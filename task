@@ -1,0 +1,43 @@
+#!/bin/bash
+set -e
+NS=nimbus.html
+RESOURCES=resources/public/nimbus
+CLJS=main
+
+sass () {
+  npx node-sass "$@" dev/custom.scss $RESOURCES/css/main.css
+}
+
+html () {
+  clj -A:dev -m $NS
+}
+
+html-watch () {
+  npx onchange -v 'dev/nimbus/html.clj' -- ./task html
+}
+
+setup () {
+  npm install
+  if ! [ -d bootstrap/bootstrap-4.4.1 ]; then
+    cd dev
+    wget https://github.com/twbs/bootstrap/archive/v4.4.1.zip
+    unzip v4.4.1.zip
+    rm v4.4.1.zip
+    cd -
+  fi
+}
+
+dev () {
+  sass
+  html
+  overmind s
+}
+
+release () {
+  sass
+  html
+  echo rm -rf $(find $RESOURCES -name cljs-runtime)
+  npx shadow-cljs release $CLJS
+}
+
+"$@"

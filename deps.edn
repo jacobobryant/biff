@@ -1,0 +1,19 @@
+{:aliases {:dev {:extra-paths ["dev"]
+                 :extra-deps {trident/repl {:mvn/version "0.2.2"}
+                              nrepl/nrepl {:mvn/version "0.5.3"}}}
+           :cljs {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.520"}
+                               thheller/shadow-cljs {:mvn/version "2.8.40"}
+                               binaryage/devtools {:mvn/version "0.9.10"}}}}
+ :paths ["src" "resources"]
+ :deps
+ {org.immutant/web {:mvn/version "2.1.10"}
+  rum {:mvn/version "0.11.4"}
+  org.clojure/java.classpath {:mvn/version "1.0.0"}
+  trident/util {:mvn/version "0.2.2"}
+  trident/ring {:mvn/version "0.2.2"}
+  mount {:mvn/version "0.1.16"}
+  metosin/reitit-ring {:mvn/version "0.3.7"}
+  metosin/muuntaja {:mvn/version "0.6.6"}
+  ring/ring-core {:mvn/version "1.8.0"}
+  com.taoensso/sente {:mvn/version "1.14.0-RC2"}
+  crypto-password {:mvn/version "0.2.1"}}}

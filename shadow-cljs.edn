@@ -1,0 +1,9 @@
+{:deps {:aliases [:cljs]}
+ :nrepl {:port 7890}
+ :builds {:main {:target :browser
+                 :output-dir "resources/public/nimbus/cljs"
+                 :asset-path "/nimbus/cljs"
+                 :compiler-options {:infer-externs :auto}
+                 :modules {:main {:init-fn nimbus.pack/init
+                                  :entries [nimbus.pack]}}
+                 :devtools {:after-load nimbus.pack/mount}}}}
