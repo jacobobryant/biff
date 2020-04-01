@@ -5,19 +5,19 @@
     [nimbus.pack.mutations :as m]
     [nimbus.core :as nimbus]
     [trident.util :as u]
+    [nimbus.lib :as lib]
     [rum.core :as rum]))
 
-(def env
+(defonce env
   (let [{:keys [sub-data subscriptions] :as db} (db/init)
         nimbus (nimbus/start-nimbus
                  {:sub-data sub-data
                   :subscriptions subscriptions
                   :api-recv m/api})]
-    (->> {"nimbus" nimbus
-          "db" db
-          "m" m/env}
-      (map #(apply u/prepend-keys %))
-      (apply merge))))
+    (lib/mcat
+      {:nimbus nimbus
+       :db db
+       :m m/env})))
 
 (defn ^:export mount []
   (rum/mount (c/main env) (js/document.querySelector "#app")))

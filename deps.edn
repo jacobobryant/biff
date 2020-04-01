@@ -16,4 +16,10 @@
   metosin/muuntaja {:mvn/version "0.6.6"}
   ring/ring-core {:mvn/version "1.8.0"}
   com.taoensso/sente {:mvn/version "1.14.0-RC2"}
-  crypto-password {:mvn/version "0.2.1"}}}
+  crypto-password {:mvn/version "0.2.1"}
+
+  ; nimbus-crux
+  juxt/crux-core {:mvn/version "20.03-1.8.0-alpha"}
+  juxt/crux-rocksdb {:mvn/version "20.03-1.8.0-alpha"}
+
+  }}

@@ -42,19 +42,20 @@
       (reitit/create-resource-handler {:path "/"})
       (reitit/create-default-handler))))
 
-(defn init []
-  (doseq [root (cp/classpath)
-          f (file-seq root)
-          :when (= "nimbus.edn" (.getName f))
-          :let [{nspace :ns} (u/catchall (edn/read-string (slurp f)))]
-          :when (some? nspace)]
-    (require nspace)))
+(defn load-config []
+  (->> (cp/classpath)
+    (mapcat file-seq)
+    (filter #(= "nimbus.edn" (.getName %)))
+    (map #(u/catchall (edn/read-string (slurp %))))
+    (filter (comp some? :ns))))
 
-(defstate server
-  :start (do
-           (init)
-           (imm/run app {:port 8080}))
-  :stop (imm/stop server))
+(defn init [config]
+  (doseq [{:keys [init]
+           nspace :ns} config]
+    (println "requiring" nspace)
+    (require nspace)
+    (when init
+      ((resolve init)))))
 
 (defmulti api :id)
 
@@ -63,6 +64,7 @@
   :nimbus/not-found)
 
 (defn wrap-api [{:keys [?data ?reply-fn] :as event}]
+  (u/pprint [:got-event event])
   (some->>
     (with-out-str
       (let [response (try
@@ -75,9 +77,20 @@
     not-empty
     (.print System/out)))
 
-(defstate sente-router
-  :start (sente/start-server-chsk-router! ch-chsk wrap-api)
-  :stop (sente-router))
+(defstate system
+  :start (let [config (load-config)]
+           (init config)
+           {:config config
+            :server (imm/run app {:port 8080})
+            :router (sente/start-server-chsk-router!
+                      ch-chsk
+                      (->> config
+                        (filter #(contains? % :middleware))
+                        (map (comp resolve :middleware))
+                        (reduce comp wrap-api)))})
+  :stop (let [{:keys [server router]} system]
+          (imm/stop server)
+          (router)))
 
 (defn -main []
-  (mount/start #'server #'sente-router))
+  (mount/start #'system))

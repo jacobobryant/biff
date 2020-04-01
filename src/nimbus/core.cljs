@@ -37,7 +37,6 @@
 (defn subscribe [{:keys [api-send sub-channels]} provider query]
   (let [ch (chan)]
     (swap! sub-channels assoc-in [provider query] ch)
-    (println "api-send" provider query)
     (api-send [provider query])
     ch))
 
