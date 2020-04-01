@@ -2,12 +2,13 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
-    [cljs.core.async :as async :refer [<! >! put! chan]]
-    [trident.util :as u :refer [capture-env]]))
+    [nimbus.pack.db :as db]
+    [cljs.core.async :as async :refer [<! >! put! chan]]))
 
 (defmulti api :id)
 (defmethod api :default
   [{:keys [id]} _]
   (println "unhandled event:" id))
 
-(def env (capture-env 'nimbus.pack.mutations))
+(defn api-send [& args]
+  (apply (:api-send @db/env) args))

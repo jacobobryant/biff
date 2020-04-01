@@ -3,24 +3,15 @@
     [nimbus.pack.components :as c]
     [nimbus.pack.db :as db]
     [nimbus.pack.mutations :as m]
-    [nimbus.core :as nimbus]
-    [trident.util :as u]
-    [nimbus.lib :as lib]
+    [nimbus.sub :as sub]
     [rum.core :as rum]))
 
-(defonce env
-  (let [{:keys [sub-data subscriptions] :as db} (db/init)
-        nimbus (nimbus/start-nimbus
-                 {:sub-data sub-data
-                  :subscriptions subscriptions
-                  :api-recv m/api})]
-    (lib/mcat
-      {:nimbus nimbus
-       :db db
-       :m m/env})))
-
 (defn ^:export mount []
-  (rum/mount (c/main env) (js/document.querySelector "#app")))
+  (rum/mount (c/main) (js/document.querySelector "#app")))
 
 (defn ^:export init []
+  (reset! db/env
+    (sub/init {:sub-data db/sub-data
+               :subscriptions db/subscriptions
+               :api-recv m/api}))
   (mount))

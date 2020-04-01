@@ -1,18 +1,17 @@
-(ns nimbus.pack
+(ns ^:nimbus nimbus.pack
   (:require
     [clojure.edn :as edn]
     [trident.util :as u]
     [taoensso.timbre :as timbre :refer [trace debug info warn error tracef debugf infof warnf errorf]]
-    [nimbus.core :as nimbus :refer [api]]))
+    [nimbus.comms :refer [api-send api]]))
 
 (def subscriptions (atom #{}))
 
 (defmethod api ::subscribe
-  [{:keys [send-fn uid] :as event} _]
+  [{:keys [uid] :as event} _]
   (swap! subscriptions conj uid)
-  (send-fn uid [::subscribe
-                {:query nil
-                 :changeset {[::deps nil]
-                             (edn/read-string (slurp "deps.edn"))}}])
+  (api-send uid [::subscribe
+                 {:query nil
+                  :changeset {[::deps nil]
+                              (edn/read-string (slurp "deps.edn"))}}])
   nil)
-

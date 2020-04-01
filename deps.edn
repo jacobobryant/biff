@@ -9,6 +9,8 @@
  {org.immutant/web {:mvn/version "2.1.10"}
   rum {:mvn/version "0.11.4"}
   org.clojure/java.classpath {:mvn/version "1.0.0"}
+  org.clojure/tools.namespace {:mvn/version "1.0.0"}
+  org.clojure/core.async {:mvn/version "1.1.587"}
   trident/util {:mvn/version "0.2.2"}
   trident/ring {:mvn/version "0.2.2"}
   mount {:mvn/version "0.1.16"}
@@ -20,6 +22,4 @@
 
   ; nimbus-crux
   juxt/crux-core {:mvn/version "20.03-1.8.0-alpha"}
-  juxt/crux-rocksdb {:mvn/version "20.03-1.8.0-alpha"}
-
-  }}
+  juxt/crux-rocksdb {:mvn/version "20.03-1.8.0-alpha"}}}

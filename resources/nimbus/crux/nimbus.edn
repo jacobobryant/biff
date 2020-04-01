@@ -1,3 +1,0 @@
-{:ns nimbus.crux
- :init nimbus.crux/init
- :middleware nimbus.crux/wrap-api}
