@@ -6,6 +6,7 @@
     [taoensso.sente :as sente]
     [ring.middleware.keyword-params]
     [ring.middleware.params]
+    [nimbus.core :refer [config]]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]))
 
 (defmulti api :id)
@@ -24,14 +25,15 @@
   (def api-send                      send-fn)
   (def connected-uids                connected-uids))
 
-(def app
+(defn app [routes]
   (reitit/ring-handler
     (reitit/router
-      [["/nimbus/comms/chsk" {:get ring-ajax-get-or-ws-handshake
-                              :post ring-ajax-post
-                              :middleware [ring.middleware.params/wrap-params
-                                           ring.middleware.keyword-params/wrap-keyword-params]
-                              :name ::chsk}]])
+      (into [["/nimbus/comms/chsk" {:get ring-ajax-get-or-ws-handshake
+                                    :post ring-ajax-post
+                                    :middleware [ring.middleware.params/wrap-params
+                                                 ring.middleware.keyword-params/wrap-keyword-params]
+                                    :name ::chsk}]]
+        routes))
     (reitit/routes
       (reitit/create-resource-handler {:path "/"})
       (reitit/create-default-handler))))
@@ -50,7 +52,12 @@
     (.print System/out)))
 
 (defstate system
-  :start {:server (imm/run app {:port 8080})
+  :start {:server (imm/run
+                    (app (->> config
+                           vals
+                           (map ::route)
+                           (filterv some?)))
+                    {:port 8080})
           :router (sente/start-server-chsk-router! ch-chsk wrap-api)}
   :stop (let [{:keys [server router]} system]
           (imm/stop server)
