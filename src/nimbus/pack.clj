@@ -8,10 +8,16 @@
 (def subscriptions (atom #{}))
 
 (defmethod api ::subscribe
-  [{:keys [uid] :as event} _]
-  (swap! subscriptions conj uid)
-  (api-send uid [::subscribe
-                 {:query nil
-                  :changeset {[::deps nil]
-                              (edn/read-string (slurp "deps.edn"))}}])
+  [{:keys [uid admin] :as event} _]
+  (when admin
+    (swap! subscriptions conj uid)
+    (api-send uid [::subscribe
+                   {:query nil
+                    :changeset {[::deps nil]
+                                (edn/read-string (slurp "deps.edn"))}}]))
   nil)
+
+(defmethod api ::fire
+  [{:keys [admin] :as event} _]
+  (u/pprint event)
+  (println admin))

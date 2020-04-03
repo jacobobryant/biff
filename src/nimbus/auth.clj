@@ -2,9 +2,6 @@
   (:require
     [clojure.edn :as edn]
     [ring.middleware.anti-forgery :as anti-forgery]
-    [ring.middleware.defaults :refer [wrap-defaults site-defaults secure-site-defaults]]
-    [ring.middleware.session.store :as store]
-    [ring.middleware.session.memory :refer [memory-store]]
     [ring.util.response :refer [redirect]]
     [trident.util :as u]
     [crypto.password.bcrypt :as pw]
@@ -13,7 +10,7 @@
 (defn unsafe [html]
   {:dangerouslySetInnerHTML {:__html html}})
 
-(defc login-html [message]
+(defc login-html [{:keys [logged-in password-incorrect]}]
   [:html {:lang "en-US"
           :style {:min-height "100%"}}
    [:head
@@ -30,27 +27,40 @@
    [:body {:style {:font-family "'Helvetica Neue', Helvetica, Arial, sans-serif"}}
     [:.d-flex.flex-column.align-items-center.justify-content-center
      {:style {:height "70vh"}}
-     [:p (or message "Sign in as admin")]
-     [:form {:method "post"}
-      [:input#__anti-forgery-token
-       {:name "__anti-forgery-token"
-        :type "hidden"
-        :value (force anti-forgery/*anti-forgery-token*)}]
-      [:.form-row
-       [:.col-12.col-sm-9.mb-2.mb-sm-0
-        [:input.form-control {:name "password"
-                              :type "password"
-                              :placeholder "Password"}]]
-       [:.col-12.col-sm-3
-        [:button.btn.btn-primary.btn-block
+     (if logged-in
+       [:form {:action "/nimbus/auth/logout" :method "post"}
+        [:input#__anti-forgery-token
+         {:name "__anti-forgery-token"
+          :type "hidden"
+          :value (force anti-forgery/*anti-forgery-token*)}]
+        [:p.text-center "Signed in as admin."]
+        [:button.btn.btn-secondary.btn-block
          (merge
            {:type "submit"}
-           (unsafe "Sign&nbsp;in"))]]]]]]])
+           (unsafe "Sign&nbsp;out"))]]
+       [:form {:method "post"}
+        [:input#__anti-forgery-token
+         {:name "__anti-forgery-token"
+          :type "hidden"
+          :value (force anti-forgery/*anti-forgery-token*)}]
+        [:p.text-center (if password-incorrect
+                          "Incorrect password."
+                          "Sign in as admin.")]
+        [:.form-row
+         [:.col-12.col-sm-9.mb-2.mb-sm-0
+          [:input.form-control {:name "password"
+                                :type "password"
+                                :placeholder "Password"}]]
+         [:.col-12.col-sm-3
+          [:button.btn.btn-primary.btn-block
+           (merge
+             {:type "submit"}
+             (unsafe "Sign&nbsp;in"))]]]])]]])
 
-(defn render-login [msg]
-  (rum/render-static-markup (login-html msg)))
+(defn render-login [opts]
+  (rum/render-static-markup (login-html opts)))
 
-(defn login [{:keys [session params]}]
+(defn login [{:keys [session params] :as req}]
   (let [next-url (:next params)
         password (:password params)
         correct (->> "deps.edn"
@@ -61,23 +71,30 @@
                   (pw/check password))]
     (if correct
       {:status 302
-       :headers {"Location" (or next-url "/pack")}
-       :cookie {"csrf" {:value (force anti-forgery/*anti-forgery-token*)}}
+       :headers {"Location" (or next-url "/nimbus/auth")}
+       :cookies {"csrf" {:value (force anti-forgery/*anti-forgery-token*)}}
        :session (assoc session :admin true)
        :body ""}
       {:headers {"Content-Type" "text/html"}
-       :body (render-login "Incorrect password.")})))
+       :body (render-login {:logged-in (:admin session)
+                            :password-incorrect true})})))
 
 (defn login-page [req]
-  {:body (render-login nil)
+  {:body (render-login {:logged-in (-> req :session :admin)})
    :headers {"Content-Type" "text/html"}})
+
+(defn logout [req]
+  {:status 302
+   :headers {"Location" "/nimbus/auth"}
+   :cookies {"ring-session" {:value "" :max-age 0}}
+   :session nil
+   :body ""})
 
 (def config
   {:nimbus.comms/route
    [""
     ["/nimbus/auth" {:post login
                      :get login-page
-                     :name ::login
-                     :middleware [[wrap-defaults
-                                   (assoc-in site-defaults
-                                     [:session :store] (memory-store))]]}]]})
+                     :name ::login}]
+    ["/nimbus/auth/logout" {:post logout
+                            :name ::logout}]]})

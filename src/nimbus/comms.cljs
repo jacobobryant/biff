@@ -2,6 +2,8 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
+    [goog.net.Cookies]
+    [cemerick.url :as url]
     [taoensso.sente :as sente]
     [cljs.core.async :as async :refer [<! >! take! put! chan]]
     [clojure.set :as set]))
@@ -26,8 +28,9 @@
   (let [ready-ch (chan)
         ready-pr (js/Promise.
                    (fn [done]
-                     (take! ready-ch done)))]
-    (-> (sente/make-channel-socket! "/nimbus/comms/chsk" {:type :auto})
+                     (take! ready-ch done)))
+        csrf-token (js/decodeURIComponent (.get (new goog.net.Cookies js/document) "csrf"))]
+    (-> (sente/make-channel-socket-client! "/nimbus/comms/chsk" csrf-token {:type :auto})
       (set/rename-keys {:send-fn :api-send})
       (update :api-send wrap-api-send ready-pr)
       (assoc :ready ready-ch))))

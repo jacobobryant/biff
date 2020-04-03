@@ -1,5 +1,6 @@
 (ns nimbus.pack
   (:require
+    [goog.net.Cookies :as gcookies]
     [nimbus.pack.components :as c]
     [nimbus.pack.db :as db]
     [nimbus.pack.mutations :as m]
@@ -15,3 +16,6 @@
                :subscriptions db/subscriptions
                :api-recv m/api}))
   (mount))
+
+
+;(.get (new goog.net.Cookies js/document) "csrf")

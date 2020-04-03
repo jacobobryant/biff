@@ -27,6 +27,13 @@ setup () {
   fi
 }
 
+repl () {
+  while true; do
+    clj -Adev -m nimbus.repl
+    sleep 1
+  done
+}
+
 dev () {
   sass
   html

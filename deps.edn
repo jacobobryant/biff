@@ -1,6 +1,5 @@
 {:aliases {:dev {:extra-paths ["dev"]
-                 :extra-deps {trident/repl {:mvn/version "0.2.2"}
-                              nrepl/nrepl {:mvn/version "0.5.3"}}}
+                 :extra-deps {nrepl/nrepl {:mvn/version "0.5.3"}}}
            :cljs {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.520"}
                                thheller/shadow-cljs {:mvn/version "2.8.40"}
                                binaryage/devtools {:mvn/version "0.9.10"}}}}
@@ -13,6 +12,7 @@
   org.clojure/java.classpath {:mvn/version "1.0.0"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
   org.clojure/core.async {:mvn/version "1.1.587"}
+  byte-transforms {:mvn/version "0.1.4"}
   trident/util {:mvn/version "0.2.2"}
   trident/ring {:mvn/version "0.2.2"}
   mount {:mvn/version "0.1.16"}

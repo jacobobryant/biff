@@ -9,9 +9,6 @@
   []
   [:div
    [:p "hello"]
-   [:button.btn.btn-primary {:on-click #(m/api-send [:nimbus.crux/tx
-                                                     [[:crux.tx/put
-                                                       {:crux.db/id :foo
-                                                        :name "hey"}]]])}
+   [:button.btn.btn-primary {:on-click #(m/api-send [:nimbus.pack/fire nil])}
     "Fire ze missiles"]
    [:pre (with-out-str (u/pprint (react db/data)))]])
