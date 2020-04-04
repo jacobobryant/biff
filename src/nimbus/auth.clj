@@ -49,6 +49,7 @@
         [:.form-row
          [:.col-12.col-sm-9.mb-2.mb-sm-0
           [:input.form-control {:name "password"
+                                :autofocus true
                                 :type "password"
                                 :placeholder "Password"}]]
          [:.col-12.col-sm-3

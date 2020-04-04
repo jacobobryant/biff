@@ -1,29 +1,34 @@
-{:aliases {:dev {:extra-paths ["dev"]
-                 :extra-deps {nrepl/nrepl {:mvn/version "0.5.3"}}}
-           :cljs {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.520"}
-                               thheller/shadow-cljs {:mvn/version "2.8.40"}
-                               binaryage/devtools {:mvn/version "0.9.10"}}}}
- :paths ["src" "resources"]
+{:aliases
+ {:dev
+  {:extra-paths ["dev"],
+   :extra-deps {nrepl/nrepl {:mvn/version "0.5.3"}}},
+  :cljs
+  {:extra-deps
+   {org.clojure/clojurescript {:mvn/version "1.10.520"},
+    thheller/shadow-cljs {:mvn/version "2.8.40"},
+    binaryage/devtools {:mvn/version "0.9.10"}}}},
+ :paths ["src" "resources"],
  :nimbus/config
- {:nimbus.auth/password-hash "$2a$11$SoTBlUdwKRf/AY9gtTxLQOmyWImXXAnej.CbukLWKwGvAeNO7Rsu6"}
+ {:nimbus.auth/password-hash
+  "$2a$11$SoTBlUdwKRf/AY9gtTxLQOmyWImXXAnej.CbukLWKwGvAeNO7Rsu6",
+  :last-update #inst "2020-04-03T22:10:56.117-00:00"},
  :deps
- {org.immutant/web {:mvn/version "2.1.10"}
-  rum {:mvn/version "0.11.4"}
-  org.clojure/java.classpath {:mvn/version "1.0.0"}
-  org.clojure/tools.namespace {:mvn/version "1.0.0"}
-  org.clojure/core.async {:mvn/version "1.1.587"}
-  byte-transforms {:mvn/version "0.1.4"}
-  trident/util {:mvn/version "0.2.2"}
-  trident/ring {:mvn/version "0.2.2"}
-  mount {:mvn/version "0.1.16"}
-  metosin/reitit-ring {:mvn/version "0.3.7"}
-  metosin/muuntaja {:mvn/version "0.6.6"}
-  ring/ring-core {:mvn/version "1.8.0"}
-  com.taoensso/sente {:mvn/version "1.14.0-RC2"}
-  crypto-password {:mvn/version "0.2.1"}
-  ring/ring-defaults {:mvn/version "0.3.2"}
-  clj-http {:mvn/version "3.10.0"}
-
-  ; nimbus-crux
-  juxt/crux-core {:mvn/version "20.03-1.8.0-alpha"}
-  juxt/crux-rocksdb {:mvn/version "20.03-1.8.0-alpha"}}}
+ {mount {:mvn/version "0.1.16"},
+  metosin/muuntaja {:mvn/version "0.6.6"},
+  trident/util {:mvn/version "0.2.2"},
+  crypto-password {:mvn/version "0.2.1"},
+  ring/ring-defaults {:mvn/version "0.3.2"},
+  rum {:mvn/version "0.11.4"},
+  org.clojure/tools.namespace {:mvn/version "1.0.0"},
+  metosin/reitit-ring {:mvn/version "0.3.7"},
+  cheshire {:mvn/version "5.10.0"},
+  org.immutant/web {:mvn/version "2.1.10"},
+  byte-transforms {:mvn/version "0.1.4"},
+  juxt/crux-rocksdb {:mvn/version "20.03-1.8.0-alpha"},
+  org.clojure/java.classpath {:mvn/version "1.0.0"},
+  com.taoensso/sente {:mvn/version "1.14.0-RC2"},
+  trident/ring {:mvn/version "0.2.2"},
+  clj-http {:mvn/version "3.10.0"},
+  juxt/crux-core {:mvn/version "20.03-1.8.0-alpha"},
+  ring/ring-core {:mvn/version "1.8.0"},
+  org.clojure/core.async {:mvn/version "1.1.587"}}}

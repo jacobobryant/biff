@@ -1,5 +1,6 @@
 (ns ^:nimbus nimbus.comms
   (:require
+    [clojure.edn :as edn]
     [immutant.web :as imm]
     [mount.core :as mount :refer [defstate]]
     [ring.middleware.defaults :refer [wrap-defaults site-defaults secure-site-defaults]]
@@ -30,10 +31,21 @@
 
 (def secret-key (bt/decode "Eof0_YC632HxXOOBgmEORg" :base64))
 
+(defn go-home [_]
+  {:status 302
+   :headers {"Location" (-> "deps.edn"
+                          slurp
+                          edn/read-string
+                          :nimbus/config
+                          (:home "/nimbus/pack"))}
+   :body ""})
+
 (defn app [routes]
   (reitit/ring-handler
     (reitit/router
-      (into [["/nimbus/comms/chsk" {:get ring-ajax-get-or-ws-handshake
+      (into [["/" {:get go-home
+                   :name ::home}]
+             ["/nimbus/comms/chsk" {:get ring-ajax-get-or-ws-handshake
                                     :post ring-ajax-post
                                     :middleware [ring.middleware.params/wrap-params
                                                  ring.middleware.keyword-params/wrap-keyword-params]
