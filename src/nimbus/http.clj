@@ -31,10 +31,11 @@
    :body ""})
 
 (def ring-settings
-  (assoc-in (if core/debug
-              rd/site-defaults
-              rd/secure-site-defaults)
-    [:session :store] (cookie/cookie-store {:key (secret-key)})))
+  (-> (if core/debug
+        rd/site-defaults
+        rd/secure-site-defaults)
+    (assoc-in [:session :store] (cookie/cookie-store {:key (secret-key)}))
+    (assoc-in [:security :ssl-redirect] false)))
 
 (defn app [routes]
   (reitit/ring-handler
