@@ -4,5 +4,5 @@
   "$2a$11$ZUkWGZo083g7eOiRQ3BdEuyZ6.Y/hdtd7Hr5ji7DbzYoAu8dvxrfe"}
  :deps
  {github-jacobobryant/nimbus {:git/url "https://github.com/jacobobryant/nimbus"
-                              :sha "ca73732ba7b5d2d555776c6b0d07cf21f83458bd"
+                              :sha "d4f96bc6060df43ed368c2dbdeb30971a38ef234"
                               :nimbus.pack/user-package true}}}
