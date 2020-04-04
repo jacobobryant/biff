@@ -1,4 +1,4 @@
-(ns nimbus.util
+(ns biff.util
   (:require
     [cemerick.url :as url]
     [clojure.edn :as edn]
@@ -31,7 +31,7 @@
     (if (get-in req [:session :admin])
       (handler req)
       {:status 302
-       :headers {"Location" (str "/nimbus/auth?next=" (url/url-encode uri))}
+       :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
        :body ""})))
 
 (defn render [component opts]
@@ -60,7 +60,7 @@
 
 (defn navbar [& contents]
   [:nav.navbar.navbar-light.bg-light.align-items-center
-   [:a {:href "/"} [:.navbar-brand "Nimbus"]]
+   [:a {:href "/"} [:.navbar-brand "Biff"]]
    [:.flex-grow-1]
    contents])
 

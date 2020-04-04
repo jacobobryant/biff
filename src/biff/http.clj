@@ -1,4 +1,4 @@
-(ns ^:nimbus nimbus.http
+(ns ^:biff biff.http
   (:require
     [byte-streams :as bs]
     [byte-transforms :as bt]
@@ -6,14 +6,14 @@
     [crypto.random :as random]
     [immutant.web :as imm]
     [mount.core :as mount :refer [defstate]]
-    [nimbus.core :as core]
-    [nimbus.util :as util]
+    [biff.core :as core]
+    [biff.util :as util]
     [reitit.ring :as reitit]
     [ring.middleware.defaults :as rd]
     [ring.middleware.session.cookie :as cookie]
     [trident.util :as u]))
 
-(def secret-key-path "data/nimbus.http/secret-key")
+(def secret-key-path "data/biff.http/secret-key")
 
 (defn secret-key []
   (or
@@ -26,7 +26,7 @@
 
 (defn redirect-home [_]
   {:status 302
-   :headers {"Location" (get-in (util/deps) [:nimbus/config ::home]
+   :headers {"Location" (get-in (util/deps) [:biff/config ::home]
                           (some ::home (vals core/config)))}
    :body ""})
 

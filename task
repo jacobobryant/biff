@@ -7,11 +7,11 @@ repeat () {
 
 dev () {
   export DEBUG=true
-  repeat clj -Adev -m nimbus.repl
+  repeat clj -Adev -m biff.repl
 }
 
 run () {
-  repeat clj -m nimbus.core
+  repeat clj -m biff.core
 }
 
 "$@"

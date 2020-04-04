@@ -1,19 +1,19 @@
-(ns ^:nimbus nimbus.auth
+(ns ^:biff biff.auth
   (:require
     [ring.middleware.anti-forgery :as anti-forgery]
-    [nimbus.util :as util]
+    [biff.util :as util]
     [crypto.password.bcrypt :as pw]
     [rum.core :as rum :refer [defc]]))
 
 (defc login-page [{:keys [logged-in password-incorrect]}]
   [:html util/html-opts
-   (util/head {:title "Login to Nimbus"})
+   (util/head {:title "Login to Biff"})
    [:body util/body-opts
     (util/navbar)
     [:.d-flex.flex-column.align-items-center.justify-content-center
      {:style {:height "70vh"}}
      (if logged-in
-       [:form {:action "/nimbus/auth/logout" :method "post"}
+       [:form {:action "/biff/auth/logout" :method "post"}
         (util/csrf)
         [:p.text-center "Signed in as admin."]
         [:button.btn.btn-secondary.btn-block
@@ -39,7 +39,7 @@
   (let [next-url (:next params)
         password (:password params)
         correct (->> (util/deps)
-                  :nimbus/config
+                  :biff/config
                   ::password-hash
                   (pw/check password))]
     (if correct
@@ -54,14 +54,14 @@
 
 (defn logout [req]
   {:status 302
-   :headers {"Location" "/nimbus/auth"}
+   :headers {"Location" "/biff/auth"}
    :cookies {"ring-session" {:value "" :max-age 0}}
    :session nil
    :body ""})
 
 (defc change-password-page [{:keys [success]}]
   [:html util/html-opts
-   (util/head {:title "Change password | Nimbus"})
+   (util/head {:title "Change password | Biff"})
    [:body util/body-opts
     (util/navbar)
     [:.container-fluid.mt-3
@@ -89,20 +89,20 @@
 
 (defn change-password [{{:keys [password newpassword confirmpassword]} :params}]
   (let [success (and (->> (util/deps)
-                       :nimbus/config
+                       :biff/config
                        ::password-hash
                        (pw/check password))
                   (= newpassword confirmpassword)
                   (not-empty newpassword))]
     (when success
-      (util/update-deps! assoc-in [:nimbus/config ::password-hash]
+      (util/update-deps! assoc-in [:biff/config ::password-hash]
         (pw/encrypt newpassword)))
     (util/render change-password-page
       {:success (boolean success)})))
 
 (def config
-  {:nimbus.http/route
-   ["/nimbus/auth"
+  {:biff.http/route
+   ["/biff/auth"
     ["" {:post login
          :get serve-login-page
          :name ::login}]

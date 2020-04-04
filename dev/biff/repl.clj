@@ -1,7 +1,7 @@
-(ns nimbus.repl
+(ns biff.repl
   (:require
     [nrepl.server :as nrepl]
-    [nimbus.core :as core]))
+    [biff.core :as core]))
 
 (defn -main []
   (nrepl/start-server :port 7888)

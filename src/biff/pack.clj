@@ -1,9 +1,9 @@
-(ns ^:nimbus nimbus.pack
+(ns ^:biff biff.pack
   (:require
     [clj-http.client :as http]
     [clojure.string :as str]
-    [nimbus.core :as core]
-    [nimbus.util :as util :refer [defmemo]]
+    [biff.core :as core]
+    [biff.util :as util :refer [defmemo]]
     [rum.core :as rum :refer [defc]]
     [trident.util :as u])
   (:import [java.lang.management ManagementFactory]))
@@ -28,7 +28,7 @@
   []
   (->>
     (http/get "https://api.github.com/search/repositories"
-      {:query-params {:q "topic:clj-nimbus"}
+      {:query-params {:q "topic:clj-biff"}
        :as :json
        :headers {"Accept" "application/vnd.github.mercy-preview+json"}})
     :body
@@ -72,7 +72,7 @@
 
 (defn need-restart? []
   (> (-> (util/deps)
-       :nimbus/config
+       :biff/config
        (::last-update #inst "1970")
        .getTime)
     (.getStartTime (ManagementFactory/getRuntimeMXBean))))
@@ -129,21 +129,21 @@
 
 (defc pack-page [req]
   [:html util/html-opts
-   (util/head "Nimbus Pack")
+   (util/head "Biff Pack")
    [:body util/body-opts
     (util/navbar
-      [:a.text-secondary {:href "/nimbus/auth/change-password"}
+      [:a.text-secondary {:href "/biff/auth/change-password"}
        "Change password"]
       [:.mr-3]
-      [:form.form-inline.mb-0 {:method "post" :action "/nimbus/auth/logout"}
+      [:form.form-inline.mb-0 {:method "post" :action "/biff/auth/logout"}
        (util/csrf)
        [:button.btn.btn-outline-secondary.btn-sm
         (util/unsafe {:type "submit"} "Sign&nbsp;out")]])
     [:.container-fluid.mt-3
      (when (need-restart?)
        [:.mb-3
-        [:div "You must restart Nimbus for changes to take effect."]
-        [:form.mb-0 {:method "post" :action "/nimbus/pack/restart"}
+        [:div "You must restart Biff for changes to take effect."]
+        [:form.mb-0 {:method "post" :action "/biff/pack/restart"}
          (util/csrf)
          [:button.btn.btn-danger.btn-sm {:type "submit"} "Restart now"]]])
      (installed-packages-table)
@@ -151,7 +151,7 @@
 
 (defn update-pkgs! [f & args]
   (apply util/update-deps!
-    (comp #(assoc-in % [:nimbus/config ::last-update] (java.util.Date.)) f)
+    (comp #(assoc-in % [:biff/config ::last-update] (java.util.Date.)) f)
     args))
 
 (defn handle-action [{{:keys [action repo-name branch latest-sha] :as params} :params}]
@@ -166,18 +166,18 @@
 
 (defc restart-page [_]
   [:html util/html-opts
-   (util/head {:title "Restarting Nimbus"}
-     [:script {:src "/nimbus/pack/js/restart.js"}])
+   (util/head {:title "Restarting Biff"}
+     [:script {:src "/biff/pack/js/restart.js"}])
    [:body util/body-opts
     (util/navbar)
     [:.container-fluid.mt-3
      [:.d-flex.flex-column.align-items-center
       [:.spinner-border.text-primary {:role "status"}
        [:span.sr-only "Loading..."]]
-      [:p.mt-3 "Waiting for Nimbus to restart. If nothing happens within 90 seconds, try "
-       [:a {:href "/" :target "_blank"} "opening Nimbus manually"] "."]]]]])
+      [:p.mt-3 "Waiting for Biff to restart. If nothing happens within 90 seconds, try "
+       [:a {:href "/" :target "_blank"} "opening Biff manually"] "."]]]]])
 
-(defn restart-nimbus [_]
+(defn restart-biff [_]
   (future
     (Thread/sleep 500)
     (shutdown-agents)
@@ -190,14 +190,14 @@
    :headers {"Content-Type" "text/plain"}})
 
 (def config
-  {:nimbus.http/home "/nimbus/pack"
-   :nimbus.http/route
-   ["/nimbus/pack"
+  {:biff.http/home "/biff/pack"
+   :biff.http/route
+   ["/biff/pack"
     ["/ping" {:get ping
               :name ::ping}]
     ["" {:middleware [util/wrap-authorize]}
      ["" {:get #(util/render pack-page %)
           :post #(util/render pack-page (doto % handle-action))
           :name ::pack}]
-     ["/restart" {:post restart-nimbus
+     ["/restart" {:post restart-biff
                   :name ::restart}]]]})

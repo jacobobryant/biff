@@ -1,7 +1,7 @@
 function check() {
-  fetch("/nimbus/pack/ping").then(r => {
+  fetch("/biff/pack/ping").then(r => {
     if (r.ok) {
-      window.location = "/nimbus/pack";
+      window.location = "/biff/pack";
     }
   });
 }

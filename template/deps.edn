@@ -1,8 +1,8 @@
-{:nimbus/config
+{:biff/config
  {; default password: hey
-  :nimbus.auth/password-hash
+  :biff.auth/password-hash
   "$2a$11$ZUkWGZo083g7eOiRQ3BdEuyZ6.Y/hdtd7Hr5ji7DbzYoAu8dvxrfe"}
  :deps
- {github-jacobobryant/nimbus {:git/url "https://github.com/jacobobryant/nimbus"
+ {github-jacobobryant/biff {:git/url "https://github.com/jacobobryant/biff"
                               :sha "d4f96bc6060df43ed368c2dbdeb30971a38ef234"
-                              :nimbus.pack/user-package true}}}
+                              :biff.pack/user-package true}}}

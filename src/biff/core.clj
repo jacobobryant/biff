@@ -1,4 +1,4 @@
-(ns nimbus.core
+(ns biff.core
   (:require
     [clojure.java.classpath :as cp]
     [clojure.tools.namespace.find :as tn-find]
@@ -10,8 +10,8 @@
 (defn plugins []
   (for [form (tn-find/find-ns-decls (cp/classpath))
         :let [sym (second form)
-              {:keys [nimbus]} (meta sym)]
-        :when nimbus]
+              {:keys [biff]} (meta sym)]
+        :when biff]
     sym))
 
 (defstate config
