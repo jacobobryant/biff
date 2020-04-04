@@ -4,5 +4,5 @@
   "$2a$11$ZUkWGZo083g7eOiRQ3BdEuyZ6.Y/hdtd7Hr5ji7DbzYoAu8dvxrfe"}
  :deps
  {github-jacobobryant/biff {:git/url "https://github.com/jacobobryant/biff"
-                              :sha "d4f96bc6060df43ed368c2dbdeb30971a38ef234"
+                              :sha "03774f384546c497d9ee0eabe818f7d686a9a38c"
                               :biff.pack/user-package true}}}
