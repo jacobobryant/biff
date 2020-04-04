@@ -1,88 +1,56 @@
 (ns ^:nimbus nimbus.auth
   (:require
-    [clojure.edn :as edn]
     [ring.middleware.anti-forgery :as anti-forgery]
-    [ring.util.response :refer [redirect]]
-    [trident.util :as u]
+    [nimbus.util :as util]
     [crypto.password.bcrypt :as pw]
     [rum.core :as rum :refer [defc]]))
 
-(defn unsafe [html]
-  {:dangerouslySetInnerHTML {:__html html}})
-
-(defc login-html [{:keys [logged-in password-incorrect]}]
-  [:html {:lang "en-US"
-          :style {:min-height "100%"}}
-   [:head
-    [:title "Login | Nimbus"]
-    [:meta {:charset "utf-8"}]
-    [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-    [:link
-     {:crossorigin "anonymous",
-      :integrity
-      "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T",
-      :href
-      "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css",
-      :rel "stylesheet"}]]
-   [:body {:style {:font-family "'Helvetica Neue', Helvetica, Arial, sans-serif"}}
+(defc login-page [{:keys [logged-in password-incorrect]}]
+  [:html util/html-opts
+   (util/head {:title "Login to Nimbus"})
+   [:body util/body-opts
+    (util/navbar)
     [:.d-flex.flex-column.align-items-center.justify-content-center
      {:style {:height "70vh"}}
      (if logged-in
        [:form {:action "/nimbus/auth/logout" :method "post"}
-        [:input#__anti-forgery-token
-         {:name "__anti-forgery-token"
-          :type "hidden"
-          :value (force anti-forgery/*anti-forgery-token*)}]
+        (util/csrf)
         [:p.text-center "Signed in as admin."]
         [:button.btn.btn-secondary.btn-block
-         (merge
-           {:type "submit"}
-           (unsafe "Sign&nbsp;out"))]]
+         (util/unsafe {:type "submit"} "Sign&nbsp;out")]]
        [:form {:method "post"}
-        [:input#__anti-forgery-token
-         {:name "__anti-forgery-token"
-          :type "hidden"
-          :value (force anti-forgery/*anti-forgery-token*)}]
-        [:p.text-center (if password-incorrect
-                          "Incorrect password."
-                          "Sign in as admin.")]
-        [:.form-row
-         [:.col-12.col-sm-9.mb-2.mb-sm-0
-          [:input.form-control {:name "password"
-                                :autofocus true
-                                :type "password"
-                                :placeholder "Password"}]]
-         [:.col-12.col-sm-3
-          [:button.btn.btn-primary.btn-block
-           (merge
-             {:type "submit"}
-             (unsafe "Sign&nbsp;in"))]]]])]]])
+        (util/csrf)
+        (if password-incorrect
+          [:p.text-danger.text-center "Incorrect password."]
+          [:p.text-center "Sign in as admin."])
+        [:input.form-control {:name "password"
+                              :autofocus true
+                              :type "password"
+                              :placeholder "Password"}]
+        [:.mb-3]
+        [:button.btn.btn-primary.btn-block
+         (util/unsafe {:type "submit"} "Sign&nbsp;in")]])]]])
 
-(defn render-login [opts]
-  (rum/render-static-markup (login-html opts)))
+(defn serve-login-page [req]
+  (util/render login-page
+    {:logged-in (-> req :session :admin)}))
 
 (defn login [{:keys [session params] :as req}]
   (let [next-url (:next params)
         password (:password params)
-        correct (->> "deps.edn"
-                  slurp
-                  edn/read-string
+        correct (->> (util/deps)
                   :nimbus/config
                   ::password-hash
                   (pw/check password))]
     (if correct
       {:status 302
-       :headers {"Location" (or next-url "/nimbus/auth")}
+       :headers {"Location" (or next-url "/")}
        :cookies {"csrf" {:value (force anti-forgery/*anti-forgery-token*)}}
        :session (assoc session :admin true)
        :body ""}
-      {:headers {"Content-Type" "text/html"}
-       :body (render-login {:logged-in (:admin session)
-                            :password-incorrect true})})))
-
-(defn login-page [req]
-  {:body (render-login {:logged-in (-> req :session :admin)})
-   :headers {"Content-Type" "text/html"}})
+      (util/render login-page
+        {:logged-in (:admin session)
+         :password-incorrect true}))))
 
 (defn logout [req]
   {:status 302
@@ -91,11 +59,55 @@
    :session nil
    :body ""})
 
+(defc change-password-page [{:keys [success]}]
+  [:html util/html-opts
+   (util/head {:title "Change password | Nimbus"})
+   [:body util/body-opts
+    (util/navbar)
+    [:.container-fluid.mt-3
+     [:.d-flex.flex-column.align-items-center
+      [:div
+       (case success
+         true [:p.text-success "Password changed."]
+         false [:p.text-danger "Invalid input."]
+         nil)
+       [:form {:method "post"}
+        (util/csrf)
+        [:.form-group.mb-2
+         [:label.mb-0 {:for "password"} "Current password:"]
+         [:input#password.form-control {:name "password"
+                                        :type "password"
+                                        :autofocus true}]]
+        [:.form-group.mb-2
+         [:label.mb-0 {:for "newpassword"} "New password:"]
+         [:input#newpassword.form-control {:name "newpassword" :type "password"}]]
+        [:.form-group.mb-2
+         [:label.mb-0 {:for "confirmpassword"} "Confirm password:"]
+         [:input#confirmpassword.form-control {:name "confirmpassword" :type "password"}]]
+        [:.mb-3]
+        [:button.btn.btn-primary.btn-block {:type "submit"} "Change password"]]]]]]])
+
+(defn change-password [{{:keys [password newpassword confirmpassword]} :params}]
+  (let [success (and (->> (util/deps)
+                       :nimbus/config
+                       ::password-hash
+                       (pw/check password))
+                  (= newpassword confirmpassword)
+                  (not-empty newpassword))]
+    (when success
+      (util/update-deps! assoc-in [:nimbus/config ::password-hash]
+        (pw/encrypt newpassword)))
+    (util/render change-password-page
+      {:success (boolean success)})))
+
 (def config
-  {:nimbus.comms/route
-   [""
-    ["/nimbus/auth" {:post login
-                     :get login-page
-                     :name ::login}]
-    ["/nimbus/auth/logout" {:post logout
-                            :name ::logout}]]})
+  {:nimbus.http/route
+   ["/nimbus/auth"
+    ["" {:post login
+         :get serve-login-page
+         :name ::login}]
+    ["/logout" {:post logout
+                :name ::logout}]
+    ["/change-password" {:get #(util/render change-password-page %)
+                         :post change-password
+                         :name ::change-password}]]})

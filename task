@@ -1,39 +1,17 @@
 #!/bin/bash
 set -e
-RESOURCES=resources/public/nimbus
-CLJS=main
 
-sass () {
-  npx node-sass "$@" dev/custom.scss $RESOURCES/css/main.css
-}
-
-setup () {
-  npm install
-  if ! [ -d bootstrap/bootstrap-4.4.1 ]; then
-    cd dev
-    wget https://github.com/twbs/bootstrap/archive/v4.4.1.zip
-    unzip v4.4.1.zip
-    rm v4.4.1.zip
-    cd -
-  fi
-}
-
-repl () {
-  while true; do
-    clj -Adev -m nimbus.repl
-    sleep 1
-  done
+repeat () {
+  while "$@"; do sleep 1; done
 }
 
 dev () {
-  sass
-  overmind s
+  export DEBUG=true
+  repeat clj -Adev -m nimbus.repl
 }
 
-release () {
-  sass
-  echo rm -rf $(find $RESOURCES -name cljs-runtime)
-  npx shadow-cljs release $CLJS
+run () {
+  repeat clj -m nimbus.core
 }
 
 "$@"

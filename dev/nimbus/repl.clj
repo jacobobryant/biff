@@ -1,9 +1,10 @@
 (ns nimbus.repl
   (:require
     [nrepl.server :as nrepl]
-    [nimbus.core :as nimbus]))
+    [nimbus.core :as core]))
 
 (defn -main []
   (nrepl/start-server :port 7888)
-  (nimbus/-main)
+  (.bindRoot #'core/debug true)
+  (core/-main)
   (println :started))

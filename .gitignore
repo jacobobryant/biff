@@ -1,7 +1,3 @@
-dev/bootstrap-4.4.1/
-resources/public/nimbus/cljs/cljs-runtime/
-.shadow-cljs/
-node_modules/
 pom.xml
 pom.xml.asc
 *.jar
@@ -16,5 +12,4 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
-nimbus.crux/
-cljs-runtime
+data/

@@ -1,55 +1,21 @@
 (ns ^:nimbus nimbus.pack
   (:require
-    [clojure.string :as str]
-    [clojure.edn :as edn]
-    [clojure.core.memoize :as memo]
-    [trident.util :as u]
-    [ring.middleware.anti-forgery :as anti-forgery]
-    [taoensso.timbre :as timbre :refer [trace debug info warn error tracef debugf infof warnf errorf]]
-    [nimbus.comms :refer [api-send api]]
     [clj-http.client :as http]
-    [ring.util.response :as resp]
-    [rum.core :as rum :refer [defc]])
+    [clojure.string :as str]
+    [nimbus.core :as core]
+    [nimbus.util :as util :refer [defmemo]]
+    [rum.core :as rum :refer [defc]]
+    [trident.util :as u])
   (:import [java.lang.management ManagementFactory]))
 
-(def subscriptions (atom #{}))
-
-(defmethod api ::subscribe
-  [{:keys [uid admin] :as event} _]
-  (when admin
-    (swap! subscriptions conj uid)
-    (api-send uid [::subscribe
-                   {:query nil
-                    :changeset {[::deps nil]
-                                (edn/read-string (slurp "deps.edn"))}}]))
-  nil)
-
-(defmethod api ::fire
-  [{:keys [admin] :as event} _]
-  (u/pprint event)
-  (println admin))
-
-(defc csrf []
-  [:input#__anti-forgery-token
-   {:name "__anti-forgery-token"
-    :type "hidden"
-    :value (force anti-forgery/*anti-forgery-token*)}])
-
-(defn unsafe [html]
-  {:dangerouslySetInnerHTML {:__html html}})
-
-; curl -H "Accept: application/vnd.github.mercy-preview+json"
-; https://api.github.com/search/repositories?q=topic:clj-nimbus | python -m json.tool
-
-(defn get-latest-sha* [{:keys [repo-name branch]}]
-  ;curl https://api.github.com/repos/izuzak/pmrpc/git/refs/heads/master
+(defmemo get-latest-sha (* 1000 60)
+  [{:keys [repo-name branch]}]
   (->>
     (http/get (str  "https://api.github.com/repos/" repo-name "/git/refs/heads/" branch)
       {:as :json})
     :body
     :object
     :sha))
-(def get-latest-sha (memo/ttl get-latest-sha* :ttl/threshold (* 1000 60)))
 
 (defn norm-repo [{:keys [html_url description default_branch full_name stargazers_count]}]
   {:url html_url
@@ -58,7 +24,8 @@
    :repo-name full_name
    :stars stargazers_count})
 
-(defn all-packages* []
+(defmemo all-packages (* 1000 60)
+  []
   (->>
     (http/get "https://api.github.com/search/repositories"
       {:query-params {:q "topic:clj-nimbus"}
@@ -67,34 +34,34 @@
     :body
     :items
     (map norm-repo)))
-(def all-packages (memo/ttl all-packages* :ttl/threshold (* 1000 60)))
 
-(defn deps []
-  (-> "deps.edn"
-    slurp
-    edn/read-string))
-
-(defn get-repo* [repo-name]
+(defmemo get-repo (* 1000 60)
+  [repo-name]
   (-> (http/get (str "https://api.github.com/repos/" repo-name)
         {:as :json})
     :body
     norm-repo))
-(def get-repo (memo/ttl get-repo* :ttl/threshold (* 1000 60)))
 
 (defn assoc-latest-sha [repo]
   (assoc repo :latest-sha (get-latest-sha repo)))
 
 (defn installed-packages []
-  (->> (deps)
+  (let [repo-name->url (->> core/config
+                         vals
+                         (map (juxt ::repo ::app-url))
+                         (into {}))
+        assoc-url #(assoc % :app-url (repo-name->url (:repo-name %)))]
+  (->> (util/deps)
     :deps
     vals
-    (filter :nimbus/user-package)
+    (filter ::user-package)
     (map (fn [{:keys [git/url] :as package}]
            (-> url
              (str/replace #"^https://github.com/" "")
              get-repo
              (merge package)
-             assoc-latest-sha)))))
+             assoc-latest-sha
+             assoc-url))))))
 
 (defn available-packages []
   (let [installed-urls (->> (installed-packages)
@@ -104,132 +71,133 @@
       (remove (comp installed-urls :url)))))
 
 (defn need-restart? []
-  (> (-> (deps)
+  (> (-> (util/deps)
        :nimbus/config
-       (:last-update #inst "1970")
+       (::last-update #inst "1970")
        .getTime)
     (.getStartTime (ManagementFactory/getRuntimeMXBean))))
 
+(defc table [{:keys [title]} contents]
+  (when (not-empty contents)
+    (list
+      [:h5 title]
+      [:table.table.table-striped
+       [:tbody
+        (for [row contents]
+          [:tr
+           (for [col row]
+             [:td {:style {:vertical-align "middle"}}
+              col])])]])))
+
+(defc hidden [k v]
+  [:input {:name k :value v :type "hidden"}])
+
+(defc installed-packages-table []
+  (table {:title "Installed packages"}
+    (for [{:keys [sha latest-sha url description branch repo-name stars app-url]}
+          (sort-by :repo-name (installed-packages))]
+      [[:a {:href url :target "_blank"} repo-name]
+       [:div description]
+       [:.d-flex
+        (when app-url
+          [:a.btn.btn-primary.mr-2.btn-sm {:href app-url} "Open"])
+        [:form.mb-0 {:method "post"}
+         (util/csrf)
+         (hidden "action" "uninstall")
+         (hidden "repo-name" repo-name)
+         [:button.btn.btn-secondary.btn-sm {:type "submit"} "Uninstall"]]
+        (when (not= sha latest-sha)
+          [:form.mb-0.ml-2 {:method "post"}
+           (util/csrf)
+           (hidden "action" "update")
+           (hidden "repo-name" repo-name)
+           (hidden "latest-sha" latest-sha)
+           [:button.btn.btn-primary.btn-sm {:type "submit"} "Update"]])]])))
+
+(defc available-packages-table []
+  (table {:title "Available packages"}
+    (for [{:keys [url description branch repo-name stars]}
+          (sort-by :stars (available-packages))]
+      [[:a {:href url :target "_blank"} repo-name]
+       [:div description]
+       [:form.mb-0 {:method "post"}
+        (util/csrf)
+        (hidden "action" "install")
+        (hidden "repo-name" repo-name)
+        (hidden "branch" branch)
+        [:button.btn.btn-primary {:type "submit"} "Install"]]])))
+
 (defc pack-page [req]
-  [:html {:lang "en-US"
-          :style {:min-height "100%"}}
-   [:head
-    [:title "Nimbus Pack"]
-    [:meta {:charset "utf-8"}]
-    [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-    [:link
-     {:crossorigin "anonymous"
-      :integrity "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-      :href "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-      :rel "stylesheet"}]]
-   [:body {:style {:font-family "'Helvetica Neue', Helvetica, Arial, sans-serif"}}
-    [:nav.navbar.navbar-light.bg-light.justify-content-between.align-items-center
-     [:.navbar-brand "Nimbus"]
-     [:form.form-inline.mb-0 {:method "post" :action "/nimbus/auth/logout"}
-      (csrf)
-      [:button.btn.btn-outline-secondary.btn-sm (merge {:type "submit"} (unsafe "Sign&nbsp;out"))]]]
+  [:html util/html-opts
+   (util/head "Nimbus Pack")
+   [:body util/body-opts
+    (util/navbar
+      [:a.text-secondary {:href "/nimbus/auth/change-password"}
+       "Change password"]
+      [:.mr-3]
+      [:form.form-inline.mb-0 {:method "post" :action "/nimbus/auth/logout"}
+       (util/csrf)
+       [:button.btn.btn-outline-secondary.btn-sm
+        (util/unsafe {:type "submit"} "Sign&nbsp;out")]])
     [:.container-fluid.mt-3
      (when (need-restart?)
-       [:div.mb-3
+       [:.mb-3
         [:div "You must restart Nimbus for changes to take effect."]
         [:form.mb-0 {:method "post" :action "/nimbus/pack/restart"}
-         (csrf)
+         (util/csrf)
          [:button.btn.btn-danger.btn-sm {:type "submit"} "Restart now"]]])
-     (when-some [packages (not-empty (installed-packages))]
-       (list
-         [:h5 "Installed packages"]
-         [:table.table.table-striped
-          [:tbody
-           (for [{:keys [sha latest-sha url description branch repo-name stars]}
-                 (sort-by :repo-name packages)]
-             [:tr
-              [:td {:style {:vertical-align "middle"}}
-               [:a {:href url :target "_blank"} repo-name]]
-              [:td {:style {:vertical-align "middle"}}
-               [:div description]]
-              [:td {:style {:vertical-align "middle"}}
-               [:.d-flex
-                [:form.mb-0 {:method "post"}
-                 (csrf)
-                 [:input {:name "action" :value "uninstall" :type "hidden"}]
-                 [:input {:name "repo-name" :value repo-name :type "hidden"}]
-                 [:button.btn.btn-secondary {:type "submit"} "Uninstall"]]
-                (when (not= sha latest-sha)
-                  [:form.mb-0.ml-2 {:method "post"}
-                   (csrf)
-                   [:input {:name "action" :value "update" :type "hidden"}]
-                   [:input {:name "repo-name" :value repo-name :type "hidden"}]
-                   [:input {:name "latest-sha" :value latest-sha :type "hidden"}]
-                   [:button.btn.btn-primary {:type "submit"} "Update"]])]]])]]))
-     (when-some [packages (not-empty (available-packages))]
-       (list
-         [:h5 "Available packages"]
-         [:table.table.table-striped
-          [:tbody
-           (for [{:keys [url description branch repo-name stars]}
-                 (sort-by :stars packages)]
-             [:tr
-              [:td {:style {:vertical-align "middle"}}
-               [:a {:href url :target "_blank"} repo-name]]
-              [:td {:style {:vertical-align "middle"}}
-               [:div description]]
-              [:td {:style {:vertical-align "middle"}}
-               [:form.mb-0 {:method "post"}
-                (csrf)
-                [:input {:name "action" :value "install" :type "hidden"}]
-                [:input {:name "repo-name" :value repo-name :type "hidden"}]
-                [:input {:name "branch" :value branch :type "hidden"}]
-                [:button.btn.btn-primary {:type "submit"} "Install"]]]])]]))]]])
+     (installed-packages-table)
+     (available-packages-table)]]])
 
-(defn render [f]
-  (fn [req]
-    {:status 200
-     :body (rum/render-static-markup (f req))
-     :headers {"Content-Type" "text/html"}}))
+(defn update-pkgs! [f & args]
+  (apply util/update-deps!
+    (comp #(assoc-in % [:nimbus/config ::last-update] (java.util.Date.)) f)
+    args))
 
-(defn write-deps! [deps]
-  (-> deps
-    (assoc-in [:nimbus/config :last-update] (java.util.Date.))
-    u/pprint
-    with-out-str
-    (#(spit "deps.edn" %))))
-
-(defn update-deps! [f & args]
-  (write-deps! (apply f (deps) args)))
-
-(defn wrap-action [{{:keys [action repo-name branch latest-sha] :as params} :params :as req}]
+(defn handle-action [{{:keys [action repo-name branch latest-sha] :as params} :params}]
   (let [pkg-name (symbol (str "github-" repo-name))]
     (case action
-      "install" (update-deps! assoc-in [:deps pkg-name]
+      "install" (update-pkgs! assoc-in [:deps pkg-name]
                   {:git/url (str "https://github.com/" repo-name)
                    :sha (get-latest-sha params)
-                   :nimbus/user-package true})
-      "uninstall" (update-deps! update :deps dissoc pkg-name)
-      "update" (update-deps! assoc-in [:deps pkg-name :sha] latest-sha)))
-  req)
+                   ::user-package true})
+      "uninstall" (update-pkgs! update :deps dissoc pkg-name)
+      "update" (update-pkgs! assoc-in [:deps pkg-name :sha] latest-sha))))
 
-(defn wrap-authorize [handler]
-  (fn [req]
-    (if (get-in req [:session :admin])
-      (handler req)
-      {:status 302
-       :headers {"Location" "/nimbus/auth?next=/nimbus/pack"}
-       :body ""})))
+(defc restart-page [_]
+  [:html util/html-opts
+   (util/head {:title "Restarting Nimbus"}
+     [:script {:src "/nimbus/pack/js/restart.js"}])
+   [:body util/body-opts
+    (util/navbar)
+    [:.container-fluid.mt-3
+     [:.d-flex.flex-column.align-items-center
+      [:.spinner-border.text-primary {:role "status"}
+       [:span.sr-only "Loading..."]]
+      [:p.mt-3 "Waiting for Nimbus to restart. If nothing happens within 90 seconds, try "
+       [:a {:href "/" :target "_blank"} "opening Nimbus manually"] "."]]]]])
 
 (defn restart-nimbus [_]
   (future
-    (Thread/sleep 1000)
+    (Thread/sleep 500)
     (shutdown-agents)
     (System/exit 0))
-  {:status 302
-   :headers {"Location" "/nimbus/pack"}
-   :body ""})
+  (util/render restart-page nil))
+
+(defn ping [_]
+  {:status 200
+   :body ""
+   :headers {"Content-Type" "text/plain"}})
 
 (def config
-  {:nimbus.comms/route
-   ["" {:middleware [wrap-authorize]}
-    ["/nimbus/pack" {:get (render pack-page)
-                     :post (comp (render pack-page) wrap-action)
-                     :name ::pack}]
-    ["/nimbus/pack/restart" {:post restart-nimbus
-                             :name ::restart}]]})
+  {:nimbus.http/home "/nimbus/pack"
+   :nimbus.http/route
+   ["/nimbus/pack"
+    ["/ping" {:get ping
+              :name ::ping}]
+    ["" {:middleware [util/wrap-authorize]}
+     ["" {:get #(util/render pack-page %)
+          :post #(util/render pack-page (doto % handle-action))
+          :name ::pack}]
+     ["/restart" {:post restart-nimbus
+                  :name ::restart}]]]})

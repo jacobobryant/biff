@@ -1,12 +1,14 @@
 (ns nimbus.core
   (:require
     [clojure.java.classpath :as cp]
-    [clojure.tools.namespace.find :as find]
+    [clojure.tools.namespace.find :as tn-find]
     [mount.core :as mount :refer [defstate]]
     [trident.util :as u]))
 
+(def debug (boolean (System/getenv "DEBUG")))
+
 (defn plugins []
-  (for [form (find/find-ns-decls (cp/classpath))
+  (for [form (tn-find/find-ns-decls (cp/classpath))
         :let [sym (second form)
               {:keys [nimbus]} (meta sym)]
         :when nimbus]
@@ -22,10 +24,5 @@
            (plugins)))
 
 (defn -main []
-  (mapv require (plugins))
+  (mapv #(u/catchall (require %)) (plugins))
   (mount/start))
-
-(comment
-  (do
-    (shutdown-agents)
-    (System/exit 0)))
