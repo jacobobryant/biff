@@ -1,0 +1,8 @@
+{:nimbus/config
+ {; default password: hey
+  :nimbus.auth/password-hash
+  "$2a$11$ZUkWGZo083g7eOiRQ3BdEuyZ6.Y/hdtd7Hr5ji7DbzYoAu8dvxrfe"}
+ :deps
+ {github-jacobobryant/nimbus {:git/url "https://github.com/jacobobryant/nimbus"
+                              :sha "ca73732ba7b5d2d555776c6b0d07cf21f83458bd"
+                              :nimbus.pack/user-package true}}}
