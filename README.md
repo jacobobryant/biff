@@ -26,6 +26,20 @@ In fact, the core of Biff is just that plugin system, less than 30 lines of
 code. Everything else is pluggable. The package manager is itself a Biff app,
 though I've bundled it with Biff core for convenience.
 
+## Usage
+
+See [How to write a Biff app](/docs/how-to-write-a-biff-app.md).
+
+To install Biff on a DigitalOcean droplet:
+
+1. Create an Ubuntu 18.04 droplet.
+2. Point a domain at it (e.g. biff.yourwebsite.com).
+3. SSH into the droplet (as root).
+4. Clone this repository.
+5. Run `./install-biff.sh`.
+
+I'm also planning to see if I can set up a one-click install option.
+
 ## OK, but *why?*
 
 In the move to web application software, we traded away **extensibility** for
