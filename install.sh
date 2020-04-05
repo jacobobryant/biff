@@ -29,12 +29,12 @@ server {
     server_name _;
     root /var/www/site;
     location / {
-        try_files $uri $uri/ @proxy;
+        try_files \$uri \$uri/ @proxy;
     }
     location @proxy {
-        proxy_pass http://localhost:8080/;
+        proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "Upgrade";
     }
 }
@@ -43,7 +43,8 @@ ln -s /etc/nginx/sites-{available,enabled}/biff
 systemctl restart nginx
 
 echo
-echo Running certbot now. When it asks if you\'d like to redirect HTTP requests to HTTPS, say yes.
+echo Running certbot now. When it asks if you\'d like to redirect HTTP requests to
+echo HTTPS, say yes.
 read -p "Press Enter to continue"
 certbot --nginx
 systemctl restart nginx
@@ -52,6 +53,10 @@ ufw allow "Nginx Full"
 ufw allow OpenSSH
 ufw enable
 
+echo
+echo
 echo Installation complete. To start Biff, run \`reboot\` and then wait for a minute.
 echo The default admin password for Biff is: hey
 echo Be sure to change it after you log in.
+echo "(If you'd like to check on Biff's startup, ssh back in and run
+echo \`watch syststemctl status biff\` and wait for the message \"Registered web context /\")
