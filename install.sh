@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# todo set up non-root user
+
 apt update
 apt upgrade
 add-apt-repository ppa:certbot/certbot
@@ -14,7 +16,7 @@ cat > /etc/systemd/system/biff.service << EOD
 Description=Biff
 
 [Service]
-ExecStart=/root/biff/template/start-biff.sh
+ExecStart=/root/biff/template/task run
 
 [Install]
 WantedBy=multi-user.target
@@ -27,7 +29,7 @@ server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
-    root /var/www/site;
+    root /var/www/\$host;
     location / {
         try_files \$uri \$uri/ @proxy;
     }
@@ -41,6 +43,7 @@ server {
 EOD
 ln -s /etc/nginx/sites-{available,enabled}/biff
 systemctl restart nginx
+ln -s /var/www /root/biff/template/www
 
 echo
 echo Running certbot now. When it asks if you\'d like to redirect HTTP requests to

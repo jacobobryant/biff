@@ -1,5 +1,6 @@
 (ns biff.core
   (:require
+    [biff.util :as util]
     [clojure.java.classpath :as cp]
     [clojure.tools.namespace.find :as tn-find]
     [mount.core :as mount :refer [defstate]]
@@ -15,14 +16,16 @@
     sym))
 
 (defstate config
-  :start (u/map-to
-           #(some-> %
-              name
-              (symbol "config")
-              resolve
-              deref)
-           (plugins)))
+  :start {:plugins (u/map-to
+                     #(some-> %
+                        name
+                        (symbol "config")
+                        resolve
+                        deref)
+                     (plugins))
+          :main (:biff/config (util/deps))})
 
 (defn -main []
   (mapv #(u/catchall (require %)) (plugins))
-  (mount/start))
+  (mount/start)
+  (println "Biff started"))

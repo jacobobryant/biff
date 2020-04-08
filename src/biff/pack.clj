@@ -47,6 +47,7 @@
 
 (defn installed-packages []
   (let [repo-name->url (->> core/config
+                         :plugins
                          vals
                          (map (juxt ::repo ::app-url))
                          (into {}))

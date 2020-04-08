@@ -1,58 +1,28 @@
 (ns ^:biff biff.http
   (:require
-    [byte-streams :as bs]
-    [byte-transforms :as bt]
-    [clojure.java.io :as io]
-    [crypto.random :as random]
+    [biff.http.handler :as handler]
+    [clojure.string :as str]
     [immutant.web :as imm]
     [mount.core :as mount :refer [defstate]]
     [biff.core :as core]
     [biff.util :as util]
     [reitit.ring :as reitit]
-    [ring.middleware.defaults :as rd]
-    [ring.middleware.session.cookie :as cookie]
     [trident.util :as u]))
 
-(def secret-key-path "data/biff.http/secret-key")
-
-(defn secret-key []
-  (or
-    (u/catchall (bt/decode (slurp secret-key-path) :base64))
-    (let [k (random/bytes 16)
-          k-str (bs/to-string (bt/encode k :base64))]
-      (io/make-parents secret-key-path)
-      (spit secret-key-path k-str)
-      k)))
-
-(defn redirect-home [_]
-  {:status 302
-   :headers {"Location" (get-in (util/deps) [:biff/config ::home]
-                          (some ::home (vals core/config)))}
-   :body ""})
-
-(def ring-settings
-  (-> (if core/debug
-        rd/site-defaults
-        rd/secure-site-defaults)
-    (assoc-in [:session :store] (cookie/cookie-store {:key (secret-key)}))
-    (assoc-in [:security :ssl-redirect] false)))
-
-(defn app [routes]
-  (reitit/ring-handler
-    (reitit/router
-      (into [["/" {:get redirect-home
-                   :name ::home}]]
-        routes)
-      {:data {:middleware [[rd/wrap-defaults ring-settings]]}})
-    (reitit/routes
-      (reitit/create-resource-handler {:path "/"})
-      (reitit/create-default-handler))))
+(defmulti handler ::ns)
+(defmethod handler :default
+  [req]
+  (handler/default-handler req))
 
 (defstate server
-  :start (imm/run
-           (app (->> core/config
-                  vals
-                  (map ::route)
-                  (filterv some?)))
-           {:port 8080})
+  :start (let [{::keys [debug-server-name host->ns]} (:main core/config)
+               get-server-name (if (and core/debug debug-server-name)
+                                 (constantly debug-server-name)
+                                 :server-name)]
+           (imm/run #(->> %
+                       get-server-name
+                       (get host->ns)
+                       (assoc % ::ns)
+                       handler)
+             {:port 8080}))
   :stop (imm/stop server))
