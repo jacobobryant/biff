@@ -58,8 +58,8 @@ software there is, the more opportunities there will be to extend software.
 ![](/img/diagram.png)
 
 Just as the software industry shifted from desktop applications to web
-applications, I believe it now needs to shift from company-controlled data to
-user-controlled data. Biff is an extremely practical way to make that start
+applications, I believe it now needs to shift from app-centric servers to
+user-centric servers. Biff is an extremely practical way to make that start
 happening.
 
 ## Status
