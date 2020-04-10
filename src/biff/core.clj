@@ -1,6 +1,6 @@
 (ns biff.core
   (:require
-    [biff.util :as util]
+    [clojure.edn :as edn]
     [clojure.java.classpath :as cp]
     [clojure.tools.namespace.find :as tn-find]
     [mount.core :as mount :refer [defstate]]
@@ -23,7 +23,10 @@
                         resolve
                         deref)
                      (plugins))
-          :main (:biff/config (util/deps))})
+          :main (-> "deps.edn"
+                  slurp
+                  edn/read-string
+                  :biff/config)})
 
 (defn -main []
   (mapv #(u/catchall (require %)) (plugins))

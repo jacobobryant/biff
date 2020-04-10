@@ -102,7 +102,7 @@
 
 (def config
   {:biff.http/route
-   ["/biff/auth"
+   ["/biff/auth" {:middleware [anti-forgery/wrap-anti-forgery]}
     ["" {:post login
          :get serve-login-page
          :name ::login}]

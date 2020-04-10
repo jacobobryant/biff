@@ -1,28 +1,38 @@
 (ns ^:biff biff.http
   (:require
-    [biff.http.handler :as handler]
-    [clojure.string :as str]
+    [biff.util :as bu]
     [immutant.web :as imm]
-    [mount.core :as mount :refer [defstate]]
+    [mount.core :refer [defstate]]
     [biff.core :as core]
-    [biff.util :as util]
-    [reitit.ring :as reitit]
-    [trident.util :as u]))
+    [reitit.ring :as reitit]))
 
 (defmulti handler ::ns)
-(defmethod handler :default
-  [req]
-  (handler/default-handler req))
+
+(defn make-default-handler [{:keys [main plugins]}]
+  (let [home (some :biff.http/home (conj (vals plugins) main))
+        routes (->> plugins
+                 vals
+                 (map :biff.http/route)
+                 (filterv some?)
+                 (into [["/" {:get (constantly {:status 302
+                                                :headers/Location home})
+                              :name ::home}]]))]
+    (bu/make-handler
+      {:debug core/debug
+       :routes routes
+       :cookie-path "data/biff.http/cookie-key"
+       :default-routes [(reitit/create-resource-handler {})]})))
 
 (defstate server
-  :start (let [{::keys [debug-server-name host->ns]} (:main core/config)
-               get-server-name (if (and core/debug debug-server-name)
-                                 (constantly debug-server-name)
-                                 :server-name)]
-           (imm/run #(->> %
-                       get-server-name
-                       (get host->ns)
-                       (assoc % ::ns)
-                       handler)
+  :start (let [{::keys [debug-ns host->ns]} (:main core/config)
+               get-ns (if (and core/debug debug-ns)
+                        (constantly debug-ns)
+                        #(-> % :server-name host->ns))
+               default-handler (make-default-handler core/config)]
+           (defmethod handler :default
+             [req]
+             (default-handler req))
+           (imm/run
+             (comp handler #(assoc % ::ns (get-ns %)))
              {:port 8080}))
   :stop (imm/stop server))

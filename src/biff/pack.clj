@@ -3,7 +3,7 @@
     [clj-http.client :as http]
     [clojure.string :as str]
     [biff.core :as core]
-    [biff.util :as util :refer [defmemo]]
+    [biff.util :as bu :refer [defmemo]]
     [rum.core :as rum :refer [defc]]
     [trident.util :as u])
   (:import [java.lang.management ManagementFactory]))
@@ -52,7 +52,7 @@
                          (map (juxt ::repo ::app-url))
                          (into {}))
         assoc-url #(assoc % :app-url (repo-name->url (:repo-name %)))]
-  (->> (util/deps)
+  (->> (bu/deps)
     :deps
     vals
     (filter ::user-package)
@@ -72,7 +72,7 @@
       (remove (comp installed-urls :url)))))
 
 (defn need-restart? []
-  (> (-> (util/deps)
+  (> (-> (bu/deps)
        :biff/config
        (::last-update #inst "1970")
        .getTime)
@@ -103,13 +103,13 @@
         (when app-url
           [:a.btn.btn-primary.mr-2.btn-sm {:href app-url} "Open"])
         [:form.mb-0 {:method "post"}
-         (util/csrf)
+         (bu/csrf)
          (hidden "action" "uninstall")
          (hidden "repo-name" repo-name)
          [:button.btn.btn-secondary.btn-sm {:type "submit"} "Uninstall"]]
         (when (not= sha latest-sha)
           [:form.mb-0.ml-2 {:method "post"}
-           (util/csrf)
+           (bu/csrf)
            (hidden "action" "update")
            (hidden "repo-name" repo-name)
            (hidden "latest-sha" latest-sha)
@@ -122,36 +122,36 @@
       [[:a {:href url :target "_blank"} repo-name]
        [:div description]
        [:form.mb-0 {:method "post"}
-        (util/csrf)
+        (bu/csrf)
         (hidden "action" "install")
         (hidden "repo-name" repo-name)
         (hidden "branch" branch)
         [:button.btn.btn-primary {:type "submit"} "Install"]]])))
 
 (defc pack-page [req]
-  [:html util/html-opts
-   (util/head "Biff Pack")
-   [:body util/body-opts
-    (util/navbar
+  [:html bu/html-opts
+   (bu/head "Biff Pack")
+   [:body bu/body-opts
+    (bu/navbar
       [:a.text-secondary {:href "/biff/auth/change-password"}
        "Change password"]
       [:.mr-3]
       [:form.form-inline.mb-0 {:method "post" :action "/biff/auth/logout"}
-       (util/csrf)
+       (bu/csrf)
        [:button.btn.btn-outline-secondary.btn-sm
-        (util/unsafe {:type "submit"} "Sign&nbsp;out")]])
+        (bu/unsafe {:type "submit"} "Sign&nbsp;out")]])
     [:.container-fluid.mt-3
      (when (need-restart?)
        [:.mb-3
         [:div "You must restart Biff for changes to take effect."]
         [:form.mb-0 {:method "post" :action "/biff/pack/restart"}
-         (util/csrf)
+         (bu/csrf)
          [:button.btn.btn-danger.btn-sm {:type "submit"} "Restart now"]]])
      (installed-packages-table)
      (available-packages-table)]]])
 
 (defn update-pkgs! [f & args]
-  (apply util/update-deps!
+  (apply bu/update-deps!
     (comp #(assoc-in % [:biff/config ::last-update] (java.util.Date.)) f)
     args))
 
@@ -166,11 +166,11 @@
       "update" (update-pkgs! assoc-in [:deps pkg-name :sha] latest-sha))))
 
 (defc restart-page [_]
-  [:html util/html-opts
-   (util/head {:title "Restarting Biff"}
+  [:html bu/html-opts
+   (bu/head {:title "Restarting Biff"}
      [:script {:src "/biff/pack/js/restart.js"}])
-   [:body util/body-opts
-    (util/navbar)
+   [:body bu/body-opts
+    (bu/navbar)
     [:.container-fluid.mt-3
      [:.d-flex.flex-column.align-items-center
       [:.spinner-border.text-primary {:role "status"}
@@ -183,7 +183,7 @@
     (Thread/sleep 500)
     (shutdown-agents)
     (System/exit 0))
-  (util/render restart-page nil))
+  (bu/render restart-page nil))
 
 (defn ping [_]
   {:status 200
@@ -196,9 +196,9 @@
    ["/biff/pack"
     ["/ping" {:get ping
               :name ::ping}]
-    ["" {:middleware [util/wrap-authorize]}
-     ["" {:get #(util/render pack-page %)
-          :post #(util/render pack-page (doto % handle-action))
+    ["" {:middleware [bu/wrap-authorize]}
+     ["" {:get #(bu/render pack-page %)
+          :post #(bu/render pack-page (doto % handle-action))
           :name ::pack}]
      ["/restart" {:post restart-biff
                   :name ::restart}]]]})
