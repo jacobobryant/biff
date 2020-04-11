@@ -8,6 +8,7 @@
     [clojure.core.memoize :as memo]
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [muuntaja.middleware :as muuntaja]
     [reitit.ring :as reitit]
     [ring.middleware.not-modified :refer [wrap-not-modified]]
     [ring.middleware.content-type :refer [wrap-content-type]]
@@ -172,6 +173,7 @@
         (reitit/router routes)
         (apply reitit/routes default-handlers))
       wrap-nice-response
+      muuntaja/wrap-format
       (rd/wrap-defaults (ring-settings debug cookie-key)))))
 
 ; you could say that rum is one of our main exports
@@ -230,10 +232,12 @@
     :value (force anti-forgery/*anti-forgery-token*)}])
 
 (defn wrap-sente-handler [handler]
-  (fn [{:keys [?data ?reply-fn] :as event}]
+  (fn [{:keys [uid ?data ?reply-fn] :as event}]
     (some->>
       (with-out-str
-        (let [event (merge event (get-in event [:ring-req :session]))
+        (let [event (-> event
+                      (set/rename-keys {:uid :sente-uid})
+                      (merge (get-in event [:ring-req :session])))
               response (try
                          (handler event ?data)
                          (catch Exception e

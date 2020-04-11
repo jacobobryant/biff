@@ -6,6 +6,7 @@
   cheshire {:mvn/version "5.10.0"}
   clj-http {:mvn/version "3.10.0"}
   crypto-password {:mvn/version "0.2.1"}
+  metosin/muuntaja {:mvn/version "0.6.6"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
   org.clojure/java.classpath {:mvn/version "1.0.0"}
