@@ -1,5 +1,8 @@
 (ns biff.util
   (:require
+    [crux.api :as crux]
+    [clojure.spec.alpha :as s]
+    [clojure.walk :as walk]
     [cemerick.url :as url]
     [clojure.set :as set]
     [ring.middleware.defaults :as rd]
@@ -271,3 +274,95 @@
     (throw (ex-info "Attempted to merge duplicate keys"
              {:keys shared-keys}))
     (apply merge ms)))
+
+(defn only-keys [& {:keys [req opt req-un opt-un]}]
+  (let [all-keys (->> (concat req-un opt-un)
+                   (map (comp keyword name))
+                   (concat req opt))]
+    (s/and #(= % (select-keys % all-keys))
+      (eval `(s/keys :req ~req :opt ~opt :req-un ~req-un :opt-un ~opt-un)))))
+
+(defmacro sdefs [& forms]
+  `(do
+     ~@(for [form (partition 2 forms)]
+         `(s/def ~@form))))
+
+(defn prep-doc [{:keys [db rules]}
+                [[table id] {merge-doc :db/merge update-doc :db/update :as doc}]]
+  (let [generated-id (nil? id)
+        merge-update (or merge-doc update-doc)
+        _ (when (and generated-id merge-update)
+            (throw (ex-info "Attempted to merge or update on a new document."
+                     {:doc doc
+                      :ident [table id]})))
+        id (or id (java.util.UUID/randomUUID))
+        old-doc (crux/entity db id)
+        doc (if merge-update
+              (do
+                (when (and update-doc (nil? old-doc))
+                  (throw (ex-info "Attempted to update on a new document."
+                           {:doc doc
+                            :ident [table id]})))
+                (merge old-doc doc))
+              doc)
+        doc (when (some? doc)
+              (->>
+                (when (map? id) (keys id))
+                (concat [:db/merge :db/update :db.crux/id])
+                (apply dissoc doc)
+                (remove (comp #{:db/remove} second))
+                (into {})))]
+    (when (and (some? doc)
+            (some not
+              (map s/valid?
+                (get-in rules [table :spec])
+                [id doc])))
+      (throw (ex-info "Document doesn't meet spec."
+               {:doc doc
+                :ident [table id]})))
+    [[table id] {:table table
+                 :id id
+                 :generated-id generated-id
+                 :old-doc old-doc
+                 :doc (cond-> (assoc doc :crux.db/id id)
+                        (map? id) (merge id))
+                 :op (cond
+                       (nil? doc) :delete
+                       (nil? old-doc) :create
+                       :default :update)}]))
+
+(defn authorize-doc [{:keys [rules] :as env} {:keys [table op] :as doc-tx-data}]
+  (let [auth-fn (get-in rules [table op])
+        _ (when (nil? auth-fn)
+            (throw (ex-info "No auth function." doc-tx-data)))
+        result (auth-fn (merge env doc-tx-data))]
+    (when-not result
+      (throw (ex-info "Document rejected."
+               doc-tx-data)))
+    (cond-> doc-tx-data
+      (map? result) (merge result))))
+
+(sdefs
+  ::ident (s/cat :table keyword? :id (s/? any?))
+  ::tx (s/map-of ::ident map?))
+
+(defn authorize [{:keys [tx] :as env}]
+  (when-not (s/valid? ::tx tx)
+    (ex-info "Invalid transaction shape."
+      {:tx tx}))
+  (let [current-time (java.util.Date.)
+        tx (->> tx
+             (walk/postwalk
+               #(case %
+                  :db/current-time current-time
+                  %))
+             (map #(prep-doc env %))
+             (into {}))
+        env (assoc env :tx tx :current-time current-time)
+        auth-result (mapv #(authorize-doc env (second %)) tx)
+        crux-tx (for [{:keys [op cas old-doc doc id]} auth-result]
+                  (cond
+                    cas            [:crux.tx/cas old-doc doc]
+                    (= op :delete) [:crux.tx/delete id]
+                    :default       [:crux.tx/put doc]))]
+    crux-tx))
