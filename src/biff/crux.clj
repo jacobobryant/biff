@@ -8,7 +8,8 @@
 
 (defn start-standalone-node ^crux.api.ICruxAPI [storage-dir]
   (crux/start-node {:crux.node/topology '[crux.standalone/topology
-                                          crux.kv.rocksdb/kv-store]
+                                          ;crux.kv.rocksdb/kv-store
+                                          ]
                     :crux.kv/db-dir (str (io/file storage-dir "db"))}))
 
 (defstate node
