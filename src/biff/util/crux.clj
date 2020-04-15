@@ -104,52 +104,6 @@
       {:where where}
       :args (dissoc args 'doc))))
 
-(defn subscribe-data
-  [{:keys [uid db fn-whitelist]} {:keys [table] :as query}]
-  (let [fn-whitelist (into #{= not= < > <= >= == !=} fn-whitelist)
-        {:keys [where id args] :as query} (normalize-query query)
-        authorized (not (some #(or (attr-clause? %) (fn-whitelist (ffirst %)))))
-        docs (cond
-               (not authorized) nil
-               (some? id) (some-> (crux/entity db id) vector)
-               (map #(crux/entity db (first %))
-                 (crux/q db
-                   {:find '[doc]
-                    :where (map #(cond->> %
-                                   (attr-clause? %) (into ['doc]))
-                             where)
-                    :args [args]})))
-        authorized (and authorized
-                     (u/for-every? [d docs]
-                       (not= :unauthorized
-                         (authorize-read
-                           (merge env
-                             {:table table
-                              :doc d
-                              :query query})))))
-        changeset (u/map-from
-                    (fn [{:crux.db/keys [id]}]
-                      [table id])
-                    docs)]
-    (when authorized
-      {:query query
-       :sub-data {:query (assoc query :table table)
-                  :changeset changeset}})))
-
-(defn crux-subscribe!
-  [{:keys [api-send subscriptions client-id uid] :as env} {:keys [table] :as query}]
-  (let [{:keys [query sub-data]} (subscribe-data env query)
-        authorized (boolean sub-data)]
-    (when authorized
-      (swap! subscriptions assoc-in [client-id query] {:table table
-                                                       :uid uid})
-      (api-send client-id [:findka/sub sub-data])
-      true)))
-
-(defn crux-unsubscribe!
-  [{:keys [subscriptions client-id uid]} query]
-  (swap! subscriptions update client-id dissoc (normalize-query query)))
-
 (defn crux== [& args]
   (let [[colls xs] (u/split-by coll? args)
         sets (map set colls)]
@@ -209,11 +163,58 @@
         specs (get-in rules [table :spec])]
     (if (and
           (some? auth-fn)
-          (some? spec)
+          (some? specs)
           (every? s/valid? specs [id auth-doc])
           (u/catchall (auth-fn {:db db :doc doc :auth-uid uid})))
       doc
       :unauthorized)))
+
+(defn subscribe-data
+  [{:keys [uid db fn-whitelist] :as env} {:keys [table] :as query}]
+  (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
+        {:keys [where id args] :as query} (normalize-query query)
+        authorized (not (some #(or (attr-clause? %) (fn-whitelist (ffirst %)))))
+        docs (cond
+               (not authorized) nil
+               (some? id) (some-> (crux/entity db id) vector)
+               :default (map #(crux/entity db (first %))
+                          (crux/q db
+                            {:find '[doc]
+                             :where (map #(cond->> %
+                                            (attr-clause? %) (into ['doc]))
+                                      where)
+                             :args [args]})))
+        authorized (and authorized
+                     (u/for-every? [d docs]
+                       (not= :unauthorized
+                         (authorize-read
+                           (merge env
+                             {:table table
+                              :doc d
+                              :query query})))))
+        changeset (u/map-from
+                    (fn [{:crux.db/keys [id]}]
+                      [table id])
+                    docs)]
+    (when authorized
+      {:query query
+       :sub-data {:query (assoc query :table table)
+                  :changeset changeset}})))
+
+(defn crux-subscribe!
+  [{:keys [api-send subscriptions client-id uid] :as env} {:keys [table] :as query}]
+  (let [{:keys [query sub-data]} (subscribe-data env query)
+        authorized (boolean sub-data)]
+    (when authorized
+      (swap! subscriptions assoc-in [client-id query] {:table table
+                                                       :uid uid})
+      (api-send client-id [:findka/sub sub-data])
+      true)))
+
+(defn crux-unsubscribe!
+  [{:keys [subscriptions client-id uid]} query]
+  (swap! subscriptions update client-id dissoc (normalize-query query)))
+
 
 (defn changeset [{:keys [db-after bypass-auth query id->change] :as env}]
   (->> id->change
@@ -256,12 +257,13 @@
     {}
     @subscriptions))
 
-(defn tx-log [{:keys [node after-tx with-ops]}]
+(defn tx-log [{:keys [node after-tx with-ops]
+               :or {after-tx nil with-ops false}}]
   (iterator-seq (crux/open-tx-log node after-tx with-ops)))
 
 (defn notify-subscribers [{:keys [node client-id last-tx-id tx] :as env}]
-  (crux/await-tx tx)
-  (and (crux/tx-committed? node)
+  (crux/await-tx node tx)
+  (and (crux/tx-committed? node tx)
     (let [txes (take 20 (tx-log {:node node
                                  :after-tx @last-tx-id}))
           tx-time-before (-> txes

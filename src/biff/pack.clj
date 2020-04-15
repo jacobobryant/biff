@@ -4,6 +4,8 @@
     [clojure.string :as str]
     [biff.core :as core]
     [biff.util :as bu :refer [defmemo]]
+    [biff.util.static :as bu-static]
+    [biff.util.http :as bu-http]
     [rum.core :as rum :refer [defc]]
     [trident.util :as u])
   (:import [java.lang.management ManagementFactory]))
@@ -103,13 +105,13 @@
         (when app-url
           [:a.btn.btn-primary.mr-2.btn-sm {:href app-url} "Open"])
         [:form.mb-0 {:method "post"}
-         (bu/csrf)
+         (bu-static/csrf)
          (hidden "action" "uninstall")
          (hidden "repo-name" repo-name)
          [:button.btn.btn-secondary.btn-sm {:type "submit"} "Uninstall"]]
         (when (not= sha latest-sha)
           [:form.mb-0.ml-2 {:method "post"}
-           (bu/csrf)
+           (bu-static/csrf)
            (hidden "action" "update")
            (hidden "repo-name" repo-name)
            (hidden "latest-sha" latest-sha)
@@ -122,30 +124,30 @@
       [[:a {:href url :target "_blank"} repo-name]
        [:div description]
        [:form.mb-0 {:method "post"}
-        (bu/csrf)
+        (bu-static/csrf)
         (hidden "action" "install")
         (hidden "repo-name" repo-name)
         (hidden "branch" branch)
         [:button.btn.btn-primary {:type "submit"} "Install"]]])))
 
 (defc pack-page [req]
-  [:html bu/html-opts
-   (bu/head "Biff Pack")
-   [:body bu/body-opts
-    (bu/navbar
+  [:html bu-static/html-opts
+   (bu-static/head "Biff Pack")
+   [:body bu-static/body-opts
+    (bu-static/navbar
       [:a.text-secondary {:href "/biff/auth/change-password"}
        "Change password"]
       [:.mr-3]
       [:form.form-inline.mb-0 {:method "post" :action "/biff/auth/logout"}
-       (bu/csrf)
+       (bu-static/csrf)
        [:button.btn.btn-outline-secondary.btn-sm
-        (bu/unsafe {:type "submit"} "Sign&nbsp;out")]])
+        (bu-static/unsafe {:type "submit"} "Sign&nbsp;out")]])
     [:.container-fluid.mt-3
      (when (need-restart?)
        [:.mb-3
         [:div "You must restart Biff for changes to take effect."]
         [:form.mb-0 {:method "post" :action "/biff/pack/restart"}
-         (bu/csrf)
+         (bu-static/csrf)
          [:button.btn.btn-danger.btn-sm {:type "submit"} "Restart now"]]])
      (installed-packages-table)
      (available-packages-table)]]])
@@ -166,11 +168,11 @@
       "update" (update-pkgs! assoc-in [:deps pkg-name :sha] latest-sha))))
 
 (defc restart-page [_]
-  [:html bu/html-opts
-   (bu/head {:title "Restarting Biff"}
+  [:html bu-static/html-opts
+   (bu-static/head {:title "Restarting Biff"}
      [:script {:src "/biff/pack/js/restart.js"}])
-   [:body bu/body-opts
-    (bu/navbar)
+   [:body bu-static/body-opts
+    (bu-static/navbar)
     [:.container-fluid.mt-3
      [:.d-flex.flex-column.align-items-center
       [:.spinner-border.text-primary {:role "status"}
@@ -183,7 +185,7 @@
     (Thread/sleep 500)
     (shutdown-agents)
     (System/exit 0))
-  (bu/render restart-page nil))
+  (bu-static/render restart-page nil))
 
 (defn ping [_]
   {:status 200
@@ -196,9 +198,9 @@
    ["/biff/pack"
     ["/ping" {:get ping
               :name ::ping}]
-    ["" {:middleware [bu/wrap-authorize]}
-     ["" {:get #(bu/render pack-page %)
-          :post #(bu/render pack-page (doto % handle-action))
+    ["" {:middleware [bu-http/wrap-authorize-admin]}
+     ["" {:get #(bu-static/render pack-page %)
+          :post #(bu-static/render pack-page (doto % handle-action))
           :name ::pack}]
      ["/restart" {:post restart-biff
                   :name ::restart}]]]})

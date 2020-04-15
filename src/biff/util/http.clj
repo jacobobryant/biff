@@ -1,4 +1,24 @@
-(ns biff.util.http)
+(ns biff.util.http
+  (:require
+    [biff.util :as bu]
+    [cemerick.url :as url]
+    [ring.middleware.head :as head]
+    [trident.util :as u]
+    [ring.util.time :as rtime]
+    [ring.util.io :as rio]
+    [clojure.string :as str]
+    [ring.util.codec :as codec]
+    [ring.util.request :as request]
+    [clojure.java.io :as io]
+    [ring.middleware.defaults :as rd]
+    [ring.middleware.session.cookie :as cookie]
+    [reitit.ring :as reitit]
+    [muuntaja.middleware :as muuntaja]
+    [rum.core :as rum]
+    [clojure.set :as set]
+    [taoensso.sente :as sente]
+    [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
+    [ring.middleware.anti-forgery :as anti-forgery]))
 
 (defn wrap-authorize-admin [handler]
   (anti-forgery/wrap-anti-forgery
@@ -44,14 +64,13 @@
   (when resp
     (-> {:body "" :status 200}
       (merge resp)
-      (nest-keys [:headers :cookies]))))
+      (bu/nest-string-keys [:headers :cookies]))))
 
 (defn wrap-nice-response [handler]
   (comp nice-response handler))
 
-(defn make-handler [{:keys [root debug routes cookie-path default-routes]
-                     ckey :cookie-key}]
-  (let [cookie-key (or ckey (some-> cookie-path cookie-key))
+(defn make-handler [{:keys [root debug routes cookie-path default-routes cookie-key]}]
+  (let [cookie-key (or cookie-key (some-> cookie-path bu/cookie-key))
         not-found #(file-response % (io/file (str root "/404.html")))
         default-handlers (->> [(when debug
                                  (file-handler "www-dev"))
@@ -68,45 +87,6 @@
       wrap-nice-response
       muuntaja/wrap-format
       (rd/wrap-defaults (ring-settings debug cookie-key)))))
-
-(defn render [component opts]
-  {:status 200
-   :body (rum/render-static-markup (component opts))
-   :headers {"Content-Type" "text/html"}})
-
-(def html-opts
-  {:lang "en-US"
-   :style {:min-height "100%"}})
-
-(def body-opts {:style {:font-family "'Helvetica Neue', Helvetica, Arial, sans-serif"}})
-
-(defn head [{:keys [title]} & contents]
-  (into
-    [:head
-     [:title title]
-     [:meta {:charset "utf-8"}]
-     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-     [:link
-      {:crossorigin "anonymous"
-       :integrity "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-       :href "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-       :rel "stylesheet"}]]
-    contents))
-
-(defn navbar [& contents]
-  [:nav.navbar.navbar-light.bg-light.align-items-center
-   [:a {:href "/"} [:.navbar-brand "Biff"]]
-   [:.flex-grow-1]
-   contents])
-
-(defn unsafe [m html]
-  (assoc m :dangerouslySetInnerHTML {:__html html}))
-
-(defn csrf []
-  [:input#__anti-forgery-token
-   {:name "__anti-forgery-token"
-    :type "hidden"
-    :value (force anti-forgery/*anti-forgery-token*)}])
 
 (defn wrap-sente-handler [handler]
   (fn [{:keys [uid ?data ?reply-fn] :as event}]

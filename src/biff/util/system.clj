@@ -3,14 +3,16 @@
     [biff.util :as bu]
     [biff.util.crux :as bu-crux]
     [biff.util.http :as bu-http]
+    [biff.util.static :as bu-static]
     [biff.core :as core]
+    [clojure.java.io :as io]
     [crux.api :as crux]
     [clojure.set :as set]))
 
 (defn write-static-resources [{:keys [static-pages biff-config app-namespace]}]
   (let [static-root (bu/root biff-config app-namespace)]
-    (bu/export-rum pages static-root)
-    (bu/copy-resources (str "www/" app-namespace) static-root)
+    (bu-static/export-rum static-pages static-root)
+    (bu-static/copy-resources (str "www/" app-namespace) static-root)
     {:static-root static-root}))
 
 (defn start-crux [{:keys [storage-dir subscriptions]}]
@@ -65,7 +67,7 @@
         {:keys [reitit-route
                 close-router
                 api-send
-                connected-uids]} (bu/init-sente
+                connected-uids]} (bu-http/init-sente
                                    {:route-name ::chsk
                                     :handler (wrap-env event-handler env)})
         routes [["" {:middleware [[wrap-env env]]}

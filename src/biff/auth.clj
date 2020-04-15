@@ -1,25 +1,26 @@
 (ns ^:biff biff.auth
   (:require
     [ring.middleware.anti-forgery :as anti-forgery]
-    [biff.util :as util]
+    [biff.util :as bu]
+    [biff.util.static :as bu-static]
     [crypto.password.bcrypt :as pw]
     [rum.core :as rum :refer [defc]]))
 
 (defc login-page [{:keys [logged-in password-incorrect]}]
-  [:html util/html-opts
-   (util/head {:title "Login to Biff"})
-   [:body util/body-opts
-    (util/navbar)
+  [:html bu-static/html-opts
+   (bu-static/head {:title "Login to Biff"})
+   [:body bu-static/body-opts
+    (bu-static/navbar)
     [:.d-flex.flex-column.align-items-center.justify-content-center
      {:style {:height "70vh"}}
      (if logged-in
        [:form {:action "/biff/auth/logout" :method "post"}
-        (util/csrf)
+        (bu-static/csrf)
         [:p.text-center "Signed in as admin."]
         [:button.btn.btn-secondary.btn-block
-         (util/unsafe {:type "submit"} "Sign&nbsp;out")]]
+         (bu-static/unsafe {:type "submit"} "Sign&nbsp;out")]]
        [:form {:method "post"}
-        (util/csrf)
+        (bu-static/csrf)
         (if password-incorrect
           [:p.text-danger.text-center "Incorrect password."]
           [:p.text-center "Sign in as admin."])
@@ -29,16 +30,16 @@
                               :placeholder "Password"}]
         [:.mb-3]
         [:button.btn.btn-primary.btn-block
-         (util/unsafe {:type "submit"} "Sign&nbsp;in")]])]]])
+         (bu-static/unsafe {:type "submit"} "Sign&nbsp;in")]])]]])
 
 (defn serve-login-page [req]
-  (util/render login-page
+  (bu-static/render login-page
     {:logged-in (-> req :session :admin)}))
 
 (defn login [{:keys [session params] :as req}]
   (let [next-url (:next params)
         password (:password params)
-        correct (->> (util/deps)
+        correct (->> (bu/deps)
                   :biff/config
                   ::password-hash
                   (pw/check password))]
@@ -48,7 +49,7 @@
        :cookies {"csrf" {:value (force anti-forgery/*anti-forgery-token*)}}
        :session (assoc session :admin true)
        :body ""}
-      (util/render login-page
+      (bu-static/render login-page
         {:logged-in (:admin session)
          :password-incorrect true}))))
 
@@ -60,10 +61,10 @@
    :body ""})
 
 (defc change-password-page [{:keys [success]}]
-  [:html util/html-opts
-   (util/head {:title "Change password | Biff"})
-   [:body util/body-opts
-    (util/navbar)
+  [:html bu-static/html-opts
+   (bu-static/head {:title "Change password | Biff"})
+   [:body bu-static/body-opts
+    (bu-static/navbar)
     [:.container-fluid.mt-3
      [:.d-flex.flex-column.align-items-center
       [:div
@@ -72,7 +73,7 @@
          false [:p.text-danger "Invalid input."]
          nil)
        [:form {:method "post"}
-        (util/csrf)
+        (bu-static/csrf)
         [:.form-group.mb-2
          [:label.mb-0 {:for "password"} "Current password:"]
          [:input#password.form-control {:name "password"
@@ -88,16 +89,16 @@
         [:button.btn.btn-primary.btn-block {:type "submit"} "Change password"]]]]]]])
 
 (defn change-password [{{:keys [password newpassword confirmpassword]} :params}]
-  (let [success (and (->> (util/deps)
+  (let [success (and (->> (bu/deps)
                        :biff/config
                        ::password-hash
                        (pw/check password))
                   (= newpassword confirmpassword)
                   (not-empty newpassword))]
     (when success
-      (util/update-deps! assoc-in [:biff/config ::password-hash]
+      (bu/update-deps! assoc-in [:biff/config ::password-hash]
         (pw/encrypt newpassword)))
-    (util/render change-password-page
+    (bu-static/render change-password-page
       {:success (boolean success)})))
 
 (def config
@@ -108,6 +109,6 @@
          :name ::login}]
     ["/logout" {:post logout
                 :name ::logout}]
-    ["/change-password" {:get #(util/render change-password-page %)
+    ["/change-password" {:get #(bu-static/render change-password-page %)
                          :post change-password
                          :name ::change-password}]]})

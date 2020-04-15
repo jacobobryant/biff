@@ -16,7 +16,6 @@
     [reitit.ring :as reitit]
     [ring.middleware.not-modified :refer [wrap-not-modified]]
     [ring.middleware.content-type :refer [wrap-content-type]]
-    [ring.middleware.head :as head]
     [ring.util.io :as rio]
     [crypto.random :as random]
     [byte-transforms :as bt]
