@@ -1,18 +1,23 @@
 (ns biff.util.crux
   (:require
     [biff.util :as bu]
+    [cognitect.anomalies :as anom]
     [clojure.java.io :as io]
     [clojure.spec.alpha :as s]
     [clojure.walk :as walk]
     [clojure.set :as set]
     [crux.api :as crux]
+    [orchestra.core :refer [defn-spec]]
     [trident.util :as u]))
 
 (defn start-node ^crux.api.ICruxAPI [{:keys [storage-dir persist]
                                       :or {persist true}}]
   (crux/start-node {:crux.node/topology (cond-> '[crux.standalone/topology]
                                           persist (conj 'crux.kv.rocksdb/kv-store))
-                    :crux.kv/db-dir (str (io/file storage-dir))}))
+                    :crux.kv/db-dir (str (io/file storage-dir "db"))
+                    :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
+                    :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv
+                    :crux.kv/sync? true}))
 
 (bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
@@ -22,77 +27,82 @@
                 [[table id] {merge-doc :db/merge update-doc :db/update :as doc}]]
   (let [generated-id (nil? id)
         merge-update (or merge-doc update-doc)
-        _ (when (and generated-id merge-update)
-            (throw (ex-info "Attempted to merge or update on a new document."
-                     {:doc doc
-                      :ident [table id]})))
-        id (or id (java.util.UUID/randomUUID))
-        old-doc (crux/entity db id)
-        doc (if merge-update
-              (do
-                (when (and update-doc (nil? old-doc))
-                  (throw (ex-info "Attempted to update on a new document."
-                           {:doc doc
-                            :ident [table id]})))
-                (merge old-doc doc))
-              doc)
-        doc (when (some? doc)
-              (->>
-                (when (map? id) (keys id))
-                (concat [:db/merge :db/update :db.crux/id])
-                (apply dissoc doc)
-                (remove (comp #{:db/remove} second))
-                (into {})))]
-    (when (and (some? doc)
-            (some not
-              (map s/valid?
-                (get-in rules [table :spec])
-                [id doc])))
-      (throw (ex-info "Document doesn't meet spec."
-               {:doc doc
-                :ident [table id]})))
-    [[table id] {:table table
-                 :id id
-                 :generated-id generated-id
-                 :old-doc old-doc
-                 :doc (cond-> (assoc doc :crux.db/id id)
-                        (map? id) (merge id))
-                 :op (cond
-                       (nil? doc) :delete
-                       (nil? old-doc) :create
-                       :default :update)}]))
+        id' (or id (java.util.UUID/randomUUID))
+        old-doc (crux/entity db id')
+        doc' (cond->> doc
+               merge-update (merge old-doc))
+        doc'' (when (some? doc')
+                (->>
+                  (when (map? id') (keys id'))
+                  (concat [:db/merge :db/update :crux.db/id])
+                  (apply dissoc doc')
+                  (remove (comp #{:db/remove} second))
+                  (into {})))]
+    (cond
+      (and generated-id merge-update)
+      (bu/anom :incorrect "Attempted to merge or update on a new document."
+        :doc doc
+        :ident [table id])
 
-(defn authorize-write [{:keys [rules] :as env} {:keys [table op] :as doc-tx-data}]
-  (let [auth-fn (get-in rules [table op])
-        _ (when (nil? auth-fn)
-            (throw (ex-info "No auth function." doc-tx-data)))
-        result (auth-fn (merge env doc-tx-data))]
-    (when-not result
-      (throw (ex-info "Document rejected."
-               doc-tx-data)))
-    (cond-> doc-tx-data
-      (map? result) (merge result))))
+      (and update-doc (nil? old-doc))
+      (bu/anom :incorrect "Attempted to update on a new document."
+        :doc doc
+        :ident [table id'])
 
-(defn authorize-tx [{:keys [tx] :as env}]
-  (when-not (s/valid? ::tx tx)
-    (ex-info "Invalid transaction shape."
-      {:tx tx}))
-  (let [current-time (java.util.Date.)
-        tx (->> tx
-             (walk/postwalk
-               #(case %
-                  :db/current-time current-time
-                  %))
-             (map #(prep-doc env %))
-             (into {}))
-        env (assoc env :tx tx :current-time current-time)
-        auth-result (mapv #(authorize-write env (second %)) tx)
-        crux-tx (for [{:keys [op cas old-doc doc id]} auth-result]
-                  (cond
-                    cas            [:crux.tx/cas old-doc doc]
-                    (= op :delete) [:crux.tx/delete id]
-                    :default       [:crux.tx/put doc]))]
-    crux-tx))
+      (and (some? doc'')
+        (some not
+          (map s/valid?
+            (get-in rules [table :spec])
+            [id' doc''])))
+      (bu/anom :incorrect "Document doesn't meet spec."
+        :doc doc''
+        :ident [table id'])
+
+      :default
+      [[table id'] {:table table
+                    :id id'
+                    :generated-id generated-id
+                    :old-doc old-doc
+                    :doc (cond-> (assoc doc'' :crux.db/id id')
+                           (map? id') (merge id'))
+                    :op (cond
+                          (nil? doc'') :delete
+                          (nil? old-doc) :create
+                          :default :update)}])))
+
+(defn authorize-write [{:keys [rules] :as env}
+                       {:keys [table op] :as doc-tx-data}]
+  (bu/letdelay [auth-fn (get-in rules [table op])
+                result (auth-fn (merge env doc-tx-data))]
+    (merge doc-tx-data
+      (cond
+        (nil? auth-fn) (bu/anom :forbidden "No auth function.")
+        (not result) (bu/anom :forbidden "Document rejected.")
+        :default (when (map? result) result)))))
+
+(defn authorize-tx [{:keys [tx current-time] :as env
+                     :or {current-time (java.util.Date.)}}]
+  (if-not (s/valid? ::tx tx)
+    (bu/anom :incorrect "Invalid transaction shape."
+      :tx tx)
+    (bu/letdelay [tx* (->> tx
+                        (walk/postwalk
+                          #(case %
+                             :db/current-time current-time
+                             %))
+                        (map #(prep-doc env %)))
+                  tx (into {} tx*)
+                  env (assoc env :tx tx :current-time current-time)
+                  auth-result (mapv #(authorize-write env (second %)) tx)
+                  crux-tx (u/forv [{:keys [op cas old-doc doc id]} auth-result]
+                            (cond
+                              cas            [:crux.tx/cas old-doc doc]
+                              (= op :delete) [:crux.tx/delete id]
+                              :default       [:crux.tx/put doc]))]
+      (or
+        (first (filter bu/anomaly? tx*))
+        (first (filter bu/anomaly? auth-result))
+        crux-tx))))
 
 (defn attr-clause? [clause]
   (not (coll? (first clause))))
@@ -115,10 +125,9 @@
 (defn crux!= [& args]
   (not (apply crux== args)))
 
-; todo fix cardinality-many attr handling
-; maybe just spin up a temp crux db
 (defn query-contains? [{:keys [id where args]} doc]
-  (or (= id (:crux.db/id doc))
+  (if (some? id)
+    (= id (:crux.db/id doc))
     (let [where (walk/postwalk #(get args % %) where)
           [attr-clauses rule-clauses] (u/split-by (comp keyword? first) where)
           [binding-clauses constant-clauses] (u/split-by (comp symbol? second) attr-clauses)
@@ -155,68 +164,75 @@
                      :get
                      :query)
         id (:crux.db/id doc)
-        auth-doc (if (map? id)
-                   (apply dissoc doc (keys id))
-                   doc)
-        auth-doc (dissoc auth-doc :crux.db/id)
+        spec-doc (apply dissoc doc
+                   (cond-> [:crux.db/id]
+                     (map? id) (concat (keys id))))
         auth-fn (get-in rules [table query-type])
         specs (get-in rules [table :spec])]
     (if (and
           (some? auth-fn)
           (some? specs)
-          (every? s/valid? specs [id auth-doc])
+          (every? true? (map s/valid? specs [id spec-doc]))
           (u/catchall (auth-fn {:db db :doc doc :auth-uid uid})))
       doc
-      :unauthorized)))
+      (bu/anom :forbidden))))
 
-(defn subscribe-data
-  [{:keys [uid db fn-whitelist] :as env} {:keys [table] :as query}]
+(defn crux-subscribe*
+  [{:keys [db fn-whitelist uid event-id] :as env} {:keys [table] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
-        {:keys [where id args] :as query} (normalize-query query)
-        authorized (not (some #(or (attr-clause? %) (fn-whitelist (ffirst %)))))
-        docs (cond
-               (not authorized) nil
-               (some? id) (some-> (crux/entity db id) vector)
-               :default (map #(crux/entity db (first %))
-                          (crux/q db
-                            {:find '[doc]
-                             :where (map #(cond->> %
-                                            (attr-clause? %) (into ['doc]))
-                                      where)
-                             :args [args]})))
-        authorized (and authorized
-                     (u/for-every? [d docs]
-                       (not= :unauthorized
-                         (authorize-read
-                           (merge env
-                             {:table table
-                              :doc d
-                              :query query})))))
-        changeset (u/map-from
-                    (fn [{:crux.db/keys [id]}]
-                      [table id])
-                    docs)]
-    (when authorized
-      {:query query
-       :sub-data {:query (assoc query :table table)
-                  :changeset changeset}})))
+        {:keys [where id args] :as norm-query} (normalize-query query)]
+    (bu/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
+                  crux-query (cond->
+                               {:find '[doc]
+                                :where (mapv #(cond->> %
+                                                (attr-clause? %) (into ['doc]))
+                                         where)}
+                               args (assoc :args [args]))
+                  docs (if (some? id)
+                         (some-> (crux/entity db id) vector)
+                         (map #(crux/entity db (first %))
+                           (crux/q db crux-query)))
+                  docs-authorized (u/for-every? [d docs]
+                                    (->>
+                                      {:table table
+                                       :doc d
+                                       :query norm-query}
+                                      (merge env)
+                                      authorize-read
+                                      bu/anomaly?
+                                      not))
+                  changeset (u/map-from
+                              (fn [{:crux.db/keys [id]}]
+                                [table id])
+                              docs)]
+      (cond
+        (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
+                                                       :query query)
+        (not fns-authorized) (bu/anom :forbidden "Function call not allowed."
+                               :where where)
+        (not docs-authorized) (bu/anom :forbidden "Document read not allowed."
+                                :docs docs)
+        :default {:norm-query norm-query
+                  :query-info {:table table
+                               :event-id event-id
+                               :uid uid}
+                  :sub-data {:query query
+                             :changeset changeset}}))))
 
 (defn crux-subscribe!
-  [{:keys [api-send subscriptions client-id uid] :as env} {:keys [table] :as query}]
-  (let [{:keys [query sub-data]} (subscribe-data env query)
-        authorized (boolean sub-data)]
-    (when authorized
-      (swap! subscriptions assoc-in [client-id query] {:table table
-                                                       :uid uid})
-      (api-send client-id [:findka/sub sub-data])
-      true)))
+  [{:keys [api-send subscriptions client-id event-id] :as env} query]
+  (let [{:keys [norm-query query-info sub-data] :as result} (crux-subscribe* env query)]
+    (if-not (bu/anomaly? result)
+      (do
+        (swap! subscriptions assoc-in [client-id norm-query] query-info)
+        (api-send client-id [event-id sub-data]))
+      result)))
 
 (defn crux-unsubscribe!
   [{:keys [subscriptions client-id uid]} query]
   (swap! subscriptions update client-id dissoc (normalize-query query)))
 
-
-(defn changeset [{:keys [db-after bypass-auth query id->change] :as env}]
+(defn get-id->doc [{:keys [db-after bypass-auth query id->change] :as env}]
   (->> id->change
     (u/map-vals
       (fn [change]
@@ -225,67 +241,400 @@
                    (query-contains? query %))
              %)
           change)))
-    (remove (comp #(= %1 %2) second))
+    (remove (comp (fn [[a b]] (= a b)) second))
     (u/map-vals (comp #(if bypass-auth
                          %
                          (authorize-read (assoc env :doc % :db db-after)))
                   second))))
 
-; todo make sure there aren't race conditions for subscribing and receiving updates
-; make this functional
-; spec env
-(defn send-changesets [{:keys [api-send uid client-id subscriptions] :as env}]
-  (reduce (fn [query->id->doc [client-id query->info]]
-            (let [queries (keys query->info)
-                  query->id->doc (->> queries
-                                   (remove query->id->doc)
-                                   (u/map-to #(changeset (merge (query->info %) env {:query %})))
-                                   (merge query->id->doc))]
-              (doseq [q queries
-                      :let [id->doc (query->id->doc q)
-                            unauthorized (= id->doc :unauthorized)
-                            {:keys [table]} (query->info q)
-                            changeset (delay (u/map-keys #(vector table %) id->doc))]
-                      :when (or unauthorized (not-empty id->doc))]
-                (if unauthorized
-                  (do
-                    (swap! subscriptions update client-id dissoc q)
-                    (u/pprint [:unauthorized-subscription uid client-id q]))
-                  (api-send client-id [:findka/sub {:query (assoc q :table table)
-                                                    :changeset @changeset}])))
-              query->id->doc))
-    {}
-    @subscriptions))
+; todo fix race conditions for subscribing and receiving updates
+(defn changesets* [{:keys [subscriptions] :as env}]
+  ((fn step [{:keys [query->id->doc subscriptions]}]
+     (let [[[client-id query->info] & subscriptions] subscriptions
+           queries (keys query->info)
+           query->id->doc (->> queries
+                            (remove query->id->doc)
+                            (u/map-to #(get-id->doc (merge (query->info %) env {:query %})))
+                            (merge query->id->doc))]
+       (concat (for [q queries
+                     :let [id->doc (query->id->doc q)
+                           anom (->> id->doc
+                                  vals
+                                  (filter bu/anomaly?)
+                                  first)
+                           {:keys [table event-id]} (query->info q)
+                           changeset (delay (u/map-keys #(vector table %) id->doc))]
+                     :when (or anom (not-empty id->doc))]
+                 (if anom
+                   (assoc anom
+                     :client-id client-id
+                     :event-id event-id
+                     :query q)
+                   {:client-id client-id
+                    :event-id event-id
+                    :query (assoc q :table table)
+                    :changeset @changeset}))
+         (when (not-empty subscriptions)
+           (lazy-seq
+             (step {:query->id->doc query->id->doc
+                    :subscriptions subscriptions}))))))
+   {:query->id->doc {}
+    :subscriptions subscriptions}))
 
 (defn tx-log [{:keys [node after-tx with-ops]
                :or {after-tx nil with-ops false}}]
   (iterator-seq (crux/open-tx-log node after-tx with-ops)))
 
-(defn notify-subscribers [{:keys [node client-id last-tx-id tx] :as env}]
+(defn tx-time-before [txes]
+  (-> txes
+    first
+    :crux.tx/tx-time
+    .toInstant
+    (.minusMillis 1)
+    java.util.Date/from))
+
+(defn get-id->change [{:keys [txes db-before db-after]}]
+  (->> (for [{:crux.tx.event/keys [tx-events]} txes
+             [_ doc-id] tx-events]
+         doc-id)
+    distinct
+    (map (fn [doc-id]
+           (mapv #(crux/entity % doc-id) [db-before db-after])))
+    distinct
+    (remove #(apply = %))
+    (u/map-from #(some :crux.db/id %))))
+
+(defn changesets [{:keys [client-id] :as env}]
+  (-> env
+    (assoc :id->change (get-id->change env))
+    (update :subscriptions (fn [xs] (sort-by #(not= client-id %) xs)))
+    changesets*))
+
+(defn notify-subscribers [{:keys [api-send node last-tx-id tx subscriptions] :as env}]
   (crux/await-tx node tx)
   (and (crux/tx-committed? node tx)
     (let [txes (take 20 (tx-log {:node node
                                  :after-tx @last-tx-id}))
-          tx-time-before (-> txes
-                           first
-                           :crux.tx/tx-time
-                           .toInstant
-                           (.minusMillis 1)
-                           java.util.Date/from)
-          {:crux.tx/keys [tx-id tx-time]} (last txes)
-          db-before (crux/db node tx-time-before)
-          db-after (crux/db node tx-time)
-          id->change (->> (for [{:crux.tx.event/keys [tx-events]} txes
-                                [_ doc-id] tx-events]
-                            doc-id)
-                       distinct
-                       (map (fn [doc-id]
-                              (mapv #(crux/entity % doc-id) [db-before db-after])))
-                       distinct
-                       (remove #(= %1 %2))
-                       (u/map-from #(some :crux.db/id %)))]
-      (send-changesets
-        (assoc env
-          :db-after db-after
-          :id->change id->change))
-      (reset! last-tx-id tx-id))))
+          {:crux.tx/keys [tx-id tx-time]} (last txes)]
+      (when (not-empty txes)
+        (doseq [{:keys [client-id query changeset event-id] :as result}
+                (changesets (assoc env
+                              :subscriptions @subscriptions
+                              :txes txes
+                              :db-before (crux/db node (tx-time-before txes))
+                              :db-after (crux/db node tx-time)))]
+          (if (bu/anomaly? result)
+            (do
+              (swap! subscriptions
+                #(let [subscriptions (update % client-id dissoc query)]
+                   (cond-> subscriptions
+                     (empty? (get subscriptions client-id)) (dissoc client-id))))
+              (api-send client-id [:biff/error (bu/anom :forbidden "Query not allowed."
+                                                 :query query)]))
+            (api-send client-id [event-id {:query query
+                                           :changeset changeset}]))))
+      (reset! last-tx-id tx-id)
+      true)))
+
+(comment
+
+  ; todo infer parts of this
+  (def params
+    '{prep-doc {:keys [:db :rules]}
+      doc-tx-data {:keys [:table :id :generated-id :old-doc :doc :op]}
+      read-auth-fn {:keys [:db :doc :auth-uid]}
+      write-auth-fn {:keys [:db :auth-uid :tx :current-time]
+                     :fns {doc-tx-data nil}}
+      authorize-write {:keys [:rules]
+                       :fns {write-auth-fn [:table :id :generated-id :old-doc :doc :op]}}
+      authorize-tx {:keys [:tx]
+                    :fns {prep-doc nil
+                          authorize-write [:current-time]}}
+      authorize-read {:keys [:table :uid :db :doc :query :rules]}
+      crux-subscribe* {:keys [:db :uid :event-id]
+                       :fns {authorize-read [:table :doc :query]}}
+      crux-subscribe! {:keys [:api-send :subscriptions :client-id]
+                       :fns {crux-subscribe* nil}}
+      crux-unsubscribe! {:keys [:subscriptions :client-id :uid]}
+      get-id->doc {:keys [:db-after :query :id->change]
+                   :fns {authorize-read [:doc :db]}}
+      changesets* {:keys [:subscriptions]
+                   :fns {get-id->doc [:query :table :uid :event-id]} }
+      get-id->change {:keys [:txes :db-before :db-after]}
+      changesets {:fns {get-id->change nil
+                        changesets* [:id->change]}}
+      notify-subscribers {:keys [:api-send :node :client-id :last-tx-id :tx :subscriptions]
+                          :fns {changesets [:txes :db-before :db-after]}}})
+
+  (bu/infer-keys params)
+  {prep-doc [:db :rules],
+   get-id->doc [:table :db-after :uid :rules :id->change :query],
+   authorize-tx [:db :rules :tx :auth-uid],
+   crux-unsubscribe! [:client-id :uid :subscriptions],
+   changesets* [:db-after :rules :subscriptions :id->change],
+   changesets [:db-after :txes :rules :db-before :subscriptions],
+   authorize-write [:current-time :db :rules :tx :auth-uid],
+   doc-tx-data [:table :generated-id :op :id :old-doc :doc],
+   write-auth-fn [:current-time :table :db :generated-id :op :tx :id :old-doc :doc :auth-uid],
+   notify-subscribers [:client-id :last-tx-id :api-send :node :rules :subscriptions :tx],
+   authorize-read [:table :db :uid :rules :query :doc],
+   read-auth-fn [:db :doc :auth-uid],
+   crux-subscribe* [:event-id :db :uid :rules],
+   get-id->change [:db-after :txes :db-before],
+   crux-subscribe! [:event-id :client-id :db :uid :api-send :rules :subscriptions]}
+
+
+  (defn tmp-node []
+    (start-node {:storage-dir (bu/tmp-dir)
+                 :persist false}))
+
+  (defmacro with-db [id->doc & forms]
+    `(with-open [node# (tmp-node)]
+       (->>
+         (for [[id# doc#] ~id->doc]
+           [:crux.tx/put
+            (assoc doc# :crux.db/id id#)])
+         (crux/submit-tx node#)
+         (crux/await-tx node#))
+       (let [~'db (crux/db node#)]
+         ~@forms)))
+
+  (query-contains?
+    {:id :foo}
+    {:crux.db/id :foo})
+
+  (query-contains?
+    {:where [:foo 3]}
+    {:foo 3})
+
+  (query-contains?
+    {:where [:foo #{3}]}
+    {:foo [3]})
+
+  (with-db {:foo {:bar 3}}
+    (crux/entity db :foo))
+
+  (bu/anomaly? {::anom/category ::anom/incorrect})
+  (bu/anom :incorrect)
+  (bu/anom :incorrect "hello")
+  (bu/anomaly? (bu/anom :incorrect "hello"))
+
+  (defmacro test-prep-doc [db & forms]
+    `(u/pprint
+       (with-db ~db
+         (prep-doc ~@forms))))
+
+  (test-prep-doc {}
+    {:db db
+     :rules {:some-table {:spec [uuid? #{{:foo 3}}]}}}
+    [[:some-table #uuid "171a3404-cc31-498b-848e-7dabc04a1daa"] {:foo 3}])
+
+
+  (test-prep-doc {}
+    {:db db
+     :rules {:some-table {:spec [uuid? #{{:foo 3}}]}}}
+    [[:some-table] {:foo 3}])
+
+  (test-prep-doc {:doc-id {:foo 1}}
+    {:db db
+     :rules {:some-table {:spec [uuid? #{{:foo 3}}]}}}
+    [[:some-table :foo] {:foo 3}])
+
+  (test-prep-doc {:doc-id {:foo 1}}
+    {:db db
+     :rules {:some-table {:spec [keyword? #{{:foo 2}}]}}}
+    [[:some-table :foo] {:foo 3}])
+
+  (test-prep-doc {{:a 1 :b 2} {:foo 1 :bar "hey"}}
+    {:db db
+     :rules {:some-table {:spec [map? #{{:foo 2}}]}}}
+    [[:some-table {:a 1 :b 2}] {:foo 2}])
+
+  (test-prep-doc {{:a 1 :b 2} {:foo 1 :bar "hey" :a 1 :b 2}}
+    {:db db
+     :rules {:some-table {:spec [map? #{{:foo 2 :bar "hey"}}]}}}
+    [[:some-table {:a 1 :b 2}] {:foo 2
+                                :db/update true}])
+
+  (authorize-write
+    {:rules {:some-table {:create (constantly true)}}}
+    {:table :some-table
+     :op :create})
+
+  (authorize-write
+    {:rules {:some-table {:create (constantly false)}}}
+    {:table :some-table
+     :op :create})
+
+  (authorize-write
+    {}
+    {:table :some-table
+     :op :create})
+
+  (with-db {{:a 1 :b 2} {:foo 1}}
+    (authorize-tx
+      {:db db
+       :tx {[:some-table {:a 1 :b 2}] {:foo 2}}
+       :rules {:some-table {:spec [map? (s/keys :req-un [::foo])]
+                            :update (constantly true)}}}))
+
+  (with-db {{:a 1 :b 2} {:foo 1}}
+    (authorize-tx
+      {:db db
+       :tx {[:some-table {:a 1 :b 2}] {:foo 2}}
+       :rules {:some-table {:spec [map? (s/keys :req-un [::foo])]
+                            :update (constantly false)}}}))
+
+(with-db {{:a 1 :b 2} {:foo 1}}
+  (authorize-tx
+    {:db db
+     :tx {[:some-table {:a 1 :b 2}] {:foo 2}}
+     :rules {:some-table {:spec [map? (s/keys :req-un [::foo ::bar])]
+                          :update (constantly true)}}}))
+
+(with-db {{:a 1 :b 2} {:foo 1}}
+  (authorize-tx
+    {:db db
+     :tx "hi"
+     :rules {:some-table {:spec [map? (s/keys :req-un [::foo])]
+                          :update (constantly true)}}}))
+
+(with-db {{:a 1 :b 2} {:foo 1}}
+  (authorize-tx
+    {:current-time "hello"
+     :db db
+     :tx {[:some-table {:a 1 :b 2}] {:foo :db/current-time}}
+     :rules {:some-table {:spec [map? (s/keys :req-un [::foo])]
+                          :update (constantly true)}}}))
+
+(authorize-read
+  {:table :some-table
+   :query {:id nil}
+   :doc {:crux.db/id {:a 1 :b 2}
+         :foo "hey"}
+   :rules {:some-table {:spec [map? (bu/only-keys :req-un [::foo])]
+                        :get (constantly true)}}})
+
+(authorize-read
+  {:table :some-table
+   :query {:query nil}
+   :doc {:crux.db/id {:a 1 :b 2}
+         :foo "hey"}
+   :rules {:some-table {:spec [map? (bu/only-keys :req-un [::foo])]
+                        :get (constantly true)}}})
+
+(authorize-read
+  {:table :some-table
+   :query {:id nil}
+   :doc {:crux.db/id {:a 1 :b 2}
+         :foo "hey"}
+   :rules {:some-table {:spec [map? (bu/only-keys :req-un [::foo ::bar])]
+                        :get (constantly true)}}})
+
+(authorize-read
+  {:table :some-table
+   :query {:id nil}
+   :doc {:crux.db/id {:a 1 :b 2}
+         :foo "hey"
+         :bar "hello"}
+   :rules {:some-table {:spec [map? (bu/only-keys :req-un [::foo])]
+                        :get (constantly true)}}})
+
+
+;(with-redefs [authorize-read :doc]
+;  (with-db {}
+;    (crux-subscribe*
+;      {:db db
+;       :doc {:crux.db/id {:a 1 :b 2}
+;             :foo "hey"}
+;       :rules {:some-table {:spec [map? (bu/only-keys :req-un [::foo])]
+;                            :get (constantly true)}}}
+;      {:table :some-table
+;       :id nil
+;       :where nil
+;       :args nil})))
+
+(with-redefs [authorize-read :doc]
+  (with-db {:foo {:a 1}}
+    (crux-subscribe*
+      {:db db
+       :uid "some-uid"}
+      '{:table :some-table
+        :id :foo
+        :where nil
+        :args nil})))
+
+(with-redefs [authorize-read :doc]
+  (with-db {:foo {:a 1}}
+    (crux-subscribe*
+      {:db db
+       :uid "some-uid"}
+      '{:table :some-table
+        :id :foo})))
+
+(with-redefs [authorize-read :doc]
+  (with-db {:foo {:a 1}}
+    (crux-subscribe*
+      {:db db
+       :uid "some-uid"}
+      '{:table :some-table
+        :where [[(println "you got pwned")]]})))
+
+(u/pprint
+  (with-redefs [authorize-read :doc]
+    (with-db {:foo {:a 1}
+              :bar {:a 1}}
+      (crux-subscribe*
+        {:db db
+         :uid "some-uid"}
+        '{:table :some-table
+          :where [[:a a]
+                  [(== a #{1 2 3})]]
+          :args {a 1}}))))
+
+
+
+(query-contains? {:id :foo}
+  {:crux.db/id :bar :a 1})
+
+
+(u/pprint
+  (get-id->doc
+    {:bypass-auth true
+     :query {:id :foo}
+     :id->change {:foo [nil
+                        {:crux.db/id :foo
+                         :a 1}]
+                  :bar [{:crux.db/id :bar
+                         :a 1}
+                        nil]}}))
+(u/pprint
+  (get-id->doc
+    {:bypass-auth true
+     :query {:id :foo}
+     :id->change {:foo [nil
+                        {:crux.db/id :foo
+                         :a 1}]
+                  :bar [{:crux.db/id :bar
+                         :a 1}
+                        nil]}}))
+
+(u/pprint
+  (with-redefs [authorize-read (constantly (bu/anom :forbidden))]
+    (changesets* {:id->change {:foo [nil
+                                     {:crux.db/id :foo
+                                      :a 1}]
+                               :bar [{:crux.db/id :bar
+                                      :a 1}
+                                     nil]}
+                  :subscriptions
+                  {"bob" {{:id :foo} {:uid "bob-uid"
+                                      :bypass-auth true
+                                      :table :some-table}}
+                   "alice" {{:where [[:a 1]]} {:uid "alice-uid"
+                                               :bypass-auth true
+                                               :table :some-table}
+                            {:id :bar} {:uid "alice-uid"
+                                        :table :some-other-table}}}})))
+
+)

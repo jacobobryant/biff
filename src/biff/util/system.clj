@@ -26,11 +26,12 @@
       (bu/pipe-fn
         (fn [opts]
           (update opts :tx #(crux/submit-tx node %)))
-        #(bu-crux/notify-subscribers
-           (assoc %
-             :node node
-             :subscriptions subscriptions
-             :last-tx-id last-tx-id)))
+        #(bu/fix-stdout
+           (bu-crux/notify-subscribers
+             (assoc %
+               :node node
+               :subscriptions subscriptions
+               :last-tx-id last-tx-id))))
       (set/rename-keys {:f :submit-tx :close :close-tx-pipe})
       (assoc :node node))))
 
@@ -53,6 +54,7 @@
                 event-handler
                 route
                 biff-config
+                rules
                 crux-dir
                 cookie-key-path] :as config} (make-config config)
         {:keys [static-root]} (write-static-resources config)
@@ -63,6 +65,7 @@
                                     :subscriptions subscriptions})
         env {:subscriptions subscriptions
              :node node
+             :rules rules
              :submit-tx submit-tx}
         {:keys [reitit-route
                 close-router
@@ -79,6 +82,11 @@
                    :routes routes
                    :cookie-path cookie-key-path})]
     {:handler handler
+     :node node
+     :subscriptions subscriptions
+     :submit-tx submit-tx
+     :connected-uids connected-uids
+     :api-send api-send
      :close (fn []
               (close-router)
               (close-tx-pipe)

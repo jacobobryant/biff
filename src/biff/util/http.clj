@@ -89,21 +89,19 @@
       (rd/wrap-defaults (ring-settings debug cookie-key)))))
 
 (defn wrap-sente-handler [handler]
-  (fn [{:keys [uid ?data ?reply-fn] :as event}]
-    (some->>
-      (with-out-str
-        (let [event (-> event
-                      (set/rename-keys {:uid :sente-uid})
-                      (merge (get-in event [:ring-req :session])))
-              response (try
-                         (handler event ?data)
-                         (catch Exception e
-                           (.printStackTrace e)
-                           ::exception))]
-          (when ?reply-fn
-            (?reply-fn response))))
-      not-empty
-      (.print System/out))))
+  (fn [{:keys [?reply-fn] :as event}]
+    (bu/fix-stdout
+      (let [event (-> event
+                    (set/rename-keys {:uid :sente-uid :id :event-id})
+                    (merge (get-in event [:ring-req :session]))
+                    (assoc :api-send (:send-fn event)))
+            response (try
+                       (handler event)
+                       (catch Exception e
+                         (.printStackTrace e)
+                         ::exception))]
+        (when ?reply-fn
+          (?reply-fn response))))))
 
 (defn init-sente [{:keys [route-name handler]}]
   (let [{:keys [ch-recv send-fn connected-uids

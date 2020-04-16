@@ -1,14 +1,16 @@
 {:paths ["src" "resources"]
- :aliases {:dev {:extra-paths ["dev"]
-                 :extra-deps {nrepl/nrepl {:mvn/version "0.5.3"}}}}
  :deps
  {byte-transforms {:mvn/version "0.1.4"}
   cheshire {:mvn/version "5.10.0"}
   clj-http {:mvn/version "3.10.0"}
+  com.cognitect/anomalies {:mvn/version "0.1.12"}
+  com.taoensso/timbre {:mvn/version "4.10.0"}
   crypto-password {:mvn/version "0.2.1"}
   metosin/muuntaja {:mvn/version "0.6.6"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
+  nrepl/nrepl {:mvn/version "0.5.3"}
+  orchestra {:mvn/version "2019.02.06-1"}
   org.clojure/java.classpath {:mvn/version "1.0.0"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
   org.immutant/web {:mvn/version "2.1.10"}

@@ -5,13 +5,12 @@ repeat () {
   while "$@"; do sleep 1; done
 }
 
-dev () {
-  export DEBUG=true
-  repeat clojure -Adev -m user
-}
-
 run () {
   repeat clojure -m biff.core
+}
+
+dev () {
+  DEBUG=true run
 }
 
 "$@"

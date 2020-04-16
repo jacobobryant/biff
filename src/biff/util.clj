@@ -4,6 +4,7 @@
     [clojure.spec.alpha :as s]
     [clojure.core.async :as async :refer [close! >! <! go go-loop chan put!]]
     [clojure.walk :as walk]
+    [cognitect.anomalies :as anom]
     [cemerick.url :as url]
     [clojure.set :as set]
     [ring.middleware.defaults :as rd]
@@ -111,6 +112,62 @@
     m
     (partition 2 kvs)))
 
+(defn anomaly? [x]
+  (s/valid? ::anom/anomaly x))
+
+(defn anom [category & [message & kvs]]
+  (apply u/assoc-some
+    {::anom/category (keyword "cognitect.anomalies" (name category))}
+    ::anom/message message
+    kvs))
+
+(defn tmp-dir []
+  (doto (io/file (System/getProperty "java.io.tmpdir")
+          (str
+            (System/currentTimeMillis)
+            "-"
+            (long (rand 0x100000000))))
+    .mkdirs
+    .deleteOnExit))
+
+(defn add-deref [form syms]
+  (walk/postwalk
+    #(cond->> %
+       (syms %) (list deref))
+    form))
+
+(defmacro letdelay [bindings & forms]
+  (let [[bindings syms] (->> bindings
+                          (partition 2)
+                          (reduce (fn [[bindings syms] [sym form]]
+                                    [(into bindings [sym `(delay ~(add-deref form syms))])
+                                     (conj syms sym)])
+                            [[] #{}]))]
+    `(let ~bindings
+       ~@(add-deref forms syms))))
+
+; todo infer parts of params from ns file
+(defn infer-keys [params]
+  (letfn [(keys-for [sym exclude]
+            (let [ret
+                  (->> (get-in params [sym :fns])
+                    (mapcat #(apply keys-for %))
+                    (concat (get-in params [sym :keys]))
+                    (remove (set exclude))
+                    set)]
+              ;(u/pprint [:keys-for sym exclude ret])
+              ret))]
+    (u/map-to (comp vec #(keys-for % nil)) (keys params))))
+
+(defmacro fix-stdout [& forms]
+  `(let [ret# (atom nil)
+         s# (with-out-str
+              (reset! ret# (do ~@forms)))]
+     (some->> s#
+       not-empty
+       (.print java.lang.System/out))
+     @ret#))
+
 ; trident.rum
 
 (def html rum.core/render-static-markup)
@@ -171,3 +228,13 @@
     set/map-invert
     (get nspace)
     (#(str "www/" %))))
+
+(comment
+  (= "3\n"
+    (with-out-str
+      (letdelay [x 3
+                 y (do
+                     (println "evaling y")
+                     (inc x))]
+        (println x)))))
+
