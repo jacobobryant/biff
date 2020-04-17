@@ -159,20 +159,22 @@
              fail
              rule-clauses)))))
 
+(defn doc-valid? [[id-spec doc-spec] {:crux.db/keys [id] :as doc}]
+  (let [doc (apply dissoc doc
+              (cond-> [:crux.db/id]
+                (map? id) (concat (keys id))))]
+    (every? true? (map s/valid? [id-spec doc-spec] [id doc] ))))
+
 (defn authorize-read [{:keys [table uid db doc query rules]}]
   (let [query-type (if (contains? query :id)
                      :get
                      :query)
-        id (:crux.db/id doc)
-        spec-doc (apply dissoc doc
-                   (cond-> [:crux.db/id]
-                     (map? id) (concat (keys id))))
         auth-fn (get-in rules [table query-type])
         specs (get-in rules [table :spec])]
     (if (and
           (some? auth-fn)
           (some? specs)
-          (every? true? (map s/valid? specs [id spec-doc]))
+          (doc-valid? specs doc)
           (u/catchall (auth-fn {:db db :doc doc :auth-uid uid})))
       doc
       (bu/anom :forbidden))))
@@ -224,8 +226,8 @@
   (let [{:keys [norm-query query-info sub-data] :as result} (crux-subscribe* env query)]
     (if-not (bu/anomaly? result)
       (do
-        (swap! subscriptions assoc-in [client-id norm-query] query-info)
-        (api-send client-id [event-id sub-data]))
+        (api-send client-id [event-id sub-data])
+        (swap! subscriptions assoc-in [client-id norm-query] query-info))
       result)))
 
 (defn crux-unsubscribe!
@@ -285,13 +287,17 @@
                :or {after-tx nil with-ops false}}]
   (iterator-seq (crux/open-tx-log node after-tx with-ops)))
 
-(defn tx-time-before [txes]
-  (-> txes
-    first
-    :crux.tx/tx-time
+(defn time-before [date]
+  (-> date
     .toInstant
     (.minusMillis 1)
     java.util.Date/from))
+
+(defn time-before-txes [txes]
+  (-> txes
+    first
+    :crux.tx/tx-time
+    time-before))
 
 (defn get-id->change [{:keys [txes db-before db-after]}]
   (->> (for [{:crux.tx.event/keys [tx-events]} txes
@@ -310,19 +316,51 @@
     (update :subscriptions (fn [xs] (sort-by #(not= client-id %) xs)))
     changesets*))
 
-(defn notify-subscribers [{:keys [api-send node last-tx-id tx subscriptions] :as env}]
+(defn trigger-data [{:keys [rules triggers id->change txes node] :as env}]
+  (for [{:keys [crux.tx/tx-time crux.tx.event/tx-events] :as tx} txes
+          :let [db (crux/db node tx-time)
+                db-before (crux/db node (time-before tx-time))]
+          [_ doc-id] tx-events
+          :let [doc (crux/entity db doc-id)
+                doc-before (crux/entity db-before doc-id)
+                doc-op (cond
+                         (nil? doc) :delete
+                         (nil? doc-before) :create
+                         :default :update)]
+          [table op->fn] triggers
+          [trigger-op f] op->fn
+          :let [specs (get-in rules [table :spec])]
+          :when (and (= trigger-op doc-op)
+                  (some #(doc-valid? specs %) [doc doc-before]))]
+    (assoc env
+      :table table
+      :op trigger-op
+      :doc doc
+      :doc-before doc-before
+      :db db
+      :db-before db-before)))
+
+(defn run-triggers [env]
+  (doseq [{:keys [table op triggers doc] :as env}
+          (trigger-data env)]
+    ((get-in triggers [table op]) env)))
+
+(defn notify-tx [{:keys [triggers api-send node last-tx-id tx subscriptions] :as env}]
   (crux/await-tx node tx)
   (and (crux/tx-committed? node tx)
     (let [txes (take 20 (tx-log {:node node
                                  :after-tx @last-tx-id}))
-          {:crux.tx/keys [tx-id tx-time]} (last txes)]
+          {:crux.tx/keys [tx-id tx-time]} (last txes)
+          {:keys [id->change] :as env} (-> env
+                                         (update :subscriptions deref)
+                                         (assoc
+                                           :txes txes
+                                           :db-before (crux/db node (time-before-txes txes))
+                                           :db-after (crux/db node tx-time))
+                                         (#(assoc % :id->change (get-id->change %))))
+          changesets (changesets env)]
       (when (not-empty txes)
-        (doseq [{:keys [client-id query changeset event-id] :as result}
-                (changesets (assoc env
-                              :subscriptions @subscriptions
-                              :txes txes
-                              :db-before (crux/db node (tx-time-before txes))
-                              :db-after (crux/db node tx-time)))]
+        (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
           (if (bu/anomaly? result)
             (do
               (swap! subscriptions
@@ -333,6 +371,7 @@
                                                  :query query)]))
             (api-send client-id [event-id {:query query
                                            :changeset changeset}]))))
+      (future (bu/fix-stdout (run-triggers env)))
       (reset! last-tx-id tx-id)
       true)))
 
@@ -363,7 +402,7 @@
       get-id->change {:keys [:txes :db-before :db-after]}
       changesets {:fns {get-id->change nil
                         changesets* [:id->change]}}
-      notify-subscribers {:keys [:api-send :node :client-id :last-tx-id :tx :subscriptions]
+      notify-tx {:keys [:api-send :node :client-id :last-tx-id :tx :subscriptions]
                           :fns {changesets [:txes :db-before :db-after]}}})
 
   (bu/infer-keys params)
@@ -376,7 +415,7 @@
    authorize-write [:current-time :db :rules :tx :auth-uid],
    doc-tx-data [:table :generated-id :op :id :old-doc :doc],
    write-auth-fn [:current-time :table :db :generated-id :op :tx :id :old-doc :doc :auth-uid],
-   notify-subscribers [:client-id :last-tx-id :api-send :node :rules :subscriptions :tx],
+   notify-tx [:client-id :last-tx-id :api-send :node :rules :subscriptions :tx],
    authorize-read [:table :db :uid :rules :query :doc],
    read-auth-fn [:db :doc :auth-uid],
    crux-subscribe* [:event-id :db :uid :rules],

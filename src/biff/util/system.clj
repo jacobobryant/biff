@@ -15,7 +15,7 @@
     (bu-static/copy-resources (str "www/" app-namespace) static-root)
     {:static-root static-root}))
 
-(defn start-crux [{:keys [storage-dir subscriptions]}]
+(defn start-crux [{:keys [storage-dir subscriptions triggers]}]
   (let [node (bu-crux/start-node {:storage-dir storage-dir})
         _ (crux/sync node)
         last-tx-id (-> (bu-crux/tx-log {:node node}) ; Better way to do this?
@@ -27,10 +27,11 @@
         (fn [opts]
           (update opts :tx #(crux/submit-tx node %)))
         #(bu/fix-stdout
-           (bu-crux/notify-subscribers
+           (bu-crux/notify-tx
              (assoc %
                :node node
                :subscriptions subscriptions
+               :triggers triggers
                :last-tx-id last-tx-id))))
       (set/rename-keys {:f :submit-tx :close :close-tx-pipe})
       (assoc :node node))))
@@ -56,13 +57,15 @@
                 biff-config
                 rules
                 crux-dir
+                triggers
                 cookie-key-path] :as config} (make-config config)
         {:keys [static-root]} (write-static-resources config)
         subscriptions (atom {})
         {:keys [submit-tx
                 close-tx-pipe
                 node]} (start-crux {:storage-dir crux-dir
-                                    :subscriptions subscriptions})
+                                    :subscriptions subscriptions
+                                    :triggers triggers})
         env {:subscriptions subscriptions
              :node node
              :rules rules
