@@ -170,14 +170,18 @@
                      :get
                      :query)
         auth-fn (get-in rules [table query-type])
-        specs (get-in rules [table :spec])]
-    (if (and
-          (some? auth-fn)
-          (some? specs)
-          (doc-valid? specs doc)
-          (u/catchall (auth-fn {:db db :doc doc :auth-uid uid})))
-      doc
-      (bu/anom :forbidden))))
+        specs (get-in rules [table :spec])
+        anom-message (cond
+                       (nil? auth-fn) "No auth fn."
+                       (nil? specs) "No specs."
+                       (not (doc-valid? specs doc)) "Doc doesn't meet specs."
+                       (not (u/catchall (auth-fn {:db db :doc doc :auth-uid uid}))) "Doc rejected.")]
+    (if anom-message
+      (bu/anom :forbidden anom-message
+        :query query
+        :table table
+        :query-type query-type)
+      doc)))
 
 (defn crux-subscribe*
   [{:keys [db fn-whitelist uid event-id] :as env} {:keys [table] :as query}]
@@ -207,6 +211,7 @@
                               (fn [{:crux.db/keys [id]}]
                                 [table id])
                               docs)]
+      (u/pprint [:crux-subscribe* crux-query])
       (cond
         (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
                                                        :query query)
@@ -238,7 +243,7 @@
   (->> id->change
     (u/map-vals
       (fn [change]
-        (walk/postwalk
+        (map
           #(when (or (not (map? %))
                    (query-contains? query %))
              %)
@@ -256,7 +261,7 @@
            queries (keys query->info)
            query->id->doc (->> queries
                             (remove query->id->doc)
-                            (u/map-to #(get-id->doc (merge (query->info %) env {:query %})))
+                            (u/map-to #(get-id->doc (merge env (query->info %) {:query %})))
                             (merge query->id->doc))]
        (concat (for [q queries
                      :let [id->doc (query->id->doc q)
@@ -313,7 +318,7 @@
 (defn changesets [{:keys [client-id] :as env}]
   (-> env
     (assoc :id->change (get-id->change env))
-    (update :subscriptions (fn [xs] (sort-by #(not= client-id %) xs)))
+    (update :subscriptions (fn [xs] (sort-by #(not= client-id (first %)) xs)))
     changesets*))
 
 (defn trigger-data [{:keys [rules triggers id->change txes node] :as env}]
@@ -343,7 +348,10 @@
 (defn run-triggers [env]
   (doseq [{:keys [table op triggers doc] :as env}
           (trigger-data env)]
+    (u/pprint [:calling-trigger table op])
     ((get-in triggers [table op]) env)))
+
+;(u/pprint ((juxt :id->change :subscriptions changesets) env))
 
 (defn notify-tx [{:keys [triggers api-send node last-tx-id tx subscriptions] :as env}]
   (crux/await-tx node tx)
@@ -359,6 +367,9 @@
                                            :db-after (crux/db node tx-time))
                                          (#(assoc % :id->change (get-id->change %))))
           changesets (changesets env)]
+      (u/pprint [:processed (take 20 (tx-log {:node node :after-tx @last-tx-id :with-ops true}))])
+      (def env env)
+      (future (bu/fix-stdout (run-triggers env)))
       (when (not-empty txes)
         (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
           (if (bu/anomaly? result)
@@ -371,7 +382,6 @@
                                                  :query query)]))
             (api-send client-id [event-id {:query query
                                            :changeset changeset}]))))
-      (future (bu/fix-stdout (run-triggers env)))
       (reset! last-tx-id tx-id)
       true)))
 
@@ -636,6 +646,24 @@
 (query-contains? {:id :foo}
   {:crux.db/id :bar :a 1})
 
+(query-contains?
+  {:id
+   {:content-type :music,
+    :provider :lastfm,
+    :provider-id ["Breaking Benjamin" "The Diary of Jane"]}}
+  {:title "The Diary of Jane",
+   :author "Breaking Benjamin",
+   :url
+   "https://www.last.fm/music/Breaking+Benjamin/_/The+Diary+of+Jane",
+   :image
+   "https://lastfm.freetls.fastly.net/i/u/174s/2e5b0bc8cf774381c37c150f159e58c4.png",
+   :crux.db/id
+   {:content-type :music,
+    :provider :lastfm,
+    :provider-id ["Breaking Benjamin" "The Diary of Jane"]},
+   :content-type :music,
+   :provider :lastfm,
+   :provider-id ["Breaking Benjamin" "The Diary of Jane"]})
 
 (u/pprint
   (get-id->doc
