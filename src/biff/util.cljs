@@ -51,6 +51,7 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
+        (u/pprint [:got-event id ?data])
         (if-some [ch (some-> sub-channels
                        (get id)
                        (get (:query ?data)))]

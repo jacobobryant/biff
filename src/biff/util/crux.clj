@@ -21,7 +21,7 @@
 
 (bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
-  ::tx (s/map-of ::ident map?))
+  ::tx (s/coll-of (s/tuple ::ident (s/nilable map?))))
 
 (defn prep-doc [{:keys [db rules]}
                 [[table id] {merge-doc :db/merge update-doc :db/update :as doc}]]
@@ -125,10 +125,17 @@
 (defn crux!= [& args]
   (not (apply crux== args)))
 
+(defn resolve-fn [sym]
+  (requiring-resolve
+    (if (qualified-symbol? sym)
+      sym
+      (symbol "clojure.core" (name sym)))))
+
 (defn query-contains? [{:keys [id where args]} doc]
   (if (some? id)
     (= id (:crux.db/id doc))
-    (let [where (walk/postwalk #(get args % %) where)
+    (let [args (assoc args 'doc (:crux.db/id doc))
+          where (walk/postwalk #(get args % %) where)
           [attr-clauses rule-clauses] (u/split-by (comp keyword? first) where)
           [binding-clauses constant-clauses] (u/split-by (comp symbol? second) attr-clauses)
           {:keys [args fail]} (reduce (fn [{:keys [args fail]} [attr sym]]
@@ -152,10 +159,10 @@
           rule-clauses (walk/postwalk #(get args % %) rule-clauses)]
       (not (reduce (fn [fail [[f & params]]]
                      (or fail
-                       (apply (requiring-resolve (condp = f
-                                                   '== `crux==
-                                                   '!= `crux!=
-                                                   f)) params)))
+                       (not (apply (resolve-fn (condp = f
+                                                 '== `crux==
+                                                 '!= `crux!=
+                                                 f)) params))))
              fail
              rule-clauses)))))
 
@@ -211,7 +218,6 @@
                               (fn [{:crux.db/keys [id]}]
                                 [table id])
                               docs)]
-      (u/pprint [:crux-subscribe* crux-query])
       (cond
         (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
                                                        :query query)
@@ -249,7 +255,7 @@
              %)
           change)))
     (remove (comp (fn [[a b]] (= a b)) second))
-    (u/map-vals (comp #(if bypass-auth
+    (u/map-vals (comp #(if (or (nil? %) bypass-auth)
                          %
                          (authorize-read (assoc env :doc % :db db-after)))
                   second))))
@@ -703,5 +709,25 @@
                                                :table :some-table}
                             {:id :bar} {:uid "alice-uid"
                                         :table :some-other-table}}}})))
+
+
+(prn (query-contains? '{:where [[:provider] [(uuid? doc)]]}
+       {:provider-id 78490,
+        :provider :thetvdb,
+        :content-type :tv-show,
+        :event-type :pick,
+        :timestamp #inst "2020-04-18T04:47:27.096-00:00",
+        :uid #uuid "676589b8-5a80-433e-9368-c6712b0b569d",
+        :crux.db/id #uuid "c0a0331c-9d32-4732-aeaf-2e09507df882"}))
+
+(prn (query-contains? '{:where [[:provider] [(map? doc)]]}
+       {:provider-id 78490,
+        :provider :thetvdb,
+        :content-type :tv-show,
+        :event-type :pick,
+        :timestamp #inst "2020-04-18T04:47:27.096-00:00",
+        :uid #uuid "676589b8-5a80-433e-9368-c6712b0b569d",
+        :crux.db/id #uuid "c0a0331c-9d32-4732-aeaf-2e09507df882"}))
+
 
 )
