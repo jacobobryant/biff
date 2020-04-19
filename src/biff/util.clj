@@ -1,5 +1,9 @@
 (ns biff.util
   (:require
+    [clojure.spec.alpha :as s]
+    [clojure.core.async :as async :refer [close! >! <! go go-loop chan put!]]
+    [clojure.walk :as walk]
+    [cognitect.anomalies :as anom]
     [cemerick.url :as url]
     [clojure.set :as set]
     [ring.middleware.defaults :as rd]
@@ -8,10 +12,10 @@
     [clojure.core.memoize :as memo]
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [muuntaja.middleware :as muuntaja]
     [reitit.ring :as reitit]
     [ring.middleware.not-modified :refer [wrap-not-modified]]
     [ring.middleware.content-type :refer [wrap-content-type]]
-    [ring.middleware.head :as head]
     [ring.util.io :as rio]
     [crypto.random :as random]
     [byte-transforms :as bt]
@@ -29,12 +33,160 @@
     [com.auth0.jwt.algorithms Algorithm]
     [com.auth0.jwt JWT]))
 
-(def html rum.core/render-static-markup)
+; trident.util
 
 (defmacro defmemo [sym ttl & forms]
   `(do
      (defn f# ~@forms)
      (def ~sym (memo/ttl f# :ttl/threshold ~ttl))))
+
+(defn nest-string-keys [m ks]
+  (let [ks (set ks)]
+    (reduce (fn [resp [k v]]
+              (let [nested-k (keyword (namespace k))]
+                (if (ks nested-k)
+                  (-> resp
+                    (update nested-k assoc (name k) v)
+                    (dissoc k))
+                  resp)))
+    m
+    m)))
+
+(defmacro defkeys [m & syms]
+  `(let [{:keys [~@syms]} ~m]
+     ~@(for [s syms]
+         `(def ~s ~s))))
+
+(defn merge-safe [& ms]
+  (if-some [shared-keys (not-empty (apply set/intersection (comp set keys) ms))]
+    (throw (ex-info "Attempted to merge duplicate keys"
+             {:keys shared-keys}))
+    (apply merge ms)))
+
+(defn only-keys [& {:keys [req opt req-un opt-un]}]
+  (let [all-keys (->> (concat req-un opt-un)
+                   (map (comp keyword name))
+                   (concat req opt))]
+    (s/and #(= % (select-keys % all-keys))
+      (eval `(s/keys :req ~req :opt ~opt :req-un ~req-un :opt-un ~opt-un)))))
+
+(defmacro sdefs [& forms]
+  `(do
+     ~@(for [form (partition 2 forms)]
+         `(s/def ~@form))))
+
+(defn pipe-fn [f & fs]
+  (let [from (chan)
+        to (chan)
+        _ (async/pipeline 1 to (map (fn [{:keys [id args]}]
+                                {:id id
+                                 :result (apply f args)})) from)
+        to (reduce (fn [from f]
+                     (let [to (chan)]
+                       (async/pipeline 1 to (map #(update % :result f)) from)
+                       to))
+             to fs)
+        p (async/pub to :id)
+        next-id (fn [id]
+                  (if (= Long/MAX_VALUE id)
+                    0
+                    (inc id)))
+        id (atom 0)]
+    {:f (fn [& args]
+          (let [id (swap! id next-id)
+                ch (chan)]
+            (async/sub p id ch)
+            (put! from {:id id
+                        :args args})
+            (go
+              (let [{:keys [result]} (<! ch)]
+                (async/unsub p id ch)
+                result))))
+     :close #(close! from)}))
+
+(defn with-defaults [m & kvs]
+  (reduce (fn  [m [k v]]
+            (cond-> m
+              (not (contains? m k)) (assoc k v)))
+    m
+    (partition 2 kvs)))
+
+(defn anomaly? [x]
+  (s/valid? ::anom/anomaly x))
+
+(defn anom [category & [message & kvs]]
+  (apply u/assoc-some
+    {::anom/category (keyword "cognitect.anomalies" (name category))}
+    ::anom/message message
+    kvs))
+
+(defn tmp-dir []
+  (doto (io/file (System/getProperty "java.io.tmpdir")
+          (str
+            (System/currentTimeMillis)
+            "-"
+            (long (rand 0x100000000))))
+    .mkdirs
+    .deleteOnExit))
+
+(defn add-deref [form syms]
+  (walk/postwalk
+    #(cond->> %
+       (syms %) (list deref))
+    form))
+
+(defmacro letdelay [bindings & forms]
+  (let [[bindings syms] (->> bindings
+                          (partition 2)
+                          (reduce (fn [[bindings syms] [sym form]]
+                                    [(into bindings [sym `(delay ~(add-deref form syms))])
+                                     (conj syms sym)])
+                            [[] #{}]))]
+    `(let ~bindings
+       ~@(add-deref forms syms))))
+
+; todo infer parts of params from ns file
+(defn infer-keys [params]
+  (letfn [(keys-for [sym exclude]
+            (let [ret
+                  (->> (get-in params [sym :fns])
+                    (mapcat #(apply keys-for %))
+                    (concat (get-in params [sym :keys]))
+                    (remove (set exclude))
+                    set)]
+              ;(u/pprint [:keys-for sym exclude ret])
+              ret))]
+    (u/map-to (comp vec #(keys-for % nil)) (keys params))))
+
+(defmacro fix-stdout [& forms]
+  `(let [ret# (atom nil)
+         s# (with-out-str
+              (reset! ret# (do ~@forms)))]
+     (some->> s#
+       not-empty
+       (.print java.lang.System/out))
+     @ret#))
+
+; trident.rum
+
+(def html rum.core/render-static-markup)
+
+; trident.jwt
+
+(defn encode-jwt [claims {:keys [secret alg]}]
+  ; todo add more algorithms
+  (let [alg (case alg
+              :HS256 (Algorithm/HMAC256 secret))]
+    (->
+      (reduce (fn [token [k v]]
+                (.withClaim token (name k) v))
+        (JWT/create)
+        claims)
+      (.sign alg))))
+
+(def decode-jwt token/decode)
+
+; biff.util
 
 (defn deps []
   (-> "deps.edn"
@@ -59,19 +211,6 @@
     secret-key
     (bt/decode :base64)))
 
-(defn encode-jwt [claims {:keys [secret alg]}]
-  ; todo add more algorithms
-  (let [alg (case alg
-              :HS256 (Algorithm/HMAC256 secret))]
-    (->
-      (reduce (fn [token [k v]]
-                (.withClaim token (name k) v))
-        (JWT/create)
-        claims)
-      (.sign alg))))
-
-(def decode-jwt token/decode)
-
 (defn write-deps! [deps]
   (-> deps
     u/pprint
@@ -81,107 +220,6 @@
 (defn update-deps! [f & args]
   (write-deps! (apply f (deps) args)))
 
-(defn wrap-authorize [handler]
-  (anti-forgery/wrap-anti-forgery
-    (fn [{:keys [uri] :as req}]
-      (if (get-in req [:session :admin])
-        (handler req)
-        {:status 302
-         :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
-         :body ""}))))
-
-(defn copy-resources [src-root dest-root]
-  (let [resource-root (io/resource src-root)
-        files (->> resource-root
-                io/as-file
-                file-seq
-                (filter #(.isFile %))
-                (map #(subs (.getPath %) (count (.getPath resource-root)))))]
-    (doseq [f files
-            :let [src (str (.getPath resource-root) f)
-                  dest (str dest-root f)]]
-      (io/make-parents dest)
-      (io/copy (io/file src) (io/file dest)))))
-
-(defn file-response [req file]
-  (when (.isFile file)
-    (head/head-response
-      (u/assoc-some
-        {:body file
-         :status 200
-         :headers/Content-Length (.length file)
-         :headers/Last-Modified (rtime/format-date (rio/last-modified-date file))}
-        :headers/Content-Type (when (str/ends-with? (.getPath file) ".html")
-                                "text/html"))
-      req)))
-
-(defn file-handler [root]
-  (fn [{:keys [request-method] :as req}]
-    (when (#{:get :head} request-method)
-      (let [path (str root (codec/url-decode (request/path-info req)))
-            path (cond-> path
-                   (.isDirectory (io/file path)) (str/replace-first #"/?$" "/index.html"))
-            file (io/file path)]
-        (file-response req file)))))
-
-(defn ring-settings [debug cookie-key]
-  (-> (if debug
-        rd/site-defaults
-        rd/secure-site-defaults)
-    (update :session merge {:store (cookie/cookie-store {:key cookie-key})
-                            :cookie-name "ring-session"})
-    (update :security merge {:anti-forgery false
-                             :ssl-redirect false})
-    (assoc :static false)))
-
-(defn nest-keys [m ks]
-  (let [ks (set ks)]
-    (reduce (fn [resp [k v]]
-              (let [nested-k (keyword (namespace k))]
-                (if (ks nested-k)
-                  (-> resp
-                    (update nested-k assoc (name k) v)
-                    (dissoc k))
-                  resp)))
-    m
-    m)))
-
-(defn nice-response [resp]
-  (when resp
-    (-> {:body "" :status 200}
-      (merge resp)
-      (nest-keys [:headers :cookies]))))
-
-(defn wrap-nice-response [handler]
-  (comp nice-response handler))
-
-(defn make-handler [{:keys [root debug routes cookie-path default-routes]
-                     ckey :cookie-key}]
-  (let [cookie-key (or ckey (some-> cookie-path cookie-key))
-        not-found #(file-response % (io/file (str root "/404.html")))
-        default-handlers (->> [(when debug
-                                 (file-handler "www-dev"))
-                               (when (and debug root)
-                                 (file-handler root))
-                               (reitit/create-default-handler
-                                 {:not-found not-found})]
-                           (concat default-routes)
-                           (filter some?))]
-    (->
-      (reitit/ring-handler
-        (reitit/router routes)
-        (apply reitit/routes default-handlers))
-      wrap-nice-response
-      (rd/wrap-defaults (ring-settings debug cookie-key)))))
-
-; you could say that rum is one of our main exports
-(defn export-rum [pages dir]
-  (doseq [[path form] pages
-          :let [full-path (cond-> (str dir path)
-                            (str/ends-with? path "/") (str "index.html"))]]
-    (io/make-parents full-path)
-    (spit full-path (rum/render-static-markup form))))
-
 (defn root [config nspace]
   (-> config
     :main
@@ -190,80 +228,12 @@
     (get nspace)
     (#(str "www/" %))))
 
-(defn render [component opts]
-  {:status 200
-   :body (rum/render-static-markup (component opts))
-   :headers {"Content-Type" "text/html"}})
+(comment
+  (= "3\n"
+    (with-out-str
+      (letdelay [x 3
+                 y (do
+                     (println "evaling y")
+                     (inc x))]
+        (println x)))))
 
-(def html-opts
-  {:lang "en-US"
-   :style {:min-height "100%"}})
-
-(def body-opts {:style {:font-family "'Helvetica Neue', Helvetica, Arial, sans-serif"}})
-
-(defn head [{:keys [title]} & contents]
-  (into
-    [:head
-     [:title title]
-     [:meta {:charset "utf-8"}]
-     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-     [:link
-      {:crossorigin "anonymous"
-       :integrity "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-       :href "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-       :rel "stylesheet"}]]
-    contents))
-
-(defn navbar [& contents]
-  [:nav.navbar.navbar-light.bg-light.align-items-center
-   [:a {:href "/"} [:.navbar-brand "Biff"]]
-   [:.flex-grow-1]
-   contents])
-
-(defn unsafe [m html]
-  (assoc m :dangerouslySetInnerHTML {:__html html}))
-
-(defn csrf []
-  [:input#__anti-forgery-token
-   {:name "__anti-forgery-token"
-    :type "hidden"
-    :value (force anti-forgery/*anti-forgery-token*)}])
-
-(defn wrap-sente-handler [handler]
-  (fn [{:keys [?data ?reply-fn] :as event}]
-    (some->>
-      (with-out-str
-        (let [event (merge event (get-in event [:ring-req :session]))
-              response (try
-                         (handler event ?data)
-                         (catch Exception e
-                           (.printStackTrace e)
-                           ::exception))]
-          (when ?reply-fn
-            (?reply-fn response))))
-      not-empty
-      (.print System/out))))
-
-(defn init-sente [{:keys [route-name handler]}]
-  (let [{:keys [ch-recv send-fn connected-uids
-                ajax-post-fn ajax-get-or-ws-handshake-fn]}
-        (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn :client-id})]
-    {:reitit-route ["/chsk" {:get ajax-get-or-ws-handshake-fn
-                             :post ajax-post-fn
-                             :middleware [anti-forgery/wrap-anti-forgery]
-                             :name route-name}]
-     :start-router #(sente/start-server-chsk-router! ch-recv
-                      (wrap-sente-handler handler))
-     :api-send send-fn
-     :connected-uids connected-uids}))
-
-(defmacro defkeys [m & syms]
-  `(let [{:keys [~@syms]} ~m]
-     ~@(for [s syms]
-         `(def ~s ~s))))
-
-(defn merge-safe [& ms]
-  (if-some [shared-keys (not-empty (apply set/intersection (comp set keys) ms))]
-    (throw (ex-info "Attempted to merge duplicate keys"
-             {:keys shared-keys}))
-    (apply merge ms)))

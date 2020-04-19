@@ -1,6 +1,6 @@
 (ns ^:biff biff.http
   (:require
-    [biff.util :as bu]
+    [biff.util.http :as bu-http]
     [immutant.web :as imm]
     [mount.core :refer [defstate]]
     [biff.core :as core]
@@ -17,7 +17,7 @@
                  (into [["/" {:get (constantly {:status 302
                                                 :headers/Location home})
                               :name ::home}]]))]
-    (bu/make-handler
+    (bu-http/make-handler
       {:debug core/debug
        :routes routes
        :cookie-path "data/biff.http/cookie-key"
@@ -27,7 +27,7 @@
   :start (let [{::keys [debug-ns host->ns]} (:main core/config)
                get-ns (if (and core/debug debug-ns)
                         (constantly debug-ns)
-                        #(-> % :server-name host->ns))
+                        #(some->> % :server-name (get host->ns)))
                default-handler (make-default-handler core/config)]
            (defmethod handler :default
              [req]
