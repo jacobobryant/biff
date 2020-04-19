@@ -28,6 +28,9 @@ though I've bundled it with Biff core for convenience.
 
 ## Usage
 
+WIP, come back later.
+
+<!--
 See [How to write a Biff app](/docs/how-to-write-a-biff-app.md).
 
 To install Biff on a DigitalOcean droplet:
@@ -39,6 +42,7 @@ To install Biff on a DigitalOcean droplet:
 5. Run `./install-biff.sh`.
 
 I'm also planning to see if I can set up a one-click install option.
+-->
 
 ## OK, but *why?*
 
@@ -64,9 +68,7 @@ happening.
 
 ## Status
 
-Now that Biff core is released, I'm going to start converting some old
-semi-abandoned applications I've written into Biff apps. There are also plenty
-of new apps I'd like to start writing for Biff.
+I'm currently moving [Findka](https://findka.com) from Firebase to Biff.
 
 ## Self-promotion
 
