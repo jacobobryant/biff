@@ -39,7 +39,12 @@
 
 (defn -main []
   (nrepl/start-server :port 7888)
-  (mapv #(u/catchall (require %)) (plugins))
+  (doseq [p (plugins)]
+    (try
+      (require p)
+      (catch Exception e
+        (println "Plugin not started:" p)
+        (.printStackTrace e))))
   (when debug
     (st/instrument))
   (println "Starting Biff plugins")

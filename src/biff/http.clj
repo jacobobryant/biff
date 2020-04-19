@@ -27,7 +27,7 @@
   :start (let [{::keys [debug-ns host->ns]} (:main core/config)
                get-ns (if (and core/debug debug-ns)
                         (constantly debug-ns)
-                        #(-> % :server-name host->ns))
+                        #(some->> % :server-name (get host->ns)))
                default-handler (make-default-handler core/config)]
            (defmethod handler :default
              [req]

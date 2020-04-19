@@ -1,6 +1,5 @@
 (ns biff.util
   (:require
-    [crux.api :as crux]
     [clojure.spec.alpha :as s]
     [clojure.core.async :as async :refer [close! >! <! go go-loop chan put!]]
     [clojure.walk :as walk]

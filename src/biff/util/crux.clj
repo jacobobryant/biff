@@ -7,7 +7,6 @@
     [clojure.walk :as walk]
     [clojure.set :as set]
     [crux.api :as crux]
-    [orchestra.core :refer [defn-spec]]
     [trident.util :as u]))
 
 (defn start-node ^crux.api.ICruxAPI [{:keys [storage-dir persist]
