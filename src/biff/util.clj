@@ -171,6 +171,13 @@
 
 (def html rum.core/render-static-markup)
 
+(defn populate-template [{:keys [templates template-key data]}]
+  (u/map-vals (fn [t]
+                (let [t (if (fn? t) (t data) t)]
+                  (cond-> t
+                    (not (string? t)) html)))
+    (get templates template-key)))
+
 ; trident.jwt
 
 (defn encode-jwt [claims {:keys [secret alg]}]
@@ -194,8 +201,8 @@
     edn/read-string))
 
 (defn secrets []
-  (-> "secrets.edn"
-    slurp
+  (some-> "secrets.edn"
+    u/maybe-slurp
     edn/read-string))
 
 (defn secret-key [path]
@@ -220,13 +227,12 @@
 (defn update-deps! [f & args]
   (write-deps! (apply f (deps) args)))
 
-(defn root [config nspace]
+(defn ns->host [config nspace]
   (-> config
     :main
     :biff.http/host->ns
     set/map-invert
-    (get nspace)
-    (#(str "www/" %))))
+    (get nspace)))
 
 (comment
   (= "3\n"

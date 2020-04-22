@@ -20,6 +20,9 @@
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
     [ring.middleware.anti-forgery :as anti-forgery]))
 
+(def default-port 8080)
+
+; TODO remove this redirect vulnerability
 (defn wrap-authorize-admin [handler]
   (anti-forgery/wrap-anti-forgery
     (fn [{:keys [uri] :as req}]
@@ -28,6 +31,15 @@
         {:status 302
          :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
          :body ""}))))
+
+(defn wrap-authorize [handler]
+  (anti-forgery/wrap-anti-forgery
+    (fn [req]
+      (if-some [uid (get-in req [:session :uid])]
+        (handler (assoc req :uid uid))
+        {:status 401
+         :headers/Content-Type "text/plain"
+         :body "Not authorized."}))))
 
 (defn file-response [req file]
   (when (.isFile file)

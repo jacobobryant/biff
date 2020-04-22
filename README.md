@@ -5,6 +5,13 @@
 >
 > &mdash;Biff Tannen in Back to the Future
 
+Biff is a self-hosted Firebase alternative written in Clojure. See [this
+post](https://jacobobryant.substack.com/p/sneak-peek-biff-a-clojurey-alternative)
+for a deeper explanation. Biff is pre-release software, and I am actively
+working on it.
+
+<!--
+
 Biff is a package manager for self-hosted Clojure web apps.
 
 ## It's a what?
@@ -30,7 +37,7 @@ though I've bundled it with Biff core for convenience.
 
 WIP, come back later.
 
-<!--
+<!- -
 See [How to write a Biff app](/docs/how-to-write-a-biff-app.md).
 
 To install Biff on a DigitalOcean droplet:
@@ -42,7 +49,7 @@ To install Biff on a DigitalOcean droplet:
 5. Run `./install-biff.sh`.
 
 I'm also planning to see if I can set up a one-click install option.
--->
+- ->
 
 ## OK, but *why?*
 
@@ -69,6 +76,7 @@ happening.
 ## Status
 
 I'm currently moving [Findka](https://findka.com) from Firebase to Biff.
+-->
 
 ## Self-promotion
 
