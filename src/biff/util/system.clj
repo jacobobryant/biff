@@ -4,6 +4,7 @@
     [biff.util.crux :as bu-crux]
     [biff.util.http :as bu-http]
     [byte-streams :as bs]
+    [clojure.core.async :refer [<!!]]
     [cemerick.url :as url]
     [crypto.random :as random]
     [byte-transforms :as bt]
@@ -167,11 +168,46 @@
    ["/signed-in" {:get signed-in?
                   :name ::signed-in}]])
 
+(defn wrap-sub [handler {:keys [fn-whitelist]}]
+  (fn [{:keys [event-id id api-send client-id uid] {:keys [query action]} :?data :as env}]
+    (if (not= :biff/sub event-id)
+      (handler env)
+      (let [env (assoc env :fn-whitelist fn-whitelist)
+            result (cond
+                     (= [query action] [:uid :subscribe])
+                     (api-send client-id
+                       [:biff/sub {:changeset {[:uid nil]
+                                               {:uid (or uid :signed-out)}}
+                                   :query query}])
+
+                     (= action :subscribe) (bu-crux/crux-subscribe! env query)
+                     (= action :unsubscribe) (bu-crux/crux-unsubscribe! env query)
+                     :default (bu/anom :incorrect "Invalid action." :action action))]
+        (when (bu/anomaly? result)
+          (api-send client-id [:biff/error result]))
+        nil))))
+
+(defn wrap-tx [handler {:keys [rules]}]
+  (fn [{:keys [event-id api-send uid client-id submit-tx db] tx :?data :as env}]
+    (if (not= event-id :biff/tx)
+      (handler env)
+      (let [tx (bu-crux/authorize-tx
+                 {:rules rules
+                  :tx tx
+                  :auth-uid uid
+                  :db db})]
+        (if (bu/anomaly? tx)
+          (do
+            (api-send client-id [:biff/error tx])
+            nil)
+          (<!! (submit-tx (assoc env :tx tx))))))))
+
 (defn start-biff [config]
   (let [{:keys [debug
                 static-pages
                 app-namespace
                 event-handler
+                fn-whitelist
                 route
                 secrets
                 rules
@@ -197,7 +233,10 @@
                 api-send
                 connected-uids]} (bu-http/init-sente
                                    {:route-name ::chsk
-                                    :handler (wrap-env event-handler env)})
+                                    :handler (-> event-handler
+                                               (wrap-sub {:fn-whitelist fn-whitelist})
+                                               (wrap-tx {:rules rules})
+                                               (wrap-env env))})
         routes [["" {:middleware [[wrap-env env]]}
                  reitit-route
                  (auth-route config)
