@@ -20,7 +20,7 @@
          rules
          triggers] (->> plugins
                      vals
-                     (map (juxt ::route ::static-pages ::rules ::triggers))
+                     (map (juxt :biff/route :biff/static-pages :biff/rules :biff/triggers))
                      (apply map (comp not-empty #(filter some? %) vector)))]
     (u/assoc-some
       {:app-namespace 'biff.system
@@ -32,7 +32,10 @@
        :send-email (some-> main :biff/send-email requiring-resolve)}
       :static-pages (when static-pages
                       (apply bu/merge-safe static-pages))
-      :route (some->> routes (into [""]))
+      :route (into [["/" {:get (constantly {:status 302
+                                            :headers/Location "/biff/pack"})
+                          :name ::home}]]
+               routes)
       :rules (when rules
                (apply merge-with bu/merge-safe rules))
       :triggers (when triggers

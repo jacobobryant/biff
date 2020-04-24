@@ -178,6 +178,9 @@
                     (not (string? t)) html)))
     (get templates template-key)))
 
+(defn unsafe [m html]
+  (merge m {:dangerouslySetInnerHTML {:__html html}}))
+
 ; trident.jwt
 
 (defn encode-jwt [claims {:keys [secret alg]}]

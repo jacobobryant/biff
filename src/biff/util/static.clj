@@ -24,7 +24,8 @@
           :let [full-path (cond-> (str dir path)
                             (str/ends-with? path "/") (str "index.html"))]]
     (io/make-parents full-path)
-    (spit full-path (rum/render-static-markup form))))
+    (spit full-path (cond-> form
+                      (not (string? form)) rum/render-static-markup))))
 
 (def html-opts
   {:lang "en-US"

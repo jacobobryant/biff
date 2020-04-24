@@ -193,8 +193,7 @@
    :headers {"Content-Type" "text/plain"}})
 
 (def config
-  {:biff.http/home "/biff/pack"
-   :biff.http/route
+  {:biff/route
    ["/biff/pack"
     ["/ping" {:get ping
               :name ::ping}]

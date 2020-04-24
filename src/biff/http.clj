@@ -3,38 +3,16 @@
     [biff.util.http :as bu-http]
     [immutant.web :as imm]
     [mount.core :refer [defstate]]
-    [biff.core :as core]
-    ;[reitit.ring :as reitit]
-    ))
+    [biff.core :as core]))
 
 (defmulti handler ::ns)
-
-;(defn make-default-handler [{:keys [main plugins]}]
-;  (let [home (some :biff.http/home (conj (vals plugins) main))
-;        routes (->> plugins
-;                 vals
-;                 (map :biff.http/route)
-;                 (filterv some?)
-;                 (into [["/" {:get (constantly {:status 302
-;                                                :headers/Location home})
-;                              :name ::home}]]))]
-;    (bu-http/make-handler
-;      {:debug core/debug
-;       :routes routes
-;       :cookie-path "data/biff.http/cookie-key"
-;       :default-routes [(reitit/create-resource-handler {})]})))
 
 (defstate server
   :start (let [{::keys [port debug-ns host->ns]
                 :or {port bu-http/default-port}} (:main core/config)
                get-ns (if (and core/debug debug-ns)
                         (constantly debug-ns)
-                        #(some->> % :server-name (get host->ns)))
-               ;default-handler (make-default-handler core/config)
-               ]
-           ;(defmethod handler :default
-           ;  [req]
-           ;  (default-handler req))
+                        #(some->> % :server-name (get host->ns)))]
            (imm/run
              (comp handler #(assoc % ::ns (get-ns %)))
              {:port port}))

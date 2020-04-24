@@ -102,7 +102,7 @@
       {:success (boolean success)})))
 
 (def config
-  {:biff.http/route
+  {:biff/route
    ["/biff/auth" {:middleware [anti-forgery/wrap-anti-forgery]}
     ["" {:post login
          :get serve-login-page
