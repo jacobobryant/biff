@@ -14,7 +14,8 @@
   [_ _]
   (bu/anom :not-found))
 
-(defn get-config [{:keys [plugins biff/send-mail]}]
+(defn get-config [{:keys [plugins biff/send-mail biff/dbname]
+                   :or {dbname "biff"}}]
   (let [[routes
          static-pages
          rules
@@ -30,6 +31,7 @@
        :on-signin-fail "/biff/signin-fail"
        :on-signout "/biff/signin"
        :send-email (some-> send-mail requiring-resolve)}
+      :crux.jdbc/dbname dbname
       :static-pages (when static-pages
                       (apply bu/merge-safe static-pages))
       :route (into [["/" {:get (constantly {:status 302

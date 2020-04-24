@@ -9,18 +9,19 @@
     [crux.api :as crux]
     [trident.util :as u]))
 
-(defn start-node ^crux.api.ICruxAPI [{:keys [crux/topology storage-dir]
+(defn start-node ^crux.api.ICruxAPI [{:keys [topology storage-dir]
                                       :or {topology :standalone} :as opts}]
-  (crux/start-node
-    (merge
-      {:crux.kv/db-dir (str (io/file storage-dir "db"))}
-      (case topology
-        :standalone {:crux.node/topology '[crux.standalone/topology crux.kv.rocksdb/kv-store]
-                     :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
-                     :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv}
-        :jdbc {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
-               :crux.jdbc/dbtype "postgresql"})
-      (dissoc opts :crux/topology :storage-dir))))
+  (let [opts (merge
+               {:crux.kv/db-dir (str (io/file storage-dir "db"))}
+               (case topology
+                 :standalone {:crux.node/topology '[crux.standalone/topology crux.kv.rocksdb/kv-store]
+                              :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
+                              :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv}
+                 :jdbc {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
+                        :crux.jdbc/dbtype "postgresql"})
+               (dissoc opts :topology :storage-dir))]
+    (u/pprint [:start-node (dissoc opts :crux.db/password)])
+    (crux/start-node opts)))
 
 (bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))

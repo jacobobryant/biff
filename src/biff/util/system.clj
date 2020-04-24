@@ -49,20 +49,22 @@
                    (assoc :db (crux/db node)))))
 
 (defn make-config [{:keys [app-namespace] :as config}]
-  (let [c (bu/with-defaults config
-            :debug core/debug
-            :biff-config core/config
-            :crux-dir (str "data/" app-namespace "/crux-db")
-            :cookie-key-path (str "data/" app-namespace "/cookie-key"))
-        host (bu/ns->host (:biff-config c) app-namespace)]
-    (bu/with-defaults c
-      :crux-opts (merge
-                   (bu/select-ns (:biff-config c) 'crux.jdbc)
-                   (select-keys (:biff-config c) [:crux/topology]))
-      :url-base (if (:debug c)
-                  (str "http://localhost:" (:biff.http/port (:biff-config c) bu-http/default-port))
-                  (str "https://" host))
-      :static-root (str "www/" host))))
+  (let [config (merge
+                 core/config
+                 {:debug core/debug
+                  :crux-dir (str "data/" app-namespace "/crux-db")
+                  :cookie-key-path (str "data/" app-namespace "/cookie-key")}
+                 config)
+        host (bu/ns->host config app-namespace)]
+    (merge
+      {:crux-opts (merge
+                    (bu/select-ns config 'crux.jdbc)
+                    (bu/select-as config {:biff.crux/topology :topology}))
+       :url-base (if (:debug config)
+                   (str "http://localhost:" (:biff.http/port config bu-http/default-port))
+                   (str "https://" host))
+       :static-root (str "www/" host)}
+      config)))
 
 ;;;; auth
 
