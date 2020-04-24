@@ -169,7 +169,7 @@
 
 (defn flatten-ns [m]
   (reduce (fn [m [k v :as pair]]
-            (if (map? v)
+            (if (and (map? v) (every? keyword? (keys v)))
               (merge m (u/prepend-keys (name k) (flatten-ns v)))
               (conj m pair)))
     {}
@@ -234,6 +234,7 @@
 (defn get-config [env]
   (-> "config.edn"
     u/maybe-slurp
+    edn/read-string
     (merge-config env)))
 
 (defn secret-key [path]
