@@ -14,7 +14,7 @@
   [_ _]
   (bu/anom :not-found))
 
-(defn get-config [{:keys [main plugins mailgun/api-key]}]
+(defn get-config [{:keys [plugins biff/send-mail]}]
   (let [[routes
          static-pages
          rules
@@ -29,7 +29,7 @@
        :on-signin-request "/biff/signin-request"
        :on-signin-fail "/biff/signin-fail"
        :on-signout "/biff/signin"
-       :send-email (some-> main :biff/send-email requiring-resolve)}
+       :send-email (some-> send-mail requiring-resolve)}
       :static-pages (when static-pages
                       (apply bu/merge-safe static-pages))
       :route (into [["/" {:get (constantly {:status 302
@@ -50,7 +50,7 @@
                     triggers)))))
 
 (defstate system
-  :start (start-biff (get-config (merge core/config (bu/secrets))))
+  :start (start-biff (get-config core/config))
   :stop ((:close system)))
 
 (defmethod bhttp/handler :default

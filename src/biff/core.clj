@@ -8,16 +8,18 @@
     [nrepl.server :as nrepl]
     [clojure.tools.namespace.repl :as tn-repl]
     [trident.util :as u]
+    [biff.util :as bu]
     [taoensso.timbre]))
 
-(def debug (boolean (System/getenv "DEBUG")))
+(def env (keyword (or (System/getenv "BIFF_ENV") :prod)))
+(def debug (not= env :prod))
 
 (defn refresh []
   (mount/stop)
   (tn-repl/refresh :after 'mount.core/start)
   :ready)
 
-(defn plugins []
+(defn find-plugins []
   (for [form (tn-find/find-ns-decls (cp/classpath))
         :let [sym (second form)
               {:keys [biff]} (meta sym)]
@@ -25,21 +27,19 @@
     sym))
 
 (defstate config
-  :start {:plugins (u/map-to
-                     #(some-> %
-                        name
-                        (symbol "config")
-                        resolve
-                        deref)
-                     (plugins))
-          :main (-> "deps.edn"
-                  slurp
-                  edn/read-string
-                  :biff/config)})
+  :start (bu/merge-safe
+           (bu/get-config env)
+           {:plugins (u/map-to
+                       #(some-> %
+                          name
+                          (symbol "config")
+                          resolve
+                          deref)
+                       (find-plugins))}))
 
 (defn -main []
   (nrepl/start-server :port 7888)
-  (doseq [p (plugins)]
+  (doseq [p (find-plugins)]
     (try
       (require p)
       (catch Exception e
@@ -48,5 +48,4 @@
   (when debug
     (st/instrument))
   (println "Starting Biff plugins")
-  (u/pprint
-    (mount/start)))
+  (prn (mount/start)))

@@ -9,7 +9,7 @@
 
 (defstate server
   :start (let [{::keys [port debug-ns host->ns]
-                :or {port bu-http/default-port}} (:main core/config)
+                :or {port bu-http/default-port}} core/config
                get-ns (if (and core/debug debug-ns)
                         (constantly debug-ns)
                         #(some->> % :server-name (get host->ns)))]

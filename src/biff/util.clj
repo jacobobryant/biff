@@ -167,6 +167,29 @@
        (.print java.lang.System/out))
      @ret#))
 
+(defn flatten-ns [m]
+  (reduce (fn [m [k v :as pair]]
+            (if (map? v)
+              (merge m (u/prepend-keys (name k) (flatten-ns v)))
+              (conj m pair)))
+    {}
+    m))
+
+(defn merge-config [config env]
+  (let [env-order (concat (get-in config [env :inherit]) [env])]
+    (->> env-order
+      (map config)
+      (map flatten-ns)
+      (apply merge))))
+
+(defn select-as [m key-map]
+  (-> m
+    (select-keys (keys key-map))
+    (set/rename-keys key-map)))
+
+(defn select-ns [m nspace]
+  (select-keys m (filter #(= (name nspace) (namespace %)) (keys m))))
+
 ; trident.rum
 
 (def html rum.core/render-static-markup)
@@ -208,6 +231,11 @@
     u/maybe-slurp
     edn/read-string))
 
+(defn get-config [env]
+  (-> "config.edn"
+    u/maybe-slurp
+    (merge-config env)))
+
 (defn secret-key [path]
   (or
     (u/catchall (slurp path))
@@ -232,7 +260,6 @@
 
 (defn ns->host [config nspace]
   (-> config
-    :main
     :biff.http/host->ns
     set/map-invert
     (get nspace)))

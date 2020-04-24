@@ -22,8 +22,8 @@
   (bu-static/export-rum static-pages static-root)
   (bu-static/copy-resources (str "www/" app-namespace) static-root))
 
-(defn start-crux [{:keys [storage-dir subscriptions triggers]}]
-  (let [node (bu-crux/start-node {:storage-dir storage-dir})
+(defn start-crux [{:keys [subscriptions triggers] :as opts}]
+  (let [node (bu-crux/start-node (dissoc opts :subscriptions :triggers))
         _ (crux/sync node)
         last-tx-id (-> (bu-crux/tx-log {:node node}) ; Better way to do this?
                      last
@@ -52,11 +52,13 @@
   (let [c (bu/with-defaults config
             :debug core/debug
             :biff-config core/config
-            :secrets (bu/secrets)
             :crux-dir (str "data/" app-namespace "/crux-db")
             :cookie-key-path (str "data/" app-namespace "/cookie-key"))
         host (bu/ns->host (:biff-config c) app-namespace)]
     (bu/with-defaults c
+      :crux-opts (merge
+                   (bu/select-ns (:biff-config c) 'crux.jdbc)
+                   (select-keys (:biff-config c) [:crux/topology]))
       :url-base (if (:debug c)
                   (str "http://localhost:" (:biff.http/port (:biff-config c) bu-http/default-port))
                   (str "https://" host))
@@ -209,19 +211,20 @@
                 event-handler
                 fn-whitelist
                 route
-                secrets
                 rules
                 crux-dir
                 triggers
                 static-root
+                crux-opts
                 url-base
                 cookie-key-path] :as config} (make-config config)
         subscriptions (atom {})
         {:keys [submit-tx
                 close-tx-pipe
-                node]} (start-crux {:storage-dir crux-dir
-                                    :subscriptions subscriptions
-                                    :triggers triggers})
+                node]} (start-crux (assoc crux-opts
+                                     :storage-dir crux-dir
+                                     :subscriptions subscriptions
+                                     :triggers triggers))
         env {:subscriptions subscriptions
              :debug debug
              :node node

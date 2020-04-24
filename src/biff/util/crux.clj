@@ -9,14 +9,18 @@
     [crux.api :as crux]
     [trident.util :as u]))
 
-(defn start-node ^crux.api.ICruxAPI [{:keys [storage-dir persist]
-                                      :or {persist true}}]
-  (crux/start-node {:crux.node/topology (cond-> '[crux.standalone/topology]
-                                          persist (conj 'crux.kv.rocksdb/kv-store))
-                    :crux.kv/db-dir (str (io/file storage-dir "db"))
-                    :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
-                    :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv
-                    :crux.kv/sync? true}))
+(defn start-node ^crux.api.ICruxAPI [{:keys [crux/topology storage-dir]
+                                      :or {topology :standalone} :as opts}]
+  (crux/start-node
+    (merge
+      {:crux.kv/db-dir (str (io/file storage-dir "db"))}
+      (case topology
+        :standalone {:crux.node/topology '[crux.standalone/topology crux.kv.rocksdb/kv-store]
+                     :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
+                     :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv}
+        :jdbc {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
+               :crux.jdbc/dbtype "postgresql"})
+      (dissoc opts :crux/topology :storage-dir))))
 
 (bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
