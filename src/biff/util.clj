@@ -58,7 +58,7 @@
          `(def ~s ~s))))
 
 (defn merge-safe [& ms]
-  (if-some [shared-keys (not-empty (apply set/intersection (comp set keys) ms))]
+  (if-some [shared-keys (not-empty (apply set/intersection (map (comp set keys) ms)))]
     (throw (ex-info "Attempted to merge duplicate keys"
              {:keys shared-keys}))
     (apply merge ms)))
