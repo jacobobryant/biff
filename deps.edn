@@ -10,8 +10,10 @@
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
   nrepl/nrepl {:mvn/version "0.5.3"}
-  juxt/crux-core {:mvn/version "20.04-1.8.1-alpha"}
-  juxt/crux-rocksdb {:mvn/version "20.04-1.8.1-alpha"}
+  juxt/crux-core {:mvn/version "20.04-1.8.2-alpha"}
+  juxt/crux-rocksdb {:mvn/version "20.04-1.8.2-alpha"}
+  juxt/crux-jdbc {:mvn/version "20.04-1.8.2-alpha"}
+  org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
   orchestra {:mvn/version "2019.02.06-1"}
   org.clojure/java.classpath {:mvn/version "1.0.0"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
