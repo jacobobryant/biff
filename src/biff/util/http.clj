@@ -22,15 +22,14 @@
 
 (def default-port 8080)
 
-; TODO remove this redirect vulnerability
-(defn wrap-authorize-admin [handler]
-  (anti-forgery/wrap-anti-forgery
-    (fn [{:keys [uri] :as req}]
-      (if (get-in req [:session :admin])
-        (handler req)
-        {:status 302
-         :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
-         :body ""}))))
+;(defn wrap-authorize-admin [handler]
+;  (anti-forgery/wrap-anti-forgery
+;    (fn [{:keys [uri] :as req}]
+;      (if (get-in req [:session :admin])
+;        (handler req)
+;        {:status 302
+;         :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
+;         :body ""}))))
 
 (defn wrap-authorize [handler]
   (anti-forgery/wrap-anti-forgery
@@ -83,7 +82,9 @@
 
 (defn make-handler [{:keys [root debug routes cookie-path default-routes cookie-key]}]
   (let [cookie-key (or cookie-key (some-> cookie-path bu/cookie-key))
-        not-found #(file-response % (io/file (str root "/404.html")))
+        not-found #(-> %
+                     (file-response (io/file (str root "/404.html")))
+                     (assoc :status 404))
         default-handlers (->> [(when debug
                                  (file-handler "www-dev"))
                                (when (and debug root)

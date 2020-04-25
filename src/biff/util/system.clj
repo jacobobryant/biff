@@ -188,8 +188,7 @@
                      (= action :unsubscribe) (bu-crux/crux-unsubscribe! env query)
                      :default (bu/anom :incorrect "Invalid action." :action action))]
         (when (bu/anomaly? result)
-          (api-send client-id [:biff/error result]))
-        nil))))
+          result)))))
 
 (defn wrap-tx [handler {:keys [rules]}]
   (fn [{:keys [event-id api-send uid client-id submit-tx db] tx :?data :as env}]

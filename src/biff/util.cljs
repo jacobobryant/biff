@@ -2,12 +2,22 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
+    [clojure.spec.alpha :as s]
     [goog.net.Cookies]
     [cemerick.url :as url]
     [taoensso.sente :as sente]
     [cljs.core.async :as async :refer [close! <! >! take! put! chan promise-chan mult tap]]
     [trident.util :as u]
     [clojure.set :as set]))
+
+(defn anomaly? [x]
+  (s/valid? (s/keys :req [:cognitect.anomalies/category] :opt [:cognitect.anomalies/message]) x))
+
+(defn anom [category & [message & kvs]]
+  (apply u/assoc-some
+    {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
+    :cognitect.anomalies/message message
+    kvs))
 
 (defn wrap-api-send [api-send ready-pr]
   (fn [event]
@@ -16,6 +26,8 @@
         (fn []
           (api-send event 5000
             (fn [response]
+              (when (anomaly? response)
+                (u/pprint response))
               (put! ch (if response response ::no-response))))))
       ch)))
 
@@ -51,6 +63,7 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
+        ;(u/pprint [:got-message id ?data])
         (if-some [ch (some-> sub-channels
                        (get id)
                        (get (:query ?data)))]

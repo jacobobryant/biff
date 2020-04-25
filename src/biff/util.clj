@@ -6,6 +6,7 @@
     [cognitect.anomalies :as anom]
     [cemerick.url :as url]
     [clojure.set :as set]
+    [crux.api :as crux]
     [ring.middleware.defaults :as rd]
     [ring.middleware.session.cookie :as cookie]
     [clojure.edn :as edn]
@@ -179,7 +180,6 @@
   (let [env-order (concat (get-in config [env :inherit]) [env])]
     (->> env-order
       (map config)
-      (map flatten-ns)
       (apply merge))))
 
 (defn select-as [m key-map]
@@ -219,7 +219,35 @@
 
 (def decode-jwt token/decode)
 
+(defn mint [{:keys [secret expires-in iss]} claims]
+  (encode-jwt
+    (u/assoc-some claims
+      :iss iss
+      :iat (u/now)
+      :exp (some->> expires-in (u/add-seconds (u/now))))
+    {:secret secret
+     :alg :HS256}))
+
 ; biff.util
+
+(defn get-key [{:keys [node db k]}]
+  (or (get (crux/entity (or db (crux/db node)) k) :biff/value)
+    (doto (bs/to-string (bt/encode (random/bytes 16) :base64))
+      (#(crux/submit-tx
+          node
+          [[:crux.tx/put
+            {:crux.db/id k
+             :biff/value %}]])))))
+
+(defn token-url [{:keys [url claims iss expires-in jwt-secret]}]
+  (let [jwt (mint {:secret jwt-secret
+                   :expires-in expires-in
+                   :iss iss}
+              claims)]
+    (-> url
+      url/url
+      (assoc :query {:token jwt})
+      str)))
 
 (defn deps []
   (-> "deps.edn"

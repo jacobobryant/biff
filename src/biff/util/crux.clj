@@ -7,6 +7,7 @@
     [clojure.walk :as walk]
     [clojure.set :as set]
     [crux.api :as crux]
+    [expound.alpha :refer [expound]]
     [trident.util :as u]))
 
 (defn start-node ^crux.api.ICruxAPI [{:keys [topology storage-dir]
@@ -20,7 +21,7 @@
                  :jdbc {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
                         :crux.jdbc/dbtype "postgresql"})
                (dissoc opts :topology :storage-dir))]
-    (u/pprint [:start-node (dissoc opts :crux.db/password)])
+    (u/pprint [:start-node (dissoc opts :crux.jdbc/password)])
     (crux/start-node opts)))
 
 (bu/sdefs
@@ -74,17 +75,19 @@
                           (nil? old-doc) :create
                           :default :update)}])))
 
-(defn authorize-write [{:keys [rules] :as env}
+(defn authorize-write [{:keys [rules admin] :as env}
                        {:keys [table op] :as doc-tx-data}]
-  (bu/letdelay [auth-fn (get-in rules [table op])
-                result (auth-fn (merge env doc-tx-data))]
-    (merge doc-tx-data
-      (cond
-        (nil? auth-fn) (bu/anom :forbidden "No auth function.")
-        (not result) (bu/anom :forbidden "Document rejected.")
-        :default (when (map? result) result)))))
+  (if admin
+    doc-tx-data
+    (bu/letdelay [auth-fn (get-in rules [table op])
+                  result (auth-fn (merge env doc-tx-data))]
+      (merge doc-tx-data
+        (cond
+          (nil? auth-fn) (bu/anom :forbidden "No auth function.")
+          (not result) (bu/anom :forbidden "Document rejected by auth fn.")
+          :default (when (map? result) result))))))
 
-(defn authorize-tx [{:keys [tx current-time] :as env
+(defn authorize-tx [{:keys [tx current-time admin] :as env
                      :or {current-time (java.util.Date.)}}]
   (if-not (s/valid? ::tx tx)
     (bu/anom :incorrect "Invalid transaction shape."
@@ -173,8 +176,13 @@
 (defn doc-valid? [[id-spec doc-spec] {:crux.db/keys [id] :as doc}]
   (let [doc (apply dissoc doc
               (cond-> [:crux.db/id]
-                (map? id) (concat (keys id))))]
-    (every? true? (map s/valid? [id-spec doc-spec] [id doc] ))))
+                (map? id) (concat (keys id))))
+        id-valid? (s/valid? id-spec id)
+        doc-valid? (s/valid? doc-spec doc)]
+    (cond
+      (not id-valid?) (expound id-spec id)
+      (not doc-valid?) (expound doc-spec doc))
+    (and id-valid? doc-valid?)))
 
 (defn authorize-read [{:keys [table uid db doc query rules]}]
   (let [query-type (if (contains? query :id)
@@ -186,12 +194,11 @@
                        (nil? auth-fn) "No auth fn."
                        (nil? specs) "No specs."
                        (not (doc-valid? specs doc)) "Doc doesn't meet specs."
-                       (not (u/catchall (auth-fn {:db db :doc doc :auth-uid uid}))) "Doc rejected.")]
+                       (not (u/catchall (auth-fn {:db db :doc doc :auth-uid uid}))) "Doc rejected by auth fn.")]
     (if anom-message
       (bu/anom :forbidden anom-message
-        :query query
-        :table table
-        :query-type query-type)
+        :norm-query query
+        :table table)
       doc)))
 
 (defn crux-subscribe*
@@ -209,15 +216,14 @@
                          (some-> (crux/entity db id) vector)
                          (map #(crux/entity db (first %))
                            (crux/q db crux-query)))
-                  docs-authorized (u/for-every? [d docs]
-                                    (->>
-                                      {:table table
-                                       :doc d
-                                       :query norm-query}
-                                      (merge env)
-                                      authorize-read
-                                      bu/anomaly?
-                                      not))
+                  authorize-anom (->> docs
+                                   (map #(->> {:doc %
+                                               :table table
+                                               :query norm-query}
+                                           (merge env)
+                                           authorize-read))
+                                   (filter bu/anomaly?)
+                                   first)
                   changeset (u/map-from
                               (fn [{:crux.db/keys [id]}]
                                 [table id])
@@ -226,9 +232,8 @@
         (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
                                                        :query query)
         (not fns-authorized) (bu/anom :forbidden "Function call not allowed."
-                               :where where)
-        (not docs-authorized) (bu/anom :forbidden "Document read not allowed."
-                                :docs docs)
+                               :query query)
+        authorize-anom authorize-anom
         :default {:norm-query norm-query
                   :query-info {:table table
                                :event-id event-id
