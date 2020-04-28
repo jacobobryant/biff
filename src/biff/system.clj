@@ -1,64 +1,211 @@
-(ns ^:biff biff.system
+(ns biff.system
   (:require
-    [biff.http :as bhttp]
-    [biff.util.system :refer [start-biff]]
-    [biff.util.crux :as bu-crux]
     [biff.util :as bu]
-    [mount.core :refer [defstate]]
-    [trident.util :as u]
-    [biff.core :as core]))
+    [biff.util.http :as bu-http]
+    [biff.util.static :as bu-static]
+    [biff.auth :as auth]
+    [clojure.set :as set]
+    [crux.api :as crux]
+    [taoensso.sente :as sente]
+    [ring.middleware.session.cookie :as cookie]
+    [ring.middleware.anti-forgery :as anti-forgery]
+    [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
+    [biff.util.crux :as bu-crux]))
 
-(defmulti ws (fn [event data] (:event-id event)))
+(defn set-defaults [sys instance-ns]
+  (let [sys (merge sys (bu/select-ns-as sys instance-ns 'biff))
+        {:biff/keys [dev app-ns host]
+         :keys [biff.auth/send-email biff.web/port biff.static/root]
+         :or {port 8080 app-ns instance-ns}} sys
+        root (or root (str "www/" host))]
+    (assert (some? host))
+    (merge
+      {:biff.crux/topology :jdbc
+       :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
+       :biff.crux.jdbc/dbname app-ns
+       :biff.handler/cookie-key-path (str "data/" app-ns "/cookie-key")
+       :biff.web/port 8080
+       :biff/base-url (if (= host "localhost")
+                        (str "http://localhost:" port)
+                        (str "https://" host))
+       :biff.static/root root
+       :biff.static/resource-root (str "www/" app-ns)
+       :biff.handler/secure-defaults true
+       :biff.handler/not-found-path (str root "/404.html")
+       :biff.handler/roots (if dev
+                             ["www-dev" root]
+                             [root])}
+      sys
+      (when dev
+        {:biff.crux/topology :standalone
+         :biff.handler/secure-defaults false}))))
 
-(defmethod ws :default
-  [_ _]
-  (bu/anom :not-found))
+(defn start-crux [sys]
+  (let [opts (-> sys
+               (bu/select-ns-as 'biff.crux 'crux)
+               (set/rename-keys {:crux/topology :topology
+                                 :crux/storage-dir :storage-dir}))
+        node (bu-crux/start-node opts)]
+    (-> sys
+      (assoc :biff/node node)
+      (update :trident.system/stop conj #(.close node)))))
 
-(defn get-config [{:keys [plugins biff/send-mail biff/dbname]
-                   :or {dbname "biff"}}]
-  (let [[routes
-         static-pages
-         rules
-         triggers] (->> plugins
-                     vals
-                     (map (juxt :biff/route :biff/static-pages :biff/rules :biff/triggers))
-                     (apply map (comp not-empty #(filter some? %) vector)))]
-    (u/assoc-some
-      {:app-namespace 'biff.system
-       :event-handler #(ws % (:?data %))
-       :on-signin "/"
-       :on-signin-request "/biff/signin-request"
-       :on-signin-fail "/biff/signin-fail"
-       :on-signout "/biff/signin"
-       :send-email (some-> send-mail requiring-resolve)}
-      :crux.jdbc/dbname dbname
-      :static-pages (when static-pages
-                      (apply bu/merge-safe static-pages))
-      :route (into [["/" {:get (constantly {:status 302
-                                            :headers/Location "/biff/pack"})
-                          :name ::home}]]
-               routes)
-      :rules (when rules
-               (apply merge-with bu/merge-safe rules))
-      :triggers (when triggers
-                  (apply merge-with
-                    (fn [m1 m2]
-                      (merge-with
-                        (fn [f g]
-                          (fn [env]
-                            (f env)
-                            (g env)))
-                        m1 m2))
-                    triggers)))))
+(defn start-sente [{:keys [biff/event-handler] :as sys}]
+  (let [{:keys [ch-recv send-fn connected-uids
+                ajax-post-fn ajax-get-or-ws-handshake-fn]}
+        (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn :client-id})
+        sente-route ["/api/chsk" {:get ajax-get-or-ws-handshake-fn
+                                  :post ajax-post-fn
+                                  :middleware [anti-forgery/wrap-anti-forgery]
+                                  :name ::chsk}]]
+    (-> sys
+      (update :biff/routes conj sente-route)
+      (assoc :biff/send-event send-fn :biff.sente/ch-recv ch-recv))))
 
-(defstate system
-  :start (start-biff (get-config core/config))
-  :stop ((:close system)))
+(defn start-tx-pipe [{:keys [biff/node] :as sys}]
+  (let [last-tx-id (-> (bu-crux/tx-log {:node node}) ; Better way to do this?
+                     last
+                     :crux.tx/tx-id
+                     atom)
+        sys (assoc sys :biff.crux/subscriptions (atom {}))
+        notify-tx-opts (-> sys
+                         (merge (bu/select-ns sys 'biff))
+                         (assoc :biff.crux/last-tx-id last-tx-id))
+        {:keys [f close]} (bu/pipe-fn
+                            (fn [opts]
+                              (update opts :tx #(crux/submit-tx node %)))
+                            #(bu/fix-stdout
+                               (bu-crux/notify-tx (merge % notify-tx-opts))))]
+    (-> sys
+      (assoc :biff/submit-tx f)
+      (update :trident.system/close conj close))))
 
-(defmethod bhttp/handler :default
-  [req]
-  (if-some [handler (:handler system)]
-    (handler req)
-    {:status 503
-     :body "Unavailable."
-     :headers {"Content-Type" "text/plain"}}))
+(defn wrap-event-handler [handler]
+  (fn [{:keys [?reply-fn] :as event}]
+    (bu/fix-stdout
+      (let [response (try
+                       (handler event)
+                       (catch Exception e
+                         (.printStackTrace e)
+                         (bu/anom :fault)))]
+        (when ?reply-fn
+          (?reply-fn response))))))
+
+(defn start-event-router [{:keys [biff.sente/ch-recv biff/event-handler] :as sys}]
+  (update sys :trident.system/stop conj
+    (sente/start-server-chsk-router! ch-recv
+      (-> event-handler
+        bu-crux/wrap-sub
+        bu-crux/wrap-tx
+        (bu/wrap-env sys)
+        wrap-event-handler))))
+
+(defn set-auth-route [sys]
+  (update sys :biff/routes conj (auth/route sys)))
+
+(defn set-handler [{:keys [biff/routes biff/host]
+                    :biff.handler/keys [roots
+                                        secure-defaults
+                                        cookie-key-path
+                                        not-found-path] :as sys}]
+  (let [session-store (cookie/cookie-store {:key (bu/cookie-key cookie-key-path)})
+        handler (bu-http/make-handler
+                  {:roots roots
+                   :session-store session-store
+                   :secure-defaults secure-defaults
+                   :not-found-path not-found-path
+                   :routes [(into ["" {:middleware [[bu/wrap-env sys]]}]
+                              routes)]})]
+    (update sys :biff.web/host->handler assoc host handler)))
+
+(defn write-static-resources
+  [{:biff.static/keys [root resource-root]
+    :keys [biff/static-pages] :as sys}]
+  (bu-static/export-rum static-pages root)
+  (bu-static/copy-resources resource-root root))
+
+(defn start-biff [sys instance-ns]
+  (let [new-sys (-> sys
+                  (set-defaults instance-ns)
+                  start-crux
+                  start-sente
+                  start-tx-pipe
+                  start-event-router
+                  set-auth-route
+                  set-handler)]
+    (write-static-resources new-sys)
+    (-> sys
+      (merge (select-keys new-sys [:trident.system/stop
+                                   :biff.web/host->handler]))
+      (merge (bu/select-ns-as new-sys 'biff instance-ns)))))
+
+;(ns ^:biffbak biff.system
+;  (:require
+;    [biff.util.system :refer [start-biff]]
+;    [biff.util :as bu]
+;    [clojure.spec.alpha :as s]
+;    [integrant.core :as ig]
+;    [trident.util :as u]))
+;
+;(defmulti ws (fn [event data] (:event-id event)))
+;
+;(defmethod ws :default
+;  [_ _]
+;  (bu/anom :not-found))
+;
+;
+;(def config
+;  {::crux {:crux.jdbc/dbname "biff"}
+;   ::auth {:on-signin "/"
+;           :on-signin-request "/biff/signin-request"
+;           :on-signin-fail "/biff/signin-fail"
+;           :on-signout "/biff/signin"}
+;   ::static-resource {:static-pageses (ig/refset ::static-pages)}
+;   ::route-config {:routes (ig/refset ::route)}
+;   ::rules-config {:ruleses (ig/refset ::rules)}
+;   [:biff.http/system ::system] {:app-namespace 'biff.system
+;                                 :biff.http/http-config (ig/ref :biff.http/config)
+;                                 :crux-config (ig/ref ::crux)
+;                                 :auth-config (ig/ref ::auth)
+;                                 :static-resource-config (ig/ref ::static-resource)
+;                                 :route-config (ig/ref ::route-config)
+;                                 :rules-config (ig/ref ::rules-config)
+;                                 :triggerses (ig/refset ::triggers)
+;                                 :event-handler #(ws % (:?data %))}})
+;
+;
+;(defmethod ig/prep-key ::auth
+;  [_ config]
+;  (update config :send-email #(some-> % requiring-resolve)))
+;
+;(defmethod ig/init-key ::static-resource
+;  [_ {:keys [static-pageses] :as config}]
+;  (when static-pageses
+;    (-> config
+;      (dissoc :static-pageses)
+;      (assoc :static-pages (apply bu/merge-safe static-pageses)))))
+;
+;(defn derive-config
+;  [{:keys [ruleses triggerses] {:keys [routes]} :route-config :as config}]
+;  (-> config
+;    (dissoc :ruleses :triggerses)
+;    (u/assoc-some
+;      :rules (some->> ruleses (apply merge-with bu/merge-safe))
+;      :triggers (some->> triggerses
+;                  (apply merge-with
+;                    (fn [m1 m2]
+;                      (merge-with
+;                        (fn [f g]
+;                          (fn [env]
+;                            (doto env f g)))
+;                        m1 m2)))))
+;    (assoc-in [:route-config :route] (into [[""]] routes))
+;    (update :route-config dissoc :routes)))
+;
+;(defmethod ig/init-key ::system
+;  [_ config]
+;  (start-biff (derive-config config)))
+;
+;(defmethod ig/halt-key! ::system
+;  [_ system]
+;  ((:close system)))

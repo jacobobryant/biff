@@ -6,17 +6,17 @@
     [rum.core :as rum]))
 
 (defn copy-resources [src-root dest-root]
-  (let [resource-root (io/resource src-root)
-        files (->> resource-root
-                io/as-file
-                file-seq
-                (filter #(.isFile %))
-                (map #(subs (.getPath %) (count (.getPath resource-root)))))]
-    (doseq [f files
-            :let [src (str (.getPath resource-root) f)
-                  dest (str dest-root f)]]
-      (io/make-parents dest)
-      (io/copy (io/file src) (io/file dest)))))
+  (when-some [resource-root (io/resource src-root)]
+    (let [files (->> resource-root
+                  io/as-file
+                  file-seq
+                  (filter #(.isFile %))
+                  (map #(subs (.getPath %) (count (.getPath resource-root)))))]
+      (doseq [f files
+              :let [src (str (.getPath resource-root) f)
+                    dest (str dest-root f)]]
+        (io/make-parents dest)
+        (io/copy (io/file src) (io/file dest))))))
 
 ; you could say that rum is one of our main exports
 (defn export-rum [pages dir]

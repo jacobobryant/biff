@@ -4,6 +4,7 @@
     [clojure.core.async :as async :refer [close! >! <! go go-loop chan put!]]
     [clojure.walk :as walk]
     [cognitect.anomalies :as anom]
+    [com.stuartsierra.dependency :as dep]
     [cemerick.url :as url]
     [clojure.set :as set]
     [crux.api :as crux]
@@ -35,6 +36,38 @@
     [com.auth0.jwt JWT]))
 
 ; trident.util
+
+(defn sort-components [components]
+  (let [name->component (into {} (map (juxt :name identity) components))]
+    (->> (for [{this-name :name :as component} components
+               relationship [:requires :required-by]
+               other-name (get component relationship)]
+           (if (= relationship :requires)
+             [this-name other-name]
+             [other-name this-name]))
+      (reduce (fn [graph [a b]]
+                (dep/depend graph a b))
+        (dep/graph))
+      (dep/topo-sort)
+      (map name->component))))
+
+(defn start-system [components]
+  (let [components (sort-components components)
+        _ (apply println "Starting" (map :name components))
+        system (->> components
+                 (map :start)
+                 reverse
+                 (apply comp)
+                 (#(% {:trident.system/stop '()})))]
+    (println "System started.")
+    system))
+
+(defn stop-system [{:trident.system/keys [stop]}]
+  (doseq [f stop]
+    (f)))
+
+(defn email= [s1 s2]
+  (.equalsIgnoreCase s1 s2))
 
 (defmacro defmemo [sym ttl & forms]
   `(do
@@ -105,13 +138,6 @@
                 result))))
      :close #(close! from)}))
 
-(defn with-defaults [m & kvs]
-  (reduce (fn  [m [k v]]
-            (cond-> m
-              (not (contains? m k)) (assoc k v)))
-    m
-    (partition 2 kvs)))
-
 (defn anomaly? [x]
   (s/valid? ::anom/anomaly x))
 
@@ -178,9 +204,12 @@
 
 (defn merge-config [config env]
   (let [env-order (concat (get-in config [env :inherit]) [env])]
-    (->> env-order
-      (map config)
-      (apply merge))))
+    (apply merge (map config env-order))))
+
+(defn ns-contains? [nspace sym]
+  (and (namespace sym)
+    (let [segments (str/split (name nspace) #"\.")]
+      (= segments (take (count segments) (str/split (namespace sym) #"\."))))))
 
 (defn select-as [m key-map]
   (-> m
@@ -188,7 +217,16 @@
     (set/rename-keys key-map)))
 
 (defn select-ns [m nspace]
-  (select-keys m (filter #(= (name nspace) (namespace %)) (keys m))))
+  (select-keys m (filter #(ns-contains? nspace (symbol %)) (keys m))))
+
+(defn select-ns-as [m ns-from ns-to]
+  (u/map-keys
+    (fn [k]
+      (->> (inc (count (str ns-from)))
+        (subs (str k))
+        (str ns-to)
+        keyword))
+    (select-ns m ns-from)))
 
 ; trident.rum
 
@@ -292,6 +330,17 @@
     :biff.http/host->ns
     set/map-invert
     (get nspace)))
+
+(defn wrap-env [handler {:keys [biff/node] :as sys}]
+  (let [env (select-ns sys 'biff)]
+    (comp handler
+      (fn [event-or-request]
+        (let [req (:ring-req event-or-request event-or-request)]
+          (-> event-or-request
+            (merge env)
+            (assoc :biff/db (crux/db node))
+            (merge (u/prepend-keys "session" (get req :session)))
+            (merge (u/prepend-keys "params" (get req :params)))))))))
 
 (comment
   (= "3\n"

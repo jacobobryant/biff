@@ -2,6 +2,7 @@
   (:require
     [biff.util :as bu]
     [cognitect.anomalies :as anom]
+    [clojure.core.async :refer [<!!]]
     [clojure.java.io :as io]
     [clojure.spec.alpha :as s]
     [clojure.walk :as walk]
@@ -202,7 +203,7 @@
       doc)))
 
 (defn crux-subscribe*
-  [{:keys [db fn-whitelist uid event-id] :as env} {:keys [table] :as query}]
+  [{:keys [db fn-whitelist session/uid id] :as env} {:keys [table] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
         {:keys [where id args] :as norm-query} (normalize-query query)]
     (bu/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
@@ -236,22 +237,22 @@
         authorize-anom authorize-anom
         :default {:norm-query norm-query
                   :query-info {:table table
-                               :event-id event-id
+                               :event-id id
                                :uid uid}
                   :sub-data {:query query
                              :changeset changeset}}))))
 
 (defn crux-subscribe!
-  [{:keys [api-send subscriptions client-id event-id] :as env} query]
+  [{:keys [send-event biff/subscriptions client-id id] :as env} query]
   (let [{:keys [norm-query query-info sub-data] :as result} (crux-subscribe* env query)]
     (if-not (bu/anomaly? result)
       (do
-        (api-send client-id [event-id sub-data])
+        (send-event client-id [id sub-data])
         (swap! subscriptions assoc-in [client-id norm-query] query-info))
       result)))
 
 (defn crux-unsubscribe!
-  [{:keys [subscriptions client-id uid]} query]
+  [{:keys [biff/subscriptions client-id session/uid]} query]
   (swap! subscriptions update client-id dissoc (normalize-query query)))
 
 (defn get-id->doc [{:keys [db-after bypass-auth query id->change] :as env}]
@@ -399,6 +400,34 @@
                                            :changeset changeset}]))))
       (reset! last-tx-id tx-id)
       true)))
+
+(defn wrap-tx [handler]
+  (fn [{:keys [id client-id biff/submit-tx] :as env}]
+    (if (not= id :biff/tx)
+      (handler env)
+      (let [tx (authorize-tx
+                 (set/rename-keys env
+                   {:session/uid :auth-uid :?data :tx}))]
+        (if (bu/anomaly? tx)
+          tx
+          (<!! (submit-tx (assoc env :tx tx))))))))
+
+(defn wrap-sub [handler]
+  (fn [{:keys [id biff/send-event client-id session/uid] {:keys [query action]} :?data :as env}]
+    (if (not= :biff/sub id)
+      (handler env)
+      (let [result (cond
+                     (= [query action] [:uid :subscribe])
+                     (send-event client-id
+                       [:biff/sub {:changeset {[:uid nil]
+                                               {:uid (or uid :signed-out)}}
+                                   :query query}])
+
+                     (= action :subscribe) (crux-subscribe! env query)
+                     (= action :unsubscribe) (crux-unsubscribe! env query)
+                     :default (bu/anom :incorrect "Invalid action." :action action))]
+        (when (bu/anomaly? result)
+          result)))))
 
 (comment
 
