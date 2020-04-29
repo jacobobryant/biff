@@ -36,7 +36,8 @@
   ([]
    (start (get-components)))
   ([components]
-   (reset! system (bu/start-system components))))
+   (reset! system (bu/start-system components))
+   nil))
 
 (defn refresh []
   (bu/stop-system @system)

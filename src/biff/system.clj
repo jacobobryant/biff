@@ -10,7 +10,8 @@
     [ring.middleware.session.cookie :as cookie]
     [ring.middleware.anti-forgery :as anti-forgery]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
-    [biff.util.crux :as bu-crux]))
+    [biff.util.crux :as bu-crux]
+    [trident.util :as u]))
 
 (defn set-defaults [sys instance-ns]
   (let [sys (merge sys (bu/select-ns-as sys instance-ns 'biff))
@@ -69,8 +70,8 @@
                      atom)
         sys (assoc sys :biff.crux/subscriptions (atom {}))
         notify-tx-opts (-> sys
-                         (merge (bu/select-ns sys 'biff))
-                         (assoc :biff.crux/last-tx-id last-tx-id))
+                         (merge (bu/select-ns-as sys 'biff nil))
+                         (assoc :last-tx-id last-tx-id))
         {:keys [f close]} (bu/pipe-fn
                             (fn [opts]
                               (update opts :tx #(crux/submit-tx node %)))

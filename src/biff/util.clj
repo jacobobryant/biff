@@ -343,15 +343,13 @@
     (get nspace)))
 
 (defn wrap-env [handler {:keys [biff/node] :as sys}]
-  (let [env (select-ns sys 'biff)]
-    (comp handler
-      (fn [event-or-request]
-        (let [req (:ring-req event-or-request event-or-request)]
-          (-> event-or-request
-            (merge env)
-            (assoc :biff/db (crux/db node))
-            (merge (u/prepend-keys "session" (get req :session)))
-            (merge (u/prepend-keys "params" (get req :params)))))))))
+  (comp handler
+    (fn [event-or-request]
+      (let [req (:ring-req event-or-request event-or-request)]
+        (-> (merge sys event-or-request)
+          (assoc :biff/db (crux/db node))
+          (merge (u/prepend-keys "session" (get req :session)))
+          (merge (u/prepend-keys "params" (get req :params))))))))
 
 (comment
   (= "3\n"

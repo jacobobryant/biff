@@ -4,12 +4,9 @@
   cheshire {:mvn/version "5.10.0"}
   clj-http {:mvn/version "3.10.0"}
   com.cognitect/anomalies {:mvn/version "0.1.12"}
-  com.taoensso/timbre {:mvn/version "4.10.0"}
   crypto-password {:mvn/version "0.2.1"}
   com.stuartsierra/dependency {:mvn/version "1.0.0"}
   expound {:mvn/version "0.8.4"}
-  integrant {:mvn/version "0.8.0"}
-  integrant/repl {:mvn/version "0.3.1"}
   metosin/muuntaja {:mvn/version "0.6.6"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
