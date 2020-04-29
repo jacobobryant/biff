@@ -19,9 +19,10 @@
                  :standalone {:crux.node/topology '[crux.standalone/topology crux.kv.rocksdb/kv-store]
                               :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
                               :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv}
-                 :jdbc {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
-                        :crux.jdbc/dbtype "postgresql"})
-               (dissoc opts :topology :storage-dir))]
+                 :jdbc (merge
+                         {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
+                          :crux.jdbc/dbtype "postgresql"}
+                         (bu/select-ns opts 'crux.jdbc))))]
     (u/pprint [:start-node (dissoc opts :crux.jdbc/password)])
     (crux/start-node opts)))
 
@@ -428,6 +429,9 @@
                      :default (bu/anom :incorrect "Invalid action." :action action))]
         (when (bu/anomaly? result)
           result)))))
+
+
+
 
 (comment
 

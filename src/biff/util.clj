@@ -219,13 +219,24 @@
 (defn select-ns [m nspace]
   (select-keys m (filter #(ns-contains? nspace (symbol %)) (keys m))))
 
+(defn ns-parts [nspace]
+  (if (nil? nspace)
+    []
+    (some-> nspace
+      str
+      not-empty
+      (str/split #"\.")
+      )))
+
 (defn select-ns-as [m ns-from ns-to]
   (u/map-keys
     (fn [k]
-      (->> (inc (count (str ns-from)))
-        (subs (str k))
-        (str ns-to)
-        keyword))
+      (let [new-ns-parts (->> (ns-parts (namespace k))
+                           (drop (count (ns-parts ns-from)))
+                           (concat (ns-parts ns-to)))]
+        (if (empty? new-ns-parts)
+          (keyword (name k))
+          (keyword (str/join "." new-ns-parts) (name k)))))
     (select-ns m ns-from)))
 
 ; trident.rum
@@ -298,7 +309,7 @@
     edn/read-string))
 
 (defn get-config [env]
-  (-> "config.edn"
+  (some-> "config.edn"
     u/maybe-slurp
     edn/read-string
     (merge-config env)))

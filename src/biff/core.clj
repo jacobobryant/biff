@@ -6,6 +6,7 @@
     [clojure.tools.namespace.repl :as tn-repl]
     [orchestra.spec.test :as st]
     [nrepl.server :as nrepl]
+    [biff.system :refer [start-biff]]
     [biff.util :as bu]
     [trident.util :as u]
     [immutant.web :as imm]))
@@ -39,8 +40,7 @@
 
 (defn refresh []
   (bu/stop-system @system)
-  (start)
-  #_(tn-repl/refresh :after 'biff.core/start))
+  (tn-repl/refresh :after 'biff.core/start))
 
 (def toggle-nrepl
   {:name ::toggle-nrepl
@@ -64,6 +64,18 @@
                 (nrepl/start-server :port nrepl-port))
               sys))})
 
+(def console
+  {:name :biff/console
+   :requires [:biff/core]
+   :required-by [:biff/web-server]
+   :start (fn [sys]
+            (-> sys
+              (merge #:console.biff.auth{:on-signin "/"
+                                         :on-signin-request "/biff/signin-request"
+                                         :on-signin-fail "/biff/signin-fail"
+                                         :on-signout "/biff/signin"})
+              (start-biff 'console.biff)))})
+
 (def web-server
   {:name :biff/web-server
    :requires [:biff/core]
@@ -77,8 +89,7 @@
                            {:port port})]
               (update sys :trident.system/stop conj #(imm/stop server))))})
 
-
-(def components [core web-server])
+(def components [core console web-server])
 
 (comment
   (u/pprint (deref system))

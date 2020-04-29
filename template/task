@@ -11,8 +11,7 @@ run () {
 }
 
 dev () {
-  export DEBUG=true
-  run
+  BIFF_ENV=dev run
 }
 
 "$@"
