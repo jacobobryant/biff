@@ -344,7 +344,7 @@
 
 (defn tx-log [{:keys [node after-tx with-ops]
                :or {after-tx nil with-ops false}}]
-  (iterator-seq (crux/open-tx-log node after-tx with-ops)))
+  (iterator-seq (crux/open-tx-log node (some-> after-tx long) with-ops)))
 
 (defn time-before [date]
   (-> date
