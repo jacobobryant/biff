@@ -4,6 +4,8 @@
     [biff.util.http :as bu-http]
     [biff.util.static :as bu-static]
     [biff.auth :as auth]
+    [biff.schema :as schema]
+    [byte-transforms :as bt]
     [clojure.set :as set]
     [crux.api :as crux]
     [taoensso.sente :as sente]
@@ -15,7 +17,7 @@
 
 (defn set-defaults [sys instance-ns]
   (let [sys (merge sys (bu/select-ns-as sys instance-ns 'biff))
-        {:biff/keys [dev app-ns host]
+        {:biff/keys [dev app-ns host rules]
          :keys [biff.auth/send-email biff.web/port biff.static/root]
          :or {port 8080 app-ns instance-ns}} sys
         root (or root (str "www/" host))]
@@ -24,7 +26,6 @@
       {:biff.crux/topology :jdbc
        :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
        :biff.crux.jdbc/dbname app-ns
-       :biff.handler/cookie-key-path (str "data/" app-ns "/cookie-key")
        :biff.web/port 8080
        :biff/base-url (if (= host "localhost")
                         (str "http://localhost:" port)
@@ -37,6 +38,7 @@
                              ["www-dev" root]
                              [root])}
       sys
+      {:biff/rules (merge rules schema/rules)}
       (when dev
         {:biff.crux/topology :standalone
          :biff.handler/secure-defaults false}))))
@@ -104,12 +106,15 @@
 (defn set-auth-route [sys]
   (update sys :biff/routes conj (auth/route sys)))
 
-(defn set-handler [{:keys [biff/routes biff/host]
+(defn set-handler [{:biff/keys [routes host node]
                     :biff.handler/keys [roots
                                         secure-defaults
-                                        cookie-key-path
                                         not-found-path] :as sys}]
-  (let [session-store (cookie/cookie-store {:key (bu/cookie-key cookie-key-path)})
+  (let [cookie-key (bt/decode (auth/get-key (assoc sys
+                                              :k :cookie-key
+                                              :biff/db (crux/db node)))
+                     :base64)
+        session-store (cookie/cookie-store {:key cookie-key})
         handler (bu-http/make-handler
                   {:roots roots
                    :session-store session-store

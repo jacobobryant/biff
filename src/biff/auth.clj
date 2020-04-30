@@ -3,6 +3,7 @@
     [crux.api :as crux]
     [ring.middleware.anti-forgery :as anti-forgery]
     [biff.util :as bu]
+    [biff.util.crux :as bu-crux]
     [byte-streams :as bs]
     [crypto.random :as random]
     [trident.util :as u]
@@ -10,14 +11,14 @@
     [cemerick.url :as url]
     [byte-transforms :as bt]))
 
-(defn get-key [{:keys [biff/node biff/db k]}]
+(defn get-key [{:keys [biff/node biff/db k] :as env}]
   (or (get (crux/entity db :biff.auth/keys) k)
     (doto (bs/to-string (bt/encode (random/bytes 16) :base64))
-      (#(crux/submit-tx
-          node
-          [[:crux.tx/put
-            {:crux.db/id :biff.auth/keys
-             k %}]])))))
+      (#(bu-crux/submit-admin-tx
+          env
+          {[:biff/auth-keys :biff.auth/keys]
+           {:db/merge true
+            k %}})))))
 
 (defn jwt-key [env]
   (get-key (assoc env :k :jwt-key)))
