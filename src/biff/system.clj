@@ -82,10 +82,15 @@
         {:keys [f close]} (bu/pipe-fn
                             (fn [opts]
                               (log :debug "submitting tx" (:tx opts))
-                              (update opts :tx #(crux/submit-tx node %)))
+                              (try
+                                (update opts :tx #(crux/submit-tx node %))
+                                (catch Exception e
+                                  (log :error e "Error while submitting tx")
+                                  nil)))
                             #(bu/fix-stdout
-                               (log :debug "tx submitted" (:tx %))
-                               (bu-crux/notify-tx (merge % notify-tx-opts))))]
+                               (when (some? %)
+                                 (log :debug "tx submitted" (:tx %))
+                                 (bu-crux/notify-tx (merge % notify-tx-opts)))))]
     (add-watch connected-uids ::rm-subs
       (fn [_ _ old-uids new-uids]
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
