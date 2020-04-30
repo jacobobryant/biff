@@ -440,7 +440,16 @@
         (when (bu/anomaly? result)
           result)))))
 
-
+(defn submit-admin-tx [{:biff/keys [node db rules]} tx]
+  (let [tx (authorize-tx {:tx tx
+                          :biff/db db
+                          :biff/rules rules
+                          :admin true})
+        anom (bu/anomaly? tx)]
+    (when anom
+      (u/pprint anom))
+    (cond->> tx
+      (not anom) (crux/submit-tx node))))
 
 
 (comment

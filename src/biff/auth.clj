@@ -19,6 +19,9 @@
             {:crux.db/id :biff.auth/keys
              k %}]])))))
 
+(defn jwt-key [env]
+  (get-key (assoc env :k :jwt-key)))
+
 (defn signin-token [jwt-key email]
   (bu/encode-jwt
     {:iss "biff"
@@ -30,8 +33,7 @@
 
 (defn signin-link [{:keys [email url] :as env}]
   (let [email (str/trim email)
-        jwt-key (get-key (assoc env :k :jwt-key))
-        jwt (signin-token jwt-key email)]
+        jwt (signin-token (jwt-key env) email)]
     (-> url
       url/url
       (assoc :query {:token jwt})
@@ -49,12 +51,13 @@
      :headers/Location location}))
 
 (defn get-uid [{:keys [biff/node biff/db email]}]
-  (or (ffirst
-        (crux/q db
-          {:find '[e]
-           :args [{'input-email email}]
-           :where '[[e :email email]
-                    [(biff.util/email= email input-email)]]}))
+  (or (:user/id
+        (ffirst
+          (crux/q db
+            {:find '[e]
+             :args [{'input-email email}]
+             :where '[[e :user/email email]
+                      [(biff.util/email= email input-email)]]})))
     (doto (java.util.UUID/randomUUID)
       (#(crux/submit-tx
           node
@@ -67,7 +70,7 @@
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
   (if-some [email (-> token
-                    (bu/decode-jwt {:secret (get-key (assoc env :k :jwt-key))
+                    (bu/decode-jwt {:secret (jwt-key env)
                                     :alg :HS256})
                     u/catchall
                     :email)]
