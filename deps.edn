@@ -24,4 +24,5 @@
   rum {:mvn/version "0.11.4"}
   ovotech/ring-jwt {:mvn/version "1.2.5"}
   com.taoensso/sente {:mvn/version "1.15.0"}
+  com.taoensso/timbre {:mvn/version "4.10.0"}
   trident/util {:mvn/version "0.2.2"}}}

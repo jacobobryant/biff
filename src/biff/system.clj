@@ -13,6 +13,7 @@
     [ring.middleware.anti-forgery :as anti-forgery]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
     [biff.util.crux :as bu-crux]
+    [taoensso.timbre :refer [log spy]]
     [trident.util :as u]))
 
 (defn set-defaults [sys instance-ns]
@@ -80,8 +81,10 @@
                          (assoc :last-tx-id last-tx-id))
         {:keys [f close]} (bu/pipe-fn
                             (fn [opts]
+                              (log :debug "submitting tx" (:tx opts))
                               (update opts :tx #(crux/submit-tx node %)))
                             #(bu/fix-stdout
+                               (log :debug "tx submitted" (:tx %))
                                (bu-crux/notify-tx (merge % notify-tx-opts))))]
     (add-watch connected-uids ::rm-subs
       (fn [_ _ old-uids new-uids]

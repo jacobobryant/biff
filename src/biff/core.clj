@@ -9,6 +9,7 @@
     [biff.system :refer [start-biff]]
     [biff.util :as bu]
     [trident.util :as u]
+    [taoensso.timbre :as timbre]
     [immutant.web :as imm]))
 
 (defonce system (atom nil))
@@ -59,6 +60,7 @@
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
                   {:biff.core/keys [start-nrepl nrepl-port instrument]
                    :or {nrepl-port 7888} :as sys} (merge sys (bu/get-config env))]
+              (timbre/merge-config! (bu/select-ns-as sys 'timbre nil))
               (when instrument
                 (st/instrument))
               (when (and start-nrepl nrepl-port)
