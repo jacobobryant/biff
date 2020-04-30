@@ -63,14 +63,18 @@
                                   :name ::chsk}]]
     (-> sys
       (update :biff/routes conj sente-route)
-      (assoc :biff/send-event send-fn :biff.sente/ch-recv ch-recv))))
+      (assoc
+        :biff/send-event send-fn
+        :biff.sente/ch-recv ch-recv
+        :biff.sente/connected-uids connected-uids))))
 
-(defn start-tx-pipe [{:keys [biff/node] :as sys}]
+(defn start-tx-pipe [{:keys [biff/node biff.sente/connected-uids] :as sys}]
   (let [last-tx-id (-> (bu-crux/tx-log {:node node}) ; Better way to do this?
                      last
                      :crux.tx/tx-id
                      atom)
-        sys (assoc sys :biff.crux/subscriptions (atom {}))
+        subscriptions (atom {})
+        sys (assoc sys :biff.crux/subscriptions subscriptions)
         notify-tx-opts (-> sys
                          (merge (bu/select-ns-as sys 'biff nil))
                          (assoc :last-tx-id last-tx-id))
@@ -79,6 +83,11 @@
                               (update opts :tx #(crux/submit-tx node %)))
                             #(bu/fix-stdout
                                (bu-crux/notify-tx (merge % notify-tx-opts))))]
+    (add-watch connected-uids ::rm-subs
+      (fn [_ _ old-uids new-uids]
+        (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
+          (when (not-empty disconnected)
+            (apply swap! subscriptions dissoc disconnected)))))
     (-> sys
       (assoc :biff/submit-tx f)
       (update :trident.system/close conj close))))

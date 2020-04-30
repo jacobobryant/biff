@@ -210,6 +210,28 @@
         :table table)
       doc)))
 
+(defn crux-resubscribe*
+  [{:keys [biff/db biff/fn-whitelist session/uid] event-id :id :as env} {:keys [table] :as query}]
+  (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
+        {:keys [where id args] :as norm-query} (normalize-query query)]
+    (bu/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
+                  crux-query (cond->
+                               {:find '[doc]
+                                :where (mapv #(cond->> %
+                                                (attr-clause? %) (into ['doc]))
+                                         where)}
+                               args (assoc :args [args]))]
+      (cond
+        (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
+                                                       :query query)
+        (not fns-authorized) (bu/anom :forbidden "Function call not allowed."
+                               :query query)
+        :default {:norm-query norm-query
+                  :query-info {:table table
+                               :event-id event-id
+                               :uid uid}}))))
+
+; todo dry with crux-resubscribe*
 (defn crux-subscribe*
   [{:keys [biff/db biff/fn-whitelist session/uid] event-id :id :as env} {:keys [table] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
@@ -257,6 +279,14 @@
       (do
         (send-event client-id [id sub-data])
         (swap! subscriptions assoc-in [client-id norm-query] query-info))
+      result)))
+
+(defn crux-resubscribe!
+  [{:keys [biff.crux/subscriptions session/uid client-id id] :as env}
+   {:keys [table] :as query}]
+  (let [{:keys [norm-query query-info] :as result} (crux-resubscribe* env query)]
+    (if-not (bu/anomaly? result)
+      (swap! subscriptions assoc-in [client-id norm-query] query-info)
       result)))
 
 (defn crux-unsubscribe!
@@ -428,7 +458,8 @@
     (if (not= :biff/sub id)
       (handler env)
       (let [result (cond
-                     (= [query action] [:uid :subscribe])
+                     (and (= query :uid)
+                       (#{:subscribe :resubscribe} action))
                      (send-event client-id
                        [:biff/sub {:changeset {[:uid nil]
                                                {:uid (or uid :signed-out)}}
@@ -436,6 +467,7 @@
 
                      (= action :subscribe) (crux-subscribe! env query)
                      (= action :unsubscribe) (crux-unsubscribe! env query)
+                     (= action :resubscribe) (crux-resubscribe! env query)
                      :default (bu/anom :incorrect "Invalid action." :action action))]
         (when (bu/anomaly? result)
           result)))))

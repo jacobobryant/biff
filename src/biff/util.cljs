@@ -31,10 +31,19 @@
               (put! ch (if response response ::no-response))))))
       ch)))
 
-(defn wrap-handler [handler ready-ch]
+(defn wrap-handler [handler {:keys [subscriptions api-send ready]}]
   (fn [{:keys [id ?data] :as event}]
-    (when (and (= id :chsk/state) (-> ?data second :first-open?))
-      (put! ready-ch true))
+    (when (= id :chsk/state)
+      (let [[old-state new-state] ?data]
+        (when (:first-open? new-state)
+          (put! ready true))
+        (when (= (mapv (juxt :first-open? :open?) [old-state new-state])
+                [[false false] [false true]])
+          (doseq [[provider query] @subscriptions]
+            (api-send [provider {:action :resubscribe
+                                 :query query}])))))
+
+    ;(u/pprint event)
     (handler event)))
 
 (defn csrf []
@@ -51,11 +60,11 @@
       (update :api-send wrap-api-send ready-pr)
       (assoc :ready ready-ch))))
 
-(defn start-router [{:keys [ch-recv handler ready]}]
+(defn start-router [{:keys [ch-recv handler ready] :as opts}]
   (sente/start-client-chsk-router! ch-recv
-    (wrap-handler handler ready)))
+    (wrap-handler handler opts)))
 
-(defn init-sente [{:keys [handler url] :as opts}]
+(defn init-sente [opts]
   (doto (merge opts (start-socket opts)) start-router))
 
 (defn wrap-sub [handler sub-channels]
@@ -105,6 +114,7 @@
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
         {:keys [api-send] :as env} (init-sente {:handler handler
+                                                :subscriptions subscriptions
                                                 :url url})]
     (maintain-subscriptions subscriptions
       (fn [[provider query]]
