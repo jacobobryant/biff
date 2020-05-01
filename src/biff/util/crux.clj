@@ -342,9 +342,16 @@
    {:query->id->doc {}
     :subscriptions subscriptions}))
 
-(defn tx-log [{:keys [node after-tx with-ops]
-               :or {after-tx nil with-ops false}}]
-  (iterator-seq (crux/open-tx-log node (some-> after-tx long) with-ops)))
+(defn tx-log* [{:keys [node after-tx with-ops]
+                :or {after-tx nil with-ops false}}]
+  (crux/open-tx-log node (some-> after-tx long) with-ops))
+
+(defmacro with-tx-log [[sym opts] & body]
+  `(let [log# (tx-log* ~opts)
+         ~sym (iterator-seq log#)
+         result# (do ~@body)]
+     (.close log#)
+     result#))
 
 (defn time-before [date]
   (-> date
@@ -413,8 +420,9 @@
                   :keys [biff.crux/subscriptions last-tx-id tx] :as env}]
   (crux/await-tx node tx)
   (and (crux/tx-committed? node tx)
-    (let [txes (take 20 (tx-log {:node node
-                                 :after-tx @last-tx-id}))
+    (let [txes (with-tx-log [log {:node node
+                                  :after-tx @last-tx-id}]
+                 (doall (take 20 log)))
           {:crux.tx/keys [tx-id tx-time]} (last txes)
           {:keys [id->change] :as env} (-> env
                                          (update :biff.crux/subscriptions deref)
@@ -424,10 +432,11 @@
                                            :db-after (crux/db node tx-time))
                                          (#(assoc % :id->change (get-id->change %))))
           changesets (changesets env)]
-      (u/pprint [:processed (take 20 (tx-log {:node node :after-tx @last-tx-id :with-ops true}))])
+      (with-tx-log [log {:node node :after-tx @last-tx-id :with-ops true}]
+        (u/pprint [:processed (take 20 log)]))
       (def env env)
-      (future (bu/fix-stdout (run-triggers env)))
       (when (not-empty txes)
+        (future (bu/fix-stdout (run-triggers env)))
         (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
           (if (bu/anomaly? result)
             (do

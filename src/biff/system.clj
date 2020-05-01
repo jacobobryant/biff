@@ -70,10 +70,8 @@
         :biff.sente/connected-uids connected-uids))))
 
 (defn start-tx-pipe [{:keys [biff/node biff.sente/connected-uids] :as sys}]
-  (let [last-tx-id (-> (bu-crux/tx-log {:node node}) ; Better way to do this?
-                     last
-                     :crux.tx/tx-id
-                     atom)
+  (let [last-tx-id (bu-crux/with-tx-log [log {:node node}]
+                     (atom (:crux.tx/tx-id (last log))))
         subscriptions (atom {})
         sys (assoc sys :biff.crux/subscriptions subscriptions)
         notify-tx-opts (-> sys
@@ -81,12 +79,13 @@
                          (assoc :last-tx-id last-tx-id))
         {:keys [f close]} (bu/pipe-fn
                             (fn [opts]
-                              (log :debug "submitting tx" (:tx opts))
-                              (try
-                                (update opts :tx #(crux/submit-tx node %))
-                                (catch Exception e
-                                  (log :error e "Error while submitting tx")
-                                  nil)))
+                              (bu/fix-stdout
+                                (log :debug "submitting tx" (:tx opts))
+                                (try
+                                  (update opts :tx #(crux/submit-tx node %))
+                                  (catch Throwable e
+                                    (log :error e "Error while submitting tx")
+                                    nil))))
                             #(bu/fix-stdout
                                (when (some? %)
                                  (log :debug "tx submitted" (:tx %))
