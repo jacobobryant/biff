@@ -9,7 +9,7 @@
     [biff.system :refer [start-biff]]
     [biff.util :as bu]
     [trident.util :as u]
-    [taoensso.timbre :as timbre]
+    [taoensso.timbre :as timbre :refer [log spy]]
     [immutant.web :as imm]))
 
 (defonce system (atom nil))

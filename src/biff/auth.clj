@@ -40,17 +40,6 @@
       (assoc :query {:token jwt})
       str)))
 
-(defn send-signin-link [{:keys [params/email biff.auth/send-email biff/base-url template location]
-                         :as env}]
-  (let [link (signin-link (assoc env
-                            :email email
-                            :url (str base-url "/api/signin")))]
-    (send-email {:to email
-                 :template template
-                 :data {:biff.auth/link link}})
-    {:status 302
-     :headers/Location location}))
-
 (defn get-uid [{:keys [biff/node biff/db email]}]
   (or (:user/id
         (ffirst
@@ -60,12 +49,25 @@
              :where '[[e :user/email email]
                       [(biff.util/email= email input-email)]]})))
     (doto (java.util.UUID/randomUUID)
+      ; todo set account created date
       (#(crux/submit-tx
           node
           [[:crux.tx/put
             {:crux.db/id {:user/id %}
              :user/id %
              :user/email email}]])))))
+
+(defn send-signin-link [{:keys [params/email biff.auth/send-email biff/base-url template location]
+                         :as env}]
+  (let [link (signin-link (assoc env
+                            :email email
+                            :url (str base-url "/api/signin")))]
+    (send-email {:to email
+                 :template template
+                 :data {:biff.auth/link link}})
+    (get-uid (assoc env :email email))
+    {:status 302
+     :headers/Location location}))
 
 (defn signin [{:keys [params/token session]
                :biff.auth/keys [on-signin on-signin-fail]
@@ -76,6 +78,7 @@
                     u/catchall
                     :email)]
     (let [uid (get-uid (assoc env :email email))]
+      ; todo set last signin date
       {:status 302
        :headers/Location on-signin
        :cookies/csrf {:path "/"
