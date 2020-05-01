@@ -9,6 +9,7 @@
     [clojure.set :as set]
     [crux.api :as crux]
     [expound.alpha :refer [expound]]
+    [taoensso.timbre :refer [log spy]]
     [trident.util :as u]))
 
 (defn start-node ^crux.api.ICruxAPI [{:keys [topology storage-dir]
@@ -409,12 +410,18 @@
       :db-before db-before)))
 
 (defn run-triggers [env]
-  (doseq [{:keys [table op triggers doc] :as env}
-          (trigger-data env)]
+  (u/pprint [:run-triggers (select-keys env [:id->change :txes])])
+  (doseq [{:keys [table op triggers doc] :as env} (trigger-data env)]
     (u/pprint [:calling-trigger table op])
-    ((get-in triggers [table op]) env)))
+    (try
+      ((get-in triggers [table op]) env)
+      (catch Exception e
+        (.printStackTrace e)
+        (log :error e "Couldn't run trigger")))))
 
 ;(u/pprint ((juxt :id->change :subscriptions changesets) env))
+
+;(run-triggers env)
 
 (defn notify-tx [{:biff/keys [triggers send-event node]
                   :keys [biff.crux/subscriptions last-tx-id tx] :as env}]
@@ -436,7 +443,6 @@
         (u/pprint [:processed (take 20 log)]))
       (def env env)
       (when (not-empty txes)
-        (future (bu/fix-stdout (run-triggers env)))
         (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
           (if (bu/anomaly? result)
             (do
@@ -448,6 +454,7 @@
                                                    :query query)]))
             (send-event client-id [event-id {:query query
                                              :changeset changeset}]))))
+      (run-triggers env)
       (reset! last-tx-id tx-id)
       true)))
 
