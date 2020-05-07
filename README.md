@@ -6,9 +6,10 @@
 > &mdash;Biff Tannen in Back to the Future
 
 Biff is a self-hosted Firebase alternative written in Clojure. See [this
-post](https://jacobobryant.substack.com/p/sneak-peek-biff-a-clojurey-alternative)
-for a deeper explanation. Biff is pre-release software, and I am actively
-working on it.
+post](https://findka.com/blog/migrating-to-biff/)
+for a deeper explanation. I'm using Biff in production for [my own startup](https://findka.com),
+but I need to write some documentation and do a lot of cleanup before officially
+releasing it.
 
 <!--
 
