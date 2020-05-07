@@ -410,7 +410,6 @@
       :db-before db-before)))
 
 (defn run-triggers [env]
-  (u/pprint [:run-triggers (select-keys env [:id->change :txes])])
   (doseq [{:keys [table op triggers doc] :as env} (trigger-data env)]
     (u/pprint [:calling-trigger table op])
     (try
@@ -442,6 +441,7 @@
       (with-tx-log [log {:node node :after-tx @last-tx-id :with-ops true}]
         (u/pprint [:processed (take 20 log)]))
       (def env env)
+      (future (bu/fix-stdout (run-triggers env)))
       (when (not-empty txes)
         (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
           (if (bu/anomaly? result)
@@ -454,7 +454,6 @@
                                                    :query query)]))
             (send-event client-id [event-id {:query query
                                              :changeset changeset}]))))
-      (run-triggers env)
       (reset! last-tx-id tx-id)
       true)))
 
