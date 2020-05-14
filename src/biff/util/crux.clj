@@ -2,7 +2,7 @@
   (:require
     [biff.util :as bu]
     [cognitect.anomalies :as anom]
-    [clojure.core.async :refer [<!!]]
+    [clojure.core.async :refer [go <!!]]
     [clojure.java.io :as io]
     [clojure.spec.alpha :as s]
     [clojure.walk :as walk]
@@ -84,12 +84,13 @@
     (bu/letdelay [auth-fn (get-in rules [table op])
                   result (auth-fn (-> env
                                     (merge doc-tx-data)
-                                    (set/rename-keys {:biff/db :db})))]
-      (merge doc-tx-data
-        (cond
-          (nil? auth-fn) (bu/anom :forbidden "No auth function.")
-          (not result) (bu/anom :forbidden "Document rejected by auth fn.")
-          :default (when (map? result) result))))))
+                                    (set/rename-keys {:biff/db :db})))
+                  anom-fn #(merge (bu/anom :forbidden %)
+                             (select-keys doc-tx-data [:table :id :doc]))]
+      (cond
+        (nil? auth-fn) (anom-fn "No auth function.")
+        (not result) (anom-fn "Document rejected by auth fn.")
+        :default (merge doc-tx-data (when (map? result) result))))))
 
 (defn authorize-tx [{:keys [tx current-time] :as env
                      :or {current-time (java.util.Date.)}}]
@@ -425,11 +426,12 @@
 (defn notify-tx [{:biff/keys [triggers send-event node]
                   :keys [biff.crux/subscriptions last-tx-id tx] :as env}]
   (crux/await-tx node tx)
-  (and (crux/tx-committed? node tx)
-    (let [txes (with-tx-log [log {:node node
-                                  :after-tx @last-tx-id}]
-                 (doall (take 20 log)))
-          {:crux.tx/keys [tx-id tx-time]} (last txes)
+  (when-let [txes (and
+                    (crux/tx-committed? node tx)
+                    (not-empty (with-tx-log [log {:node node
+                                                  :after-tx @last-tx-id}]
+                                 (doall (take 20 log)))))]
+    (let [{:crux.tx/keys [tx-id tx-time]} (last txes)
           {:keys [id->change] :as env} (-> env
                                          (update :biff.crux/subscriptions deref)
                                          (assoc
@@ -438,22 +440,19 @@
                                            :db-after (crux/db node tx-time))
                                          (#(assoc % :id->change (get-id->change %))))
           changesets (changesets env)]
-      (with-tx-log [log {:node node :after-tx @last-tx-id :with-ops true}]
-        (u/pprint [:processed (take 20 log)]))
-      (def env env)
+      (println "Processed" (count txes) "txes")
       (future (bu/fix-stdout (run-triggers env)))
-      (when (not-empty txes)
-        (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
-          (if (bu/anomaly? result)
-            (do
-              (swap! subscriptions
-                #(let [subscriptions (update % client-id dissoc query)]
-                   (cond-> subscriptions
-                     (empty? (get subscriptions client-id)) (dissoc client-id))))
-              (send-event client-id [:biff/error (bu/anom :forbidden "Query not allowed."
-                                                   :query query)]))
-            (send-event client-id [event-id {:query query
-                                             :changeset changeset}]))))
+      (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
+        (if (bu/anomaly? result)
+          (do
+            (swap! subscriptions
+              #(let [subscriptions (update % client-id dissoc query)]
+                 (cond-> subscriptions
+                   (empty? (get subscriptions client-id)) (dissoc client-id))))
+            (send-event client-id [:biff/error (bu/anom :forbidden "Query not allowed."
+                                                 :query query)]))
+          (send-event client-id [event-id {:query query
+                                           :changeset changeset}])))
       (reset! last-tx-id tx-id)
       true)))
 
@@ -487,16 +486,18 @@
         (when (bu/anomaly? result)
           result)))))
 
-(defn submit-admin-tx [{:biff/keys [node db rules]} tx]
-  (let [tx (authorize-tx {:tx tx
+(defn submit-admin-tx [{:biff/keys [submit-tx node db rules] :as sys} tx]
+  (let [db (or db (crux/db node))
+        tx (authorize-tx {:tx tx
                           :biff/db db
                           :biff/rules rules
                           :admin true})
         anom (bu/anomaly? tx)]
     (when anom
       (u/pprint anom))
-    (cond->> tx
-      (not anom) (crux/submit-tx node))))
+    (if anom
+      tx
+      (<!! (submit-tx (assoc sys :tx tx))))))
 
 
 (comment
