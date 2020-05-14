@@ -2,6 +2,7 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
+    [sablono.util]
     [clojure.spec.alpha :as s]
     [goog.net.Cookies]
     [cemerick.url :as url]
@@ -143,3 +144,15 @@
                       (fn? v) (comp #(js->clj % :keywordize-keys true)))))
       clj->js)
     (array children)))
+
+(defn adapt-class [react-class & args]
+  (let [[opts children] (if (map? (first args))
+                          [(first args) (rest args)]
+                          [{} args])
+        type# (first children)]
+    (let [new-children (if (vector? type#)
+                         [(sablono.interpreter/interpret children)]
+                         children)]
+
+      (apply js/React.createElement react-class
+        (clj->js (sablono.util/html-to-dom-attrs opts)) new-children))))
