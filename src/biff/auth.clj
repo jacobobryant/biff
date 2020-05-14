@@ -82,6 +82,7 @@
       {:status 302
        :headers/Location on-signin
        :cookies/csrf {:path "/"
+                      :max-age (* 60 60 24 90)
                       :value (force anti-forgery/*anti-forgery-token*)}
        :session (assoc session :uid uid)})
     {:status 302
