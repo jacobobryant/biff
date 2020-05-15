@@ -192,7 +192,7 @@
         (not doc-valid?) (expound doc-spec doc)))
     (and id-valid? doc-valid?)))
 
-(defn authorize-read [{:keys [table session/uid biff/db doc query biff/rules]}]
+(defn authorize-read [{:keys [table uid biff/db doc query biff/rules]}]
   (let [query-type (if (contains? query :id)
                      :get
                      :query)
@@ -252,6 +252,7 @@
                   authorize-anom (->> docs
                                    (map #(->> {:doc %
                                                :table table
+                                               :uid uid
                                                :query norm-query}
                                            (merge env)
                                            authorize-read))
@@ -445,6 +446,7 @@
       (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
         (if (bu/anomaly? result)
           (do
+            (u/pprint result)
             (swap! subscriptions
               #(let [subscriptions (update % client-id dissoc query)]
                  (cond-> subscriptions
