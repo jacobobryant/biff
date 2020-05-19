@@ -6,8 +6,7 @@
 > &mdash;Biff Tannen in Back to the Future
 
 Biff is a web framework and self-hosted deployment solution for Clojure,
-inspired by Firebase. See [this
-post](https://findka.com/blog/migrating-to-biff/) for a deeper explanation. I'm
+inspired by Firebase. I'm
 using Biff in production for [my own startup](https://findka.com). I'm
 currently working on documentation and code cleanup so that others can use it
 too.
