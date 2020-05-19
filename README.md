@@ -22,7 +22,7 @@ development if you:
 
 1. Install dependencies (clj, npm and overmind)
 2. `./task setup`
-3. `./task dev`
+3. `./task dev` (if you get a lockfile error, hit ctrl-c and run it again)
 4. Go to `localhost:9630` and start the `app` build
 5. Go to `localhost:8080`
 
