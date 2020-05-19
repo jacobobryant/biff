@@ -42,23 +42,23 @@
 
 (defn refresh []
   (bu/stop-system @system)
-  (tn-repl/refresh :after 'biff.core/start))
+  (tn-repl/refresh :after `start))
 
 (def toggle-nrepl
   {:name ::toggle-nrepl
-   :required-by [:biff/core]
-   :start #(assoc % :biff.core/start-nrepl true)})
+   :required-by [:biff/init]
+   :start #(assoc % :biff.init/start-nrepl true)})
 
 (defn -main []
   (start (conj (get-components) toggle-nrepl)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def core
-  {:name :biff/core
+(def init
+  {:name :biff/init
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-                  {:biff.core/keys [start-nrepl nrepl-port instrument]
+                  {:biff.init/keys [start-nrepl nrepl-port instrument]
                    :or {nrepl-port 7888} :as sys} (merge sys (bu/get-config env))]
               (timbre/merge-config! (bu/select-ns-as sys 'timbre nil))
               (when instrument
@@ -69,19 +69,22 @@
 
 (def console
   {:name :biff/console
-   :requires [:biff/core]
+   :requires [:biff/init]
    :required-by [:biff/web-server]
-   :start (fn [sys]
-            (-> sys
-              (merge #:console.biff.auth{:on-signin "/"
-                                         :on-signin-request "/biff/signin-request"
-                                         :on-signin-fail "/biff/signin-fail"
-                                         :on-signout "/biff/signin"})
-              (start-biff 'console.biff)))})
+   :start (fn [{:keys [biff.console/enabled] :as sys}]
+            ; I'll enable this by default after we actually have a web console app.
+            (if enabled
+              (-> sys
+                (merge #:console.biff.auth{:on-signin "/"
+                                           :on-signin-request "/biff/signin-request"
+                                           :on-signin-fail "/biff/signin-fail"
+                                           :on-signout "/biff/signin"})
+                (start-biff 'console.biff))
+              sys))})
 
 (def web-server
   {:name :biff/web-server
-   :requires [:biff/core]
+   :requires [:biff/init]
    :start (fn [{:biff.web/keys [host->handler port] :as sys}]
             (let [server (imm/run
                            #(if-some [handler (get host->handler (:server-name %))]
@@ -92,7 +95,7 @@
                            {:port port})]
               (update sys :trident.system/stop conj #(imm/stop server))))})
 
-(def components [core console web-server])
+(def components [init console web-server])
 
 (comment
   (u/pprint (deref system))

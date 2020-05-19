@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+APP_NS="hello"
+CLJS_APPS="app"
+HOST="example.com"
+
+setup () {
+  which clj npm overmind > /dev/null # Assert dependencies
+  npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
+}
+
+repl () {
+  BIFF_ENV=dev clj -m biff.core
+}
+
+cljs () {
+  npx shadow-cljs server
+}
+
+dev () {
+  overmind s
+}
+
+release-cljs () {
+  npx shadow-cljs release $CLJS_APPS
+  for app in $CLJS_APPS; do
+    mkdir -p resources/www/$APP_NS/cljs/$app
+    cp {www-dev,resources/www/$APP_NS}/cljs/$app/main.js
+  done
+}
+
+deploy () {
+  scp config.edn biff@$HOST:biff/template/
+  # ...
+}
+
+"$@"

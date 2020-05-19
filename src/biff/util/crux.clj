@@ -44,6 +44,14 @@
                   (concat [:db/merge :db/update :crux.db/id])
                   (apply dissoc doc')
                   (remove (comp #{:db/remove} second))
+                  (map (fn [[k v]]
+                         [k (if (and (vector? v) (#{:db/union :db/disj} (first v)))
+                              (let [[op x] v
+                                    old-xs (get old-doc k)]
+                                (case op
+                                  :db/union ((fnil conj #{}) old-xs x)
+                                  :db/disj ((fnil disj #{}) old-xs x)))
+                              v)]))
                   (into {})))]
     (cond
       (and generated-id merge-update)
