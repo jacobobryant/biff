@@ -11,10 +11,15 @@ using Biff in production for [my own startup](https://findka.com). I'm
 currently working on documentation and code cleanup so that others can use it
 too.
 
+Join `#biff` on `http://clojurians.net` for discussion. By the way: I want to help people learn web development with Biff.
+In particular, doing so will help me improve Biff and its documentation (I also
+enjoy teaching). So if you want to use Biff,
+come say hi. If you've got an idea for a web app you want to build, I'd be happy to do some 1-on-1
+mentoring/pair programming to help make it happen.
+
 ## Getting Started&mdash;Work in progress!
 
-Please read/skim [this post](https://findka.com/blog/migrating-to-biff/) first. It will
-give you a conceptual overview of Biff.
+For a fairly detailed conceptual overview, read/skim [this post](https://findka.com/blog/migrating-to-biff/) first.
 
 See the [example project](example/). It's tic-tac-toe written in Biff. You can run it in
 development if you:
@@ -24,6 +29,12 @@ development if you:
 3. `./task dev` (if you get a lockfile error, hit ctrl-c and run it again)
 4. Go to `localhost:9630` and start the `app` build
 5. Go to `localhost:8080`
+
+After that, you can browse through the code and start tinkering. Some good starting points are:
+
+ - [task](/example/task)
+ - [src/hello/core.clj](/example/src/hello/core.clj)
+ - [src/hello/client/app.cljs](/example/src/hello/client/app.cljs)
 
 <!--
 ### New project template
