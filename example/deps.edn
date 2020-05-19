@@ -6,7 +6,8 @@
                                cljs-http {:mvn/version "0.1.46"}}}}
  :deps
  {github-jacobobryant/biff
-  {;:git/url "https://github.com/jacobobryant/biff",
-   ;:tag "HEAD",
-   ;:sha "e09bffd678ba45881c744cf260052504b91bbe88"
-   :local/root "/home/arch/dev/biff"}}}
+  {:git/url "https://github.com/jacobobryant/biff"
+   :tag "HEAD"
+   :sha "fc86130cc969b5624fb29461578828eb1c3e61aa"
+   ;:local/root "/home/arch/dev/biff"
+   }}}

@@ -5,11 +5,89 @@
 >
 > &mdash;Biff Tannen in Back to the Future
 
-Biff is a self-hosted Firebase alternative written in Clojure. See [this
-post](https://findka.com/blog/migrating-to-biff/)
-for a deeper explanation. I'm using Biff in production for [my own startup](https://findka.com),
-but I need to write some documentation and do a lot of cleanup before officially
-releasing it.
+Biff is a web framework and self-hosted deployment solution for Clojure,
+inspired by Firebase. See [this
+post](https://findka.com/blog/migrating-to-biff/) for a deeper explanation. I'm
+using Biff in production for [my own startup](https://findka.com). I'm
+currently working on documentation and code cleanup so that others can use it
+too.
+
+## Getting Started&mdash;Work in progress!
+
+Please read/skim [this post](https://findka.com/blog/migrating-to-biff/) first. It will
+give you a conceptual overview of Biff.
+
+See the [example project](example/). It's tic-tac-toe written in Biff. You can run it in
+development if you:
+
+1. Install dependencies (clj, npm and overmind)
+2. `./task setup`
+3. `./task dev`
+4. Go to `localhost:9630` and start the `app` build
+5. Go to `localhost:8080`
+
+<!--
+### New project template
+
+Make a new directory for your app. Put the following in `deps.edn`:
+
+```clojure
+{:deps
+ {github-jacobobryant/biff
+  {:git/url "https://github.com/jacobobryant/biff"
+   :tag "HEAD"}}}
+```
+Then run `clj -Sresolve-tags` to add Biff's latest commit sha to deps.edn.
+
+Now put this in `src/hello/core.clj`:
+
+```clojure
+(ns ^:biff hello.core)
+
+(defn start-hello [sys]
+  (println "Hello starting")
+  (-> sys
+    (assoc :foo 3)
+    (update :trident.system/stop conj #(println "Hello stopping"))))
+
+(def components
+  [{:name :hello/core
+    :requires [:biff/init]
+    :start start-hello}])
+```
+
+Run `clj -m biff.core`. You should get output like this:
+```bash
+$ clj -m biff.core
+23:05:19.763 [main] INFO  crux.hash.jnr - unknown
+23:05:19.770 [main] INFO  crux.hash - Using libgcrypt for ID hashing.
+23:05:33.716 [main] DEBUG org.jboss.logging - Logging Provider: org.jboss.logging.Slf4jLoggerProvider
+Starting :biff.core/toggle-nrepl :biff/init :biff/console :biff/web-server :hello/core
+23:05:35.090 INFO  [org.projectodd.wunderboss.web.Web] (main) Registered web context /
+Hello starting
+System started.
+```
+
+From your editor, connect to nrepl on port 7888 and evaluate the following:
+```clojure
+(:foo @biff.core/system)
+=> 3
+
+(biff.util/stop-system @biff.core/system)
+=> Hello stopping
+=> nil
+```
+
+In `src/hello/core.clj`, change `"Hello starting"` to `"Hello again"`. Save the
+file and then evaluate `(biff.core/refresh)`.
+
+See [Plugins and config](https://findka.com/blog/migrating-to-biff/#plugins-and-config).
+
+### HTTP routes
+
+ -->
+
+
 
 <!--
 
