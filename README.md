@@ -11,7 +11,7 @@ using Biff in production for [my own startup](https://findka.com). I'm
 currently working on documentation and code cleanup so that others can use it
 too.
 
-Join `#biff` on [http://clojurians.net](clojurians.net) for discussion. By the way: I want to help people learn web development with Biff.
+Join `#biff` on [clojurians.net](http://clojurians.net) for discussion. By the way: I want to help people learn web development with Biff.
 In particular, doing so will help me improve Biff and its documentation (I also
 enjoy teaching). So if you want to use Biff,
 come say hi. If you've got an idea for a web app you want to build, I'd be happy to do some 1-on-1
