@@ -41,7 +41,7 @@ target="_blank">subscribe to my newsletter</a>.
 
 ## Usage
 
-See the documentation at [biffweb.com](http://biffweb.com) (work in progress!).
+See the documentation at [biffweb.com](https://biffweb.com) (work in progress!).
 
 ## License
 
