@@ -13,7 +13,7 @@ docs-dev () {
 
 docs () {
   (cd slate; bundle exec middleman build --clean)
-  rsync -av --delete slate/build/ docs/
+  rsync -av --delete slate/build/ --exclude CNAME docs/
 }
 
 "$@"
