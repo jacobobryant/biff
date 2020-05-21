@@ -1,0 +1,464 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Biff</title>
+
+    <style>
+      .highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight .gh {
+  color: #999999;
+}
+.highlight .sr {
+  color: #f6aa11;
+}
+.highlight .go {
+  color: #888888;
+}
+.highlight .gp {
+  color: #555555;
+}
+.highlight .gs {
+}
+.highlight .gu {
+  color: #aaaaaa;
+}
+.highlight .nb {
+  color: #f6aa11;
+}
+.highlight .cm {
+  color: #75715e;
+}
+.highlight .cp {
+  color: #75715e;
+}
+.highlight .c1 {
+  color: #75715e;
+}
+.highlight .cs {
+  color: #75715e;
+}
+.highlight .c, .highlight .ch, .highlight .cd, .highlight .cpf {
+  color: #75715e;
+}
+.highlight .err {
+  color: #960050;
+}
+.highlight .gr {
+  color: #960050;
+}
+.highlight .gt {
+  color: #960050;
+}
+.highlight .gd {
+  color: #49483e;
+}
+.highlight .gi {
+  color: #49483e;
+}
+.highlight .ge {
+  color: #49483e;
+}
+.highlight .kc {
+  color: #66d9ef;
+}
+.highlight .kd {
+  color: #66d9ef;
+}
+.highlight .kr {
+  color: #66d9ef;
+}
+.highlight .no {
+  color: #66d9ef;
+}
+.highlight .kt {
+  color: #66d9ef;
+}
+.highlight .mf {
+  color: #ae81ff;
+}
+.highlight .mh {
+  color: #ae81ff;
+}
+.highlight .il {
+  color: #ae81ff;
+}
+.highlight .mi {
+  color: #ae81ff;
+}
+.highlight .mo {
+  color: #ae81ff;
+}
+.highlight .m, .highlight .mb, .highlight .mx {
+  color: #ae81ff;
+}
+.highlight .sc {
+  color: #ae81ff;
+}
+.highlight .se {
+  color: #ae81ff;
+}
+.highlight .ss {
+  color: #ae81ff;
+}
+.highlight .sd {
+  color: #e6db74;
+}
+.highlight .s2 {
+  color: #e6db74;
+}
+.highlight .sb {
+  color: #e6db74;
+}
+.highlight .sh {
+  color: #e6db74;
+}
+.highlight .si {
+  color: #e6db74;
+}
+.highlight .sx {
+  color: #e6db74;
+}
+.highlight .s1 {
+  color: #e6db74;
+}
+.highlight .s, .highlight .sa, .highlight .dl {
+  color: #e6db74;
+}
+.highlight .na {
+  color: #a6e22e;
+}
+.highlight .nc {
+  color: #a6e22e;
+}
+.highlight .nd {
+  color: #a6e22e;
+}
+.highlight .ne {
+  color: #a6e22e;
+}
+.highlight .nf, .highlight .fm {
+  color: #a6e22e;
+}
+.highlight .vc {
+  color: #ffffff;
+}
+.highlight .nn {
+  color: #ffffff;
+}
+.highlight .ni {
+  color: #ffffff;
+}
+.highlight .bp {
+  color: #ffffff;
+}
+.highlight .vg {
+  color: #ffffff;
+}
+.highlight .vi {
+  color: #ffffff;
+}
+.highlight .nv, .highlight .vm {
+  color: #ffffff;
+}
+.highlight .w {
+  color: #ffffff;
+}
+.highlight {
+  color: #ffffff;
+}
+.highlight .n, .highlight .py, .highlight .nx {
+  color: #ffffff;
+}
+.highlight .nl {
+  color: #f92672;
+}
+.highlight .ow {
+  color: #f92672;
+}
+.highlight .nt {
+  color: #f92672;
+}
+.highlight .k, .highlight .kv {
+  color: #f92672;
+}
+.highlight .kn {
+  color: #f92672;
+}
+.highlight .kp {
+  color: #f92672;
+}
+.highlight .o {
+  color: #f92672;
+}
+    </style>
+    <link href="stylesheets/screen-2d4677d4.css" rel="stylesheet" media="screen" />
+    <link href="stylesheets/print-c427a123.css" rel="stylesheet" media="print" />
+      <script src="javascripts/all-c5541673.js"></script>
+  </head>
+
+  <body class="index" data-languages="[&quot;Clojure&quot;]">
+    <a href="#" id="nav-button">
+      <span>
+        NAV
+        <img src="images/navbar-cad8cdcb.png" alt="Navbar" />
+      </span>
+    </a>
+    <div class="toc-wrapper">
+        <div class="search">
+          <input type="text" class="search" id="input-search" placeholder="Search">
+        </div>
+        <ul class="search-results"></ul>
+      <ul id="toc" class="toc-list-h1">
+          <li>
+            <a href="#introduction" class="toc-h1 toc-link" data-title="Introduction">Introduction</a>
+          </li>
+          <li>
+            <a href="#getting-started" class="toc-h1 toc-link" data-title="Getting started">Getting started</a>
+          </li>
+          <li>
+            <a href="#build-system" class="toc-h1 toc-link" data-title="Build system">Build system</a>
+          </li>
+          <li>
+            <a href="#backend-entrypoint" class="toc-h1 toc-link" data-title="Backend entrypoint">Backend entrypoint</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#configuration" class="toc-h2 toc-link" data-title="Configuration">Configuration</a>
+                  </li>
+              </ul>
+          </li>
+      </ul>
+        <ul class="toc-footer">
+            <li><a href="https://github.com/jacobobryant/biff" target="_blank">View on Github</a></li>
+            <li><a href="http://clojurians.net" target="_blank">Discuss on &#35;biff</a></li>
+            <li><a href="https://findka.com/subscribe/" target="_blank">Subscribe for updates</a></li>
+        </ul>
+    </div>
+    <div class="page-wrapper">
+      <div class="dark-box"></div>
+      <div class="content">
+        <div class="main-heading">
+          <div class="main">Biff</div>
+          <div class="sub">A web framework + self-hosted deployment solution for Clojure<br>
+            <a href="https://jacobobryant.com" target="_blank"><small>Jacob O'Bryant</small></a></div>
+        </div>
+        <h1 id='introduction'>Introduction</h1>
+<p>Biff is a web framework and self-hosted deployment solution for Clojure (<a
+href="https://github.com/jacobobryant/biff" target="_blank">Github repo</a>).
+It&#39;s the culmination of 18 months I&#39;ve spent building web apps with various
+technologies like Datomic, Fulcro, AWS and Firebase (and plenty of Clojure
+libraries). I&#39;ve taken parts I liked and added a few innovations of my own.
+It&#39;s meant primarily to speed up development in pre-growth startups and hobby
+projects, but over time I&#39;d like to make it suitable for apps that need scale
+as well.</p>
+
+<p>It includes features for:</p>
+
+<ul>
+<li>Automated <strong>installation and deploys</strong> on DigitalOcean.</li>
+<li><a href="https://opencrux.com"><strong>Crux</strong></a> for the database. Thus you can use
+filesystem persistence on a $5 droplet for hobby projects or managed Postgres
+(or even Kafka) for serious apps.</li>
+<li><strong>Subscriptions</strong>. Specify what data the frontend needs declaratively, and
+Biff will keep it up-to-date.</li>
+<li><strong>Read/write authorization rules</strong>. No need to set up a bunch of endpoints
+for CRUD operations. Queries and transactions can be submitted from the
+frontend as long as they pass the rules you define.</li>
+<li><strong>Database triggers</strong>. Run code when documents of certain types are created,
+updated or deleted.</li>
+<li><strong>Authentication</strong>. Email link for now; password and SSO coming later.</li>
+<li><strong>Websocket communication</strong>.</li>
+<li>Serving <strong>static resources</strong>.</li>
+<li><strong>Multitenancy</strong>. Run multiple apps from the same process.</li>
+</ul>
+
+<p>Biff is currently <strong>alpha quality</strong>, though I am using it in production for <a
+href="https://findka.com" target="_blank">Findka</a>. Join <code>#biff</code> on <a
+href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
+discussion. I want to help people succeed with Biff, so feel free to ask for
+help and let me know what I can improve. If you&#39;d like to support my work and
+receive email updates about Biff, <a href="https://findka.com/subscribe/"
+target="_blank">subscribe to my newsletter</a>.</p>
+<h1 id='getting-started'>Getting started</h1>
+<p>The fastest way to get started with Biff is by cloning the Github repo and running the
+official example project (an implementation of Tic Tac Toe):</p>
+
+<ol>
+<li>Install dependencies (clj, npm and overmind)</li>
+<li><code>git clone https://github.com/jacobobryant/biff</code></li>
+<li><code>cd biff/example</code></li>
+<li><code>./task setup</code></li>
+<li><code>./task dev</code></li>
+<li>Go to <code>localhost:9630</code> and start the <code>app</code> build</li>
+<li>Go to <code>localhost:8080</code></li>
+</ol>
+
+<p>You can tinker with this app and use it as a template for your own projects.</p>
+<h1 id='build-system'>Build system</h1>
+<p>The example project uses tools.deps, Shadow CLJS, and Overmind.
+<code>task</code> is the main entrypoint:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">
+task</a></div>
+<div class="highlight"><pre class="highlight shell"><code><span class="c">#!/bin/bash</span>
+<span class="nb">set</span> <span class="nt">-e</span>
+
+setup <span class="o">()</span> <span class="o">{</span>
+  which clj npm overmind <span class="o">&gt;</span> /dev/null <span class="c"># Assert dependencies</span>
+  npm <span class="nb">install</span> <span class="c"># Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`</span>
+  clj <span class="nt">-Stree</span> <span class="o">&gt;</span> /dev/null <span class="c"># Download project dependencies</span>
+<span class="o">}</span>
+
+repl <span class="o">()</span> <span class="o">{</span>
+  <span class="nv">BIFF_ENV</span><span class="o">=</span>dev clj <span class="nt">-m</span> biff.core
+<span class="o">}</span>
+
+cljs <span class="o">()</span> <span class="o">{</span>
+  npx shadow-cljs server
+<span class="o">}</span>
+
+dev <span class="o">()</span> <span class="o">{</span>
+  overmind start
+<span class="o">}</span>
+
+...
+
+<span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span>
+</code></pre></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/Procfile" target="_blank">
+Procfile</a></div>
+<div class="highlight"><pre class="highlight shell tab-shell"><code>repl: ./task repl
+cljs: ./task cljs
+</code></pre></div>
+<p>So <code>./task dev</code> will use Overmind to run <code>clj</code> and <code>shadow-cljs</code> in the same
+terminal window. Hit <code>ctrl-c</code> to exit. If you&#39;d like to restart just one
+process, run e.g. <code>overmind restart repl</code> in another window. You can easily add
+new build tasks by creating new functions in <code>task</code>. Also, I recommend putting
+<code>alias t=&#39;./task&#39;</code> in your <code>.bashrc</code>.</p>
+
+<p>To fetch the latest Biff version, start out with only <code>:git/url</code> and <code>:tag</code> in the dependency:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/deps.edn" target="_blank">
+deps.edn</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="n">...</span><span class="w">
+ </span><span class="no">:deps</span><span class="w">
+ </span><span class="p">{</span><span class="n">github-jacobobryant/biff</span><span class="w">
+  </span><span class="p">{</span><span class="no">:git/url</span><span class="w"> </span><span class="s">"https://github.com/jacobobryant/biff"</span><span class="w">
+   </span><span class="no">:tag</span><span class="w"> </span><span class="s">"HEAD"</span><span class="p">}}}</span><span class="w">
+</span></code></pre></div>
+<p>Then run <code>clj -Sresolve-tags</code>. The latest commit hash will be added to <code>deps.edn</code>.</p>
+<h1 id='backend-entrypoint'>Backend entrypoint</h1>
+<p>When you run <code>clj -m biff.core</code>, Biff searches the classpath for plugins and then starts
+them in a certain order. To define a plugin, you must set <code>^:biff</code> metadata on a namespace
+and then set a <code>components</code> var to a list of plugin objects in that namespace:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/core.clj" target="_blank">
+src/hello/core.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="o">^</span><span class="no">:biff</span><span class="w"> </span><span class="n">hello.core</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.system</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">clojure.pprint</span><span class="w"> </span><span class="no">:refer</span><span class="w"> </span><span class="p">[</span><span class="n">pprint</span><span class="p">]]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.handlers</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.routes</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.rules</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.static</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.triggers</span><span class="p">]))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">send-email</span><span class="w"> </span><span class="p">[</span><span class="n">opts</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">pprint</span><span class="w"> </span><span class="p">[</span><span class="no">:send-email</span><span class="w"> </span><span class="n">opts</span><span class="p">]))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">start-hello</span><span class="w"> </span><span class="p">[</span><span class="n">sys</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">-&gt;</span><span class="w"> </span><span class="n">sys</span><span class="w">
+    </span><span class="p">(</span><span class="nb">merge</span><span class="w"> </span><span class="o">#</span><span class="no">:hello.biff.auth</span><span class="p">{</span><span class="no">:send-email</span><span class="w"> </span><span class="n">send-email</span><span class="w">
+                             </span><span class="no">:on-signup</span><span class="w"> </span><span class="s">"/signin/sent/"</span><span class="w">
+                             </span><span class="no">:on-signin-request</span><span class="w"> </span><span class="s">"/signin/sent/"</span><span class="w">
+                             </span><span class="no">:on-signin-fail</span><span class="w"> </span><span class="s">"/signin/fail/"</span><span class="w">
+                             </span><span class="no">:on-signin</span><span class="w"> </span><span class="s">"/app/"</span><span class="w">
+                             </span><span class="no">:on-signout</span><span class="w"> </span><span class="s">"/"</span><span class="p">})</span><span class="w">
+    </span><span class="p">(</span><span class="nb">merge</span><span class="w"> </span><span class="o">#</span><span class="no">:hello.biff</span><span class="p">{</span><span class="no">:routes</span><span class="w"> </span><span class="n">hello.routes/routes</span><span class="w">
+                        </span><span class="no">:static-pages</span><span class="w"> </span><span class="n">hello.static/pages</span><span class="w">
+                        </span><span class="no">:event-handler</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nf">hello.handlers/api</span><span class="w"> </span><span class="n">%</span><span class="w"> </span><span class="p">(</span><span class="no">:?data</span><span class="w"> </span><span class="n">%</span><span class="p">))</span><span class="w">
+                        </span><span class="no">:rules</span><span class="w"> </span><span class="n">hello.rules/rules</span><span class="w">
+                        </span><span class="no">:triggers</span><span class="w"> </span><span class="n">hello.triggers/triggers</span><span class="p">})</span><span class="w">
+    </span><span class="p">(</span><span class="nf">biff.system/start-biff</span><span class="w"> </span><span class="ss">'hello.biff</span><span class="p">)))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">components</span><span class="w">
+  </span><span class="p">[{</span><span class="no">:name</span><span class="w"> </span><span class="no">:hello/core</span><span class="w">
+    </span><span class="no">:requires</span><span class="w"> </span><span class="p">[</span><span class="no">:biff/init</span><span class="p">]</span><span class="w">
+    </span><span class="no">:required-by</span><span class="w"> </span><span class="p">[</span><span class="no">:biff/web-server</span><span class="p">]</span><span class="w">
+    </span><span class="no">:start</span><span class="w"> </span><span class="n">start-hello</span><span class="p">}])</span><span class="w">
+</span></code></pre></div>
+<p><code>:biff/init</code> and <code>:biff/web-server</code> are plugins defined in the <code>biff.core</code>
+namespace. The <code>:requires</code> and <code>:required-by</code> values are used to start plugins
+in the right order. You can think of plugins kind of like Ring middleware. They
+receive a system map and pass along a modified version of it.</p>
+
+<p><code>biff.system/start-biff</code> starts a Biff app. That includes initializing:</p>
+
+<ul>
+<li>a Crux node</li>
+<li>a Sente websocket listener and event router</li>
+<li>some default event handlers that handle queries, transactions and subscriptions from the frontend</li>
+<li>a Crux transaction listener, so clients can be notified of subscription updates</li>
+<li>some Reitit HTTP routes for authentication</li>
+<li>any static resources you&#39;ve included with your app</li>
+</ul>
+
+<p>If you connect to nrepl port 7888, you can access the system with
+<code>@biff.core/system</code>. Biff provides some helper functions for repl-driven
+development:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">biff.util/stop-system</span><span class="w"> </span><span class="o">@</span><span class="n">biff.core/system</span><span class="p">)</span><span class="w">
+</span><span class="p">(</span><span class="nf">biff.core/start</span><span class="p">)</span><span class="w">
+</span><span class="p">(</span><span class="nf">biff.core/refresh</span><span class="p">)</span><span class="w"> </span><span class="c1">; stops, reloads namespaces from filesystem, starts.</span><span class="w">
+</span></code></pre></div><h2 id='configuration'>Configuration</h2>
+<p>App-specific configuration can go in your plugin, as shown above. For example, we set
+<code>#:hello.biff.auth/on-signin</code> so that clients will be redirected to <code>/app/</code> after they
+sign in successfully.</p>
+
+<p>Environment-specific configuration and secrets can go in <code>config.edn</code>. They will be read in
+by the <code>:biff/init</code> plugin.</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/config.edn" target="_blank">
+config.edn</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:prod</span><span class="w"> </span><span class="p">{</span><span class="no">:biff.crux.jdbc/user</span><span class="w"> </span><span class="s">"..."</span><span class="w">
+        </span><span class="no">:biff.crux.jdbc/password</span><span class="w"> </span><span class="s">"..."</span><span class="w">
+        </span><span class="no">:biff.crux.jdbc/host</span><span class="w"> </span><span class="s">"..."</span><span class="w">
+        </span><span class="no">:biff.crux.jdbc/port</span><span class="w"> </span><span class="n">...</span><span class="w">
+        </span><span class="no">:hello.biff/host</span><span class="w"> </span><span class="s">"example.com"</span><span class="w">
+        </span><span class="no">:hello.biff.crux.jdbc/dbname</span><span class="w"> </span><span class="s">"hello"</span><span class="w">
+        </span><span class="no">:hello.mailgun/api-key</span><span class="w"> </span><span class="s">"..."</span><span class="p">}</span><span class="w">
+ </span><span class="no">:dev</span><span class="w"> </span><span class="p">{</span><span class="no">:inherit</span><span class="w"> </span><span class="p">[</span><span class="no">:prod</span><span class="p">]</span><span class="w">
+       </span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">true</span><span class="w">
+       </span><span class="no">:hello.biff/host</span><span class="w"> </span><span class="s">"localhost"</span><span class="p">}}</span><span class="w">
+</span></code></pre></div>
+<aside class="warning">Keep this file out of source control if it contains any secrets.</aside>
+
+<p>The system map is mostly flat, with namespaced keys. For example, Biff
+configuration for the example app is stored under the <code>:hello.biff</code> namespace.
+You could run multiple Biff apps in the same process by using a different
+namespace, e.g. <code>(biff.system/start-biff sys &#39;another-app.biff)</code>. Keys under
+the <code>:biff</code> namespace (e.g. <code>:biff/dev</code> from <code>config.edn</code> above) will become
+defaults for all Biff apps.</p>
+
+<p>Similarly, the return values from <code>biff.system/start-biff</code> will be namespaced. For example,
+you can get the Crux node in our example app with <code>(:hello.biff/node @biff.core/system)</code>.</p>
+
+<p>When the <code>:biff/init</code> plugin reads in your <code>config.edn</code> file, it will merge the
+nested maps according to the current environment and the value of <code>:inherit</code>.
+The default environment is <code>:prod</code>. This can be overridden by setting the
+<code>BIFF_ENV</code> environment variable:</p>
+<div class="highlight"><pre class="highlight shell tab-shell"><code><span class="nv">BIFF_ENV</span><span class="o">=</span>dev clj <span class="nt">-m</span> biff.core
+</code></pre></div>
+      </div>
+      <div class="dark-box">
+          <div class="lang-selector">
+                <a href="#" data-language-name="Clojure">Clojure</a>
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

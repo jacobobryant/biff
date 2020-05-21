@@ -14,4 +14,9 @@ dev () {
   BIFF_ENV=dev run
 }
 
+docs () {
+  (cd slate; bundle exec middleman build --clean)
+  rsync -av --delete slate/build/ docs/
+}
+
 "$@"
