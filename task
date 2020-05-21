@@ -2,16 +2,13 @@
 set -e
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-repeat () {
-  while "$@"; do sleep 1; done
-}
-
-run () {
-  repeat clojure -m biff.core
-}
-
 dev () {
-  BIFF_ENV=dev run
+  BIFF_ENV=dev clj -m biff.core
+}
+
+docs-dev () {
+  cd slate
+  bundle exec middleman server
 }
 
 docs () {

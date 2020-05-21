@@ -16,30 +16,34 @@
     [taoensso.timbre :refer [log spy]]
     [trident.util :as u]))
 
-(defn set-defaults [sys instance-ns]
-  (let [sys (merge sys (bu/select-ns-as sys instance-ns 'biff))
-        {:biff/keys [dev app-ns host rules]
-         :keys [biff.auth/send-email biff.web/port biff.static/root]
-         :or {port 8080 app-ns instance-ns}} sys
-        root (or root (str "www/" host))]
+(defn set-defaults [sys app-ns]
+  (let [sys (merge sys (bu/select-ns-as sys app-ns 'biff))
+        {:biff/keys [dev host rules]
+         :keys [biff.auth/send-email
+                biff.web/port
+                biff.static/root
+                biff.static/root-dev]
+         :or {port 8080}} sys
+        root (or root (str "www/" host))
+        root-dev (if dev "www-dev" root-dev)]
     (assert (some? host))
     (merge
       {:biff.crux/topology :jdbc
        :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
        :biff.crux.jdbc/dbname app-ns
        :biff.web/port 8080
-       :biff/base-url (if (= host "localhost")
-                        (str "http://localhost:" port)
-                        (str "https://" host))
        :biff.static/root root
        :biff.static/resource-root (str "www/" app-ns)
        :biff.handler/secure-defaults true
-       :biff.handler/not-found-path (str root "/404.html")
-       :biff.handler/roots (if dev
-                             ["www-dev" root]
-                             [root])}
+       :biff.handler/not-found-path (str root "/404.html")}
       sys
-      {:biff/rules (merge rules schema/rules)}
+      {:biff/rules (merge rules schema/rules)
+       :biff.handler/roots (if root-dev
+                             [root-dev root]
+                             [root])
+       :biff/base-url (if (= host "localhost")
+                        (str "http://localhost:" port)
+                        (str "https://" host))}
       (when dev
         {:biff.crux/topology :standalone
          :biff.handler/secure-defaults false}))))
@@ -54,7 +58,7 @@
       (assoc :biff/node node)
       (update :trident.system/stop conj #(.close node)))))
 
-(defn start-sente [{:keys [biff/event-handler] :as sys}]
+(defn start-sente [sys]
   (let [{:keys [ch-recv send-fn connected-uids
                 ajax-post-fn ajax-get-or-ws-handshake-fn]}
         (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn :client-id})
@@ -110,7 +114,8 @@
         (when ?reply-fn
           (?reply-fn response))))))
 
-(defn start-event-router [{:keys [biff.sente/ch-recv biff/event-handler] :as sys}]
+(defn start-event-router [{:keys [biff.sente/ch-recv biff/event-handler]
+                           :or {event-handler (constantly nil)} :as sys}]
   (update sys :trident.system/stop conj
     (sente/start-server-chsk-router! ch-recv
       (-> event-handler
@@ -146,9 +151,9 @@
   (bu-static/export-rum static-pages root)
   (bu-static/copy-resources resource-root root))
 
-(defn start-biff [sys instance-ns]
+(defn start-biff [sys app-ns]
   (let [new-sys (-> sys
-                  (set-defaults instance-ns)
+                  (set-defaults app-ns)
                   start-crux
                   start-sente
                   start-tx-pipe
@@ -159,4 +164,4 @@
     (-> sys
       (merge (select-keys new-sys [:trident.system/stop
                                    :biff.web/host->handler]))
-      (merge (bu/select-ns-as new-sys 'biff instance-ns)))))
+      (merge (bu/select-ns-as new-sys 'biff app-ns)))))

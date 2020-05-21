@@ -47,7 +47,7 @@
 (def toggle-nrepl
   {:name ::toggle-nrepl
    :required-by [:biff/init]
-   :start #(assoc % :biff.init/start-nrepl true)})
+   :start #(merge {:biff.init/start-nrepl true} %)})
 
 (defn -main []
   (start (conj (get-components) toggle-nrepl)))

@@ -29,8 +29,8 @@ It includes features for:
 
 - Automated **installation and deploys** on DigitalOcean.
 - [**Crux**](https://opencrux.com) for the database. Thus you can use
-  filesystem persistence on a $5 droplet for hobby projects or managed Postgres
-  (or even Kafka) for serious apps.
+  filesystem persistence on a $5 droplet for hobby projects or managed
+  Postgres/Kafka for serious apps.
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
 - **Read/write authorization rules**. No need to set up a bunch of endpoints
@@ -195,10 +195,10 @@ development:
 (biff.core/refresh) ; stops, reloads namespaces from filesystem, starts.
 ```
 
-## Configuration
+# Configuration
 
 App-specific configuration can go in your plugin, as shown above. For example, we set
-`#:hello.biff.auth/on-signin` so that clients will be redirected to `/app/` after they
+`:hello.biff.auth/on-signin` so that clients will be redirected to `/app/` after they
 sign in successfully.
 
 Environment-specific configuration and secrets can go in `config.edn`. They will be read in
@@ -240,3 +240,97 @@ The default environment is `:prod`. This can be overridden by setting the
 BIFF_ENV=dev clj -m biff.core
 ```
 
+Here is a complete list of configuration options and their default values. See the following sections
+for a deeper explanation.
+
+Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
+
+```clojure
+{; === Config for the :biff/init plugin ===
+
+ :biff.init/start-nrepl true
+ :biff.init/nrepl-port 7888
+ :biff.init/instrument false ; Calls orchestra.spec.test/instrument if true.
+ :timbre/* ...               ; These keys are passed to taoensso.timbre/merge-config!
+                             ; (without the timbre prefix).
+
+
+ ; === Config for biff.system/start-biff ===
+ ; Note: app-ns is the second parameter in biff.system/start-biff
+
+ ; REQUIRED (unless you don't want to use the corresponding features)
+ :biff/host nil          ; The hostname this app will be served on, e.g. "example.com" for prod
+                         ; or "localhost" for dev.
+ :biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
+                         ; {"/hello/" [:html [:body [:p "hello"]]]}
+ :biff/rules nil         ; An authorization rules data structure.
+ :biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
+                         ; Crux queries sent from the frontend. Functions in clojure.core
+                         ; need not be qualified. For example: '[map? example.core/frobulate]
+ :biff/triggers nil      ; A database triggers data structure.
+ :biff/event-handler nil ; A Sente event handler function.
+ :biff/routes nil        ; A vector of Reitit routes.
+
+ :biff.auth/send-email nil ; A function.
+ :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
+ :biff.auth/on-signin-request nil
+ :biff.auth/on-signin-fail nil
+ :biff.auth/on-signin nil
+ :biff.auth/on-signout nil
+
+ ; Ignored if :biff.crux/topology isn't :jdbc.
+ :biff.crux.jdbc/user nil
+ :biff.crux.jdbc/password nil
+ :biff.crux.jdbc/host nil
+ :biff.crux.jdbc/port nil
+
+ ; OPTIONAL
+ :biff/dev false ; When true, serves static files from `www-dev/` (in addition to the
+                 ; `:biff.static/root` value) and sets the following config options
+                 ; (overriding any specified values):
+                 ; {:biff.crux/topology :standalone
+                 ;  :biff.handler/secure-defaults false
+                 ;  :biff.static/root-dev "www-dev"}
+ :biff.crux/topology :jdbc ; One of #{:jdbc :standalone}
+ :biff.crux/storage-dir "data/{{app-ns}}/crux-db" ; Directory to store Crux files.
+ :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
+                           ; :biff.crux/topology is :jdbc. In this case, you must set
+                           ; :biff.crux.jdbc/{user,password,host,port}.
+ :biff.crux.jdbc/dbname app-ns
+ :biff.crux.jdbc/dbtype "postgresql"
+ :biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
+ :biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
+ :biff.static/root-dev nil                       ; An additional static file directory.
+ :biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
+ :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
+                                    ; or just site-defaults.
+
+
+ ; === Config for the :biff/web-server plugin ===
+
+ :biff.web/host->handler ... ; Set by biff.system/start-biff. A map used to dispatch Ring
+                             ; requests. For example:
+                             ; {"localhost" (constantly {:status 200 ...})
+                             ;  "example.com" (constantly {:status 200 ...})}
+ :biff.web/port 8080}        ; Port for the web server to listen on. Also used in
+                             ; biff.system/start-biff.
+```
+
+The following keys are added to the system map by `biff.system/start-biff`:
+
+ - `:biff/base-url`: e.g. "https://example.com" or "http://localhost:8080"
+ - `:biff/node`: the Crux node.
+ - `:biff/send-event`: the value of `:send-fn` returned by `taoensso.sente/make-channel-socket!`.
+ - `:biff.sente/connected-uids`: Ditto but for `:connected-uids`.
+ - `:biff.crux/subscriptions`: An atom used to keep track of which clients have subscribed
+   to which queries.
+ - `:biff/submit-tx`: A replacement for `crux.api/submit-tx` that triggers subscription updates
+   (will be removed after <a href="https://github.com/jacobobryant/biff/issues/10" target="_blank">&#35;10</a>
+   is closed).
+
+
+`biff.system/start-biff` merges the system map into incoming Ring requests and Sente events. It also
+adds `:biff/db` (a Crux DB value) on each new request/event.
+Note that
+the keys will not be prefixed yet&mdash;so within a request/event handler, you'd use `:biff/node` to get
+the Crux node, but within a separate Biff plugin you'd use e.g. `:example.biff/node`.
