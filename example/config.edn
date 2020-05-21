@@ -1,2 +1,10 @@
-{:dev {:biff/dev true
+{:prod {:biff.crux.jdbc/user "..."
+        :biff.crux.jdbc/password "..."
+        :biff.crux.jdbc/host "..."
+        :biff.crux.jdbc/port ...
+        :hello.biff/host "example.com"
+        :hello.biff.crux.jdbc/dbname "hello"
+        :hello.mailgun/api-key "..."}
+ :dev {:inherit [:prod]
+       :biff/dev true
        :hello.biff/host "localhost"}}

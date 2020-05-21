@@ -8,6 +8,7 @@ HOST="example.com"
 setup () {
   which clj npm overmind > /dev/null # Assert dependencies
   npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
+  clj -Stree > /dev/null # Download project dependencies
 }
 
 repl () {
@@ -19,7 +20,7 @@ cljs () {
 }
 
 dev () {
-  overmind s
+  overmind start
 }
 
 release-cljs () {
