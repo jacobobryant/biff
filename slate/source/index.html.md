@@ -21,7 +21,7 @@ href="https://github.com/jacobobryant/biff" target="_blank">Github repo</a>).
 It's the culmination of 18 months I've spent building web apps with various
 technologies like Datomic, Fulcro, AWS and Firebase (and plenty of Clojure
 libraries). I've taken parts I liked and added a few innovations of my own.
-It's meant primarily to speed up development in pre-growth startups and hobby
+It's designed primarily to speed up development in pre-growth startups and hobby
 projects, but over time I'd like to make it suitable for apps that need scale
 as well.
 
@@ -42,6 +42,11 @@ It includes features for:
 - **Websocket communication**.
 - Serving **static resources**.
 - **Multitenancy**. Run multiple apps from the same process.
+
+Also: instead of trying to do everything for everyone, Biff is designed to be
+easy to take apart (without forking). This should help mitigate the main
+drawback of frameworks, which is that it's often less work in the long run to
+just stitch the libraries together yourself.
 
 Biff is currently **alpha quality**, though I am using it in production for <a
 href="https://findka.com" target="_blank">Findka</a>. Join `#biff` on <a
@@ -246,79 +251,80 @@ for a deeper explanation.
 Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 
 ```clojure
-{; === Config for the :biff/init plugin ===
+; === Config for the :biff/init plugin ===
 
- :biff.init/start-nrepl true
- :biff.init/nrepl-port 7888
- :biff.init/instrument false ; Calls orchestra.spec.test/instrument if true.
- :timbre/* ...               ; These keys are passed to taoensso.timbre/merge-config!
-                             ; (without the timbre prefix).
-
-
- ; === Config for biff.system/start-biff ===
- ; Note: app-ns is the second parameter in biff.system/start-biff
-
- ; REQUIRED (unless you don't want to use the corresponding features)
- :biff/host nil          ; The hostname this app will be served on, e.g. "example.com" for prod
-                         ; or "localhost" for dev.
- :biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
-                         ; {"/hello/" [:html [:body [:p "hello"]]]}
- :biff/rules nil         ; An authorization rules data structure.
- :biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
-                         ; Crux queries sent from the frontend. Functions in clojure.core
-                         ; need not be qualified. For example: '[map? example.core/frobulate]
- :biff/triggers nil      ; A database triggers data structure.
- :biff/event-handler nil ; A Sente event handler function.
- :biff/routes nil        ; A vector of Reitit routes.
-
- :biff.auth/send-email nil ; A function.
- :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
- :biff.auth/on-signin-request nil
- :biff.auth/on-signin-fail nil
- :biff.auth/on-signin nil
- :biff.auth/on-signout nil
-
- ; Ignored if :biff.crux/topology isn't :jdbc.
- :biff.crux.jdbc/user nil
- :biff.crux.jdbc/password nil
- :biff.crux.jdbc/host nil
- :biff.crux.jdbc/port nil
-
- ; OPTIONAL
- :biff/dev false ; When true, serves static files from `www-dev/` (in addition to the
-                 ; `:biff.static/root` value) and sets the following config options
-                 ; (overriding any specified values):
-                 ; {:biff.crux/topology :standalone
-                 ;  :biff.handler/secure-defaults false
-                 ;  :biff.static/root-dev "www-dev"}
- :biff.crux/topology :jdbc ; One of #{:jdbc :standalone}
- :biff.crux/storage-dir "data/{{app-ns}}/crux-db" ; Directory to store Crux files.
- :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
-                           ; :biff.crux/topology is :jdbc. In this case, you must set
-                           ; :biff.crux.jdbc/{user,password,host,port}.
- :biff.crux.jdbc/dbname app-ns
- :biff.crux.jdbc/dbtype "postgresql"
- :biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
- :biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
- :biff.static/root-dev nil                       ; An additional static file directory.
- :biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
- :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
-                                    ; or just site-defaults.
+:biff.init/start-nrepl true
+:biff.init/nrepl-port 7888
+:biff.init/instrument false ; Calls orchestra.spec.test/instrument if true.
+:timbre/* ...               ; These keys are passed to taoensso.timbre/merge-config!
+                            ; (without the timbre prefix).
 
 
- ; === Config for the :biff/web-server plugin ===
+; === Config for biff.system/start-biff ===
+; Note: app-ns is the second parameter in biff.system/start-biff
 
- :biff.web/host->handler ... ; Set by biff.system/start-biff. A map used to dispatch Ring
-                             ; requests. For example:
-                             ; {"localhost" (constantly {:status 200 ...})
-                             ;  "example.com" (constantly {:status 200 ...})}
- :biff.web/port 8080}        ; Port for the web server to listen on. Also used in
-                             ; biff.system/start-biff.
+; REQUIRED (unless you don't want to use the corresponding features)
+:biff/host nil          ; The hostname this app will be served on, e.g. "example.com" for prod
+                        ; or "localhost" for dev.
+:biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
+                        ; {"/hello/" [:html [:body [:p "hello"]]]}
+:biff/rules nil         ; An authorization rules data structure.
+:biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
+                        ; Crux queries sent from the frontend. Functions in clojure.core
+                        ; need not be qualified. For example: '[map? example.core/frobulate]
+:biff/triggers nil      ; A database triggers data structure.
+:biff/event-handler nil ; A Sente event handler function.
+:biff/routes nil        ; A vector of Reitit routes.
+
+:biff.auth/send-email nil ; A function.
+:biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
+:biff.auth/on-signin-request nil
+:biff.auth/on-signin-fail nil
+:biff.auth/on-signin nil
+:biff.auth/on-signout nil
+
+; Ignored if :biff.crux/topology isn't :jdbc.
+:biff.crux.jdbc/user nil
+:biff.crux.jdbc/password nil
+:biff.crux.jdbc/host nil
+:biff.crux.jdbc/port nil
+
+; OPTIONAL
+:biff/dev false ; When true, sets the following config options (overriding any specified values):
+                ; {:biff.crux/topology :standalone
+                ;  :biff.handler/secure-defaults false
+                ;  :biff.static/root-dev "www-dev"}
+
+:biff.crux/topology :jdbc ; One of #{:jdbc :standalone}
+:biff.crux/storage-dir "data/{{app-ns}}/crux-db" ; Directory to store Crux files.
+:biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
+                          ; :biff.crux/topology is :jdbc. In this case, you must set
+                          ; :biff.crux.jdbc/{user,password,host,port}.
+:biff.crux.jdbc/dbname app-ns
+:biff.crux.jdbc/dbtype "postgresql"
+
+:biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
+:biff.static/root-dev nil                       ; An additional static file directory.
+:biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
+
+:biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
+:biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
+                                   ; or just site-defaults.
+
+
+; === Config for the :biff/web-server plugin ===
+
+:biff.web/host->handler ... ; Set by biff.system/start-biff. A map used to dispatch Ring
+                            ; requests. For example:
+                            ; {"localhost" (constantly {:status 200 ...})
+                            ;  "example.com" (constantly {:status 200 ...})}
+:biff.web/port 8080         ; Port for the web server to listen on. Also used in
+                            ; biff.system/start-biff.
 ```
 
 The following keys are added to the system map by `biff.system/start-biff`:
 
- - `:biff/base-url`: e.g. "https://example.com" or "http://localhost:8080"
+ - `:biff/base-url`: e.g. `"https://example.com"` or `"http://localhost:8080"`
  - `:biff/node`: the Crux node.
  - `:biff/send-event`: the value of `:send-fn` returned by `taoensso.sente/make-channel-socket!`.
  - `:biff.sente/connected-uids`: Ditto but for `:connected-uids`.
@@ -334,3 +340,313 @@ adds `:biff/db` (a Crux DB value) on each new request/event.
 Note that
 the keys will not be prefixed yet&mdash;so within a request/event handler, you'd use `:biff/node` to get
 the Crux node, but within a separate Biff plugin you'd use e.g. `:example.biff/node`.
+
+# Static resources
+
+Relevant config:
+
+```clojure
+:biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
+                        ; {"/hello/" [:html [:body [:p "hello"]]]}
+
+:biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
+:biff.static/root-dev nil                       ; An additional static file directory.
+:biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
+
+:biff/dev false ; When true, sets the following config options (overriding any specified values):
+                ; {:biff.static/root-dev "www-dev"
+                ;  ...}
+```
+
+Biff will copy your static resources to `www/yourwebsite.com/` (i.e. the value
+of `:biff.static/root`). In production, `www/` is a symlink to `/var/www/` and
+is served directly by Nginx (so static files will be served even if your JVM
+process goes down, e.g. during deployment). In development, the JVM process
+will serve files from that directory.
+
+Biff gets static resources from two places. First, it will render HTML
+files from the value of `:biff/static-pages` on startup.
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/static.clj" target="_blank">
+src/hello/static.clj</a></div>
+```clojure
+(ns hello.static
+  (:require
+    [rum.core :as rum]))
+
+(def signin-form
+  (rum/fragment
+    [:p "Email address:"]
+    [:form {:action "/api/signin-request" :method "post"}
+     [:input {:name "email" :type "email" :placeholder "Email"}]
+     [:button {:type "submit"} "Sign up/Sign in"]]))
+
+(def home
+  [:html
+   [:head
+    [:meta {:charset "utf-8"}]
+    [:script {:src "/js/ensure-signed-out.js"}]]
+   [:body
+    signin-form]])
+
+(def signin-sent
+  [:html [:head [:meta {:charset "utf-8"}]]
+   [:body
+    [:p "Sign-in link sent, please check your inbox."]
+    [:p "(Just kidding: click on the sign-in link that was printed to the console.)"]]])
+
+(def signin-fail
+  [:html [:head [:meta {:charset "utf-8"}]]
+   [:body
+    [:p "Invalid sign-in token."]
+    signin-form]])
+
+(def app
+  [:html
+   [:head
+    [:meta {:charset "utf-8"}]
+    [:script {:src "/js/ensure-signed-in.js"}]]
+   [:body
+    [:#app "Loading..."]
+    [:script {:src "/cljs/app/main.js"}]]])
+
+(def not-found
+  [:html [:head [:meta {:charset "utf-8"}]]
+   [:body
+    [:p "Not found."]]])
+
+(def pages
+  {"/" home
+   "/signin/sent/" signin-sent
+   "/signin/fail/" signin-fail
+   "/app/" app
+   "/404.html" not-found})
+```
+
+Second, Biff will look for files in the resource directory specified
+by `:biff.static/resource-root`.
+
+```bash
+biff/example $ tree resources/
+resources/
+└── www
+    └── hello.biff
+        └── js
+            ├── ensure-signed-in.js
+            └── ensure-signed-out.js
+```
+
+I currently commit generated resources (except for HTML files, but including
+CLJS compilation output) to the git repo. If you prefer, you can easily add
+initialization code to your app that instead generates the resources during
+deployment (or downloads them from a CI server).
+
+I'd like to add a CDN integration eventually.
+
+# Authentication
+
+Relevant config:
+
+```clojure
+:biff.auth/send-email nil ; A function.
+:biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
+:biff.auth/on-signin-request nil
+:biff.auth/on-signin-fail nil
+:biff.auth/on-signin nil
+:biff.auth/on-signout nil
+```
+
+Biff currently provides email link authentication (i.e. the user clicks a link
+in an email to sign in). Password and SSO authentication are on the roadmap.
+
+Biff provides a set of HTTP endpoints for authentication.
+
+## Sign up
+
+Sends the user an email with a sign-in link. Redirects to the value of
+`:biff.auth/on-signup`. If the email is sent successfully and the user
+hasn't already signed up, creates a user
+document in Crux with the email and a random UUID.
+
+The token included in the link will expire after 30 minutes.
+
+### HTTP Request
+
+`POST /api/signup`
+
+### Form Parameters
+
+Parameter | Description
+----------|------------
+email | The user's email address.
+
+### Example Usage
+
+```clojure
+[:p "Email address:"]
+[:form {:action "/api/signup" :method "post"}
+ [:input {:name "email" :type "email" :placeholder "Email"}]
+ [:button {:type "submit"} "Sign up"]]
+```
+
+The `:biff.auth/send-email` function will be called with the following options:
+
+```clojure
+(send-email {:to "alice@example.com"
+             :template :biff.auth/signup
+             :data {:biff.auth/link "https://example.com/api/signin?token=..."}})
+```
+
+You will have to provide a `send-email` function which generates an email from
+the template data and sends it. (The example app just prints the template data
+to the console). If you use Mailgun, you can do something like this:
+
+```clojure
+(def templates
+  {:biff.auth/signup
+   (fn [{:keys [biff.auth/link to]}]
+     {:subject "Thanks for signing up"
+      :html (rum.core/render-static-markup
+              [:div
+               [:p "We received a request to sign up with Findka using this email address."]
+               [:p [:a {:href link} "Click here to sign up."]]
+               [:p "If you did not request this link, you can ignore this email."]])})
+   :biff.auth/signin ...})
+
+(defn send-email* [api-key opts]
+  (http/post (str "https://api.mailgun.net/v3/mail.example.com/messages")
+    {:basic-auth ["api" api-key]
+     :form-params (assoc opts :from "Example <contact@mail.example.com>")}))
+
+(defn send-email [{:keys [to text template data api-key] :as opts}]
+  (if (some? template)
+    (if-some [template-fn (get templates template)]
+      (send-email* api-key
+        (assoc (template-fn (assoc data :to to)) :to to))
+      (println "Email template not found:" template))
+    (send-email* api-key (select-keys opts [:to :subject :text :html]))))
+
+(defn start-example [{:keys [example.mailgun/api-key] :as sys}]
+  (-> sys
+    (merge
+      {:example.biff.auth/send-email #(send-email (assoc % :api-key api-key))
+       ...})
+    (biff.system/start-biff 'example.biff)))
+```
+
+## Request sign-in
+
+Sends the user an email with a sign-in link. This is the same as [Sign up](#sign-up),
+except:
+
+ - The endpoint is `/api/signin-request`
+ - The template key will be set to `:biff.auth/signin`
+ - The user will be redirected to the value of `:biff.auth/on-signin-request`
+
+## Sign in
+
+Verifies the given JWT and adds a `:uid` key to the user's session (expires in
+90 days). Redirects to the value of `:biff.auth/on-signin` (or
+`:biff.auth/on-signin-fail` if the token is incorrect or expired).
+
+Also sets a `:csrf` cookie, the value of which must be included in the
+`X-CSRF-Token` header for any HTTP requests that require authentication.
+
+### HTTP Request
+
+`GET /api/signin`
+
+### URL Parameters
+
+Parameter | Description
+----------|------------
+token | A JWT
+
+### Example Usage
+
+This endpoint is used by the link generated by [Sign up](#sign-up) and [Request
+sign-in](#request-sign-in), so you typically won't need to generate a link for
+this endpoint yourself. However, if you'd like to use a longer expiration date for the
+token or authenticate at a custom endpoint, you can do it like so:
+
+```clojure
+(biff.util/token-url {:url (str (:biff/base-url sys) "/api/unsubscribe")
+                      :claims {:email "alice@example.com"
+                               :uid "abc123"}
+                      :jwt-secret (biff.auth/jwt-key sys)
+                      :iss "example"
+                      :expires-in (* 60 60 24 7 4)})
+
+; Or for just the token:
+(biff.util/mint {:secret (biff.auth/jwt-key sys)
+                 :iss "example"
+                 :expires-in (* 60 60 24 7 4)}
+                {:email "alice@example.com"
+                 :uid "abc123"})
+```
+
+After a user is signed in, you can authenticate them on the backend from an event/request
+handler like so:
+
+```clojure
+(defn handler [{:keys [session/uid biff/db]}]
+  (if (some? uid)
+    (prn (crux.api/entity db {:user/id uid}))
+    ; => {:crux.db/id {:user/id #uuid "..."}
+    ;     :user/id #uuid "..." ; duplicated for query convenience
+    ;     :user/email "alice@example.com"}
+    (println "User not authenticated.")))
+```
+
+## Sign out
+
+Clears the user's session and `:csrf` cookie. Redirects to the value of
+`:biff.auth/on-signout`.
+
+See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26</a>.
+
+### HTTP Request
+
+`GET /api/signout`
+
+### Example Usage
+
+```clojure
+[:a {:href "/api/signout"} "sign out"]
+```
+
+## Check if signed in
+
+Returns status 200 if the user is authenticated, else 403.
+
+See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26</a>.
+
+### HTTP Request
+
+`GET /api/signed-in`
+
+### Example Usage
+
+Include this on your landing page:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-out.js" target="_blank">
+resources/www/hello.biff/js/ensure-signed-out.js</a></div>
+```javascript
+fetch("/api/signed-in").then(response => {
+  if (response.status == 200) {
+    document.location = "/app";
+  }
+});
+```
+
+Include this on your app page:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-in.js" target="_blank">
+resources/www/hello.biff/js/ensure-signed-in.js</a></div>
+```javascript
+fetch("/api/signed-in").then(response => {
+  if (response.status != 200) {
+    document.location = "/";
+  }
+});
+```

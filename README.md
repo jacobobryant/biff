@@ -17,8 +17,8 @@ It includes features for:
 
 - Automated **installation and deploys** on DigitalOcean.
 - [**Crux**](https://opencrux.com) for the database. Thus you can use
-  filesystem persistence on a $5 droplet for hobby projects or managed Postgres
-  (or even Kafka) for serious apps.
+  filesystem persistence on a $5 droplet for hobby projects or managed
+  Postgres/Kafka for serious apps.
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
 - **Read/write authorization rules**. No need to set up a bunch of endpoints
