@@ -351,6 +351,15 @@
           (merge (u/prepend-keys "session" (get req :session)))
           (merge (u/prepend-keys "params" (get req :params))))))))
 
+(defn wrap-authorize [handler]
+  (anti-forgery/wrap-anti-forgery
+    (fn [req]
+      (if (some? (get-in req [:session :uid]))
+        (handler req)
+        {:status 401
+         :headers/Content-Type "text/plain"
+         :body "Not authorized."}))))
+
 (comment
   (= "3\n"
     (with-out-str

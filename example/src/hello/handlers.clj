@@ -41,3 +41,8 @@
                    :tx [[:crux.tx/match {:game/id game-id} game]
                         [:crux.tx/put new-game]]))
       nil)))
+
+(defmethod api :hello/echo
+  [{:keys [client-id biff/send-event]} arg]
+  (send-event client-id [:hello/prn ":hello/echo called"])
+  arg)

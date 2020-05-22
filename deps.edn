@@ -7,7 +7,6 @@
   crypto-password {:mvn/version "0.2.1"}
   com.stuartsierra/dependency {:mvn/version "1.0.0"}
   expound {:mvn/version "0.8.4"}
-  metosin/muuntaja {:mvn/version "0.6.6"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
   nrepl/nrepl {:mvn/version "0.5.3"}

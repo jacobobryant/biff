@@ -13,6 +13,10 @@
   [_ anom]
   (pprint anom))
 
+(defmethod api :hello/prn
+  [_ arg]
+  (prn arg))
+
 (defn api-send [& args]
   (apply (:api-send @s/system) args))
 

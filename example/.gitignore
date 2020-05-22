@@ -16,3 +16,4 @@ data/
 www/
 www-dev/
 node_modules/
+.shadow-cljs/

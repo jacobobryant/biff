@@ -13,30 +13,14 @@
     [ring.middleware.defaults :as rd]
     [ring.middleware.session.cookie :as cookie]
     [reitit.ring :as reitit]
-    [muuntaja.middleware :as muuntaja]
     [rum.core :as rum]
     [clojure.set :as set]
     [taoensso.sente :as sente]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
     [ring.middleware.anti-forgery :as anti-forgery]))
 
-;(defn wrap-authorize-admin [handler]
-;  (anti-forgery/wrap-anti-forgery
-;    (fn [{:keys [uri] :as req}]
-;      (if (get-in req [:session :admin])
-;        (handler req)
-;        {:status 302
-;         :headers {"Location" (str "/biff/auth?next=" (url/url-encode uri))}
-;         :body ""}))))
-
-(defn wrap-authorize [handler]
-  (anti-forgery/wrap-anti-forgery
-    (fn [req]
-      (if-some [uid (get-in req [:session :uid])]
-        (handler (assoc req :uid uid))
-        {:status 401
-         :headers/Content-Type "text/plain"
-         :body "Not authorized."}))))
+; deprecated, use biff.util/wrap-authorize
+(def wrap-authorize biff.util/wrap-authorize)
 
 (defn file-response [req file]
   (when (.isFile file)
@@ -92,30 +76,4 @@
         (reitit/router routes)
         (apply reitit/routes default-handlers))
       wrap-nice-response
-      muuntaja/wrap-format
       (rd/wrap-defaults ring-defaults))))
-
-;(defn wrap-sente-handler [handler]
-;  (fn [{:keys [?reply-fn] :as event}]
-;    (bu/fix-stdout
-;      (let [event (set/rename-keys event {:send-fn :send-event})
-;            response (try
-;                       (handler event)
-;                       (catch Exception e
-;                         (.printStackTrace e)
-;                         (bu/anom :fault)))]
-;        (when ?reply-fn
-;          (?reply-fn response))))))
-;
-;(defn init-sente [{:keys [route-name handler]}]
-;  (let [{:keys [ch-recv send-fn connected-uids
-;                ajax-post-fn ajax-get-or-ws-handshake-fn]}
-;        (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn :client-id})]
-;    {:sente-route ["/api/chsk" {:get ajax-get-or-ws-handshake-fn
-;                                :post ajax-post-fn
-;                                :middleware [anti-forgery/wrap-anti-forgery]
-;                                :name route-name}]
-;     :close-router (sente/start-server-chsk-router! ch-recv
-;                     (wrap-sente-handler handler))
-;     :send-event send-fn
-;     :connected-uids connected-uids}))

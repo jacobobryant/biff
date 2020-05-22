@@ -263,7 +263,7 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 ; === Config for biff.system/start-biff ===
 ; Note: app-ns is the second parameter in biff.system/start-biff
 
-; REQUIRED (unless you don't want to use the corresponding features)
+; RECOMMENDED
 :biff/host nil          ; The hostname this app will be served on, e.g. "example.com" for prod
                         ; or "localhost" for dev.
 :biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
@@ -273,8 +273,8 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
                         ; Crux queries sent from the frontend. Functions in clojure.core
                         ; need not be qualified. For example: '[map? example.core/frobulate]
 :biff/triggers nil      ; A database triggers data structure.
-:biff/event-handler nil ; A Sente event handler function.
 :biff/routes nil        ; A vector of Reitit routes.
+:biff/event-handler nil ; A Sente event handler function.
 
 :biff.auth/send-email nil ; A function.
 :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
@@ -289,12 +289,12 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/host nil
 :biff.crux.jdbc/port nil
 
-; OPTIONAL
 :biff/dev false ; When true, sets the following config options (overriding any specified values):
                 ; {:biff.crux/topology :standalone
                 ;  :biff.handler/secure-defaults false
                 ;  :biff.static/root-dev "www-dev"}
 
+; OPTIONAL
 :biff.crux/topology :jdbc ; One of #{:jdbc :standalone}
 :biff.crux/storage-dir "data/{{app-ns}}/crux-db" ; Directory to store Crux files.
 :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
@@ -650,3 +650,202 @@ fetch("/api/signed-in").then(response => {
   }
 });
 ```
+
+# Client/server communication
+
+Relevant config:
+
+```clojure
+:biff/routes nil        ; A vector of Reitit routes.
+:biff/event-handler nil ; A Sente event handler function.
+:biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
+:biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
+                                   ; or just site-defaults.
+:biff/dev false ; When true, sets the following config options (overriding any specified values):
+                ; {:biff.handler/secure-defaults false
+                ;  ...}
+```
+
+## HTTP
+
+The value of `:biff/routes` will be wrapped with some default middleware which, among other things:
+
+ - Applies a modified version of `ring.middleware.defaults/secure-site-defaults` (or `site-defaults`).
+ - Merges the system map into the request (so you can access configuration and other things).
+ - Sets `:biff/db` to a current Crux db value.
+ - Flattens the `:session` and `:params` maps (so you can do e.g. `(:session/uid request)` instead
+   of `(:uid (:session request))`).
+ - Sets default values of `{:body "" :status 200}` for responses.
+ - Nests any `:headers/*` or `:cookies/*` keys (so `:headers/Content-Type "text/plain"` expands
+   to `:headers {"Content-Type" "text/plain"}`).
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
+src/hello/routes.clj</a></div>
+```clojure
+(ns hello.routes
+  (:require
+    [biff.util :as bu]
+    ...))
+
+(defn echo [req]
+  {:headers/Content-Type "application/edn"
+   :body (prn-str
+           (merge
+             (select-keys req [:params :body-params])
+             (bu/select-ns req 'params)))})
+
+(def routes
+  [["/echo" {:get echo
+             :post echo
+             :name ::echo}]
+   ...])
+```
+
+```shell
+$ curl -XPOST localhost:8080/echo?foo=1 -F bar=2
+{:params {:foo "1", :bar "2"}, :params/bar "2", :params/foo "1"}
+$ curl -XPOST localhost:8080/echo -d '{:foo 1}' -H "Content-Type: application/edn"
+{:params {}, :body-params {:foo 1}}
+```
+
+For endpoints that require authentication, you must wrap anti-forgery middleware. Also,
+be sure not to make any `GET` endpoints that require authentication as these bypass anti-forgery
+checks.
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
+src/hello/routes.clj</a></div>
+```clojure
+(ns hello.routes
+  (:require
+    [biff.util :as bu]
+    [crux.api :as crux]
+    [ring.middleware.anti-forgery :as anti-forgery]))
+
+...
+
+(defn whoami [{:keys [session/uid biff/db]}]
+  (if (some? uid)
+    {:body (:user/email (crux/entity db {:user/id uid}))
+     :headers/Content-Type "text/plain"}
+    {:status 401
+     :headers/Content-Type "text/plain"
+     :body "Not authorized."}))
+
+(defn whoami2 [{:keys [session/uid biff/db]}]
+  {:body (:user/email (crux/entity db {:user/id uid}))
+   :headers/Content-Type "text/plain"})
+
+(def routes
+  [...
+   ["/whoami" {:post whoami
+               :middleware [anti-forgery/wrap-anti-forgery]
+               :name ::whoami}]
+   ; Same as whoami
+   ["/whoami2" {:post whoami2
+                :middleware [bu/wrap-authorize]
+                :name ::whoami2}]])
+```
+
+When calling these endpoints, you must include the value of the `csrf` cookie in the
+`X-CSRF-Token` header:
+
+```clojure
+(cljs-http.client/post "/whoami" {:headers {"X-CSRF-Token" (biff.util/csrf)}})
+; => {:status 200, :body "alice@example.com", ...}
+```
+
+However, communicating over websockets is usually more convenient, in which
+case this is unnecessary.
+
+## Web sockets
+
+Web sockets are the preferred method of communication. First, set `:biff/event-handler`:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/core.clj" target="_blank">
+src/hello/core.clj</a></div>
+```clojure
+(defn start-hello [sys]
+  (-> sys
+    ...
+    (merge #:hello.biff{:event-handler #(hello.handlers/api % (:?data %))
+                        ...})
+    (biff.system/start-biff 'hello.biff)))
+```
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/handlers.clj" target="_blank">
+src/hello/handlers.clj</a></div>
+```clojure
+(ns hello.handlers
+  (:require
+    [biff.util :as bu]
+    ...))
+
+(defmulti api :id)
+
+(defmethod api :default
+  [{:keys [id]} _]
+  (bu/anom :not-found (str "No method for " id)))
+
+(defmethod api :hello/move
+  [{:keys [biff/db biff/submit-tx session/uid] :as sys} {:keys [game-id location]}]
+  ...)
+
+(defmethod api :hello/echo
+  [{:keys [client-id biff/send-event]} arg]
+  (send-event client-id [:hello/prn ":hello/echo called"])
+  arg)
+```
+
+Biff provides a helper function for initializing the web socket connection on the frontend:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
+src/hello/client/app.cljs</a></div>
+```clojure
+(defn ^:export init []
+  (reset! hello.client.app.system/system
+    (biff.util/init-sub {:handler hello.client.app.mutations/api
+                         ...}))
+  ...)
+```
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
+src/hello/client/app/mutations.cljs</a></div>
+```clojure
+(defmulti api (comp first :?data))
+
+(defmethod api :default
+  [{[event-id] :?data} data]
+  (println "unhandled event:" event-id))
+
+(defmethod api :biff/error
+  [_ anom]
+  (pprint anom))
+
+(defmethod api :hello/prn
+  [_ arg]
+  (prn arg))
+
+(defn api-send [& args]
+  (apply (:api-send @hello.client.app.system/system) args))
+
+(comment
+  (go
+    (<! (api-send [:hello/echo {:foo "bar"}]))
+    ; => {:foo "bar"}
+    ; => ":hello/echo called"
+    ))
+```
+
+# Transactions
+
+# Subscriptions
+
+# Rules
+
+# Triggers
+
+# Deployment
+
+# Tips
+
+# Contributing
