@@ -229,6 +229,29 @@
           <li>
             <a href="#configuration" class="toc-h1 toc-link" data-title="Configuration">Configuration</a>
           </li>
+          <li>
+            <a href="#static-resources" class="toc-h1 toc-link" data-title="Static resources">Static resources</a>
+          </li>
+          <li>
+            <a href="#authentication" class="toc-h1 toc-link" data-title="Authentication">Authentication</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#sign-up" class="toc-h2 toc-link" data-title="Sign up">Sign up</a>
+                  </li>
+                  <li>
+                    <a href="#request-sign-in" class="toc-h2 toc-link" data-title="Request sign-in">Request sign-in</a>
+                  </li>
+                  <li>
+                    <a href="#sign-in" class="toc-h2 toc-link" data-title="Sign in">Sign in</a>
+                  </li>
+                  <li>
+                    <a href="#sign-out" class="toc-h2 toc-link" data-title="Sign out">Sign out</a>
+                  </li>
+                  <li>
+                    <a href="#check-if-signed-in" class="toc-h2 toc-link" data-title="Check if signed in">Check if signed in</a>
+                  </li>
+              </ul>
+          </li>
       </ul>
         <ul class="toc-footer">
             <li><a href="https://github.com/jacobobryant/biff" target="_blank">View on Github</a></li>
@@ -250,7 +273,7 @@ href="https://github.com/jacobobryant/biff" target="_blank">Github repo</a>).
 It&#39;s the culmination of 18 months I&#39;ve spent building web apps with various
 technologies like Datomic, Fulcro, AWS and Firebase (and plenty of Clojure
 libraries). I&#39;ve taken parts I liked and added a few innovations of my own.
-It&#39;s meant primarily to speed up development in pre-growth startups and hobby
+It&#39;s designed primarily to speed up development in pre-growth startups and hobby
 projects, but over time I&#39;d like to make it suitable for apps that need scale
 as well.</p>
 
@@ -273,6 +296,11 @@ updated or deleted.</li>
 <li>Serving <strong>static resources</strong>.</li>
 <li><strong>Multitenancy</strong>. Run multiple apps from the same process.</li>
 </ul>
+
+<p>Also: instead of trying to do everything for everyone, Biff is designed to be
+easy to take apart (without forking). This should help mitigate the main
+drawback of frameworks, which is that it&#39;s often less work in the long run to
+just stitch the libraries together yourself.</p>
 
 <p>Biff is currently <strong>alpha quality</strong>, though I am using it in production for <a
 href="https://findka.com" target="_blank">Findka</a>. Join <code>#biff</code> on <a
@@ -455,79 +483,80 @@ The default environment is <code>:prod</code>. This can be overridden by setting
 for a deeper explanation.</p>
 
 <p>Note: <code>:foo/*</code> is used to denote all keywords prefixed by <code>:foo/</code> or <code>:foo.</code>.</p>
-<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="c1">; === Config for the :biff/init plugin ===</span><span class="w">
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="c1">; === Config for the :biff/init plugin ===</span><span class="w">
 
- </span><span class="no">:biff.init/start-nrepl</span><span class="w"> </span><span class="n">true</span><span class="w">
- </span><span class="no">:biff.init/nrepl-port</span><span class="w"> </span><span class="mi">7888</span><span class="w">
- </span><span class="no">:biff.init/instrument</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; Calls orchestra.spec.test/instrument if true.</span><span class="w">
- </span><span class="no">:timbre/*</span><span class="w"> </span><span class="n">...</span><span class="w">               </span><span class="c1">; These keys are passed to taoensso.timbre/merge-config!</span><span class="w">
-                             </span><span class="c1">; (without the timbre prefix).</span><span class="w">
-
-
- </span><span class="c1">; === Config for biff.system/start-biff ===</span><span class="w">
- </span><span class="c1">; Note: app-ns is the second parameter in biff.system/start-biff</span><span class="w">
-
- </span><span class="c1">; REQUIRED (unless you don't want to use the corresponding features)</span><span class="w">
- </span><span class="no">:biff/host</span><span class="w"> </span><span class="n">nil</span><span class="w">          </span><span class="c1">; The hostname this app will be served on, e.g. "example.com" for prod</span><span class="w">
-                         </span><span class="c1">; or "localhost" for dev.</span><span class="w">
- </span><span class="no">:biff/static-pages</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; A map from paths to Rum data structures, e.g.</span><span class="w">
-                         </span><span class="c1">; {"/hello/" [:html [:body [:p "hello"]]]}</span><span class="w">
- </span><span class="no">:biff/rules</span><span class="w"> </span><span class="n">nil</span><span class="w">         </span><span class="c1">; An authorization rules data structure.</span><span class="w">
- </span><span class="no">:biff/fn-whitelist</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Collection of fully-qualified function symbols to allow in</span><span class="w">
-                         </span><span class="c1">; Crux queries sent from the frontend. Functions in clojure.core</span><span class="w">
-                         </span><span class="c1">; need not be qualified. For example: '[map? example.core/frobulate]</span><span class="w">
- </span><span class="no">:biff/triggers</span><span class="w"> </span><span class="n">nil</span><span class="w">      </span><span class="c1">; A database triggers data structure.</span><span class="w">
- </span><span class="no">:biff/event-handler</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A Sente event handler function.</span><span class="w">
- </span><span class="no">:biff/routes</span><span class="w"> </span><span class="n">nil</span><span class="w">        </span><span class="c1">; A vector of Reitit routes.</span><span class="w">
-
- </span><span class="no">:biff.auth/send-email</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A function.</span><span class="w">
- </span><span class="no">:biff.auth/on-signup</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Redirect route, e.g. "/signup/success/".</span><span class="w">
- </span><span class="no">:biff.auth/on-signin-request</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.auth/on-signin-fail</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.auth/on-signin</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.auth/on-signout</span><span class="w"> </span><span class="n">nil</span><span class="w">
-
- </span><span class="c1">; Ignored if :biff.crux/topology isn't :jdbc.</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/user</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/password</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/host</span><span class="w"> </span><span class="n">nil</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/port</span><span class="w"> </span><span class="n">nil</span><span class="w">
-
- </span><span class="c1">; OPTIONAL</span><span class="w">
- </span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; When true, serves static files from `www-dev/` (in addition to the</span><span class="w">
-                 </span><span class="c1">; `:biff.static/root` value) and sets the following config options</span><span class="w">
-                 </span><span class="c1">; (overriding any specified values):</span><span class="w">
-                 </span><span class="c1">; {:biff.crux/topology :standalone</span><span class="w">
-                 </span><span class="c1">;  :biff.handler/secure-defaults false</span><span class="w">
-                 </span><span class="c1">;  :biff.static/root-dev "www-dev"}</span><span class="w">
- </span><span class="no">:biff.crux/topology</span><span class="w"> </span><span class="no">:jdbc</span><span class="w"> </span><span class="c1">; One of #{:jdbc :standalone}</span><span class="w">
- </span><span class="no">:biff.crux/storage-dir</span><span class="w"> </span><span class="s">"data/{{app-ns}}/crux-db"</span><span class="w"> </span><span class="c1">; Directory to store Crux files.</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/*</span><span class="w"> </span><span class="n">...</span><span class="w">     </span><span class="c1">; Passed to crux.api/start-node (without the biff prefix) if</span><span class="w">
-                           </span><span class="c1">; :biff.crux/topology is :jdbc. In this case, you must set</span><span class="w">
-                           </span><span class="c1">; :biff.crux.jdbc/{user,password,host,port}.</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/dbname</span><span class="w"> </span><span class="n">app-ns</span><span class="w">
- </span><span class="no">:biff.crux.jdbc/dbtype</span><span class="w"> </span><span class="s">"postgresql"</span><span class="w">
- </span><span class="no">:biff.handler/not-found-path</span><span class="w"> </span><span class="s">"{{value of :biff.static/root}}/404.html"</span><span class="w">
- </span><span class="no">:biff.static/root</span><span class="w"> </span><span class="s">"www/{{value of :biff/host}}"</span><span class="w"> </span><span class="c1">; Directory from which to serve static files.</span><span class="w">
- </span><span class="no">:biff.static/root-dev</span><span class="w"> </span><span class="n">nil</span><span class="w">                       </span><span class="c1">; An additional static file directory.</span><span class="w">
- </span><span class="no">:biff.static/resource-root</span><span class="w"> </span><span class="s">"www/{{app-ns}}"</span><span class="w">     </span><span class="c1">; Resource directory where static files are stored.</span><span class="w">
- </span><span class="no">:biff.handler/secure-defaults</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="c1">; Whether to use ring.middleware.defaults/secure-site-defaults</span><span class="w">
-                                    </span><span class="c1">; or just site-defaults.</span><span class="w">
+</span><span class="no">:biff.init/start-nrepl</span><span class="w"> </span><span class="n">true</span><span class="w">
+</span><span class="no">:biff.init/nrepl-port</span><span class="w"> </span><span class="mi">7888</span><span class="w">
+</span><span class="no">:biff.init/instrument</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; Calls orchestra.spec.test/instrument if true.</span><span class="w">
+</span><span class="no">:timbre/*</span><span class="w"> </span><span class="n">...</span><span class="w">               </span><span class="c1">; These keys are passed to taoensso.timbre/merge-config!</span><span class="w">
+                            </span><span class="c1">; (without the timbre prefix).</span><span class="w">
 
 
- </span><span class="c1">; === Config for the :biff/web-server plugin ===</span><span class="w">
+</span><span class="c1">; === Config for biff.system/start-biff ===</span><span class="w">
+</span><span class="c1">; Note: app-ns is the second parameter in biff.system/start-biff</span><span class="w">
 
- </span><span class="no">:biff.web/host-&gt;handler</span><span class="w"> </span><span class="n">...</span><span class="w"> </span><span class="c1">; Set by biff.system/start-biff. A map used to dispatch Ring</span><span class="w">
-                             </span><span class="c1">; requests. For example:</span><span class="w">
-                             </span><span class="c1">; {"localhost" (constantly {:status 200 ...})</span><span class="w">
-                             </span><span class="c1">;  "example.com" (constantly {:status 200 ...})}</span><span class="w">
- </span><span class="no">:biff.web/port</span><span class="w"> </span><span class="mi">8080</span><span class="p">}</span><span class="w">        </span><span class="c1">; Port for the web server to listen on. Also used in</span><span class="w">
-                             </span><span class="c1">; biff.system/start-biff.</span><span class="w">
+</span><span class="c1">; REQUIRED (unless you don't want to use the corresponding features)</span><span class="w">
+</span><span class="no">:biff/host</span><span class="w"> </span><span class="n">nil</span><span class="w">          </span><span class="c1">; The hostname this app will be served on, e.g. "example.com" for prod</span><span class="w">
+                        </span><span class="c1">; or "localhost" for dev.</span><span class="w">
+</span><span class="no">:biff/static-pages</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; A map from paths to Rum data structures, e.g.</span><span class="w">
+                        </span><span class="c1">; {"/hello/" [:html [:body [:p "hello"]]]}</span><span class="w">
+</span><span class="no">:biff/rules</span><span class="w"> </span><span class="n">nil</span><span class="w">         </span><span class="c1">; An authorization rules data structure.</span><span class="w">
+</span><span class="no">:biff/fn-whitelist</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Collection of fully-qualified function symbols to allow in</span><span class="w">
+                        </span><span class="c1">; Crux queries sent from the frontend. Functions in clojure.core</span><span class="w">
+                        </span><span class="c1">; need not be qualified. For example: '[map? example.core/frobulate]</span><span class="w">
+</span><span class="no">:biff/triggers</span><span class="w"> </span><span class="n">nil</span><span class="w">      </span><span class="c1">; A database triggers data structure.</span><span class="w">
+</span><span class="no">:biff/event-handler</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A Sente event handler function.</span><span class="w">
+</span><span class="no">:biff/routes</span><span class="w"> </span><span class="n">nil</span><span class="w">        </span><span class="c1">; A vector of Reitit routes.</span><span class="w">
+
+</span><span class="no">:biff.auth/send-email</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A function.</span><span class="w">
+</span><span class="no">:biff.auth/on-signup</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Redirect route, e.g. "/signup/success/".</span><span class="w">
+</span><span class="no">:biff.auth/on-signin-request</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signin-fail</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signin</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signout</span><span class="w"> </span><span class="n">nil</span><span class="w">
+
+</span><span class="c1">; Ignored if :biff.crux/topology isn't :jdbc.</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/user</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/password</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/host</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/port</span><span class="w"> </span><span class="n">nil</span><span class="w">
+
+</span><span class="c1">; OPTIONAL</span><span class="w">
+</span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; When true, sets the following config options (overriding any specified values):</span><span class="w">
+                </span><span class="c1">; {:biff.crux/topology :standalone</span><span class="w">
+                </span><span class="c1">;  :biff.handler/secure-defaults false</span><span class="w">
+                </span><span class="c1">;  :biff.static/root-dev "www-dev"}</span><span class="w">
+
+</span><span class="no">:biff.crux/topology</span><span class="w"> </span><span class="no">:jdbc</span><span class="w"> </span><span class="c1">; One of #{:jdbc :standalone}</span><span class="w">
+</span><span class="no">:biff.crux/storage-dir</span><span class="w"> </span><span class="s">"data/{{app-ns}}/crux-db"</span><span class="w"> </span><span class="c1">; Directory to store Crux files.</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/*</span><span class="w"> </span><span class="n">...</span><span class="w">     </span><span class="c1">; Passed to crux.api/start-node (without the biff prefix) if</span><span class="w">
+                          </span><span class="c1">; :biff.crux/topology is :jdbc. In this case, you must set</span><span class="w">
+                          </span><span class="c1">; :biff.crux.jdbc/{user,password,host,port}.</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/dbname</span><span class="w"> </span><span class="n">app-ns</span><span class="w">
+</span><span class="no">:biff.crux.jdbc/dbtype</span><span class="w"> </span><span class="s">"postgresql"</span><span class="w">
+
+</span><span class="no">:biff.static/root</span><span class="w"> </span><span class="s">"www/{{value of :biff/host}}"</span><span class="w"> </span><span class="c1">; Directory from which to serve static files.</span><span class="w">
+</span><span class="no">:biff.static/root-dev</span><span class="w"> </span><span class="n">nil</span><span class="w">                       </span><span class="c1">; An additional static file directory.</span><span class="w">
+</span><span class="no">:biff.static/resource-root</span><span class="w"> </span><span class="s">"www/{{app-ns}}"</span><span class="w">     </span><span class="c1">; Resource directory where static files are stored.</span><span class="w">
+
+</span><span class="no">:biff.handler/not-found-path</span><span class="w"> </span><span class="s">"{{value of :biff.static/root}}/404.html"</span><span class="w">
+</span><span class="no">:biff.handler/secure-defaults</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="c1">; Whether to use ring.middleware.defaults/secure-site-defaults</span><span class="w">
+                                   </span><span class="c1">; or just site-defaults.</span><span class="w">
+
+
+</span><span class="c1">; === Config for the :biff/web-server plugin ===</span><span class="w">
+
+</span><span class="no">:biff.web/host-&gt;handler</span><span class="w"> </span><span class="n">...</span><span class="w"> </span><span class="c1">; Set by biff.system/start-biff. A map used to dispatch Ring</span><span class="w">
+                            </span><span class="c1">; requests. For example:</span><span class="w">
+                            </span><span class="c1">; {"localhost" (constantly {:status 200 ...})</span><span class="w">
+                            </span><span class="c1">;  "example.com" (constantly {:status 200 ...})}</span><span class="w">
+</span><span class="no">:biff.web/port</span><span class="w"> </span><span class="mi">8080</span><span class="w">         </span><span class="c1">; Port for the web server to listen on. Also used in</span><span class="w">
+                            </span><span class="c1">; biff.system/start-biff.</span><span class="w">
 </span></code></pre></div>
 <p>The following keys are added to the system map by <code>biff.system/start-biff</code>:</p>
 
 <ul>
-<li><code>:biff/base-url</code>: e.g. &quot;https://example.com&quot; or &quot;http://localhost:8080&quot;</li>
+<li><code>:biff/base-url</code>: e.g. <code>&quot;https://example.com&quot;</code> or <code>&quot;http://localhost:8080&quot;</code></li>
 <li><code>:biff/node</code>: the Crux node.</li>
 <li><code>:biff/send-event</code>: the value of <code>:send-fn</code> returned by <code>taoensso.sente/make-channel-socket!</code>.</li>
 <li><code>:biff.sente/connected-uids</code>: Ditto but for <code>:connected-uids</code>.</li>
@@ -543,7 +572,268 @@ adds <code>:biff/db</code> (a Crux DB value) on each new request/event.
 Note that
 the keys will not be prefixed yet&mdash;so within a request/event handler, you&#39;d use <code>:biff/node</code> to get
 the Crux node, but within a separate Biff plugin you&#39;d use e.g. <code>:example.biff/node</code>.</p>
+<h1 id='static-resources'>Static resources</h1>
+<p>Relevant config:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="no">:biff/static-pages</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; A map from paths to Rum data structures, e.g.</span><span class="w">
+                        </span><span class="c1">; {"/hello/" [:html [:body [:p "hello"]]]}</span><span class="w">
 
+</span><span class="no">:biff.static/root</span><span class="w"> </span><span class="s">"www/{{value of :biff/host}}"</span><span class="w"> </span><span class="c1">; Directory from which to serve static files.</span><span class="w">
+</span><span class="no">:biff.static/root-dev</span><span class="w"> </span><span class="n">nil</span><span class="w">                       </span><span class="c1">; An additional static file directory.</span><span class="w">
+</span><span class="no">:biff.static/resource-root</span><span class="w"> </span><span class="s">"www/{{app-ns}}"</span><span class="w">     </span><span class="c1">; Resource directory where static files are stored.</span><span class="w">
+
+</span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; When true, sets the following config options (overriding any specified values):</span><span class="w">
+                </span><span class="c1">; {:biff.static/root-dev "www-dev"</span><span class="w">
+                </span><span class="c1">;  ...}</span><span class="w">
+</span></code></pre></div>
+<p>Biff will copy your static resources to <code>www/yourwebsite.com/</code> (i.e. the value
+of <code>:biff.static/root</code>). In production, <code>www/</code> is a symlink to <code>/var/www/</code> and
+is served directly by Nginx (so static files will be served even if your JVM
+process goes down, e.g. during deployment). In development, the JVM process
+will serve files from that directory.</p>
+
+<p>Biff gets static resources from two places. First, it will render HTML
+files from the value of <code>:biff/static-pages</code> on startup.</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/static.clj" target="_blank">
+src/hello/static.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.static</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">rum.core</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">rum</span><span class="p">]))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">signin-form</span><span class="w">
+  </span><span class="p">(</span><span class="nf">rum/fragment</span><span class="w">
+    </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"Email address:"</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="no">:form</span><span class="w"> </span><span class="p">{</span><span class="no">:action</span><span class="w"> </span><span class="s">"/api/signin-request"</span><span class="w"> </span><span class="no">:method</span><span class="w"> </span><span class="s">"post"</span><span class="p">}</span><span class="w">
+     </span><span class="p">[</span><span class="no">:input</span><span class="w"> </span><span class="p">{</span><span class="no">:name</span><span class="w"> </span><span class="s">"email"</span><span class="w"> </span><span class="no">:type</span><span class="w"> </span><span class="s">"email"</span><span class="w"> </span><span class="no">:placeholder</span><span class="w"> </span><span class="s">"Email"</span><span class="p">}]</span><span class="w">
+     </span><span class="p">[</span><span class="no">:button</span><span class="w"> </span><span class="p">{</span><span class="no">:type</span><span class="w"> </span><span class="s">"submit"</span><span class="p">}</span><span class="w"> </span><span class="s">"Sign up/Sign in"</span><span class="p">]]))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">home</span><span class="w">
+  </span><span class="p">[</span><span class="no">:html</span><span class="w">
+   </span><span class="p">[</span><span class="no">:head</span><span class="w">
+    </span><span class="p">[</span><span class="no">:meta</span><span class="w"> </span><span class="p">{</span><span class="no">:charset</span><span class="w"> </span><span class="s">"utf-8"</span><span class="p">}]</span><span class="w">
+    </span><span class="p">[</span><span class="no">:script</span><span class="w"> </span><span class="p">{</span><span class="no">:src</span><span class="w"> </span><span class="s">"/js/ensure-signed-out.js"</span><span class="p">}]]</span><span class="w">
+   </span><span class="p">[</span><span class="no">:body</span><span class="w">
+    </span><span class="n">signin-form</span><span class="p">]])</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">signin-sent</span><span class="w">
+  </span><span class="p">[</span><span class="no">:html</span><span class="w"> </span><span class="p">[</span><span class="no">:head</span><span class="w"> </span><span class="p">[</span><span class="no">:meta</span><span class="w"> </span><span class="p">{</span><span class="no">:charset</span><span class="w"> </span><span class="s">"utf-8"</span><span class="p">}]]</span><span class="w">
+   </span><span class="p">[</span><span class="no">:body</span><span class="w">
+    </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"Sign-in link sent, please check your inbox."</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"(Just kidding: click on the sign-in link that was printed to the console.)"</span><span class="p">]]])</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">signin-fail</span><span class="w">
+  </span><span class="p">[</span><span class="no">:html</span><span class="w"> </span><span class="p">[</span><span class="no">:head</span><span class="w"> </span><span class="p">[</span><span class="no">:meta</span><span class="w"> </span><span class="p">{</span><span class="no">:charset</span><span class="w"> </span><span class="s">"utf-8"</span><span class="p">}]]</span><span class="w">
+   </span><span class="p">[</span><span class="no">:body</span><span class="w">
+    </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"Invalid sign-in token."</span><span class="p">]</span><span class="w">
+    </span><span class="n">signin-form</span><span class="p">]])</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">app</span><span class="w">
+  </span><span class="p">[</span><span class="no">:html</span><span class="w">
+   </span><span class="p">[</span><span class="no">:head</span><span class="w">
+    </span><span class="p">[</span><span class="no">:meta</span><span class="w"> </span><span class="p">{</span><span class="no">:charset</span><span class="w"> </span><span class="s">"utf-8"</span><span class="p">}]</span><span class="w">
+    </span><span class="p">[</span><span class="no">:script</span><span class="w"> </span><span class="p">{</span><span class="no">:src</span><span class="w"> </span><span class="s">"/js/ensure-signed-in.js"</span><span class="p">}]]</span><span class="w">
+   </span><span class="p">[</span><span class="no">:body</span><span class="w">
+    </span><span class="p">[</span><span class="no">:#app</span><span class="w"> </span><span class="s">"Loading..."</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="no">:script</span><span class="w"> </span><span class="p">{</span><span class="no">:src</span><span class="w"> </span><span class="s">"/cljs/app/main.js"</span><span class="p">}]]])</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">not-found</span><span class="w">
+  </span><span class="p">[</span><span class="no">:html</span><span class="w"> </span><span class="p">[</span><span class="no">:head</span><span class="w"> </span><span class="p">[</span><span class="no">:meta</span><span class="w"> </span><span class="p">{</span><span class="no">:charset</span><span class="w"> </span><span class="s">"utf-8"</span><span class="p">}]]</span><span class="w">
+   </span><span class="p">[</span><span class="no">:body</span><span class="w">
+    </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"Not found."</span><span class="p">]]])</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">pages</span><span class="w">
+  </span><span class="p">{</span><span class="s">"/"</span><span class="w"> </span><span class="n">home</span><span class="w">
+   </span><span class="s">"/signin/sent/"</span><span class="w"> </span><span class="n">signin-sent</span><span class="w">
+   </span><span class="s">"/signin/fail/"</span><span class="w"> </span><span class="n">signin-fail</span><span class="w">
+   </span><span class="s">"/app/"</span><span class="w"> </span><span class="n">app</span><span class="w">
+   </span><span class="s">"/404.html"</span><span class="w"> </span><span class="n">not-found</span><span class="p">})</span><span class="w">
+</span></code></pre></div>
+<p>Second, Biff will look for files in the resource directory specified
+by <code>:biff.static/resource-root</code>.</p>
+<div class="highlight"><pre class="highlight shell"><code>biff/example <span class="nv">$ </span>tree resources/
+resources/
+└── www
+    └── hello.biff
+        └── js
+            ├── ensure-signed-in.js
+            └── ensure-signed-out.js
+</code></pre></div>
+<p>I currently commit generated resources (except for HTML files, but including
+CLJS compilation output) to the git repo. If you prefer, you can easily add
+initialization code to your app that instead generates the resources during
+deployment (or downloads them from a CI server).</p>
+
+<p>I&#39;d like to add a CDN integration eventually.</p>
+<h1 id='authentication'>Authentication</h1>
+<p>Relevant config:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="no">:biff.auth/send-email</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A function.</span><span class="w">
+</span><span class="no">:biff.auth/on-signup</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Redirect route, e.g. "/signup/success/".</span><span class="w">
+</span><span class="no">:biff.auth/on-signin-request</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signin-fail</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signin</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span><span class="no">:biff.auth/on-signout</span><span class="w"> </span><span class="n">nil</span><span class="w">
+</span></code></pre></div>
+<p>Biff currently provides email link authentication (i.e. the user clicks a link
+in an email to sign in). Password and SSO authentication are on the roadmap.</p>
+
+<p>Biff provides a set of HTTP endpoints for authentication.</p>
+<h2 id='sign-up'>Sign up</h2>
+<p>Sends the user an email with a sign-in link. Redirects to the value of
+<code>:biff.auth/on-signup</code>. If the email is sent successfully and the user
+hasn&#39;t already signed up, creates a user
+document in Crux with the email and a random UUID.</p>
+
+<p>The token included in the link will expire after 30 minutes.</p>
+<h3 id='http-request'>HTTP Request</h3>
+<p><code>POST /api/signup</code></p>
+<h3 id='form-parameters'>Form Parameters</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>email</td>
+<td>The user&#39;s email address.</td>
+</tr>
+</tbody></table>
+<h3 id='example-usage'>Example Usage</h3><div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"Email address:"</span><span class="p">]</span><span class="w">
+</span><span class="p">[</span><span class="no">:form</span><span class="w"> </span><span class="p">{</span><span class="no">:action</span><span class="w"> </span><span class="s">"/api/signup"</span><span class="w"> </span><span class="no">:method</span><span class="w"> </span><span class="s">"post"</span><span class="p">}</span><span class="w">
+ </span><span class="p">[</span><span class="no">:input</span><span class="w"> </span><span class="p">{</span><span class="no">:name</span><span class="w"> </span><span class="s">"email"</span><span class="w"> </span><span class="no">:type</span><span class="w"> </span><span class="s">"email"</span><span class="w"> </span><span class="no">:placeholder</span><span class="w"> </span><span class="s">"Email"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">[</span><span class="no">:button</span><span class="w"> </span><span class="p">{</span><span class="no">:type</span><span class="w"> </span><span class="s">"submit"</span><span class="p">}</span><span class="w"> </span><span class="s">"Sign up"</span><span class="p">]]</span><span class="w">
+</span></code></pre></div>
+<p>The <code>:biff.auth/send-email</code> function will be called with the following options:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">send-email</span><span class="w"> </span><span class="p">{</span><span class="no">:to</span><span class="w"> </span><span class="s">"alice@example.com"</span><span class="w">
+             </span><span class="no">:template</span><span class="w"> </span><span class="no">:biff.auth/signup</span><span class="w">
+             </span><span class="no">:data</span><span class="w"> </span><span class="p">{</span><span class="no">:biff.auth/link</span><span class="w"> </span><span class="s">"https://example.com/api/signin?token=..."</span><span class="p">}})</span><span class="w">
+</span></code></pre></div>
+<p>You will have to provide a <code>send-email</code> function which generates an email from
+the template data and sends it. (The example app just prints the template data
+to the console). If you use Mailgun, you can do something like this:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">templates</span><span class="w">
+  </span><span class="p">{</span><span class="no">:biff.auth/signup</span><span class="w">
+   </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">biff.auth/link</span><span class="w"> </span><span class="n">to</span><span class="p">]}]</span><span class="w">
+     </span><span class="p">{</span><span class="no">:subject</span><span class="w"> </span><span class="s">"Thanks for signing up"</span><span class="w">
+      </span><span class="no">:html</span><span class="w"> </span><span class="p">(</span><span class="nf">rum.core/render-static-markup</span><span class="w">
+              </span><span class="p">[</span><span class="no">:div</span><span class="w">
+               </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"We received a request to sign up with Findka using this email address."</span><span class="p">]</span><span class="w">
+               </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="p">[</span><span class="no">:a</span><span class="w"> </span><span class="p">{</span><span class="no">:href</span><span class="w"> </span><span class="n">link</span><span class="p">}</span><span class="w"> </span><span class="s">"Click here to sign up."</span><span class="p">]]</span><span class="w">
+               </span><span class="p">[</span><span class="no">:p</span><span class="w"> </span><span class="s">"If you did not request this link, you can ignore this email."</span><span class="p">]])})</span><span class="w">
+   </span><span class="no">:biff.auth/signin</span><span class="w"> </span><span class="n">...</span><span class="p">})</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">send-email*</span><span class="w"> </span><span class="p">[</span><span class="n">api-key</span><span class="w"> </span><span class="n">opts</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">http/post</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="s">"https://api.mailgun.net/v3/mail.example.com/messages"</span><span class="p">)</span><span class="w">
+    </span><span class="p">{</span><span class="no">:basic-auth</span><span class="w"> </span><span class="p">[</span><span class="s">"api"</span><span class="w"> </span><span class="n">api-key</span><span class="p">]</span><span class="w">
+     </span><span class="no">:form-params</span><span class="w"> </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="n">opts</span><span class="w"> </span><span class="no">:from</span><span class="w"> </span><span class="s">"Example &lt;contact@mail.example.com&gt;"</span><span class="p">)}))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">send-email</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">to</span><span class="w"> </span><span class="n">text</span><span class="w"> </span><span class="n">template</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">api-key</span><span class="p">]</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">opts</span><span class="p">}]</span><span class="w">
+  </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">some?</span><span class="w"> </span><span class="n">template</span><span class="p">)</span><span class="w">
+    </span><span class="p">(</span><span class="nf">if-some</span><span class="w"> </span><span class="p">[</span><span class="n">template-fn</span><span class="w"> </span><span class="p">(</span><span class="nb">get</span><span class="w"> </span><span class="n">templates</span><span class="w"> </span><span class="n">template</span><span class="p">)]</span><span class="w">
+      </span><span class="p">(</span><span class="nf">send-email*</span><span class="w"> </span><span class="n">api-key</span><span class="w">
+        </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="p">(</span><span class="nf">template-fn</span><span class="w"> </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="no">:to</span><span class="w"> </span><span class="n">to</span><span class="p">))</span><span class="w"> </span><span class="no">:to</span><span class="w"> </span><span class="n">to</span><span class="p">))</span><span class="w">
+      </span><span class="p">(</span><span class="nb">println</span><span class="w"> </span><span class="s">"Email template not found:"</span><span class="w"> </span><span class="n">template</span><span class="p">))</span><span class="w">
+    </span><span class="p">(</span><span class="nf">send-email*</span><span class="w"> </span><span class="n">api-key</span><span class="w"> </span><span class="p">(</span><span class="nb">select-keys</span><span class="w"> </span><span class="n">opts</span><span class="w"> </span><span class="p">[</span><span class="no">:to</span><span class="w"> </span><span class="no">:subject</span><span class="w"> </span><span class="no">:text</span><span class="w"> </span><span class="no">:html</span><span class="p">]))))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">start-example</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">example.mailgun/api-key</span><span class="p">]</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">sys</span><span class="p">}]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">-&gt;</span><span class="w"> </span><span class="n">sys</span><span class="w">
+    </span><span class="p">(</span><span class="nb">merge</span><span class="w">
+      </span><span class="p">{</span><span class="no">:example.biff.auth/send-email</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nf">send-email</span><span class="w"> </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="n">%</span><span class="w"> </span><span class="no">:api-key</span><span class="w"> </span><span class="n">api-key</span><span class="p">))</span><span class="w">
+       </span><span class="n">...</span><span class="p">})</span><span class="w">
+    </span><span class="p">(</span><span class="nf">biff.system/start-biff</span><span class="w"> </span><span class="ss">'example.biff</span><span class="p">)))</span><span class="w">
+</span></code></pre></div><h2 id='request-sign-in'>Request sign-in</h2>
+<p>Sends the user an email with a sign-in link. This is the same as <a href="#sign-up">Sign up</a>,
+except:</p>
+
+<ul>
+<li>The endpoint is <code>/api/signin-request</code></li>
+<li>The template key will be set to <code>:biff.auth/signin</code></li>
+<li>The user will be redirected to the value of <code>:biff.auth/on-signin-request</code></li>
+</ul>
+<h2 id='sign-in'>Sign in</h2>
+<p>Verifies the given JWT and adds a <code>:uid</code> key to the user&#39;s session (expires in
+90 days). Redirects to the value of <code>:biff.auth/on-signin</code> (or
+<code>:biff.auth/on-signin-fail</code> if the token is incorrect or expired).</p>
+
+<p>Also sets a <code>:csrf</code> cookie, the value of which must be included in the
+<code>X-CSRF-Token</code> header for any HTTP requests that require authentication.</p>
+<h3 id='http-request-2'>HTTP Request</h3>
+<p><code>GET /api/signin</code></p>
+<h3 id='url-parameters'>URL Parameters</h3>
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>token</td>
+<td>A JWT</td>
+</tr>
+</tbody></table>
+<h3 id='example-usage-2'>Example Usage</h3>
+<p>This endpoint is used by the link generated by <a href="#sign-up">Sign up</a> and <a href="#request-sign-in">Request
+sign-in</a>, so you typically won&#39;t need to generate a link for
+this endpoint yourself. However, if you&#39;d like to use a longer expiration date for the
+token or authenticate at a custom endpoint, you can do it like so:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">biff.util/token-url</span><span class="w"> </span><span class="p">{</span><span class="no">:url</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="p">(</span><span class="no">:biff/base-url</span><span class="w"> </span><span class="n">sys</span><span class="p">)</span><span class="w"> </span><span class="s">"/api/unsubscribe"</span><span class="p">)</span><span class="w">
+                      </span><span class="no">:claims</span><span class="w"> </span><span class="p">{</span><span class="no">:email</span><span class="w"> </span><span class="s">"alice@example.com"</span><span class="w">
+                               </span><span class="no">:uid</span><span class="w"> </span><span class="s">"abc123"</span><span class="p">}</span><span class="w">
+                      </span><span class="no">:jwt-secret</span><span class="w"> </span><span class="p">(</span><span class="nf">biff.auth/jwt-key</span><span class="w"> </span><span class="n">sys</span><span class="p">)</span><span class="w">
+                      </span><span class="no">:iss</span><span class="w"> </span><span class="s">"example"</span><span class="w">
+                      </span><span class="no">:expires-in</span><span class="w"> </span><span class="p">(</span><span class="nb">*</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="mi">4</span><span class="p">)})</span><span class="w">
+
+</span><span class="c1">; Or for just the token:</span><span class="w">
+</span><span class="p">(</span><span class="nf">biff.util/mint</span><span class="w"> </span><span class="p">{</span><span class="no">:secret</span><span class="w"> </span><span class="p">(</span><span class="nf">biff.auth/jwt-key</span><span class="w"> </span><span class="n">sys</span><span class="p">)</span><span class="w">
+                 </span><span class="no">:iss</span><span class="w"> </span><span class="s">"example"</span><span class="w">
+                 </span><span class="no">:expires-in</span><span class="w"> </span><span class="p">(</span><span class="nb">*</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="mi">24</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="mi">4</span><span class="p">)}</span><span class="w">
+                </span><span class="p">{</span><span class="no">:email</span><span class="w"> </span><span class="s">"alice@example.com"</span><span class="w">
+                 </span><span class="no">:uid</span><span class="w"> </span><span class="s">"abc123"</span><span class="p">})</span><span class="w">
+</span></code></pre></div>
+<p>After a user is signed in, you can authenticate them on the backend from an event/request
+handler like so:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">handler</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="w"> </span><span class="n">biff/db</span><span class="p">]}]</span><span class="w">
+  </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">some?</span><span class="w"> </span><span class="n">uid</span><span class="p">)</span><span class="w">
+    </span><span class="p">(</span><span class="nb">prn</span><span class="w"> </span><span class="p">(</span><span class="nf">crux.api/entity</span><span class="w"> </span><span class="n">db</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="n">uid</span><span class="p">}))</span><span class="w">
+    </span><span class="c1">; =&gt; {:crux.db/id {:user/id #uuid "..."}</span><span class="w">
+    </span><span class="c1">;     :user/id #uuid "..." ; duplicated for query convenience</span><span class="w">
+    </span><span class="c1">;     :user/email "alice@example.com"}</span><span class="w">
+    </span><span class="p">(</span><span class="nb">println</span><span class="w"> </span><span class="s">"User not authenticated."</span><span class="p">)))</span><span class="w">
+</span></code></pre></div><h2 id='sign-out'>Sign out</h2>
+<p>Clears the user&#39;s session and <code>:csrf</code> cookie. Redirects to the value of
+<code>:biff.auth/on-signout</code>.</p>
+
+<p>See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26</a>.</p>
+<h3 id='http-request-3'>HTTP Request</h3>
+<p><code>GET /api/signout</code></p>
+<h3 id='example-usage-3'>Example Usage</h3><div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[</span><span class="no">:a</span><span class="w"> </span><span class="p">{</span><span class="no">:href</span><span class="w"> </span><span class="s">"/api/signout"</span><span class="p">}</span><span class="w"> </span><span class="s">"sign out"</span><span class="p">]</span><span class="w">
+</span></code></pre></div><h2 id='check-if-signed-in'>Check if signed in</h2>
+<p>Returns status 200 if the user is authenticated, else 403.</p>
+
+<p>See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26</a>.</p>
+<h3 id='http-request-4'>HTTP Request</h3>
+<p><code>GET /api/signed-in</code></p>
+<h3 id='example-usage-4'>Example Usage</h3>
+<p>Include this on your landing page:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-out.js" target="_blank">
+resources/www/hello.biff/js/ensure-signed-out.js</a></div>
+<div class="highlight"><pre class="highlight javascript tab-javascript"><code><span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">/api/signed-in</span><span class="dl">"</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">document</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">/app</span><span class="dl">"</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>Include this on your app page:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-in.js" target="_blank">
+resources/www/hello.biff/js/ensure-signed-in.js</a></div>
+<div class="highlight"><pre class="highlight javascript tab-javascript"><code><span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">/api/signed-in</span><span class="dl">"</span><span class="p">).</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">document</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div>
       </div>
       <div class="dark-box">
           <div class="lang-selector">
