@@ -252,6 +252,38 @@
                   </li>
               </ul>
           </li>
+          <li>
+            <a href="#client-server-communication" class="toc-h1 toc-link" data-title="Client/server communication">Client/server communication</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#http" class="toc-h2 toc-link" data-title="HTTP">HTTP</a>
+                  </li>
+                  <li>
+                    <a href="#web-sockets" class="toc-h2 toc-link" data-title="Web sockets">Web sockets</a>
+                  </li>
+              </ul>
+          </li>
+          <li>
+            <a href="#transactions" class="toc-h1 toc-link" data-title="Transactions">Transactions</a>
+          </li>
+          <li>
+            <a href="#subscriptions" class="toc-h1 toc-link" data-title="Subscriptions">Subscriptions</a>
+          </li>
+          <li>
+            <a href="#rules" class="toc-h1 toc-link" data-title="Rules">Rules</a>
+          </li>
+          <li>
+            <a href="#triggers" class="toc-h1 toc-link" data-title="Triggers">Triggers</a>
+          </li>
+          <li>
+            <a href="#deployment" class="toc-h1 toc-link" data-title="Deployment">Deployment</a>
+          </li>
+          <li>
+            <a href="#tips" class="toc-h1 toc-link" data-title="Tips">Tips</a>
+          </li>
+          <li>
+            <a href="#contributing" class="toc-h1 toc-link" data-title="Contributing">Contributing</a>
+          </li>
       </ul>
         <ul class="toc-footer">
             <li><a href="https://github.com/jacobobryant/biff" target="_blank">View on Github</a></li>
@@ -495,7 +527,7 @@ for a deeper explanation.</p>
 </span><span class="c1">; === Config for biff.system/start-biff ===</span><span class="w">
 </span><span class="c1">; Note: app-ns is the second parameter in biff.system/start-biff</span><span class="w">
 
-</span><span class="c1">; REQUIRED (unless you don't want to use the corresponding features)</span><span class="w">
+</span><span class="c1">; RECOMMENDED</span><span class="w">
 </span><span class="no">:biff/host</span><span class="w"> </span><span class="n">nil</span><span class="w">          </span><span class="c1">; The hostname this app will be served on, e.g. "example.com" for prod</span><span class="w">
                         </span><span class="c1">; or "localhost" for dev.</span><span class="w">
 </span><span class="no">:biff/static-pages</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; A map from paths to Rum data structures, e.g.</span><span class="w">
@@ -505,8 +537,8 @@ for a deeper explanation.</p>
                         </span><span class="c1">; Crux queries sent from the frontend. Functions in clojure.core</span><span class="w">
                         </span><span class="c1">; need not be qualified. For example: '[map? example.core/frobulate]</span><span class="w">
 </span><span class="no">:biff/triggers</span><span class="w"> </span><span class="n">nil</span><span class="w">      </span><span class="c1">; A database triggers data structure.</span><span class="w">
-</span><span class="no">:biff/event-handler</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A Sente event handler function.</span><span class="w">
 </span><span class="no">:biff/routes</span><span class="w"> </span><span class="n">nil</span><span class="w">        </span><span class="c1">; A vector of Reitit routes.</span><span class="w">
+</span><span class="no">:biff/event-handler</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A Sente event handler function.</span><span class="w">
 
 </span><span class="no">:biff.auth/send-email</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A function.</span><span class="w">
 </span><span class="no">:biff.auth/on-signup</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Redirect route, e.g. "/signup/success/".</span><span class="w">
@@ -521,12 +553,12 @@ for a deeper explanation.</p>
 </span><span class="no">:biff.crux.jdbc/host</span><span class="w"> </span><span class="n">nil</span><span class="w">
 </span><span class="no">:biff.crux.jdbc/port</span><span class="w"> </span><span class="n">nil</span><span class="w">
 
-</span><span class="c1">; OPTIONAL</span><span class="w">
 </span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; When true, sets the following config options (overriding any specified values):</span><span class="w">
                 </span><span class="c1">; {:biff.crux/topology :standalone</span><span class="w">
                 </span><span class="c1">;  :biff.handler/secure-defaults false</span><span class="w">
                 </span><span class="c1">;  :biff.static/root-dev "www-dev"}</span><span class="w">
 
+</span><span class="c1">; OPTIONAL</span><span class="w">
 </span><span class="no">:biff.crux/topology</span><span class="w"> </span><span class="no">:jdbc</span><span class="w"> </span><span class="c1">; One of #{:jdbc :standalone}</span><span class="w">
 </span><span class="no">:biff.crux/storage-dir</span><span class="w"> </span><span class="s">"data/{{app-ns}}/crux-db"</span><span class="w"> </span><span class="c1">; Directory to store Crux files.</span><span class="w">
 </span><span class="no">:biff.crux.jdbc/*</span><span class="w"> </span><span class="n">...</span><span class="w">     </span><span class="c1">; Passed to crux.api/start-node (without the biff prefix) if</span><span class="w">
@@ -833,7 +865,167 @@ resources/www/hello.biff/js/ensure-signed-in.js</a></div>
     <span class="nb">document</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">;</span>
   <span class="p">}</span>
 <span class="p">});</span>
+</code></pre></div><h1 id='client-server-communication'>Client/server communication</h1>
+<p>Relevant config:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="no">:biff/routes</span><span class="w"> </span><span class="n">nil</span><span class="w">        </span><span class="c1">; A vector of Reitit routes.</span><span class="w">
+</span><span class="no">:biff/event-handler</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A Sente event handler function.</span><span class="w">
+</span><span class="no">:biff.handler/not-found-path</span><span class="w"> </span><span class="s">"{{value of :biff.static/root}}/404.html"</span><span class="w">
+</span><span class="no">:biff.handler/secure-defaults</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="c1">; Whether to use ring.middleware.defaults/secure-site-defaults</span><span class="w">
+                                   </span><span class="c1">; or just site-defaults.</span><span class="w">
+</span><span class="no">:biff/dev</span><span class="w"> </span><span class="n">false</span><span class="w"> </span><span class="c1">; When true, sets the following config options (overriding any specified values):</span><span class="w">
+                </span><span class="c1">; {:biff.handler/secure-defaults false</span><span class="w">
+                </span><span class="c1">;  ...}</span><span class="w">
+</span></code></pre></div><h2 id='http'>HTTP</h2>
+<p>The value of <code>:biff/routes</code> will be wrapped with some default middleware which, among other things:</p>
+
+<ul>
+<li>Applies a modified version of <code>ring.middleware.defaults/secure-site-defaults</code> (or <code>site-defaults</code>).</li>
+<li>Merges the system map into the request (so you can access configuration and other things).</li>
+<li>Sets <code>:biff/db</code> to a current Crux db value.</li>
+<li>Flattens the <code>:session</code> and <code>:params</code> maps (so you can do e.g. <code>(:session/uid request)</code> instead
+of <code>(:uid (:session request))</code>).</li>
+<li>Sets default values of <code>{:body &quot;&quot; :status 200}</code> for responses.</li>
+<li>Nests any <code>:headers/*</code> or <code>:cookies/*</code> keys (so <code>:headers/Content-Type &quot;text/plain&quot;</code> expands
+to <code>:headers {&quot;Content-Type&quot; &quot;text/plain&quot;}</code>).</li>
+</ul>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
+src/hello/routes.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.routes</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">bu</span><span class="p">]</span><span class="w">
+    </span><span class="n">...</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">echo</span><span class="w"> </span><span class="p">[</span><span class="n">req</span><span class="p">]</span><span class="w">
+  </span><span class="p">{</span><span class="no">:headers/Content-Type</span><span class="w"> </span><span class="s">"application/edn"</span><span class="w">
+   </span><span class="no">:body</span><span class="w"> </span><span class="p">(</span><span class="nb">prn-str</span><span class="w">
+           </span><span class="p">(</span><span class="nb">merge</span><span class="w">
+             </span><span class="p">(</span><span class="nb">select-keys</span><span class="w"> </span><span class="n">req</span><span class="w"> </span><span class="p">[</span><span class="no">:params</span><span class="w"> </span><span class="no">:body-params</span><span class="p">])</span><span class="w">
+             </span><span class="p">(</span><span class="nf">bu/select-ns</span><span class="w"> </span><span class="n">req</span><span class="w"> </span><span class="ss">'params</span><span class="p">)))})</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">routes</span><span class="w">
+  </span><span class="p">[[</span><span class="s">"/echo"</span><span class="w"> </span><span class="p">{</span><span class="no">:get</span><span class="w"> </span><span class="n">echo</span><span class="w">
+             </span><span class="no">:post</span><span class="w"> </span><span class="n">echo</span><span class="w">
+             </span><span class="no">:name</span><span class="w"> </span><span class="no">::echo</span><span class="p">}]</span><span class="w">
+   </span><span class="n">...</span><span class="p">])</span><span class="w">
+</span></code></pre></div><div class="highlight"><pre class="highlight shell tab-shell"><code><span class="nv">$ </span>curl <span class="nt">-XPOST</span> localhost:8080/echo?foo<span class="o">=</span>1 <span class="nt">-F</span> <span class="nv">bar</span><span class="o">=</span>2
+<span class="o">{</span>:params <span class="o">{</span>:foo <span class="s2">"1"</span>, :bar <span class="s2">"2"</span><span class="o">}</span>, :params/bar <span class="s2">"2"</span>, :params/foo <span class="s2">"1"</span><span class="o">}</span>
+<span class="nv">$ </span>curl <span class="nt">-XPOST</span> localhost:8080/echo <span class="nt">-d</span> <span class="s1">'{:foo 1}'</span> <span class="nt">-H</span> <span class="s2">"Content-Type: application/edn"</span>
+<span class="o">{</span>:params <span class="o">{}</span>, :body-params <span class="o">{</span>:foo 1<span class="o">}}</span>
 </code></pre></div>
+<p>For endpoints that require authentication, you must wrap anti-forgery middleware. Also,
+be sure not to make any <code>GET</code> endpoints that require authentication as these bypass anti-forgery
+checks.</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
+src/hello/routes.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.routes</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">bu</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">crux.api</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">crux</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">ring.middleware.anti-forgery</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">anti-forgery</span><span class="p">]))</span><span class="w">
+
+</span><span class="n">...</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">whoami</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="w"> </span><span class="n">biff/db</span><span class="p">]}]</span><span class="w">
+  </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">some?</span><span class="w"> </span><span class="n">uid</span><span class="p">)</span><span class="w">
+    </span><span class="p">{</span><span class="no">:body</span><span class="w"> </span><span class="p">(</span><span class="no">:user/email</span><span class="w"> </span><span class="p">(</span><span class="nf">crux/entity</span><span class="w"> </span><span class="n">db</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="n">uid</span><span class="p">}))</span><span class="w">
+     </span><span class="no">:headers/Content-Type</span><span class="w"> </span><span class="s">"text/plain"</span><span class="p">}</span><span class="w">
+    </span><span class="p">{</span><span class="no">:status</span><span class="w"> </span><span class="mi">401</span><span class="w">
+     </span><span class="no">:headers/Content-Type</span><span class="w"> </span><span class="s">"text/plain"</span><span class="w">
+     </span><span class="no">:body</span><span class="w"> </span><span class="s">"Not authorized."</span><span class="p">}))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">whoami2</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="w"> </span><span class="n">biff/db</span><span class="p">]}]</span><span class="w">
+  </span><span class="p">{</span><span class="no">:body</span><span class="w"> </span><span class="p">(</span><span class="no">:user/email</span><span class="w"> </span><span class="p">(</span><span class="nf">crux/entity</span><span class="w"> </span><span class="n">db</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="n">uid</span><span class="p">}))</span><span class="w">
+   </span><span class="no">:headers/Content-Type</span><span class="w"> </span><span class="s">"text/plain"</span><span class="p">})</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">routes</span><span class="w">
+  </span><span class="p">[</span><span class="n">...</span><span class="w">
+   </span><span class="p">[</span><span class="s">"/whoami"</span><span class="w"> </span><span class="p">{</span><span class="no">:post</span><span class="w"> </span><span class="n">whoami</span><span class="w">
+               </span><span class="no">:middleware</span><span class="w"> </span><span class="p">[</span><span class="n">anti-forgery/wrap-anti-forgery</span><span class="p">]</span><span class="w">
+               </span><span class="no">:name</span><span class="w"> </span><span class="no">::whoami</span><span class="p">}]</span><span class="w">
+   </span><span class="c1">; Same as whoami</span><span class="w">
+   </span><span class="p">[</span><span class="s">"/whoami2"</span><span class="w"> </span><span class="p">{</span><span class="no">:post</span><span class="w"> </span><span class="n">whoami2</span><span class="w">
+                </span><span class="no">:middleware</span><span class="w"> </span><span class="p">[</span><span class="n">bu/wrap-authorize</span><span class="p">]</span><span class="w">
+                </span><span class="no">:name</span><span class="w"> </span><span class="no">::whoami2</span><span class="p">}]])</span><span class="w">
+</span></code></pre></div>
+<p>When calling these endpoints, you must include the value of the <code>csrf</code> cookie in the
+<code>X-CSRF-Token</code> header:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">cljs-http.client/post</span><span class="w"> </span><span class="s">"/whoami"</span><span class="w"> </span><span class="p">{</span><span class="no">:headers</span><span class="w"> </span><span class="p">{</span><span class="s">"X-CSRF-Token"</span><span class="w"> </span><span class="p">(</span><span class="nf">biff.util/csrf</span><span class="p">)}})</span><span class="w">
+</span><span class="c1">; =&gt; {:status 200, :body "alice@example.com", ...}</span><span class="w">
+</span></code></pre></div>
+<p>However, communicating over websockets is usually more convenient, in which
+case this is unnecessary.</p>
+<h2 id='web-sockets'>Web sockets</h2>
+<p>Web sockets are the preferred method of communication. First, set <code>:biff/event-handler</code>:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/core.clj" target="_blank">
+src/hello/core.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">start-hello</span><span class="w"> </span><span class="p">[</span><span class="n">sys</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">-&gt;</span><span class="w"> </span><span class="n">sys</span><span class="w">
+    </span><span class="n">...</span><span class="w">
+    </span><span class="p">(</span><span class="nb">merge</span><span class="w"> </span><span class="o">#</span><span class="no">:hello.biff</span><span class="p">{</span><span class="no">:event-handler</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nf">hello.handlers/api</span><span class="w"> </span><span class="n">%</span><span class="w"> </span><span class="p">(</span><span class="no">:?data</span><span class="w"> </span><span class="n">%</span><span class="p">))</span><span class="w">
+                        </span><span class="n">...</span><span class="p">})</span><span class="w">
+    </span><span class="p">(</span><span class="nf">biff.system/start-biff</span><span class="w"> </span><span class="ss">'hello.biff</span><span class="p">)))</span><span class="w">
+</span></code></pre></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/handlers.clj" target="_blank">
+src/hello/handlers.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.handlers</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">bu</span><span class="p">]</span><span class="w">
+    </span><span class="n">...</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmulti</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:id</span><span class="p">)</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:default</span><span class="w">
+  </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">id</span><span class="p">]}</span><span class="w"> </span><span class="n">_</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">bu/anom</span><span class="w"> </span><span class="no">:not-found</span><span class="w"> </span><span class="p">(</span><span class="nb">str</span><span class="w"> </span><span class="s">"No method for "</span><span class="w"> </span><span class="n">id</span><span class="p">)))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:hello/move</span><span class="w">
+  </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">biff/db</span><span class="w"> </span><span class="n">biff/submit-tx</span><span class="w"> </span><span class="n">session/uid</span><span class="p">]</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">sys</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">game-id</span><span class="w"> </span><span class="n">location</span><span class="p">]}]</span><span class="w">
+  </span><span class="n">...</span><span class="p">)</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:hello/echo</span><span class="w">
+  </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">client-id</span><span class="w"> </span><span class="n">biff/send-event</span><span class="p">]}</span><span class="w"> </span><span class="n">arg</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">send-event</span><span class="w"> </span><span class="n">client-id</span><span class="w"> </span><span class="p">[</span><span class="no">:hello/prn</span><span class="w"> </span><span class="s">":hello/echo called"</span><span class="p">])</span><span class="w">
+  </span><span class="n">arg</span><span class="p">)</span><span class="w">
+</span></code></pre></div>
+<p>Biff provides a helper function for initializing the web socket connection on the frontend:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
+src/hello/client/app.cljs</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="o">^</span><span class="no">:export</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="p">[]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">reset!</span><span class="w"> </span><span class="n">hello.client.app.system/system</span><span class="w">
+    </span><span class="p">(</span><span class="nf">biff.util/init-sub</span><span class="w"> </span><span class="p">{</span><span class="no">:handler</span><span class="w"> </span><span class="n">hello.client.app.mutations/api</span><span class="w">
+                         </span><span class="n">...</span><span class="p">}))</span><span class="w">
+  </span><span class="n">...</span><span class="p">)</span><span class="w">
+</span></code></pre></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
+src/hello/client/app/mutations.cljs</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defmulti</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="p">(</span><span class="nb">comp</span><span class="w"> </span><span class="nb">first</span><span class="w"> </span><span class="no">:?data</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:default</span><span class="w">
+  </span><span class="p">[{[</span><span class="n">event-id</span><span class="p">]</span><span class="w"> </span><span class="no">:?data</span><span class="p">}</span><span class="w"> </span><span class="n">data</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">println</span><span class="w"> </span><span class="s">"unhandled event:"</span><span class="w"> </span><span class="n">event-id</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:biff/error</span><span class="w">
+  </span><span class="p">[</span><span class="n">_</span><span class="w"> </span><span class="n">anom</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">pprint</span><span class="w"> </span><span class="n">anom</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defmethod</span><span class="w"> </span><span class="n">api</span><span class="w"> </span><span class="no">:hello/prn</span><span class="w">
+  </span><span class="p">[</span><span class="n">_</span><span class="w"> </span><span class="n">arg</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">prn</span><span class="w"> </span><span class="n">arg</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">api-send</span><span class="w"> </span><span class="p">[</span><span class="o">&amp;</span><span class="w"> </span><span class="n">args</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">apply</span><span class="w"> </span><span class="p">(</span><span class="no">:api-send</span><span class="w"> </span><span class="o">@</span><span class="n">hello.client.app.system/system</span><span class="p">)</span><span class="w"> </span><span class="n">args</span><span class="p">))</span><span class="w">
+
+</span><span class="p">(</span><span class="nb">comment</span><span class="w">
+  </span><span class="p">(</span><span class="nf">go</span><span class="w">
+    </span><span class="p">(</span><span class="nf">&lt;!</span><span class="w"> </span><span class="p">(</span><span class="nf">api-send</span><span class="w"> </span><span class="p">[</span><span class="no">:hello/echo</span><span class="w"> </span><span class="p">{</span><span class="no">:foo</span><span class="w"> </span><span class="s">"bar"</span><span class="p">}]))</span><span class="w">
+    </span><span class="c1">; =&gt; {:foo "bar"}</span><span class="w">
+    </span><span class="c1">; =&gt; ":hello/echo called"</span><span class="w">
+    </span><span class="p">))</span><span class="w">
+</span></code></pre></div><h1 id='transactions'>Transactions</h1><h1 id='subscriptions'>Subscriptions</h1><h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
       </div>
       <div class="dark-box">
           <div class="lang-selector">
