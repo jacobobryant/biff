@@ -313,9 +313,7 @@ as well.</p>
 
 <ul>
 <li>Automated <strong>installation and deploys</strong> on DigitalOcean.</li>
-<li><a href="https://opencrux.com"><strong>Crux</strong></a> for the database. Thus you can use
-filesystem persistence on a $5 droplet for hobby projects or managed
-Postgres/Kafka for serious apps.</li>
+<li><a href="https://opencrux.com"><strong>Crux</strong></a> for the database.</li>
 <li><strong>Subscriptions</strong>. Specify what data the frontend needs declaratively, and
 Biff will keep it up-to-date.</li>
 <li><strong>Read/write authorization rules</strong>. No need to set up a bunch of endpoints
@@ -1025,7 +1023,97 @@ src/hello/client/app/mutations.cljs</a></div>
     </span><span class="c1">; =&gt; {:foo "bar"}</span><span class="w">
     </span><span class="c1">; =&gt; ":hello/echo called"</span><span class="w">
     </span><span class="p">))</span><span class="w">
-</span></code></pre></div><h1 id='transactions'>Transactions</h1><h1 id='subscriptions'>Subscriptions</h1><h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
+</span></code></pre></div><h1 id='transactions'>Transactions</h1>
+<p>You can send arbitrary transactions from the frontend. They will be submitted
+only if they pass certain authorization rules which you define (see
+<a href="#rules">Rules</a>). Transactions look like this:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
+src/hello/client/app/mutations.cljs</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">set-display-name</span><span class="w"> </span><span class="p">[</span><span class="n">display-name</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">api-send</span><span class="w">
+    </span><span class="p">[</span><span class="no">:biff/tx</span><span class="w">
+     </span><span class="p">{[</span><span class="no">:public-users</span><span class="w"> </span><span class="p">{</span><span class="no">:user.public/id</span><span class="w"> </span><span class="o">@</span><span class="n">db/uid</span><span class="p">}]</span><span class="w">
+      </span><span class="p">{</span><span class="no">:db/merge</span><span class="w"> </span><span class="n">true</span><span class="w">
+       </span><span class="no">:display-name</span><span class="w"> </span><span class="p">(</span><span class="nb">or</span><span class="w"> </span><span class="p">(</span><span class="nf">not-empty</span><span class="w"> </span><span class="n">display-name</span><span class="p">)</span><span class="w"> </span><span class="no">:db/remove</span><span class="p">)}}]))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">set-game-id</span><span class="w"> </span><span class="p">[</span><span class="n">game-id</span><span class="p">]</span><span class="w">
+  </span><span class="p">(</span><span class="nb">when</span><span class="w"> </span><span class="p">(</span><span class="nb">not=</span><span class="w"> </span><span class="n">game-id</span><span class="w"> </span><span class="o">@</span><span class="n">db/game-id</span><span class="p">)</span><span class="w">
+    </span><span class="p">(</span><span class="nf">api-send</span><span class="w">
+      </span><span class="p">[</span><span class="no">:biff/tx</span><span class="w">
+       </span><span class="p">(</span><span class="nf">cond-&gt;</span><span class="w"> </span><span class="p">{}</span><span class="w">
+         </span><span class="p">(</span><span class="nf">not-empty</span><span class="w"> </span><span class="o">@</span><span class="n">db/game-id</span><span class="p">)</span><span class="w">
+         </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="p">[</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:game/id</span><span class="w"> </span><span class="o">@</span><span class="n">db/game-id</span><span class="p">}]</span><span class="w">
+           </span><span class="p">{</span><span class="no">:db/update</span><span class="w"> </span><span class="n">true</span><span class="w">
+            </span><span class="no">:users</span><span class="w"> </span><span class="p">[</span><span class="no">:db/disj</span><span class="w"> </span><span class="o">@</span><span class="n">db/uid</span><span class="p">]})</span><span class="w">
+
+         </span><span class="p">(</span><span class="nf">not-empty</span><span class="w"> </span><span class="n">game-id</span><span class="p">)</span><span class="w">
+         </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="p">[</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:game/id</span><span class="w"> </span><span class="n">game-id</span><span class="p">}]</span><span class="w">
+           </span><span class="p">{</span><span class="no">:db/merge</span><span class="w"> </span><span class="n">true</span><span class="w">
+            </span><span class="no">:users</span><span class="w"> </span><span class="p">[</span><span class="no">:db/union</span><span class="w"> </span><span class="o">@</span><span class="n">db/uid</span><span class="p">]}))])))</span><span class="w">
+</span></code></pre></div>
+<p>The transaction is a map from idents to documents. The first element of an
+ident is a table, such as <code>:games</code>. Tables are defined by your rules, and they
+specify which rules a document write must pass in order to be allowed.</p>
+
+<p>The second element, if present, is a document ID. If omitted, it means we&#39;re
+creating a new document and we want the server to set the ID to a random UUID:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:messages</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:text</span><span class="w"> </span><span class="s">"hello"</span><span class="p">}}</span><span class="w">
+</span></code></pre></div>
+<p>If you want to create multiple documents in the same table with random IDs, use
+a nested vector instead of a map.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[[[</span><span class="no">:messages</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:text</span><span class="w"> </span><span class="s">"a"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">[[</span><span class="no">:messages</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:text</span><span class="w"> </span><span class="s">"b"</span><span class="p">}]]</span><span class="w">
+</span></code></pre></div>
+<p><code>:db/current-time</code> is replaced by the server with the current time.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:events</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:timestamp</span><span class="w"> </span><span class="no">:db/current-time</span><span class="w">
+            </span><span class="n">...</span><span class="p">}}</span><span class="w">
+</span></code></pre></div>
+<p>If <code>:db/update</code> is true, the given document will be merged with an existing
+document, failing if the document doesn&#39;t exist. There&#39;s also <code>:db/merge</code> which
+simply creates the document if it doesn&#39;t exist (i.e. upsert).</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:chatrooms</span><span class="w"> </span><span class="p">{</span><span class="no">:chatroom/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:db/update</span><span class="w"> </span><span class="n">true</span><span class="w">
+  </span><span class="no">:title</span><span class="w"> </span><span class="s">"Existing chatroom"</span><span class="p">}</span><span class="w">
+
+ </span><span class="p">[</span><span class="no">:chatrooms</span><span class="w"> </span><span class="p">{</span><span class="no">:chatroom/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"another-uuid"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:db/merge</span><span class="w"> </span><span class="n">true</span><span class="w">
+  </span><span class="no">:title</span><span class="w"> </span><span class="s">"New or existing chatroom"</span><span class="p">}}</span><span class="w">
+</span></code></pre></div>
+<p>You can <code>dissoc</code> document keys by setting them to <code>:db/remove</code>. You can
+delete whole documents by setting them to <code>nil</code>.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:users</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"my-id"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:db/update</span><span class="w"> </span><span class="n">true</span><span class="w">
+  </span><span class="no">:display-name</span><span class="w"> </span><span class="no">:db/remove</span><span class="p">}</span><span class="w">
+
+ </span><span class="p">[</span><span class="no">:orders</span><span class="w"> </span><span class="p">{</span><span class="no">:order/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-order-id"</span><span class="p">}]</span><span class="w">
+ </span><span class="n">nil</span><span class="p">}</span><span class="w">
+</span></code></pre></div>
+<p>You can add or remove an element to/from a set by using <code>:db/union</code> and
+<code>:db/disj</code>, respectively:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:game/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"old-game-uuid"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:db/update</span><span class="w"> </span><span class="n">true</span><span class="w">
+  </span><span class="no">:users</span><span class="w"> </span><span class="p">[</span><span class="no">:db/disj</span><span class="w"> </span><span class="s">"my-uid"</span><span class="p">]}</span><span class="w">
+
+ </span><span class="p">[</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:game/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"new-game-uuid"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:db/update</span><span class="w"> </span><span class="n">true</span><span class="w">
+  </span><span class="no">:users</span><span class="w"> </span><span class="p">[</span><span class="no">:db/union</span><span class="w"> </span><span class="s">"my-uid"</span><span class="p">]}}</span><span class="w">
+</span></code></pre></div>
+<p>Using maps as document IDs lets you specify composite IDs. In addition, all
+keys in in the document ID will be duplicated in the document itself. This
+allows you to use document ID keys in your queries.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:user-item</span><span class="w"> </span><span class="p">{</span><span class="no">:user</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-user-id"</span><span class="w">
+              </span><span class="no">:item</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-item-id"</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{</span><span class="no">:rating</span><span class="w"> </span><span class="no">:like</span><span class="p">}}</span><span class="w">
+
+</span><span class="c1">; Expands to:</span><span class="w">
+</span><span class="p">[</span><span class="no">:crux.tx/put</span><span class="w">
+ </span><span class="p">{</span><span class="no">:crux.db/id</span><span class="w"> </span><span class="p">{</span><span class="no">:user</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-user-id"</span><span class="w">
+               </span><span class="no">:item</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-item-id"</span><span class="p">}</span><span class="w">
+  </span><span class="no">:user</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-user-id"</span><span class="w">
+  </span><span class="no">:item</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-item-id"</span><span class="w">
+  </span><span class="no">:rating</span><span class="w"> </span><span class="no">:like</span><span class="p">}]</span><span class="w">
+</span></code></pre></div><h1 id='subscriptions'>Subscriptions</h1><h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
       </div>
       <div class="dark-box">
           <div class="lang-selector">
