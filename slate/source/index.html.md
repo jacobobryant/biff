@@ -28,9 +28,7 @@ as well.
 It includes features for:
 
 - Automated **installation and deploys** on DigitalOcean.
-- [**Crux**](https://opencrux.com) for the database. Thus you can use
-  filesystem persistence on a $5 droplet for hobby projects or managed
-  Postgres/Kafka for serious apps.
+- [**Crux**](https://opencrux.com) for the database.
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
 - **Read/write authorization rules**. No need to set up a bunch of endpoints
@@ -837,6 +835,120 @@ src/hello/client/app/mutations.cljs</a></div>
 ```
 
 # Transactions
+
+You can send arbitrary transactions from the frontend. They will be submitted
+only if they pass certain authorization rules which you define (see
+[Rules](#rules)). Transactions look like this:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
+src/hello/client/app/mutations.cljs</a></div>
+
+```clojure
+(defn set-display-name [display-name]
+  (api-send
+    [:biff/tx
+     {[:public-users {:user.public/id @db/uid}]
+      {:db/merge true
+       :display-name (or (not-empty display-name) :db/remove)}}]))
+
+(defn set-game-id [game-id]
+  (when (not= game-id @db/game-id)
+    (api-send
+      [:biff/tx
+       (cond-> {}
+         (not-empty @db/game-id)
+         (assoc [:games {:game/id @db/game-id}]
+           {:db/update true
+            :users [:db/disj @db/uid]})
+
+         (not-empty game-id)
+         (assoc [:games {:game/id game-id}]
+           {:db/merge true
+            :users [:db/union @db/uid]}))])))
+```
+
+The transaction is a map from idents to documents. The first element of an
+ident is a table, such as `:games`. Tables are defined by your rules, and they
+specify which rules a document write must pass in order to be allowed.
+
+The second element, if present, is a document ID. If omitted, it means we're
+creating a new document and we want the server to set the ID to a random UUID:
+
+```clojure
+{[:messages] {:text "hello"}}
+```
+
+If you want to create multiple documents in the same table with random IDs, use
+a nested vector instead of a map.
+
+```clojure
+[[[:messages] {:text "a"}]
+ [[:messages] {:text "b"}]]
+```
+
+`:db/current-time` is replaced by the server with the current time.
+
+```clojure
+{[:events] {:timestamp :db/current-time
+            ...}}
+```
+
+If `:db/update` is true, the given document will be merged with an existing
+document, failing if the document doesn't exist. There's also `:db/merge` which
+simply creates the document if it doesn't exist (i.e. upsert).
+
+```clojure
+{[:chatrooms {:chatroom/id #uuid "some-uuid"}]
+ {:db/update true
+  :title "Existing chatroom"}
+
+ [:chatrooms {:chatroom/id #uuid "another-uuid"}]
+ {:db/merge true
+  :title "New or existing chatroom"}}
+```
+
+You can `dissoc` document keys by setting them to `:db/remove`. You can
+delete whole documents by setting them to `nil`.
+
+```clojure
+{[:users {:user/id #uuid "my-id"}]
+ {:db/update true
+  :display-name :db/remove}
+
+ [:orders {:order/id #uuid "some-order-id"}]
+ nil}
+```
+
+You can add or remove an element to/from a set by using `:db/union` and
+`:db/disj`, respectively:
+
+```clojure
+{[:games {:game/id #uuid "old-game-uuid"}]
+ {:db/update true
+  :users [:db/disj "my-uid"]}
+
+ [:games {:game/id #uuid "new-game-uuid"}]
+ {:db/update true
+  :users [:db/union "my-uid"]}}
+```
+
+Using maps as document IDs lets you specify composite IDs. In addition, all
+keys in in the document ID will be duplicated in the document itself. This
+allows you to use document ID keys in your queries.
+
+```clojure
+{[:user-item {:user #uuid "some-user-id"
+              :item #uuid "some-item-id"}]
+ {:rating :like}}
+
+; Expands to:
+[:crux.tx/put
+ {:crux.db/id {:user #uuid "some-user-id"
+               :item #uuid "some-item-id"}
+  :user #uuid "some-user-id"
+  :item #uuid "some-item-id"
+  :rating :like}]
+```
 
 # Subscriptions
 
