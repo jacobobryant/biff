@@ -8,6 +8,6 @@
  {github-jacobobryant/biff
   {:git/url "https://github.com/jacobobryant/biff"
    :tag "HEAD"
-   :sha "fc86130cc969b5624fb29461578828eb1c3e61aa"
+   :sha "6c4f94049b02a7920a251d9d693467dd63f30ce4"
    ;:local/root "/home/arch/dev/biff"
    }}}
