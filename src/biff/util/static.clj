@@ -3,18 +3,23 @@
     [ring.middleware.anti-forgery :as anti-forgery]
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [rum.core :as rum]))
+    [rum.core :as rum])
+  (:import
+    [java.nio.file Paths]))
 
 (defn copy-resources [src-root dest-root]
   (when-some [resource-root (io/resource src-root)]
     (let [files (->> resource-root
                   io/as-file
                   file-seq
-                  (filter #(.isFile %))
-                  (map #(subs (.getPath %) (count (.getPath resource-root)))))]
-      (doseq [f files
-              :let [src (str (.getPath resource-root) f)
-                    dest (str dest-root f)]]
+                  (filter #(.isFile %)))]
+      (doseq [src files
+              :let [dest (.toFile
+                           (.resolve
+                             (Paths/get (.toURI (io/file dest-root)))
+                             (.relativize
+                               (Paths/get (.toURI resource-root))
+                               (Paths/get (.toURI src)))))]]
         (io/make-parents dest)
         (io/copy (io/file src) (io/file dest))))))
 
