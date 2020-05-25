@@ -14,7 +14,6 @@
     [clojure.core.memoize :as memo]
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [muuntaja.middleware :as muuntaja]
     [reitit.ring :as reitit]
     [ring.middleware.not-modified :refer [wrap-not-modified]]
     [ring.middleware.content-type :refer [wrap-content-type]]
