@@ -290,10 +290,15 @@
             <a href="#triggers" class="toc-h1 toc-link" data-title="Triggers">Triggers</a>
           </li>
           <li>
-            <a href="#deployment" class="toc-h1 toc-link" data-title="Deployment">Deployment</a>
-          </li>
-          <li>
-            <a href="#tips" class="toc-h1 toc-link" data-title="Tips">Tips</a>
+            <a href="#production" class="toc-h1 toc-link" data-title="Production">Production</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#installation" class="toc-h2 toc-link" data-title="Installation">Installation</a>
+                  </li>
+                  <li>
+                    <a href="#deployment" class="toc-h2 toc-link" data-title="Deployment">Deployment</a>
+                  </li>
+              </ul>
           </li>
           <li>
             <a href="#contributing" class="toc-h1 toc-link" data-title="Contributing">Contributing</a>
@@ -326,7 +331,7 @@ as well.</p>
 <p>It includes features for:</p>
 
 <ul>
-<li>Automated <strong>installation and deploys</strong> on DigitalOcean.</li>
+<li><strong>Installation and deployment</strong> on DigitalOcean.</li>
 <li><a href="https://opencrux.com"><strong>Crux</strong></a> for the database.</li>
 <li><strong>Subscriptions</strong>. Specify what data the frontend needs declaratively, and
 Biff will keep it up-to-date.</li>
@@ -367,7 +372,8 @@ official example project (an implementation of Tic Tac Toe):</p>
 <li>Go to <code>localhost:8080</code></li>
 </ol>
 
-<p>You can tinker with this app and use it as a template for your own projects.</p>
+<p>You can tinker with this app and use it as a template for your own projects. See
+<a href="#production">Production</a> when you want to deploy.</p>
 <h1 id='build-system'>Build system</h1>
 <p>The example project uses tools.deps, Shadow CLJS, and Overmind.
 <code>task</code> is the main entrypoint:</p>
@@ -720,7 +726,7 @@ deployment (or downloads them from a CI server).</p>
 <p>Biff currently provides email link authentication (i.e. the user clicks a link
 in an email to sign in). Password and SSO authentication are on the roadmap.</p>
 
-<p>Biff provides a set of HTTP endpoints for authentication.</p>
+<p>Biff provides a set of HTTP endpoints for authentication:</p>
 <h2 id='sign-up'>Sign up</h2>
 <p>Sends the user an email with a sign-in link. Redirects to the value of
 <code>:biff.auth/on-signup</code>. If the email is sent successfully and the user
@@ -1483,7 +1489,132 @@ on the operation:</p>
                       </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">current-time</span><span class="w"> </span><span class="n">timestamp</span><span class="p">)</span><span class="w">
                       </span><span class="c1">; Make sure that the ID was set by the server, not the client.</span><span class="w">
                       </span><span class="n">generated-id</span><span class="p">))}}</span><span class="w">
-</span></code></pre></div><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
+</span></code></pre></div><h1 id='triggers'>Triggers</h1>
+<p>Relevant config:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="no">:biff/triggers</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="c1">; A database triggers data structure.</span><span class="w">
+</span></code></pre></div>
+<p>Triggers let you run code in response to document writes. You must define a map of
+<code>table-&gt;operation-&gt;fn</code>, for example:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/triggers.clj" target="_blank">src/hello/triggers.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="n">assign-players</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">biff/submit-tx</span><span class="w"> </span><span class="nb">doc</span><span class="p">]</span><span class="w">
+                       </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">users</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="n">o</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">env</span><span class="p">}]</span><span class="w">
+  </span><span class="c1">; When a user joins or leaves a game, re-assign users to X and O as needed.</span><span class="w">
+  </span><span class="c1">; Delete the game document if everyone has left.</span><span class="w">
+  </span><span class="p">(</span><span class="k">let</span><span class="w"> </span><span class="p">[</span><span class="n">new-doc</span><span class="w"> </span><span class="n">...</span><span class="w"> </span><span class="c1">; Same as doc but maybe with different :x and :o values</span><span class="w">
+        </span><span class="n">op</span><span class="w"> </span><span class="p">(</span><span class="k">cond</span><span class="w">
+             </span><span class="p">(</span><span class="nf">empty?</span><span class="w"> </span><span class="n">users</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="no">:crux.tx/delete</span><span class="w"> </span><span class="p">(</span><span class="no">:crux.db/id</span><span class="w"> </span><span class="nb">doc</span><span class="p">)]</span><span class="w">
+             </span><span class="p">(</span><span class="nb">not=</span><span class="w"> </span><span class="nb">doc</span><span class="w"> </span><span class="n">new-doc</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="no">:crux.tx/put</span><span class="w"> </span><span class="n">new-doc</span><span class="p">])]</span><span class="w">
+    </span><span class="p">(</span><span class="nb">when</span><span class="w"> </span><span class="n">op</span><span class="w">
+      </span><span class="p">(</span><span class="nf">submit-tx</span><span class="w"> </span><span class="p">(</span><span class="nb">assoc</span><span class="w"> </span><span class="n">env</span><span class="w"> </span><span class="no">:tx</span><span class="w">
+                   </span><span class="p">[[</span><span class="no">:crux.tx/match</span><span class="w"> </span><span class="p">(</span><span class="nb">some</span><span class="w"> </span><span class="no">:crux.db/id</span><span class="w"> </span><span class="p">[</span><span class="nb">doc</span><span class="w"> </span><span class="n">new-doc</span><span class="p">])</span><span class="w"> </span><span class="nb">doc</span><span class="p">]</span><span class="w">
+                    </span><span class="n">op</span><span class="p">])))))</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">triggers</span><span class="w">
+  </span><span class="p">{</span><span class="no">:games</span><span class="w"> </span><span class="p">{[</span><span class="no">:create</span><span class="w"> </span><span class="no">:update</span><span class="p">]</span><span class="w"> </span><span class="n">assign-players</span><span class="p">}})</span><span class="w">
+</span></code></pre></div>
+<p>See <a href="#tables">Tables</a> and <a href="#operations">Operations</a>. The function will receive the system
+map merged with the following keys:</p>
+
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>:doc</code></td>
+<td>The document that was written.</td>
+</tr>
+<tr>
+<td><code>:doc-before</code></td>
+<td>The document&#39;s value before being written.</td>
+</tr>
+<tr>
+<td><code>:db</code></td>
+<td>The Crux DB value after this operation occurred.</td>
+</tr>
+<tr>
+<td><code>:db-before</code></td>
+<td>The Crux DB value before this operation occurred.</td>
+</tr>
+<tr>
+<td><code>:op</code></td>
+<td>One of <code>#{:create :update :delete}</code>.</td>
+</tr>
+</tbody></table>
+<h1 id='production'>Production</h1><h2 id='installation'>Installation</h2>
+<p>First, create an Ubuntu droplet on DigitalOcean. Make sure you have SSH access. If you&#39;ve
+added your public cert to DigitalOcean already, this may be handled automatically.</p>
+
+<p>The following script includes setting up LetsEncrypt. Before running it, you&#39;ll
+need to point at the droplet any domain(s) you want to serve from Biff. The
+script will ask for a list of the domains and will generate a certificate for
+them.</p>
+
+<p>Log in as root and run this:</p>
+<div class="highlight"><pre class="highlight shell"><code>git clone https://github.com/jacobobryant/biff
+<span class="nb">cd </span>biff
+./install.sh
+reboot
+</code></pre></div>
+<p><code>install.sh</code> will:</p>
+
+<ol>
+<li>Install dependencies</li>
+<li>Install Biff as a systemd service (i.e. autostart on boot)</li>
+<li>Setup Nginx</li>
+<li>Install certificates</li>
+<li>Setup firewall</li>
+</ol>
+
+<p>Currently it uses the root user to run Biff, but I&#39;ll fix that soon.</p>
+
+<p>If you ever want to update the list of domains served by Biff, just run
+something like the following:</p>
+<div class="highlight"><pre class="highlight shell"><code>certbot <span class="nt">--nginx</span> <span class="nt">-d</span> <span class="s1">'findka.com,jacobobryant.com'</span>
+</code></pre></div>
+<p>I&#39;ve only tested the install script on DigitalOcean, but it should work on
+other providers with little to no tweaking.</p>
+<h2 id='deployment'>Deployment</h2>
+<ol>
+<li>Update <code>/root/biff/prod/config.edn</code> if needed (e.g. <code>scp config.edn
+root@example.com:biff/prod/</code>).</li>
+<li>Commit any static resources you need to your project&#39;s repo (or add some code to
+download them from a CI server or something on startup). For example:</li>
+</ol>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">task</a></div>
+<div class="highlight"><pre class="highlight shell"><code><span class="nv">APP_NS</span><span class="o">=</span><span class="s2">"hello"</span>
+<span class="nv">CLJS_APPS</span><span class="o">=</span><span class="s2">"app"</span>
+
+release-cljs <span class="o">()</span> <span class="o">{</span>
+  npx shadow-cljs release <span class="nv">$CLJS_APPS</span>
+  <span class="k">for </span>app <span class="k">in</span> <span class="nv">$CLJS_APPS</span><span class="p">;</span> <span class="k">do
+    </span><span class="nb">mkdir</span> <span class="nt">-p</span> resources/www/<span class="nv">$APP_NS</span>/cljs/<span class="nv">$app</span>
+    <span class="nb">cp</span> <span class="o">{</span>www-dev,resources/www/<span class="nv">$APP_NS</span><span class="o">}</span>/cljs/<span class="nv">$app</span>/main.js
+  <span class="k">done</span>
+<span class="o">}</span>
+</code></pre></div>
+<ol start="3">
+<li>On the first deploy, add your project to <code>/root/biff/prod/deps.edn</code>. On
+   future deploys, update the <code>:sha</code> values in that file.</li>
+<li>Restart Biff: <code>systemctl restart biff</code></li>
+<li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started.</code>.</li>
+</ol>
+
+<p>If you want to deploy your app from a private repo, you&#39;ll need to add a deploy
+certificate and configure Biff to add it to the keychain on startup. I&#39;ll add
+automation and instructions after the first person tells me they want
+to do this.</p>
+<h1 id='contributing'>Contributing</h1>
+<p>Simply using Biff and reporting problems would be a big help. Github issues or
+the Slack channel work great. Also, ask me any questions you have while
+learning Biff. It&#39;ll help me improve the documentation.</p>
+
+<p>And if you want to work on any PRs, great. I&#39;d recommend opening an issue or
+chatting with me on Slack first.</p>
+
       </div>
       <div class="dark-box">
           <div class="lang-selector">

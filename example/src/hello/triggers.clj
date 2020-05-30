@@ -4,6 +4,8 @@
 
 (defn assign-players [{:keys [biff/submit-tx doc]
                        {:keys [users x o]} :doc :as env}]
+  ; When a user joins or leaves a game, make assignments for X and O as needed.
+  ; Delete the game document if everyone has left.
   (let [new-x (when-not (contains? users x)
                 (first (shuffle (disj users o))))
         new-o (when-not (contains? users o)

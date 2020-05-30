@@ -15,7 +15,7 @@ as well.
 
 It includes features for:
 
-- Automated **installation and deploys** on DigitalOcean.
+- **Installation and deployment** on DigitalOcean.
 - [**Crux**](https://opencrux.com) for the database.
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.

@@ -1,3 +1,0 @@
-{:deps
- {github-jacobobryant/biff {:git/url "https://github.com/jacobobryant/biff"
-                            :sha "03774f384546c497d9ee0eabe818f7d686a9a38c"}}}

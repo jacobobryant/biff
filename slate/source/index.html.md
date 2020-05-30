@@ -27,7 +27,7 @@ as well.
 
 It includes features for:
 
-- Automated **installation and deploys** on DigitalOcean.
+- **Installation and deployment** on DigitalOcean.
 - [**Crux**](https://opencrux.com) for the database.
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
@@ -67,7 +67,8 @@ official example project (an implementation of Tic Tac Toe):
 6. Go to `localhost:9630` and start the `app` build
 7. Go to `localhost:8080`
 
-You can tinker with this app and use it as a template for your own projects.
+You can tinker with this app and use it as a template for your own projects. See
+[Production](#production) when you want to deploy.
 
 # Build system
 
@@ -457,7 +458,7 @@ Relevant config:
 Biff currently provides email link authentication (i.e. the user clicks a link
 in an email to sign in). Password and SSO authentication are on the roadmap.
 
-Biff provides a set of HTTP endpoints for authentication.
+Biff provides a set of HTTP endpoints for authentication:
 
 ## Sign up
 
@@ -1325,8 +1326,124 @@ Some examples:
 
 # Triggers
 
-# Deployment
+Relevant config:
 
-# Tips
+```clojure
+:biff/triggers nil ; A database triggers data structure.
+```
+
+Triggers let you run code in response to document writes. You must define a map of
+`table->operation->fn`, for example:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/triggers.clj" target="_blank">src/hello/triggers.clj</a></div>
+```clojure
+(defn assign-players [{:keys [biff/submit-tx doc]
+                       {:keys [users x o]} :doc :as env}]
+  ; When a user joins or leaves a game, re-assign users to X and O as needed.
+  ; Delete the game document if everyone has left.
+  (let [new-doc ... ; Same as doc but maybe with different :x and :o values
+        op (cond
+             (empty? users) [:crux.tx/delete (:crux.db/id doc)]
+             (not= doc new-doc) [:crux.tx/put new-doc])]
+    (when op
+      (submit-tx (assoc env :tx
+                   [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
+                    op])))))
+
+(def triggers
+  {:games {[:create :update] assign-players}})
+```
+
+See [Tables](#tables) and [Operations](#operations). The function will receive the system
+map merged with the following keys:
+
+Key | Description
+----|------------
+`:doc` | The document that was written.
+`:doc-before` | The document's value before being written.
+`:db` | The Crux DB value after this operation occurred.
+`:db-before` | The Crux DB value before this operation occurred.
+`:op` | One of `#{:create :update :delete}`.
+
+# Production
+
+## Installation
+
+First, create an Ubuntu droplet on DigitalOcean. Make sure you have SSH access. If you've
+added your public cert to DigitalOcean already, this may be handled automatically.
+
+The following script includes setting up LetsEncrypt. Before running it, you'll
+need to point at the droplet any domain(s) you want to serve from Biff. The
+script will ask for a list of the domains and will generate a certificate for
+them.
+
+Log in as root and run this:
+
+```bash
+git clone https://github.com/jacobobryant/biff
+cd biff
+./install.sh
+reboot
+```
+
+`install.sh` will:
+
+1. Install dependencies
+2. Install Biff as a systemd service (i.e. autostart on boot)
+3. Setup Nginx
+4. Install certificates
+5. Setup firewall
+
+Currently it uses the root user to run Biff, but I'll fix that soon.
+
+If you ever want to update the list of domains served by Biff, just run
+something like the following:
+
+```bash
+certbot --nginx -d 'findka.com,jacobobryant.com'
+```
+
+I've only tested the install script on DigitalOcean, but it should work on
+other providers with little to no tweaking.
+
+## Deployment
+
+1. Update `/root/biff/prod/config.edn` if needed (e.g. `scp config.edn
+   root@example.com:biff/prod/`).
+2. Commit any static resources you need to your project's repo (or add some code to
+   download them from a CI server or something on startup). For example:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">task</a></div>
+```bash
+APP_NS="hello"
+CLJS_APPS="app"
+
+release-cljs () {
+  npx shadow-cljs release $CLJS_APPS
+  for app in $CLJS_APPS; do
+    mkdir -p resources/www/$APP_NS/cljs/$app
+    cp {www-dev,resources/www/$APP_NS}/cljs/$app/main.js
+  done
+}
+```
+
+<ol start="3">
+<li>On the first deploy, add your project to <code>/root/biff/prod/deps.edn</code>. On
+   future deploys, update the <code>:sha</code> values in that file.</li>
+<li>Restart Biff: <code>systemctl restart biff</code></li>
+<li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started.</code>.</li>
+</ol>
+
+If you want to deploy your app from a private repo, you'll need to add a deploy
+certificate and configure Biff to add it to the keychain on startup. I'll add
+automation and instructions after the first person tells me they want
+to do this.
 
 # Contributing
+
+Simply using Biff and reporting problems would be a big help. Github issues or
+the Slack channel work great. Also, ask me any questions you have while
+learning Biff. It'll help me improve the documentation.
+
+And if you want to work on any PRs, great. I'd recommend opening an issue or
+chatting with me on Slack first.

@@ -11,12 +11,14 @@ curl -O https://download.clojure.org/install/linux-install-1.10.1.536.sh
 chmod +x linux-install-1.10.1.536.sh
 ./linux-install-1.10.1.536.sh
 
+(cd /root/biff/prod; clojure -Sresolve-tags)
+
 cat > /etc/systemd/system/biff.service << EOD
 [Unit]
 Description=Biff
 
 [Service]
-ExecStart=/root/biff/template/task run
+ExecStart=/root/biff/prod/task run
 
 [Install]
 WantedBy=multi-user.target
@@ -44,7 +46,7 @@ server {
 EOD
 ln -s /etc/nginx/sites-{available,enabled}/biff
 systemctl restart nginx
-ln -s /var/www /root/biff/template/www
+ln -s /var/www /root/biff/prod/www
 
 echo
 echo Running certbot now. When it asks if you\'d like to redirect HTTP requests to
@@ -59,8 +61,9 @@ ufw enable
 
 echo
 echo
-echo Installation complete. To start Biff, run \`reboot\` and then wait for a minute.
-echo The default admin password for Biff is: hey
-echo Be sure to change it after you log in.
-echo "(If you'd like to check on Biff's startup, ssh back in and run
-echo \`watch syststemctl status biff\` and wait for the message \"Registered web context /\")
+echo Installation complete. Edit /root/biff/prod/deps.edn and add your project.
+echo Then run \`reboot\` and then wait for a minute.
+echo
+echo Watch logs: \`journalctl -u biff -f\`
+echo Update: edit ~/biff/prod/deps.edn
+echo Restart: \`systemctl restart biff\`
