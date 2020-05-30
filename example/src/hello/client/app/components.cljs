@@ -38,50 +38,53 @@
 
 (defc participants < reactive
   []
-  [:div
-   [:div "Participants:"]
-   [:ul
-    (for [u (react db/participants)]
-      [:li {:key u}
-       (logic/id->name (react db/id->public-users) u)
-       (when (= u (react db/x))
-         [:span " (" [:strong "X"] ")"])
-       (when (= u (react db/o))
-         [:span " (" [:strong "O"] ")"])])]])
+  (when (some? (react db/game))
+    [:div
+     [:div "Participants:"]
+     [:ul
+      (for [u (react db/participants)]
+        [:li {:key u}
+         (logic/id->name (react db/id->public-users) u)
+         (when (= u (react db/x))
+           [:span " (" [:strong "X"] ")"])
+         (when (= u (react db/o))
+           [:span " (" [:strong "O"] ")"])])]]))
 
 (defc board < reactive
   []
-  [:div
-   (for [row (range 3)]
-     [:div {:key row
-            :style {:display "flex"
-                    :align-items "center"}}
-      (for [col (range 3)]
-        [:button {:key col
-                  :on-click #(m/move [row col])
-                  :style {:width "4rem"
-                          :height "4rem"
-                          :font-size "2rem"}}
-         [:strong (some-> (react db/board)
-                    (get [row col])
-                    name
-                    str/upper-case)]])])])
+  (when (some? (react db/game))
+    [:div
+     (for [row (range 3)]
+       [:div {:key row
+              :style {:display "flex"
+                      :align-items "center"}}
+        (for [col (range 3)]
+          [:button {:key col
+                    :on-click #(m/move [row col])
+                    :style {:width "4rem"
+                            :height "4rem"
+                            :font-size "2rem"}}
+           [:strong (some-> (react db/board)
+                      (get [row col])
+                      name
+                      str/upper-case)]])])]))
 
 (defc info < reactive
   []
-  [:div
-   (if (react db/game-over)
-     [:div
-      [:p (str "Game over. "
-            (if-some [winner (react db/winner)]
-              (str (logic/id->name (react db/id->public-users) winner)
-                " won.")
-              "It's a draw."))]
-      [:button {:on-click m/new-game} "New game"]]
-     [:p "It's "
-      (logic/id->name (react db/id->public-users) 
-        (react db/current-player))
-      "'s turn." ])])
+  (when (some? (react db/game))
+    [:div
+     (if (react db/game-over)
+       [:div
+        [:p (str "Game over. "
+              (if-some [winner (react db/winner)]
+                (str (logic/id->name (react db/id->public-users) winner)
+                  " won.")
+                "It's a draw."))]
+        [:button {:on-click m/new-game} "New game"]]
+       [:p "It's "
+        (logic/id->name (react db/id->public-users)
+          (react db/current-player))
+        "'s turn." ])]))
 
 (defc main < reactive
   []
