@@ -6,9 +6,15 @@
 
 (defonce db (atom {}))
 
+; same as (do (rum.core/cursor-in db [:sub-data]) ...)
 (u/defcursors db
   sub-data [:sub-data])
 
+; same as (do
+;           (rum.core/derived-atom [sub-data] :hello.client.app.db/data
+;             (fn [sub-data]
+;               (apply merge-with merge (vals sub-data))))
+;           ...)
 (u/defderivations [sub-data] hello.client.app.db
   data (apply merge-with merge (vals sub-data))
 
@@ -40,7 +46,9 @@
   game-over (logic/game-over? game)
   draw (and game-over (not winner))
 
-  biff-subs [:uid
+  biff-subs [; :uid is a special non-Crux query. Biff will respond
+             ; with the currently authenticated user's ID.
+             :uid
              (when signed-in
                [{:table :users
                  :id user-ref}

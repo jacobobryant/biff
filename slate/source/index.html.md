@@ -952,6 +952,196 @@ allows you to use document ID keys in your queries.
 
 # Subscriptions
 
+Biff allows you to subscribe to Crux queries from the frontend with one major
+caveat: cross-entity joins are not allowed. Basically, this means all the where
+clauses in the query have to be for the same entity.
+
+```clojure
+; OK
+'{:find [doc]
+  :where [[doc :foo 1]
+          [doc :bar "hey"]]}
+
+; Not OK
+'{:find [doc]
+  :where [[user :name "Tilly"]
+          [doc :user user]]}
+```
+
+So to be clear, Biff's subscribable "queries" are not datalog at all. They're
+just predicates that can take advantage of Crux's indices. Biff makes this
+restriction so that it can provide query updates to clients efficiently without
+having to solve a hard research problem first. However, it turns out that we can
+go quite far even with this restriction.
+
+On the frontend, use `biff.util/init-sub` to initialize a websocket connection
+that handles query subscriptions for you:
+
+```clojure
+(def default-subscriptions
+  #{[:biff/sub '{:table :users
+                 :where [[:name "Ben"]
+                         [:age age]
+                         [(<= 18 age)]
+                         [(yourapp.core/likes-cheese? doc)]]}]})
+
+(def subscriptions (atom default-subscriptions))
+(def sub-data (atom {}))
+
+(biff.util/init-sub
+  {:subscriptions subscriptions
+   :sub-data sub-data})
+```
+
+
+If you want to subscribe to a query, `swap!` it into `subscriptions`. If you
+want to unsubscribe, `swap!` it out. Biff will populate `sub-data` with the
+results of your queries and remove old data when you unsubscribe. You can then
+use the contents of that atom to drive your UI. The contents of `sub-data` is a
+map of the form `subscription->doc-id->doc`, for example:
+
+```clojure
+{[:biff/sub '{:table :users
+              :where ...}]
+ {{:user/id #uuid "some-uuid"} {:name "Sven"
+                                :age 250
+                                ...}}}
+```
+
+Note the subscription format again:
+
+```clojure
+[:biff/sub '{:table :users
+             :where [[:name "Ben"]
+                     [:age age]
+                     [(<= 18 age)]
+                     [(yourapp.core/likes-cheese? doc)]]}]
+```
+
+The first element is a Sente event ID. The query map (the second element) omits
+the entity variable in the where clauses since it has to be the same for each
+clause anyway. But it will be bound to `doc` in case you want to use it in e.g.
+a predicate function. `:find` is similarly omitted.
+
+The `:table` value is connected to authorization rules which you define on the
+backend (see [Rules](#rules)). When a client subscribes to this query, it will
+be rejected unless you define rules for that table which allow the query. You
+also have to whitelist any predicate function calls (like
+`yourapp.core/likes-cheese?`), though the comparison operators (like `<=`) are
+whitelisted for you.
+
+I haven't yet added support for `or`, `not`, etc. clauses in subscriptions. See
+<a href="https://github.com/jacobobryant/biff/issues/9" target="_blank">#9</a>.
+
+You can also subscribe to individual documents:
+
+```clojure
+[:biff/sub '{:table :users
+             :id {:user/id #uuid "some-uuid"}}]
+```
+
+All this is most powerful when you make the `subscriptions` atom a derivation of
+`sub-data`:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
+src/hello/client/app.cljs</a></div>
+```clojure
+(ns hello.client.app
+  (:require
+    [biff.util :as bu]
+    [hello.client.app.db :as db]
+    [hello.client.app.mutations :as m]
+    [hello.client.app.system :as s]
+    ...))
+
+...
+
+(defn ^:export init []
+  (reset! s/system
+    (bu/init-sub {:handler m/api
+                  :sub-data db/sub-data
+                  :subscriptions db/subscriptions}))
+  ...)
+```
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/db.cljs" target="_blank">
+src/hello/client/app/db.cljs</a></div>
+```clojure
+(ns hello.client.app.db
+  (:require
+    [hello.logic :as logic]
+    [trident.util :as u]
+    [rum.core]))
+
+(defonce db (atom {}))
+
+; same as (do (rum.core/cursor-in db [:sub-data]) ...)
+(u/defcursors db
+  sub-data [:sub-data])
+
+; same as (do
+;           (rum.core/derived-atom [sub-data] :hello.client.app.db/data
+;             (fn [sub-data]
+;               (apply merge-with merge (vals sub-data))))
+;           ...)
+(u/defderivations [sub-data] hello.client.app.db
+  data (apply merge-with merge (vals sub-data))
+
+  uid (get-in data [:uid nil :uid])
+  signed-in (and (some? uid) (not= :signed-out uid))
+  user-ref {:user/id uid}
+  game (->> data
+         :games
+         vals
+         (filter #(contains? (:users %) uid))
+         first)
+
+  ...
+
+  biff-subs [; :uid is a special non-Crux query. Biff will respond
+             ; with the currently authenticated user's ID.
+             :uid
+             (when signed-in
+               [{:table :users
+                 :id user-ref}
+                {:table :public-users
+                 :id {:user.public/id uid}}
+                {:table :games
+                 :where [[:users uid]]}])
+             (for [u (:users game)]
+               {:table :public-users
+                :id {:user.public/id u}})]
+  subscriptions (->> biff-subs
+                  flatten
+                  (filter some?)
+                  (map #(vector :biff/sub %))
+                  set))
+```
+
+When a user signs into the example app, the following will happen:
+
+1. Client subscribes to `:uid` (i.e. `subscriptions` contains `#{[:biff/sub
+:uid]}`).
+2. `sub-data` is populated with the user's ID.
+3. `signed-in` changes to `true` and `biff-subs` gets updated. The client is now
+   subscribed to various information about the current user, including the current
+   game (if they've joined one).
+4. `sub-data` is populated with more data. The UI will display the user's
+   email address, display name and current game. The client will subscribe to data
+   about the other players (their display names).
+5. The other players' display names will be loaded into `sub-data` and the UI will
+   update again.
+
+This is what I meant when I said that we can go pretty far without cross-entity
+joins: using this method, we can declaratively load all the relevant data and
+perform joins on the client. This should be sufficient for many situations.
+
+However, it won't work if you need an aggregation of a set of documents that's
+too large to send to the client (not to mention each client), or if the client
+isn't allowed to see the individual documents. To handle that, I'd like to
+eventually try integrating <a href="https://materialize.io"
+target="_blank">Materialize</a>.
+
 # Rules
 
 # Triggers

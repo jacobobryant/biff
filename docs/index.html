@@ -1113,7 +1113,179 @@ allows you to use document ID keys in your queries.</p>
   </span><span class="no">:user</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-user-id"</span><span class="w">
   </span><span class="no">:item</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-item-id"</span><span class="w">
   </span><span class="no">:rating</span><span class="w"> </span><span class="no">:like</span><span class="p">}]</span><span class="w">
-</span></code></pre></div><h1 id='subscriptions'>Subscriptions</h1><h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
+</span></code></pre></div><h1 id='subscriptions'>Subscriptions</h1>
+<p>Biff allows you to subscribe to Crux queries from the frontend with one major
+caveat: cross-entity joins are not allowed. Basically, this means all the where
+clauses in the query have to be for the same entity.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="c1">; OK</span><span class="w">
+</span><span class="o">'</span><span class="p">{</span><span class="no">:find</span><span class="w"> </span><span class="p">[</span><span class="nb">doc</span><span class="p">]</span><span class="w">
+  </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="nb">doc</span><span class="w"> </span><span class="no">:foo</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w">
+          </span><span class="p">[</span><span class="nb">doc</span><span class="w"> </span><span class="no">:bar</span><span class="w"> </span><span class="s">"hey"</span><span class="p">]]}</span><span class="w">
+
+</span><span class="c1">; Not OK</span><span class="w">
+</span><span class="o">'</span><span class="p">{</span><span class="no">:find</span><span class="w"> </span><span class="p">[</span><span class="nb">doc</span><span class="p">]</span><span class="w">
+  </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="n">user</span><span class="w"> </span><span class="no">:name</span><span class="w"> </span><span class="s">"Tilly"</span><span class="p">]</span><span class="w">
+          </span><span class="p">[</span><span class="nb">doc</span><span class="w"> </span><span class="no">:user</span><span class="w"> </span><span class="n">user</span><span class="p">]]}</span><span class="w">
+</span></code></pre></div>
+<p>So to be clear, Biff&#39;s subscribable &quot;queries&quot; are not datalog at all. They&#39;re
+just predicates that can take advantage of Crux&#39;s indices. Biff makes this
+restriction so that it can provide query updates to clients efficiently without
+having to solve a hard research problem first. However, it turns out that we can
+go quite far even with this restriction.</p>
+
+<p>On the frontend, use <code>biff.util/init-sub</code> to initialize a websocket connection
+that handles query subscriptions for you:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">default-subscriptions</span><span class="w">
+  </span><span class="o">#</span><span class="p">{[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="o">'</span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+                 </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="no">:name</span><span class="w"> </span><span class="s">"Ben"</span><span class="p">]</span><span class="w">
+                         </span><span class="p">[</span><span class="no">:age</span><span class="w"> </span><span class="n">age</span><span class="p">]</span><span class="w">
+                         </span><span class="p">[(</span><span class="nb">&lt;=</span><span class="w"> </span><span class="mi">18</span><span class="w"> </span><span class="n">age</span><span class="p">)]</span><span class="w">
+                         </span><span class="p">[(</span><span class="nf">yourapp.core/likes-cheese?</span><span class="w"> </span><span class="nb">doc</span><span class="p">)]]}]})</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">subscriptions</span><span class="w"> </span><span class="p">(</span><span class="nf">atom</span><span class="w"> </span><span class="n">default-subscriptions</span><span class="p">))</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">sub-data</span><span class="w"> </span><span class="p">(</span><span class="nf">atom</span><span class="w"> </span><span class="p">{}))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">biff.util/init-sub</span><span class="w">
+  </span><span class="p">{</span><span class="no">:subscriptions</span><span class="w"> </span><span class="n">subscriptions</span><span class="w">
+   </span><span class="no">:sub-data</span><span class="w"> </span><span class="n">sub-data</span><span class="p">})</span><span class="w">
+</span></code></pre></div>
+<p>If you want to subscribe to a query, <code>swap!</code> it into <code>subscriptions</code>. If you
+want to unsubscribe, <code>swap!</code> it out. Biff will populate <code>sub-data</code> with the
+results of your queries and remove old data when you unsubscribe. You can then
+use the contents of that atom to drive your UI. The contents of <code>sub-data</code> is a
+map of the form <code>subscription-&gt;doc-id-&gt;doc</code>, for example:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="o">'</span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+              </span><span class="no">:where</span><span class="w"> </span><span class="n">...</span><span class="p">}]</span><span class="w">
+ </span><span class="p">{{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="no">:name</span><span class="w"> </span><span class="s">"Sven"</span><span class="w">
+                                </span><span class="no">:age</span><span class="w"> </span><span class="mi">250</span><span class="w">
+                                </span><span class="n">...</span><span class="p">}}}</span><span class="w">
+</span></code></pre></div>
+<p>Note the subscription format again:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="o">'</span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+             </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="no">:name</span><span class="w"> </span><span class="s">"Ben"</span><span class="p">]</span><span class="w">
+                     </span><span class="p">[</span><span class="no">:age</span><span class="w"> </span><span class="n">age</span><span class="p">]</span><span class="w">
+                     </span><span class="p">[(</span><span class="nb">&lt;=</span><span class="w"> </span><span class="mi">18</span><span class="w"> </span><span class="n">age</span><span class="p">)]</span><span class="w">
+                     </span><span class="p">[(</span><span class="nf">yourapp.core/likes-cheese?</span><span class="w"> </span><span class="nb">doc</span><span class="p">)]]}]</span><span class="w">
+</span></code></pre></div>
+<p>The first element is a Sente event ID. The query map (the second element) omits
+the entity variable in the where clauses since it has to be the same for each
+clause anyway. But it will be bound to <code>doc</code> in case you want to use it in e.g.
+a predicate function. <code>:find</code> is similarly omitted.</p>
+
+<p>The <code>:table</code> value is connected to authorization rules which you define on the
+backend (see <a href="#rules">Rules</a>). When a client subscribes to this query, it will
+be rejected unless you define rules for that table which allow the query. You
+also have to whitelist any predicate function calls (like
+<code>yourapp.core/likes-cheese?</code>), though the comparison operators (like <code>&lt;=</code>) are
+whitelisted for you.</p>
+
+<p>I haven&#39;t yet added support for <code>or</code>, <code>not</code>, etc. clauses in subscriptions. See
+<a href="https://github.com/jacobobryant/biff/issues/9" target="_blank">#9</a>.</p>
+
+<p>You can also subscribe to individual documents:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="o">'</span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+             </span><span class="no">:id</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}}]</span><span class="w">
+</span></code></pre></div>
+<p>All this is most powerful when you make the <code>subscriptions</code> atom a derivation of
+<code>sub-data</code>:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
+src/hello/client/app.cljs</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.client.app</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">bu</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.client.app.db</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">db</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.client.app.mutations</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">m</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.client.app.system</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">s</span><span class="p">]</span><span class="w">
+    </span><span class="n">...</span><span class="p">))</span><span class="w">
+
+</span><span class="n">...</span><span class="w">
+
+</span><span class="p">(</span><span class="k">defn</span><span class="w"> </span><span class="o">^</span><span class="no">:export</span><span class="w"> </span><span class="n">init</span><span class="w"> </span><span class="p">[]</span><span class="w">
+  </span><span class="p">(</span><span class="nf">reset!</span><span class="w"> </span><span class="n">s/system</span><span class="w">
+    </span><span class="p">(</span><span class="nf">bu/init-sub</span><span class="w"> </span><span class="p">{</span><span class="no">:handler</span><span class="w"> </span><span class="n">m/api</span><span class="w">
+                  </span><span class="no">:sub-data</span><span class="w"> </span><span class="n">db/sub-data</span><span class="w">
+                  </span><span class="no">:subscriptions</span><span class="w"> </span><span class="n">db/subscriptions</span><span class="p">}))</span><span class="w">
+  </span><span class="n">...</span><span class="p">)</span><span class="w">
+</span></code></pre></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/db.cljs" target="_blank">
+src/hello/client/app/db.cljs</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.client.app.db</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">hello.logic</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">logic</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">trident.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">u</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">rum.core</span><span class="p">]))</span><span class="w">
+
+</span><span class="p">(</span><span class="nf">defonce</span><span class="w"> </span><span class="n">db</span><span class="w"> </span><span class="p">(</span><span class="nf">atom</span><span class="w"> </span><span class="p">{}))</span><span class="w">
+
+</span><span class="c1">; same as (do (rum.core/cursor-in db [:sub-data]) ...)</span><span class="w">
+</span><span class="p">(</span><span class="nf">u/defcursors</span><span class="w"> </span><span class="n">db</span><span class="w">
+  </span><span class="n">sub-data</span><span class="w"> </span><span class="p">[</span><span class="no">:sub-data</span><span class="p">])</span><span class="w">
+
+</span><span class="c1">; same as (do</span><span class="w">
+</span><span class="c1">;           (rum.core/derived-atom [sub-data] :hello.client.app.db/data</span><span class="w">
+</span><span class="c1">;             (fn [sub-data]</span><span class="w">
+</span><span class="c1">;               (apply merge-with merge (vals sub-data))))</span><span class="w">
+</span><span class="c1">;           ...)</span><span class="w">
+</span><span class="p">(</span><span class="nf">u/defderivations</span><span class="w"> </span><span class="p">[</span><span class="n">sub-data</span><span class="p">]</span><span class="w"> </span><span class="n">hello.client.app.db</span><span class="w">
+  </span><span class="n">data</span><span class="w"> </span><span class="p">(</span><span class="nb">apply</span><span class="w"> </span><span class="nb">merge-with</span><span class="w"> </span><span class="nb">merge</span><span class="w"> </span><span class="p">(</span><span class="nb">vals</span><span class="w"> </span><span class="n">sub-data</span><span class="p">))</span><span class="w">
+
+  </span><span class="n">uid</span><span class="w"> </span><span class="p">(</span><span class="nf">get-in</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="p">[</span><span class="no">:uid</span><span class="w"> </span><span class="n">nil</span><span class="w"> </span><span class="no">:uid</span><span class="p">])</span><span class="w">
+  </span><span class="n">signed-in</span><span class="w"> </span><span class="p">(</span><span class="nb">and</span><span class="w"> </span><span class="p">(</span><span class="nf">some?</span><span class="w"> </span><span class="n">uid</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nb">not=</span><span class="w"> </span><span class="no">:signed-out</span><span class="w"> </span><span class="n">uid</span><span class="p">))</span><span class="w">
+  </span><span class="n">user-ref</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="n">uid</span><span class="p">}</span><span class="w">
+  </span><span class="n">game</span><span class="w"> </span><span class="p">(</span><span class="nf">-&gt;&gt;</span><span class="w"> </span><span class="n">data</span><span class="w">
+         </span><span class="no">:games</span><span class="w">
+         </span><span class="nb">vals</span><span class="w">
+         </span><span class="p">(</span><span class="nb">filter</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nb">contains?</span><span class="w"> </span><span class="p">(</span><span class="no">:users</span><span class="w"> </span><span class="n">%</span><span class="p">)</span><span class="w"> </span><span class="n">uid</span><span class="p">))</span><span class="w">
+         </span><span class="nb">first</span><span class="p">)</span><span class="w">
+
+  </span><span class="n">...</span><span class="w">
+
+  </span><span class="n">biff-subs</span><span class="w"> </span><span class="p">[</span><span class="c1">; :uid is a special non-Crux query. Biff will respond</span><span class="w">
+             </span><span class="c1">; with the currently authenticated user's ID.</span><span class="w">
+             </span><span class="no">:uid</span><span class="w">
+             </span><span class="p">(</span><span class="nb">when</span><span class="w"> </span><span class="n">signed-in</span><span class="w">
+               </span><span class="p">[{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+                 </span><span class="no">:id</span><span class="w"> </span><span class="n">user-ref</span><span class="p">}</span><span class="w">
+                </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:public-users</span><span class="w">
+                 </span><span class="no">:id</span><span class="w"> </span><span class="p">{</span><span class="no">:user.public/id</span><span class="w"> </span><span class="n">uid</span><span class="p">}}</span><span class="w">
+                </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:games</span><span class="w">
+                 </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="no">:users</span><span class="w"> </span><span class="n">uid</span><span class="p">]]}])</span><span class="w">
+             </span><span class="p">(</span><span class="k">for</span><span class="w"> </span><span class="p">[</span><span class="n">u</span><span class="w"> </span><span class="p">(</span><span class="no">:users</span><span class="w"> </span><span class="n">game</span><span class="p">)]</span><span class="w">
+               </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:public-users</span><span class="w">
+                </span><span class="no">:id</span><span class="w"> </span><span class="p">{</span><span class="no">:user.public/id</span><span class="w"> </span><span class="n">u</span><span class="p">}})]</span><span class="w">
+  </span><span class="n">subscriptions</span><span class="w"> </span><span class="p">(</span><span class="nf">-&gt;&gt;</span><span class="w"> </span><span class="n">biff-subs</span><span class="w">
+                  </span><span class="n">flatten</span><span class="w">
+                  </span><span class="p">(</span><span class="nb">filter</span><span class="w"> </span><span class="n">some?</span><span class="p">)</span><span class="w">
+                  </span><span class="p">(</span><span class="nb">map</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nb">vector</span><span class="w"> </span><span class="no">:biff/sub</span><span class="w"> </span><span class="n">%</span><span class="p">))</span><span class="w">
+                  </span><span class="nb">set</span><span class="p">))</span><span class="w">
+</span></code></pre></div>
+<p>When a user signs into the example app, the following will happen:</p>
+
+<ol>
+<li>Client subscribes to <code>:uid</code> (i.e. <code>subscriptions</code> contains <code>#{[:biff/sub
+:uid]}</code>).</li>
+<li><code>sub-data</code> is populated with the user&#39;s ID.</li>
+<li><code>signed-in</code> changes to <code>true</code> and <code>biff-subs</code> gets updated. The client is now
+subscribed to various information about the current user, including the current
+game (if they&#39;ve joined one).</li>
+<li><code>sub-data</code> is populated with more data. The UI will display the user&#39;s
+email address, display name and current game. The client will subscribe to data
+about the other players (their display names).</li>
+<li>The other players&#39; display names will be loaded into <code>sub-data</code> and the UI will
+update again.</li>
+</ol>
+
+<p>This is what I meant when I said that we can go pretty far without cross-entity
+joins: using this method, we can declaratively load all the relevant data and
+perform joins on the client. This should be sufficient for many situations.</p>
+
+<p>However, it won&#39;t work if you need an aggregation of a set of documents that&#39;s
+too large to send to the client (not to mention each client), or if the client
+isn&#39;t allowed to see the individual documents. To handle that, I&#39;d like to
+eventually try integrating <a href="https://materialize.io"
+target="_blank">Materialize</a>.</p>
+<h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
       </div>
       <div class="dark-box">
           <div class="lang-selector">

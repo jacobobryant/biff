@@ -112,7 +112,8 @@
     (watch nil nil #{} @sub-atom)))
 
 (defn init-sub [{:keys [sub-data subscriptions handler url]
-                 :or {url "/api/chsk"}}]
+                 :or {url "/api/chsk"
+                      handler (constantly nil)}}]
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
         {:keys [api-send] :as env} (init-sente {:handler handler
