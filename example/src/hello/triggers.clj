@@ -1,6 +1,5 @@
 (ns hello.triggers
   (:require
-    [hello.rules :as rules]
     [trident.util :as u]))
 
 (defn assign-players [{:keys [biff/submit-tx doc]
@@ -24,5 +23,4 @@
                     op])))))
 
 (def triggers
-  (rules/expand-ops
-    {:games {[:create :update] assign-players}}))
+  {:games {[:create :update] assign-players}})

@@ -359,6 +359,18 @@
          :headers/Content-Type "text/plain"
          :body "Not authorized."}))))
 
+(defn authenticated? [{:keys [session/uid]}]
+  (some? uid))
+
+(defn only-changed-keys? [doc-a doc-b & ks]
+  (apply = (map (fn [{:keys [crux.db/id] :as doc}]
+                  (apply dissoc (or doc {})
+                    (concat ks [:crux.db/id] (when (map? id) (keys id)))))
+             [doc-a doc-b])))
+
+(defn only-changed-elements? [doc-a doc-b k & xs]
+  (apply = (map #(apply (fnil disj #{}) (get % k) xs) [doc-a doc-b])))
+
 (comment
   (= "3\n"
     (with-out-str

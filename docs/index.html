@@ -271,6 +271,20 @@
           </li>
           <li>
             <a href="#rules" class="toc-h1 toc-link" data-title="Rules">Rules</a>
+              <ul class="toc-list-h2">
+                  <li>
+                    <a href="#tables" class="toc-h2 toc-link" data-title="Tables">Tables</a>
+                  </li>
+                  <li>
+                    <a href="#specs" class="toc-h2 toc-link" data-title="Specs">Specs</a>
+                  </li>
+                  <li>
+                    <a href="#operations" class="toc-h2 toc-link" data-title="Operations">Operations</a>
+                  </li>
+                  <li>
+                    <a href="#predicates" class="toc-h2 toc-link" data-title="Predicates">Predicates</a>
+                  </li>
+              </ul>
           </li>
           <li>
             <a href="#triggers" class="toc-h1 toc-link" data-title="Triggers">Triggers</a>
@@ -1285,7 +1299,191 @@ too large to send to the client (not to mention each client), or if the client
 isn&#39;t allowed to see the individual documents. To handle that, I&#39;d like to
 eventually try integrating <a href="https://materialize.io"
 target="_blank">Materialize</a>.</p>
-<h1 id='rules'>Rules</h1><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
+<h1 id='rules'>Rules</h1>
+<p>Relevant config:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="no">:biff/rules</span><span class="w"> </span><span class="n">nil</span><span class="w">         </span><span class="c1">; An authorization rules data structure.</span><span class="w">
+</span><span class="no">:biff/fn-whitelist</span><span class="w"> </span><span class="n">nil</span><span class="w">  </span><span class="c1">; Collection of fully-qualified function symbols to allow in</span><span class="w">
+                        </span><span class="c1">; Crux queries sent from the frontend. Functions in clojure.core</span><span class="w">
+                        </span><span class="c1">; need not be qualified. For example: '[map? example.core/frobulate]</span><span class="w">
+</span></code></pre></div>
+<p>Your app&#39;s rules define what transactions and subscriptions will be accepted
+from the frontend (see <a href="#transactions">Transactions</a> and
+<a href="#subscriptions">Subscriptions</a>).</p>
+
+<p>The value of <code>:biff/rules</code> is a map of <code>table-&gt;rules</code>, for example:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">hello.rules</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w">
+    </span><span class="p">[</span><span class="n">biff.util</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">bu</span><span class="p">]</span><span class="w">
+    </span><span class="p">[</span><span class="n">clojure.spec.alpha</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">s</span><span class="p">]))</span><span class="w">
+
+</span><span class="c1">; Same as (do (s/def ...) ...)</span><span class="w">
+</span><span class="p">(</span><span class="nf">bu/sdefs</span><span class="w">
+  </span><span class="no">:user/id</span><span class="w"> </span><span class="n">uuid?</span><span class="w">
+  </span><span class="c1">; like s/keys, but only allows specified keys.</span><span class="w">
+  </span><span class="no">::user-ref</span><span class="w"> </span><span class="p">(</span><span class="nf">bu/only-keys</span><span class="w"> </span><span class="no">:req</span><span class="w"> </span><span class="p">[</span><span class="no">:user/id</span><span class="p">])</span><span class="w">
+  </span><span class="no">::user</span><span class="w"> </span><span class="p">(</span><span class="nf">bu/only-keys</span><span class="w"> </span><span class="no">:req</span><span class="w"> </span><span class="p">[</span><span class="no">:user/email</span><span class="p">])</span><span class="w">
+  </span><span class="n">...</span><span class="p">)</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">rules</span><span class="w">
+  </span><span class="p">{</span><span class="no">:users</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="no">::user-ref</span><span class="w"> </span><span class="no">::user</span><span class="p">]</span><span class="w">
+           </span><span class="no">:get</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">user/id</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                  </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">uid</span><span class="w"> </span><span class="n">id</span><span class="p">))}</span><span class="w">
+   </span><span class="n">...</span><span class="p">})</span><span class="w">
+</span></code></pre></div><h3 id='tables'>Tables</h3>
+<p>The table is used in transactions and subscriptions to specify which rules should be
+used. The rules above authorize us to subscribe to this:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+            </span><span class="no">:id</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}}]</span><span class="w">
+</span></code></pre></div>
+<p>And for transactions:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="no">::game-ref</span><span class="w"> </span><span class="no">::game</span><span class="p">]</span><span class="w">
+         </span><span class="no">:create</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[</span><span class="n">env</span><span class="p">]</span><span class="w"> </span><span class="n">...</span><span class="p">)}}</span><span class="w">
+</span><span class="c1">; Authorizes:</span><span class="w">
+</span><span class="p">[</span><span class="no">:biff/tx</span><span class="w"> </span><span class="p">{[</span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:game/id</span><span class="w"> </span><span class="s">"ABCD"</span><span class="p">}]</span><span class="w">
+           </span><span class="p">{</span><span class="no">:users</span><span class="w"> </span><span class="o">#</span><span class="p">{</span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}}}]</span><span class="w">
+</span></code></pre></div><h3 id='specs'>Specs</h3>
+<p>For each document in the query result or transaction, authorization has two
+steps. First, the document ID and the document are checked with <code>s/valid?</code>
+against the two elements in <code>:specs</code>, respectively. For example, the specs for
+the <code>:users</code> table above would authorize a read or write operation on the
+following document:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:crux.db/id</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}</span><span class="w">
+ </span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="w">
+ </span><span class="no">:user/email</span><span class="w"> </span><span class="s">"email@example.com"</span><span class="p">}</span><span class="w">
+</span></code></pre></div>
+<p>Note that during this check, the document will not include the ID or any keys
+in the ID (for map IDs). (Also recall that map ID keys are automatically
+duplicated in the document when using Biff transactions).</p>
+
+<p>For write operations, the document must pass the spec before and/or after the
+transaction, depending on whether the document is being created, updated or
+deleted.</p>
+<h3 id='operations'>Operations</h3>
+<p>If the specs pass, then the document must pass a predicate specified by the
+operation. There are five operations: <code>:create</code>, <code>:update</code>, <code>:delete</code>,
+<code>:query</code>, <code>:get</code>.</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:messages</span><span class="w"> </span><span class="p">{</span><span class="no">:specs</span><span class="w"> </span><span class="n">...</span><span class="w">
+            </span><span class="no">:create</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[</span><span class="n">env</span><span class="p">]</span><span class="w"> </span><span class="n">...</span><span class="p">)</span><span class="w">
+            </span><span class="no">:get</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[</span><span class="n">env</span><span class="p">]</span><span class="w"> </span><span class="n">...</span><span class="p">)}}</span><span class="w">
+</span></code></pre></div>
+<p>You can use the same predicate for multiple operations like so:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:messages</span><span class="w"> </span><span class="p">{</span><span class="no">:specs</span><span class="w"> </span><span class="n">...</span><span class="w">
+            </span><span class="p">[</span><span class="no">:create</span><span class="w"> </span><span class="no">:update</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[</span><span class="n">env</span><span class="p">]</span><span class="w"> </span><span class="n">...</span><span class="p">)}}</span><span class="w">
+</span></code></pre></div>
+<p>There are also several aliases:</p>
+
+<table><thead>
+<tr>
+<th>Alias</th>
+<th>Expands to</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>:read</code></td>
+<td><code>[:query :get]</code></td>
+</tr>
+<tr>
+<td><code>:write</code></td>
+<td><code>[:create :update :delete]</code></td>
+</tr>
+<tr>
+<td><code>:rw</code></td>
+<td><code>[:query :get :create :update :delete]</code></td>
+</tr>
+</tbody></table>
+
+<p>For example:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:messages</span><span class="w"> </span><span class="p">{</span><span class="no">:specs</span><span class="w"> </span><span class="n">...</span><span class="w">
+            </span><span class="no">:write</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[</span><span class="n">env</span><span class="p">]</span><span class="w"> </span><span class="n">...</span><span class="p">)}}</span><span class="w">
+</span></code></pre></div>
+<p><code>:get</code> refers to subscriptions for individual documents while <code>:query</code> is for
+multiple documents:</p>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="c1">; get</span><span class="w">
+</span><span class="p">[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:users</span><span class="w">
+            </span><span class="no">:id</span><span class="w"> </span><span class="p">{</span><span class="no">:user/id</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">}}]</span><span class="w">
+</span><span class="c1">; query</span><span class="w">
+</span><span class="p">[</span><span class="no">:biff/sub</span><span class="w"> </span><span class="p">{</span><span class="no">:table</span><span class="w"> </span><span class="no">:games</span><span class="w">
+            </span><span class="no">:where</span><span class="w"> </span><span class="p">[[</span><span class="no">:users</span><span class="w"> </span><span class="o">#</span><span class="n">uuid</span><span class="w"> </span><span class="s">"some-uuid"</span><span class="p">]]}]</span><span class="w">
+</span></code></pre></div><h3 id='predicates'>Predicates</h3>
+<p>Predicates receive the system map merged with some additional keys, depending
+on the operation:</p>
+
+<table><thead>
+<tr>
+<th>Key</th>
+<th>Operations</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td><code>:session/uid</code></td>
+<td><code>:rw</code></td>
+<td>The ID of the user who submitted the query/transaction. <code>nil</code> if they&#39;re unauthenticated.</td>
+</tr>
+<tr>
+<td><code>:biff/db</code></td>
+<td><code>:rw</code></td>
+<td>The Crux DB value before this operation occurred.</td>
+</tr>
+<tr>
+<td><code>:doc</code></td>
+<td><code>:rw</code></td>
+<td>The document being operated on.</td>
+</tr>
+<tr>
+<td><code>:old-doc</code></td>
+<td><code>:write</code></td>
+<td>The previous value of the document being operated on.</td>
+</tr>
+<tr>
+<td><code>:current-time</code></td>
+<td><code>:write</code></td>
+<td>The inst used to replace any occurrences of <code>:db/current-time</code> (see <a href="#transactions">Transactions</a>).</td>
+</tr>
+<tr>
+<td><code>:generated-id</code></td>
+<td><code>:create</code></td>
+<td><code>true</code> iff a random UUID was generated for this document&#39;s ID.</td>
+</tr>
+</tbody></table>
+
+<p>Some examples:</p>
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+<div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">rules</span><span class="w">
+  </span><span class="p">{</span><span class="no">:public-users</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="no">::user-public-ref</span><span class="w"> </span><span class="no">::user-public</span><span class="p">]</span><span class="w">
+                  </span><span class="c1">; Returns false iff :session/uid is nil.</span><span class="w">
+                  </span><span class="no">:get</span><span class="w"> </span><span class="n">bu/authenticated?</span><span class="w">
+                  </span><span class="no">:write</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">user.public/id</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                           </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">uid</span><span class="w"> </span><span class="n">id</span><span class="p">))}</span><span class="w">
+   </span><span class="no">:users</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="no">::user-ref</span><span class="w"> </span><span class="no">::user</span><span class="p">]</span><span class="w">
+           </span><span class="no">:get</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">user/id</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                  </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">uid</span><span class="w"> </span><span class="n">id</span><span class="p">))}</span><span class="w">
+   </span><span class="no">:games</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="no">::game-ref</span><span class="w"> </span><span class="no">::game</span><span class="p">]</span><span class="w">
+           </span><span class="no">:query</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">users</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                    </span><span class="p">(</span><span class="nb">contains?</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">uid</span><span class="p">))</span><span class="w">
+           </span><span class="p">[</span><span class="no">:create</span><span class="w"> </span><span class="no">:update</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="w"> </span><span class="nb">doc</span><span class="w"> </span><span class="n">old-doc</span><span class="p">]</span><span class="w">
+                                   </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">users</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                               </span><span class="p">(</span><span class="nb">and</span><span class="w">
+                                 </span><span class="p">(</span><span class="nb">some</span><span class="w"> </span><span class="o">#</span><span class="p">(</span><span class="nb">contains?</span><span class="w"> </span><span class="p">(</span><span class="no">:users</span><span class="w"> </span><span class="n">%</span><span class="p">)</span><span class="w"> </span><span class="n">uid</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="nb">doc</span><span class="w"> </span><span class="n">old-doc</span><span class="p">])</span><span class="w">
+                                 </span><span class="c1">; Checks that no keys other than :users have changed</span><span class="w">
+                                 </span><span class="c1">; (supports varargs).</span><span class="w">
+                                 </span><span class="p">(</span><span class="nf">bu/only-changed-keys?</span><span class="w"> </span><span class="nb">doc</span><span class="w"> </span><span class="n">old-doc</span><span class="w"> </span><span class="no">:users</span><span class="p">)</span><span class="w">
+                                 </span><span class="c1">; Checks that the value of :users (a set) hasn't changed except</span><span class="w">
+                                 </span><span class="c1">; for the addition/removal of uid (supports varargs).</span><span class="w">
+                                 </span><span class="p">(</span><span class="nf">bu/only-changed-elements?</span><span class="w"> </span><span class="nb">doc</span><span class="w"> </span><span class="n">old-doc</span><span class="w"> </span><span class="no">:users</span><span class="w"> </span><span class="n">uid</span><span class="p">)))}})</span><span class="w">
+</span></code></pre></div><div class="highlight"><pre class="highlight clojure tab-clojure"><code><span class="p">{</span><span class="no">:events</span><span class="w"> </span><span class="p">{</span><span class="no">:spec</span><span class="w"> </span><span class="p">[</span><span class="n">uuid?</span><span class="w"> </span><span class="no">::event</span><span class="p">]</span><span class="w">
+          </span><span class="no">:create</span><span class="w"> </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="p">[{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">session/uid</span><span class="w"> </span><span class="n">current-time</span><span class="w"> </span><span class="n">generated-id</span><span class="p">]</span><span class="w">
+                        </span><span class="p">{</span><span class="no">:keys</span><span class="w"> </span><span class="p">[</span><span class="n">timestamp</span><span class="w"> </span><span class="n">user</span><span class="p">]}</span><span class="w"> </span><span class="no">:doc</span><span class="p">}]</span><span class="w">
+                    </span><span class="p">(</span><span class="nb">and</span><span class="w">
+                      </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">uid</span><span class="w"> </span><span class="p">(</span><span class="no">:user/id</span><span class="w"> </span><span class="n">user</span><span class="p">))</span><span class="w">
+                      </span><span class="c1">; Make sure that :timestamp was set by the server, not the client.</span><span class="w">
+                      </span><span class="p">(</span><span class="nb">=</span><span class="w"> </span><span class="n">current-time</span><span class="w"> </span><span class="n">timestamp</span><span class="p">)</span><span class="w">
+                      </span><span class="c1">; Make sure that the ID was set by the server, not the client.</span><span class="w">
+                      </span><span class="n">generated-id</span><span class="p">))}}</span><span class="w">
+</span></code></pre></div><h1 id='triggers'>Triggers</h1><h1 id='deployment'>Deployment</h1><h1 id='tips'>Tips</h1><h1 id='contributing'>Contributing</h1>
       </div>
       <div class="dark-box">
           <div class="lang-selector">

@@ -16,9 +16,31 @@
     [taoensso.timbre :refer [log spy]]
     [trident.util :as u]))
 
+(defn expand-ops [rules]
+  (u/map-vals
+    (fn [table-rules]
+      (into {}
+        (for [[k v] table-rules
+              k (if (coll? k) k [k])
+              :let [ks (case k
+                         :rw [:create
+                              :get
+                              :update
+                              :delete
+                              :query]
+                         :read [:get
+                                :query]
+                         :write [:create
+                                 :update
+                                 :delete]
+                         [k])]
+              k ks]
+          [k v])))
+    rules))
+
 (defn set-defaults [sys app-ns]
   (let [sys (merge sys (bu/select-ns-as sys app-ns 'biff))
-        {:biff/keys [dev host rules]
+        {:biff/keys [dev host rules triggers]
          :keys [biff.auth/send-email
                 biff.web/port
                 biff.static/root
@@ -37,7 +59,8 @@
        :biff.handler/secure-defaults true
        :biff.handler/not-found-path (str root "/404.html")}
       sys
-      {:biff/rules (merge rules schema/rules)
+      {:biff/rules (expand-ops (merge rules schema/rules))
+       :biff/triggers (expand-ops triggers)
        :biff.handler/roots (if root-dev
                              [root-dev root]
                              [root])

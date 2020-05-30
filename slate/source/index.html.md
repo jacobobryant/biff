@@ -1144,6 +1144,185 @@ target="_blank">Materialize</a>.
 
 # Rules
 
+Relevant config:
+
+```clojure
+:biff/rules nil         ; An authorization rules data structure.
+:biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
+                        ; Crux queries sent from the frontend. Functions in clojure.core
+                        ; need not be qualified. For example: '[map? example.core/frobulate]
+```
+
+Your app's rules define what transactions and subscriptions will be accepted
+from the frontend (see [Transactions](#transactions) and
+[Subscriptions](#subscriptions)).
+
+The value of `:biff/rules` is a map of `table->rules`, for example:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+```clojure
+(ns hello.rules
+  (:require
+    [biff.util :as bu]
+    [clojure.spec.alpha :as s]))
+
+; Same as (do (s/def ...) ...)
+(bu/sdefs
+  :user/id uuid?
+  ; like s/keys, but only allows specified keys.
+  ::user-ref (bu/only-keys :req [:user/id])
+  ::user (bu/only-keys :req [:user/email])
+  ...)
+
+(def rules
+  {:users {:spec [::user-ref ::user]
+           :get (fn [{:keys [session/uid] {:keys [user/id]} :doc}]
+                  (= uid id))}
+   ...})
+```
+
+### Tables
+
+The table is used in transactions and subscriptions to specify which rules should be
+used. The rules above authorize us to subscribe to this:
+
+```clojure
+[:biff/sub {:table :users
+            :id {:user/id #uuid "some-uuid"}}]
+```
+
+And for transactions:
+
+```clojure
+{:games {:spec [::game-ref ::game]
+         :create (fn [env] ...)}}
+; Authorizes:
+[:biff/tx {[:games {:game/id "ABCD"}]
+           {:users #{#uuid "some-uuid"}}}]
+```
+
+### Specs
+
+For each document in the query result or transaction, authorization has two
+steps. First, the document ID and the document are checked with `s/valid?`
+against the two elements in `:specs`, respectively. For example, the specs for
+the `:users` table above would authorize a read or write operation on the
+following document:
+
+```clojure
+{:crux.db/id {:user/id #uuid "some-uuid"}
+ :user/id #uuid "some-uuid"
+ :user/email "email@example.com"}
+```
+
+Note that during this check, the document will not include the ID or any keys
+in the ID (for map IDs). (Also recall that map ID keys are automatically
+duplicated in the document when using Biff transactions).
+
+For write operations, the document must pass the spec before and/or after the
+transaction, depending on whether the document is being created, updated or
+deleted.
+
+### Operations
+
+If the specs pass, then the document must pass a predicate specified by the
+operation. There are five operations: `:create`, `:update`, `:delete`,
+`:query`, `:get`.
+
+```clojure
+{:messages {:specs ...
+            :create (fn [env] ...)
+            :get (fn [env] ...)}}
+```
+
+You can use the same predicate for multiple operations like so:
+
+```clojure
+{:messages {:specs ...
+            [:create :update] (fn [env] ...)}}
+```
+
+There are also several aliases:
+
+Alias | Expands to
+------|-----------
+`:read` | `[:query :get]`
+`:write` | `[:create :update :delete]`
+`:rw` | `[:query :get :create :update :delete]`
+
+For example:
+
+```clojure
+{:messages {:specs ...
+            :write (fn [env] ...)}}
+```
+
+`:get` refers to subscriptions for individual documents while `:query` is for
+multiple documents:
+
+```clojure
+; get
+[:biff/sub {:table :users
+            :id {:user/id #uuid "some-uuid"}}]
+; query
+[:biff/sub {:table :games
+            :where [[:users #uuid "some-uuid"]]}]
+```
+
+### Predicates
+
+Predicates receive the system map merged with some additional keys, depending
+on the operation:
+
+Key | Operations | Description
+----|------------|------------
+`:session/uid` | `:rw` | The ID of the user who submitted the query/transaction. `nil` if they're unauthenticated.
+`:biff/db` | `:rw` | The Crux DB value before this operation occurred.
+`:doc` | `:rw` | The document being operated on.
+`:old-doc` | `:write` | The previous value of the document being operated on.
+`:current-time` | `:write` | The inst used to replace any occurrences of `:db/current-time` (see [Transactions](#transactions)).
+`:generated-id` | `:create` | `true` iff a random UUID was generated for this document's ID.
+
+Some examples:
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+```clojure
+(def rules
+  {:public-users {:spec [::user-public-ref ::user-public]
+                  ; Returns false iff :session/uid is nil.
+                  :get bu/authenticated?
+                  :write (fn [{:keys [session/uid] {:keys [user.public/id]} :doc}]
+                           (= uid id))}
+   :users {:spec [::user-ref ::user]
+           :get (fn [{:keys [session/uid] {:keys [user/id]} :doc}]
+                  (= uid id))}
+   :games {:spec [::game-ref ::game]
+           :query (fn [{:keys [session/uid] {:keys [users]} :doc}]
+                    (contains? users uid))
+           [:create :update] (fn [{:keys [session/uid doc old-doc]
+                                   {:keys [users]} :doc}]
+                               (and
+                                 (some #(contains? (:users %) uid) [doc old-doc])
+                                 ; Checks that no keys other than :users have changed
+                                 ; (supports varargs).
+                                 (bu/only-changed-keys? doc old-doc :users)
+                                 ; Checks that the value of :users (a set) hasn't changed except
+                                 ; for the addition/removal of uid (supports varargs).
+                                 (bu/only-changed-elements? doc old-doc :users uid)))}})
+```
+
+```clojure
+{:events {:spec [uuid? ::event]
+          :create (fn [{:keys [session/uid current-time generated-id]
+                        {:keys [timestamp user]} :doc}]
+                    (and
+                      (= uid (:user/id user))
+                      ; Make sure that :timestamp was set by the server, not the client.
+                      (= current-time timestamp)
+                      ; Make sure that the ID was set by the server, not the client.
+                      generated-id))}}
+```
+
 # Triggers
 
 # Deployment

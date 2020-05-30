@@ -90,9 +90,7 @@
   (if admin
     doc-tx-data
     (bu/letdelay [auth-fn (get-in rules [table op])
-                  result (auth-fn (-> env
-                                    (merge doc-tx-data)
-                                    (set/rename-keys {:biff/db :db})))
+                  result (auth-fn (merge env doc-tx-data))
                   anom-fn #(merge (bu/anom :forbidden %)
                              (select-keys doc-tx-data [:table :id :doc]))]
       (cond
@@ -200,7 +198,7 @@
         (not doc-valid?) (expound doc-spec doc)))
     (and id-valid? doc-valid?)))
 
-(defn authorize-read [{:keys [table uid biff/db doc query biff/rules]}]
+(defn authorize-read [{:keys [table doc query biff/rules] :as env}]
   (let [query-type (if (contains? query :id)
                      :get
                      :query)
@@ -212,7 +210,7 @@
                        (not (doc-valid? {:verbose true
                                          :specs specs
                                          :doc doc})) "Doc doesn't meet specs."
-                       (not (u/catchall (auth-fn {:db db :doc doc :auth-uid uid})))
+                       (not (u/catchall (auth-fn env)))
                        "Doc rejected by auth fn.")]
     (if anom-message
       (bu/anom :forbidden anom-message
@@ -239,7 +237,7 @@
         :default {:norm-query norm-query
                   :query-info {:table table
                                :event-id event-id
-                               :uid uid}}))))
+                               :session/uid uid}}))))
 
 ; todo dry with crux-resubscribe*
 (defn crux-subscribe*
@@ -260,7 +258,6 @@
                   authorize-anom (->> docs
                                    (map #(->> {:doc %
                                                :table table
-                                               :uid uid
                                                :query norm-query}
                                            (merge env)
                                            authorize-read))
@@ -279,7 +276,7 @@
         :default {:norm-query norm-query
                   :query-info {:table table
                                :event-id event-id
-                               :uid uid}
+                               :session/uid uid}
                   :sub-data {:query query
                              :changeset changeset}}))))
 
@@ -470,9 +467,7 @@
   (fn [{:keys [id client-id biff/submit-tx] :as env}]
     (if (not= id :biff/tx)
       (handler env)
-      (let [tx (authorize-tx
-                 (set/rename-keys env
-                   {:session/uid :auth-uid :?data :tx}))]
+      (let [tx (authorize-tx (set/rename-keys env {:?data :tx}))]
         (if (bu/anomaly? tx)
           tx
           (<!! (submit-tx (assoc env :tx tx))))))))
