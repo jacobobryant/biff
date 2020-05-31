@@ -70,7 +70,7 @@
             (get-in rules [table :spec])
             [id' doc''])))
       (bu/anom :incorrect "Document doesn't meet spec."
-        :doc doc''
+        :doc doc
         :ident [table id'])
 
       :default
@@ -92,7 +92,7 @@
     (bu/letdelay [auth-fn (get-in rules [table op])
                   result (auth-fn (merge env doc-tx-data))
                   anom-fn #(merge (bu/anom :forbidden %)
-                             (select-keys doc-tx-data [:table :id :doc]))]
+                             (select-keys doc-tx-data [:table :id]))]
       (cond
         (nil? auth-fn) (anom-fn "No auth function.")
         (not result) (anom-fn "Document rejected by auth fn.")
