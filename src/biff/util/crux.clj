@@ -481,7 +481,10 @@
                        (#{:subscribe :resubscribe} action))
                      (send-event client-id
                        [:biff/sub {:changeset {[:uid nil]
-                                               {:uid (or uid :signed-out)}}
+                                               (if (some? uid)
+                                                 {:uid uid}
+                                                 {:uid client-id
+                                                  :tmp true})}
                                    :query query}])
 
                      (= action :subscribe) (crux-subscribe! env query)

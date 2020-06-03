@@ -84,7 +84,19 @@
 (defn start-sente [sys]
   (let [{:keys [ch-recv send-fn connected-uids
                 ajax-post-fn ajax-get-or-ws-handshake-fn]}
-        (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn :client-id})
+        (sente/make-channel-socket! (get-sch-adapter)
+          {:user-id-fn :client-id
+           :csrf-token-fn (fn [{:keys [session/uid] :as req}]
+                            ; Disable CSRF checks for anonymous users.
+                            (if (some? uid)
+                              (or (:anti-forgery-token req)
+                                (get-in req [:session :csrf-token])
+                                (get-in req [:session :ring.middleware.anti-forgery/anti-forgery-token])
+                                (get-in req [:session "__anti-forgery-token"]))
+                              (or
+                                (get-in req [:params    :csrf-token])
+                                (get-in req [:headers "x-csrf-token"])
+                                (get-in req [:headers "x-xsrf-token"]))))})
         sente-route ["/api/chsk" {:get ajax-get-or-ws-handshake-fn
                                   :post ajax-post-fn
                                   :middleware [anti-forgery/wrap-anti-forgery]
