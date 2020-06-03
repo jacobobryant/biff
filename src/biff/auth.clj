@@ -23,18 +23,18 @@
 (defn jwt-key [env]
   (get-key (assoc env :k :jwt-key)))
 
-(defn signin-token [jwt-key email]
+(defn signin-token [jwt-key claims]
   (bu/encode-jwt
-    {:iss "biff"
-     :iat (u/now)
-     :exp (u/add-seconds (u/now) (* 60 30))
-     :email email}
+    (merge
+      claims
+      {:iss "biff"
+       :iat (u/now)
+       :exp (u/add-seconds (u/now) (* 60 30))})
     {:secret jwt-key
      :alg :HS256}))
 
-(defn signin-link [{:keys [email url] :as env}]
-  (let [email (str/trim email)
-        jwt (signin-token (jwt-key env) email)]
+(defn signin-link [{:keys [claims url] :as env}]
+  (let [jwt (signin-token (jwt-key env) (update claims :email str/trim))]
     (-> url
       url/url
       (assoc :query {:token jwt})
@@ -57,10 +57,10 @@
              :user/id %
              :user/email email}]])))))
 
-(defn send-signin-link [{:keys [params/email biff.auth/send-email biff/base-url template location]
+(defn send-signin-link [{:keys [params params/email biff.auth/send-email biff/base-url template location]
                          :as env}]
   (let [link (signin-link (assoc env
-                            :email email
+                            :claims params
                             :url (str base-url "/api/signin")))]
     (send-email {:to email
                  :template template
@@ -72,12 +72,19 @@
 (defn signin [{:keys [params/token session]
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
-  (if-some [email (-> token
+  (if-some [claims (-> token
                     (bu/decode-jwt {:secret (jwt-key env)
                                     :alg :HS256})
-                    u/catchall
-                    :email)]
-    (let [uid (get-uid (assoc env :email email))]
+                    u/catchall)]
+    (let [uid (get-uid (merge env (select-keys claims [:email])))
+          claims (not-empty (dissoc claims :email :iss :iat :exp))]
+      (bu-crux/submit-admin-tx
+        env
+        {[:users {:user/id uid}]
+         (u/assoc-some
+           {:db/update true
+            :last-signed-in (u/now)
+            :claims claims})})
       ; todo set last signin date
       {:status 302
        :headers/Location on-signin

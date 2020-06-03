@@ -464,7 +464,7 @@
       true)))
 
 (defn wrap-tx [handler]
-  (fn [{:keys [id client-id biff/submit-tx] :as env}]
+  (fn [{:keys [id biff/submit-tx] :as env}]
     (if (not= id :biff/tx)
       (handler env)
       (let [tx (authorize-tx (set/rename-keys env {:?data :tx}))]
