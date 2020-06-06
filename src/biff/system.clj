@@ -116,11 +116,8 @@
         notify-tx-opts (-> sys
                          (merge (bu/select-ns-as sys 'biff nil))
                          (assoc :last-tx-id last-tx-id))
-        listener (crux/listen node {:crux/event-type :crux/indexed-tx :with-tx-ops? true}
-                   (fn [ev]
-                     (bu/fix-stdout
-                       (u/pprint [:listen ev])
-                       (bu-crux/notify-tx notify-tx-opts))))]
+        listener (crux/listen node {:crux/event-type :crux/indexed-tx}
+                   (fn [ev] (bu-crux/notify-tx notify-tx-opts)))]
     (add-watch connected-uids ::rm-subs
       (fn [_ _ old-uids new-uids]
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]

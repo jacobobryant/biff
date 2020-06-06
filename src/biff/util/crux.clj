@@ -323,7 +323,11 @@
            queries (keys query->info)
            query->id->doc (->> queries
                             (remove query->id->doc)
-                            (u/map-to #(get-id->doc (merge env (query->info %) {:query %})))
+                            (u/map-to #(get-id->doc (merge
+                                                      env
+                                                      (query->info %)
+                                                      {:client-id client-id
+                                                       :query %})))
                             (merge query->id->doc))]
        (concat (for [q queries
                      :let [id->doc (query->id->doc q)
