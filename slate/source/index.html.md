@@ -5,9 +5,6 @@ language_tabs: # must be one of https://git.io/vQNgJ
   - Clojure
 
 toc_footers:
-  - <a href="https://github.com/jacobobryant/biff" target="_blank">View on Github</a>
-  - <a href="http://clojurians.net" target="_blank">Discuss on &#35;biff</a>
-  - <a href="https://findka.com/subscribe/" target="_blank">Subscribe for updates</a>
 
 includes:
 
@@ -16,19 +13,16 @@ search: true
 
 # Introduction
 
-Biff is a web framework and self-hosted deployment solution for Clojure (<a
-href="https://github.com/jacobobryant/biff" target="_blank">Github repo</a>).
-It's the culmination of 18 months I've spent building web apps with various
-technologies like Datomic, Fulcro, AWS and Firebase (and plenty of Clojure
-libraries). I've taken parts I liked and added a few innovations of my own.
-It's designed primarily to speed up development in pre-growth startups and hobby
-projects, but over time I'd like to make it suitable for apps that need scale
-as well.
-
-It includes features for:
+Biff is designed to make web development with Clojure fast and easy, especially
+for early stage startups and hobby projects. Over time I'd like to make it
+suitable for apps that need scale as well.
+I use it in production for <a href="https://findka.com"
+target="_blank">Findka</a>, my startup. I started writing Biff after 18 months
+of experimenting with various web technologies like Firebase, Datomic and
+several Clojure web frameworks/libraries. It includes:
 
 - **Installation and deployment** on DigitalOcean.
-- [**Crux**](https://opencrux.com) for the database.
+- **Crux** (an immutable document database with Datalog queries).
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
 - **Read/write authorization rules**. No need to set up a bunch of endpoints
@@ -46,13 +40,13 @@ easy to take apart (without forking). This should help mitigate the main
 drawback of frameworks, which is that it's often less work in the long run to
 just stitch the libraries together yourself.
 
-Biff is currently **alpha quality**, though I am using it in production for <a
-href="https://findka.com" target="_blank">Findka</a>. Join `#biff` on <a
+Biff is currently alpha quality. Join `#biff` on <a
 href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
-discussion. I want to help people succeed with Biff, so feel free to ask for
-help and let me know what I can improve. If you'd like to support my work and
-receive email updates about Biff, <a href="https://findka.com/subscribe/"
-target="_blank">subscribe to my newsletter</a>.
+discussion. Feel free to reach out for help, bug reports or anything else. I
+spend most of my time trying to figure out how the h\*ck to do marketing for
+Findka, so Biff-related distractions are always welcome. Also see the <a
+href="https://github.com/jacobobryant/biff/issues" target="_blank">issues</a>
+on Github.
 
 # Getting started
 
@@ -1438,12 +1432,3 @@ If you want to deploy your app from a private repo, you'll need to add a deploy
 certificate and configure Biff to add it to the keychain on startup. I'll add
 automation and instructions after the first person tells me they want
 to do this.
-
-# Contributing
-
-Simply using Biff and reporting problems would be a big help. Github issues or
-the Slack channel work great. Also, ask me any questions you have while
-learning Biff. It'll help me improve the documentation.
-
-And if you want to work on any PRs, great. I'd recommend opening an issue or
-chatting with me on Slack first.

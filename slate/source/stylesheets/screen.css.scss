@@ -75,7 +75,17 @@ html, body {
   .logo {
     display: block;
     max-width: 100%;
+    width: 50%;
+    margin: auto;
     margin-bottom: $logo-margin;
+  }
+
+  .sponsored-by {
+    color: white;
+    text-align: center;
+    margin-top: 15px;
+    font-weight: initial;
+    text-decoration: none;
   }
 
   &>.search {
