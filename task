@@ -11,9 +11,4 @@ docs-dev () {
   bundle exec middleman server
 }
 
-docs () {
-  (cd slate; bundle exec middleman build --clean)
-  rsync -av --delete slate/build/ --exclude CNAME docs/
-}
-
 "$@"
