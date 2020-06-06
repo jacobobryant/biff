@@ -1,8 +1,9 @@
 (ns hello.triggers
   (:require
+    [crux.api :as crux]
     [trident.util :as u]))
 
-(defn assign-players [{:keys [biff/submit-tx doc]
+(defn assign-players [{:keys [biff/node doc]
                        {:keys [users x o]} :doc :as env}]
   ; When a user joins or leaves a game, make assignments for X and O as needed.
   ; Delete the game document if everyone has left.
@@ -20,9 +21,9 @@
              (empty? users) [:crux.tx/delete (:crux.db/id doc)]
              (not= doc new-doc) [:crux.tx/put new-doc])]
     (when op
-      (submit-tx (assoc env :tx
-                   [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
-                    op])))))
+      (crux/submit-tx node
+        [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
+         op]))))
 
 (def triggers
   {:games {[:create :update] assign-players}})

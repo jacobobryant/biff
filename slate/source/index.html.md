@@ -323,10 +323,6 @@ The following keys are added to the system map by `biff.system/start-biff`:
  - `:biff.sente/connected-uids`: Ditto but for `:connected-uids`.
  - `:biff.crux/subscriptions`: An atom used to keep track of which clients have subscribed
    to which queries.
- - `:biff/submit-tx`: A replacement for `crux.api/submit-tx` that triggers subscription updates
-   (will be removed after <a href="https://github.com/jacobobryant/biff/issues/10" target="_blank">&#35;10</a>
-   is closed).
-
 
 `biff.system/start-biff` merges the system map into incoming Ring requests and Sente events. It also
 adds `:biff/db` (a Crux DB value) on each new request/event.
@@ -780,7 +776,7 @@ src/hello/handlers.clj</a></div>
   (bu/anom :not-found (str "No method for " id)))
 
 (defmethod api :hello/move
-  [{:keys [biff/db biff/submit-tx session/uid] :as sys} {:keys [game-id location]}]
+  [{:keys [biff/db session/uid] :as sys} {:keys [game-id location]}]
   ...)
 
 (defmethod api :hello/echo
@@ -1331,7 +1327,7 @@ Triggers let you run code in response to document writes. You must define a map 
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/triggers.clj" target="_blank">src/hello/triggers.clj</a></div>
 ```clojure
-(defn assign-players [{:keys [biff/submit-tx doc]
+(defn assign-players [{:keys [biff/node doc]
                        {:keys [users x o]} :doc :as env}]
   ; When a user joins or leaves a game, re-assign users to X and O as needed.
   ; Delete the game document if everyone has left.
@@ -1340,9 +1336,9 @@ Triggers let you run code in response to document writes. You must define a map 
              (empty? users) [:crux.tx/delete (:crux.db/id doc)]
              (not= doc new-doc) [:crux.tx/put new-doc])]
     (when op
-      (submit-tx (assoc env :tx
-                   [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
-                    op])))))
+      (crux/submit-tx node
+        [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
+         op]))))
 
 (def triggers
   {:games {[:create :update] assign-players}})

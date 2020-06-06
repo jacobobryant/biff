@@ -116,27 +116,17 @@
         notify-tx-opts (-> sys
                          (merge (bu/select-ns-as sys 'biff nil))
                          (assoc :last-tx-id last-tx-id))
-        {:keys [f close]} (bu/pipe-fn
-                            (fn [opts]
-                              (bu/fix-stdout
-                                (log :debug "submitting tx" (:tx opts))
-                                (try
-                                  (update opts :tx #(crux/submit-tx node %))
-                                  (catch Throwable e
-                                    (log :error e "Error while submitting tx")
-                                    nil))))
-                            #(bu/fix-stdout
-                               (when (some? %)
-                                 (log :debug "tx submitted" (:tx %))
-                                 (bu-crux/notify-tx (merge % notify-tx-opts)))))]
+        listener (crux/listen node {:crux/event-type :crux/indexed-tx :with-tx-ops? true}
+                   (fn [ev]
+                     (bu/fix-stdout
+                       (u/pprint [:listen ev])
+                       (bu-crux/notify-tx notify-tx-opts))))]
     (add-watch connected-uids ::rm-subs
       (fn [_ _ old-uids new-uids]
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
           (when (not-empty disconnected)
             (apply swap! subscriptions dissoc disconnected)))))
-    (-> sys
-      (assoc :biff/submit-tx f)
-      (update :trident.system/close conj close))))
+    (update sys :trident.system/close conj #(.close listener))))
 
 (defn wrap-event-handler [handler]
   (fn [{:keys [?reply-fn] :as event}]

@@ -395,7 +395,8 @@
   (for [{:keys [crux.tx/tx-time crux.tx.event/tx-events] :as tx} txes
         :let [db (crux/db node tx-time)
               db-before (crux/db node (time-before tx-time))]
-        [_ doc-id] tx-events
+        [tx-op doc-id] tx-events
+        :when (#{:crux.tx/put :crux.tx/delete} tx-op)
         :let [doc (crux/entity db doc-id)
               doc-before (crux/entity db-before doc-id)
               doc-op (cond
@@ -430,13 +431,10 @@
 ;(run-triggers env)
 
 (defn notify-tx [{:biff/keys [triggers send-event node]
-                  :keys [biff.crux/subscriptions last-tx-id tx] :as env}]
-  (crux/await-tx node tx)
-  (when-let [txes (and
-                    (crux/tx-committed? node tx)
-                    (not-empty (with-tx-log [log {:node node
-                                                  :after-tx @last-tx-id}]
-                                 (doall (take 20 log)))))]
+                  :keys [biff.crux/subscriptions last-tx-id] :as env}]
+  (when-let [txes (not-empty (with-tx-log [log {:node node
+                                                :after-tx @last-tx-id}]
+                               (doall (take 20 log))))]
     (let [{:crux.tx/keys [tx-id tx-time]} (last txes)
           {:keys [id->change] :as env} (-> env
                                          (update :biff.crux/subscriptions deref)
@@ -464,13 +462,13 @@
       true)))
 
 (defn wrap-tx [handler]
-  (fn [{:keys [id biff/submit-tx] :as env}]
+  (fn [{:keys [id biff/node] :as env}]
     (if (not= id :biff/tx)
       (handler env)
       (let [tx (authorize-tx (set/rename-keys env {:?data :tx}))]
         (if (bu/anomaly? tx)
           tx
-          (<!! (submit-tx (assoc env :tx tx))))))))
+          (crux/submit-tx node tx))))))
 
 (defn wrap-sub [handler]
   (fn [{:keys [id biff/send-event client-id session/uid] {:keys [query action]} :?data :as env}]
@@ -494,7 +492,7 @@
         (when (bu/anomaly? result)
           result)))))
 
-(defn submit-admin-tx [{:biff/keys [submit-tx node db rules] :as sys} tx]
+(defn submit-admin-tx [{:biff/keys [node db rules] :as sys} tx]
   (let [db (or db (crux/db node))
         tx (authorize-tx {:tx tx
                           :biff/db db
@@ -505,7 +503,7 @@
       (u/pprint anom))
     (if anom
       tx
-      (<!! (submit-tx (assoc sys :tx tx))))))
+      (crux/submit-tx node tx))))
 
 
 (comment
