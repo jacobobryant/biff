@@ -2,11 +2,11 @@
   (:require
     [crux.api :as crux]
     [ring.middleware.anti-forgery :as anti-forgery]
-    [biff.util :as bu]
-    [biff.util.crux :as bu-crux]
+    [biff.crux :as bcrux]
     [byte-streams :as bs]
     [crypto.random :as random]
     [trident.util :as u]
+    [trident.jwt :as tjwt]
     [clojure.string :as str]
     [cemerick.url :as url]
     [byte-transforms :as bt]))
@@ -14,7 +14,7 @@
 (defn get-key [{:keys [biff/node biff/db k] :as env}]
   (or (get (crux/entity db :biff.auth/keys) k)
     (doto (bs/to-string (bt/encode (random/bytes 16) :base64))
-      (#(bu-crux/submit-admin-tx
+      (#(bcrux/submit-admin-tx
           env
           {[:biff/auth-keys :biff.auth/keys]
            {:db/merge true
@@ -24,7 +24,7 @@
   (get-key (assoc env :k :jwt-key)))
 
 (defn signin-token [jwt-key claims]
-  (bu/encode-jwt
+  (tjwt/encode
     (merge
       claims
       {:iss "biff"
@@ -40,6 +40,9 @@
       (assoc :query {:token jwt})
       str)))
 
+(defn email= [s1 s2]
+  (.equalsIgnoreCase s1 s2))
+
 (defn get-uid [{:keys [biff/node biff/db email]}]
   (or (:user/id
         (ffirst
@@ -47,7 +50,7 @@
             {:find '[e]
              :args [{'input-email email}]
              :where '[[e :user/email email]
-                      [(biff.util/email= email input-email)]]})))
+                      [(biff.auth/email= email input-email)]]})))
     (doto (java.util.UUID/randomUUID)
       ; todo set account created date
       (#(crux/submit-tx
@@ -73,12 +76,12 @@
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
   (if-some [claims (-> token
-                    (bu/decode-jwt {:secret (jwt-key env)
-                                    :alg :HS256})
+                     (tjwt/decode {:secret (jwt-key env)
+                                   :alg :HS256})
                     u/catchall)]
     (let [uid (get-uid (merge env (select-keys claims [:email])))
           claims (not-empty (dissoc claims :email :iss :iat :exp))]
-      (bu-crux/submit-admin-tx
+      (bcrux/submit-admin-tx
         env
         {[:users {:user/id uid}]
          (u/assoc-some

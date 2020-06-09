@@ -1,45 +1,35 @@
 (ns biff.system
   (:require
-    [biff.util :as bu]
-    [biff.util.http :as bu-http]
-    [biff.util.static :as bu-static]
+    [biff.http :as http]
     [biff.auth :as auth]
-    [biff.schema :as schema]
+    [biff.rules :as rules]
     [byte-transforms :as bt]
     [clojure.set :as set]
+    [clojure.string :as str]
+    [clojure.java.io :as io]
     [crux.api :as crux]
     [taoensso.sente :as sente]
     [ring.middleware.session.cookie :as cookie]
     [ring.middleware.anti-forgery :as anti-forgery]
+    [rum.core :as rum]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
-    [biff.util.crux :as bu-crux]
+    [biff.crux :as bcrux]
     [taoensso.timbre :refer [log spy]]
-    [trident.util :as u]))
+    [trident.util :as u])
+  (:import
+    [java.nio.file Paths]))
 
-(defn expand-ops [rules]
-  (u/map-vals
-    (fn [table-rules]
-      (into {}
-        (for [[k v] table-rules
-              k (if (coll? k) k [k])
-              :let [ks (case k
-                         :rw [:create
-                              :get
-                              :update
-                              :delete
-                              :query]
-                         :read [:get
-                                :query]
-                         :write [:create
-                                 :update
-                                 :delete]
-                         [k])]
-              k ks]
-          [k v])))
-    rules))
+(defn wrap-env [handler {:keys [biff/node] :as sys}]
+  (comp handler
+    (fn [event-or-request]
+      (let [req (:ring-req event-or-request event-or-request)]
+        (-> (merge sys event-or-request)
+          (assoc :biff/db (crux/db node))
+          (merge (u/prepend-keys "session" (get req :session)))
+          (merge (u/prepend-keys "params" (get req :params))))))))
 
 (defn set-defaults [sys app-ns]
-  (let [sys (merge sys (bu/select-ns-as sys (str app-ns ".biff") 'biff))
+  (let [sys (merge sys (u/select-ns-as sys (str app-ns ".biff") 'biff))
         {:biff/keys [dev host rules triggers]
          :keys [biff.auth/send-email
                 biff.web/port
@@ -59,8 +49,8 @@
        :biff.handler/secure-defaults true
        :biff.handler/not-found-path (str root "/404.html")}
       sys
-      {:biff/rules (expand-ops (merge rules schema/rules))
-       :biff/triggers (expand-ops triggers)
+      {:biff/rules (rules/expand-ops (merge rules rules/rules))
+       :biff/triggers (rules/expand-ops triggers)
        :biff.handler/roots (if root-dev
                              [root-dev root]
                              [root])
@@ -73,13 +63,13 @@
 
 (defn start-crux [sys]
   (let [opts (-> sys
-               (bu/select-ns-as 'biff.crux 'crux)
+               (u/select-ns-as 'biff.crux 'crux)
                (set/rename-keys {:crux/topology :topology
                                  :crux/storage-dir :storage-dir}))
-        node (bu-crux/start-node opts)]
+        node (bcrux/start-node opts)]
     (-> sys
       (assoc :biff/node node)
-      (update :trident.system/stop conj #(.close node)))))
+      (update :sys/stop conj #(.close node)))))
 
 (defn start-sente [sys]
   (let [{:keys [ch-recv send-fn connected-uids
@@ -108,42 +98,42 @@
         :biff.sente/ch-recv ch-recv
         :biff.sente/connected-uids connected-uids))))
 
-(defn start-tx-pipe [{:keys [biff/node biff.sente/connected-uids] :as sys}]
-  (let [last-tx-id (bu-crux/with-tx-log [log {:node node}]
+(defn start-tx-listener [{:keys [biff/node biff.sente/connected-uids] :as sys}]
+  (let [last-tx-id (bcrux/with-tx-log [log {:node node}]
                      (atom (:crux.tx/tx-id (last log))))
         subscriptions (atom {})
         sys (assoc sys :biff.crux/subscriptions subscriptions)
         notify-tx-opts (-> sys
-                         (merge (bu/select-ns-as sys 'biff nil))
+                         (merge (u/select-ns-as sys 'biff nil))
                          (assoc :last-tx-id last-tx-id))
         listener (crux/listen node {:crux/event-type :crux/indexed-tx}
-                   (fn [ev] (bu-crux/notify-tx notify-tx-opts)))]
+                   (fn [ev] (bcrux/notify-tx notify-tx-opts)))]
     (add-watch connected-uids ::rm-subs
       (fn [_ _ old-uids new-uids]
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
           (when (not-empty disconnected)
             (apply swap! subscriptions dissoc disconnected)))))
-    (update sys :trident.system/close conj #(.close listener))))
+    (update sys :sys/close conj #(.close listener))))
 
 (defn wrap-event-handler [handler]
   (fn [{:keys [?reply-fn] :as event}]
-    (bu/fix-stdout
+    (u/fix-stdout
       (let [response (try
                        (handler event)
                        (catch Exception e
                          (.printStackTrace e)
-                         (bu/anom :fault)))]
+                         (u/anom :fault)))]
         (when ?reply-fn
           (?reply-fn response))))))
 
 (defn start-event-router [{:keys [biff.sente/ch-recv biff/event-handler]
                            :or {event-handler (constantly nil)} :as sys}]
-  (update sys :trident.system/stop conj
+  (update sys :sys/stop conj
     (sente/start-server-chsk-router! ch-recv
       (-> event-handler
-        bu-crux/wrap-sub
-        bu-crux/wrap-tx
-        (bu/wrap-env sys)
+        bcrux/wrap-sub
+        bcrux/wrap-tx
+        (wrap-env sys)
         wrap-event-handler))))
 
 (defn set-auth-route [sys]
@@ -158,32 +148,56 @@
                                               :biff/db (crux/db node)))
                      :base64)
         session-store (cookie/cookie-store {:key cookie-key})
-        handler (bu-http/make-handler
+        handler (http/make-handler
                   {:roots roots
                    :session-store session-store
                    :secure-defaults secure-defaults
                    :not-found-path not-found-path
-                   :routes [(into ["" {:middleware [[bu/wrap-env sys]]}]
+                   :routes [(into ["" {:middleware [[wrap-env sys]]}]
                               routes)]})]
     (update sys :biff.web/host->handler assoc host handler)))
+
+(defn copy-resources [src-root dest-root]
+  (when-some [resource-root (io/resource src-root)]
+    (let [files (->> resource-root
+                  io/as-file
+                  file-seq
+                  (filter #(.isFile %)))]
+      (doseq [src files
+              :let [dest (.toFile
+                           (.resolve
+                             (Paths/get (.toURI (io/file dest-root)))
+                             (.relativize
+                               (Paths/get (.toURI resource-root))
+                               (Paths/get (.toURI src)))))]]
+        (io/make-parents dest)
+        (io/copy (io/file src) (io/file dest))))))
+
+; you could say that rum is one of our main exports
+(defn export-rum [pages dir]
+  (doseq [[path form] pages
+          :let [full-path (cond-> (str dir path)
+                            (str/ends-with? path "/") (str "index.html"))]]
+    (io/make-parents full-path)
+    (spit full-path (cond-> form
+                      (not (string? form)) rum/render-static-markup))))
 
 (defn write-static-resources
   [{:biff.static/keys [root resource-root]
     :keys [biff/static-pages] :as sys}]
-  (bu-static/export-rum static-pages root)
-  (bu-static/copy-resources resource-root root))
+  (export-rum static-pages root)
+  (copy-resources resource-root root))
 
 (defn start-biff [sys app-ns]
   (let [new-sys (-> sys
                   (set-defaults app-ns)
                   start-crux
                   start-sente
-                  start-tx-pipe
+                  start-tx-listener
                   start-event-router
                   set-auth-route
                   set-handler)]
     (write-static-resources new-sys)
     (-> sys
-      (merge (select-keys new-sys [:trident.system/stop
-                                   :biff.web/host->handler]))
-      (merge (bu/select-ns-as new-sys 'biff (str app-ns ".biff"))))))
+      (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
+      (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff"))))))

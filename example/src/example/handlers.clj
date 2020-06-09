@@ -1,6 +1,6 @@
 (ns example.handlers
   (:require
-    [biff.util :as bu]
+    [trident.util :as u]
     [clojure.spec.alpha :as s]
     [crux.api :as crux]
     [example.logic :as logic]))
@@ -9,7 +9,7 @@
 
 (defmethod api :default
   [{:keys [id]} _]
-  (bu/anom :not-found (str "No method for " id)))
+  (u/anom :not-found (str "No method for " id)))
 
 (defmethod api :example/move
   [{:keys [biff/node biff/db session/uid] :as sys} {:keys [game-id location]}]

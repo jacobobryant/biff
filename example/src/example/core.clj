@@ -15,16 +15,16 @@
   (tn/set-refresh-dirs "src" "../../src")
   (-> sys
     (merge #:example.biff.auth{:send-email send-email
-                             :on-signup "/signin/sent/"
-                             :on-signin-request "/signin/sent/"
-                             :on-signin-fail "/signin/fail/"
-                             :on-signin "/app/"
-                             :on-signout "/"})
+                               :on-signup "/signin/sent/"
+                               :on-signin-request "/signin/sent/"
+                               :on-signin-fail "/signin/fail/"
+                               :on-signin "/app/"
+                               :on-signout "/"})
     (merge #:example.biff{:routes example.routes/routes
-                        :static-pages example.static/pages
-                        :event-handler #(example.handlers/api % (:?data %))
-                        :rules example.rules/rules
-                        :triggers example.triggers/triggers})
+                          :static-pages example.static/pages
+                          :event-handler #(example.handlers/api % (:?data %))
+                          :rules example.rules/rules
+                          :triggers example.triggers/triggers})
     (biff.system/start-biff 'example)))
 
 (def components
@@ -35,5 +35,4 @@
 
 (comment
   (crux.api/submit-tx (:example.biff/node @biff.core/system)
-    [[:crux.tx/delete {:game/id "test"}]
-     [:crux.tx/delete {:game/id "testo"}] ]))
+    [[:crux.tx/delete {:game/id "test"}]]))

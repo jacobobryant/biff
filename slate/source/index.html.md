@@ -34,6 +34,7 @@ several Clojure web frameworks/libraries. It includes:
 - **Websocket communication**.
 - Serving **static resources**.
 - **Multitenancy**. Run multiple apps from the same process.
+- Less than **2K lines of code**.
 
 Also: instead of trying to do everything for everyone, Biff is designed to be
 easy to take apart (without forking). This should help mitigate the main
@@ -42,11 +43,9 @@ just stitch the libraries together yourself.
 
 Biff is currently alpha quality. Join `#biff` on <a
 href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
-discussion. Feel free to reach out for help, bug reports or anything else. I
-spend most of my time trying to figure out how the h\*ck to do marketing for
-Findka, so Biff-related distractions are always welcome. Also see the <a
-href="https://github.com/jacobobryant/biff/issues" target="_blank">issues</a>
-on Github.
+discussion. Feel free to reach out for help, bug reports or anything else. Also
+see the <a href="https://github.com/jacobobryant/biff/issues"
+target="_blank">issues</a> on Github.
 
 # Getting started
 
@@ -150,16 +149,16 @@ src/example/core.clj</a></div>
 (defn start-example [sys]
   (-> sys
     (merge #:example.biff.auth{:send-email send-email
-                             :on-signup "/signin/sent/"
-                             :on-signin-request "/signin/sent/"
-                             :on-signin-fail "/signin/fail/"
-                             :on-signin "/app/"
-                             :on-signout "/"})
+                               :on-signup "/signin/sent/"
+                               :on-signin-request "/signin/sent/"
+                               :on-signin-fail "/signin/fail/"
+                               :on-signin "/app/"
+                               :on-signout "/"})
     (merge #:example.biff{:routes example.routes/routes
-                        :static-pages example.static/pages
-                        :event-handler #(example.handlers/api % (:?data %))
-                        :rules example.rules/rules
-                        :triggers example.triggers/triggers})
+                          :static-pages example.static/pages
+                          :event-handler #(example.handlers/api % (:?data %))
+                          :rules example.rules/rules
+                          :triggers example.triggers/triggers})
     (biff.system/start-biff 'example)))
 
 (def components
@@ -188,7 +187,7 @@ If you connect to nrepl port 7888, you can access the system with
 development:
 
 ```clojure
-(biff.util/stop-system @biff.core/system)
+(biff.core/stop)
 (biff.core/start)
 (biff.core/refresh) ; stops, reloads namespaces from filesystem, starts.
 ```
@@ -558,19 +557,19 @@ this endpoint yourself. However, if you'd like to use a longer expiration date f
 token or authenticate at a custom endpoint, you can do it like so:
 
 ```clojure
-(biff.util/token-url {:url (str (:biff/base-url sys) "/api/unsubscribe")
-                      :claims {:email "alice@example.com"
-                               :uid "abc123"}
-                      :jwt-secret (biff.auth/jwt-key sys)
-                      :iss "example"
-                      :expires-in (* 60 60 24 7 4)})
+(trident.jwt/url {:url (str (:biff/base-url sys) "/api/unsubscribe")
+                  :claims {:email "alice@example.com"
+                           :uid "abc123"}
+                  :jwt-secret (biff.auth/jwt-key sys)
+                  :iss "example"
+                  :expires-in (* 60 60 24 7 4)})
 
 ; Or for just the token:
-(biff.util/mint {:secret (biff.auth/jwt-key sys)
-                 :iss "example"
-                 :expires-in (* 60 60 24 7 4)}
-                {:email "alice@example.com"
-                 :uid "abc123"})
+(trident.jwt/mint {:secret (biff.auth/jwt-key sys)
+                   :iss "example"
+                   :expires-in (* 60 60 24 7 4)}
+                  {:email "alice@example.com"
+                   :uid "abc123"})
 ```
 
 After a user is signed in, you can authenticate them on the backend from an event/request
@@ -672,7 +671,7 @@ src/example/routes.clj</a></div>
 ```clojure
 (ns example.routes
   (:require
-    [biff.util :as bu]
+    [trident.util :as u]
     ...))
 
 (defn echo [req]
@@ -680,7 +679,7 @@ src/example/routes.clj</a></div>
    :body (prn-str
            (merge
              (select-keys req [:params :body-params])
-             (bu/select-ns req 'params)))})
+             (u/select-ns req 'params)))})
 
 (def routes
   [["/echo" {:get echo
@@ -705,7 +704,7 @@ src/example/routes.clj</a></div>
 ```clojure
 (ns example.routes
   (:require
-    [biff.util :as bu]
+    [biff.http :as bhttp]
     [crux.api :as crux]
     [ring.middleware.anti-forgery :as anti-forgery]))
 
@@ -730,7 +729,7 @@ src/example/routes.clj</a></div>
                :name ::whoami}]
    ; Same as whoami
    ["/whoami2" {:post whoami2
-                :middleware [bu/wrap-authorize]
+                :middleware [bhttp/wrap-authorize]
                 :name ::whoami2}]])
 ```
 
@@ -738,7 +737,7 @@ When calling these endpoints, you must include the value of the `csrf` cookie in
 `X-CSRF-Token` header:
 
 ```clojure
-(cljs-http.client/post "/whoami" {:headers {"X-CSRF-Token" (biff.util/csrf)}})
+(cljs-http.client/post "/whoami" {:headers {"X-CSRF-Token" (biff.client/csrf)}})
 ; => {:status 200, :body "alice@example.com", ...}
 ```
 
@@ -756,7 +755,7 @@ src/example/core.clj</a></div>
   (-> sys
     ...
     (merge #:example.biff{:event-handler #(example.handlers/api % (:?data %))
-                        ...})
+                          ...})
     (biff.system/start-biff 'example)))
 ```
 
@@ -764,15 +763,13 @@ src/example/core.clj</a></div>
 src/example/handlers.clj</a></div>
 ```clojure
 (ns example.handlers
-  (:require
-    [biff.util :as bu]
-    ...))
+  ...)
 
 (defmulti api :id)
 
 (defmethod api :default
   [{:keys [id]} _]
-  (bu/anom :not-found (str "No method for " id)))
+  (trident.util/anom :not-found (str "No method for " id)))
 
 (defmethod api :example/move
   [{:keys [biff/db session/uid] :as sys} {:keys [game-id location]}]
@@ -791,8 +788,8 @@ src/example/client/app.cljs</a></div>
 ```clojure
 (defn ^:export init []
   (reset! example.client.app.system/system
-    (biff.util/init-sub {:handler example.client.app.mutations/api
-                         ...}))
+    (biff.client/init-sub {:handler example.client.app.mutations/api
+                           ...}))
   ...)
 ```
 
@@ -964,7 +961,7 @@ restriction so that it can provide query updates to clients efficiently without
 having to solve a hard research problem first. However, it turns out that we can
 go quite far even with this restriction.
 
-On the frontend, use `biff.util/init-sub` to initialize a websocket connection
+On the frontend, use `biff.client/init-sub` to initialize a websocket connection
 that handles query subscriptions for you:
 
 ```clojure
@@ -978,7 +975,7 @@ that handles query subscriptions for you:
 (def subscriptions (atom default-subscriptions))
 (def sub-data (atom {}))
 
-(biff.util/init-sub
+(biff.client/init-sub
   {:subscriptions subscriptions
    :sub-data sub-data})
 ```
@@ -1038,7 +1035,7 @@ src/example/client/app.cljs</a></div>
 ```clojure
 (ns example.client.app
   (:require
-    [biff.util :as bu]
+    [biff.client :as bc]
     [example.client.app.db :as db]
     [example.client.app.mutations :as m]
     [example.client.app.system :as s]
@@ -1048,7 +1045,7 @@ src/example/client/app.cljs</a></div>
 
 (defn ^:export init []
   (reset! s/system
-    (bu/init-sub {:handler m/api
+    (bc/init-sub {:handler m/api
                   :sub-data db/sub-data
                   :subscriptions db/subscriptions}))
   ...)
@@ -1153,15 +1150,15 @@ The value of `:biff/rules` is a map of `table->rules`, for example:
 ```clojure
 (ns example.rules
   (:require
-    [biff.util :as bu]
+    [trident.util :as u]
     [clojure.spec.alpha :as s]))
 
 ; Same as (do (s/def ...) ...)
-(bu/sdefs
+(u/sdefs
   :user/id uuid?
   ; like s/keys, but only allows specified keys.
-  ::user-ref (bu/only-keys :req [:user/id])
-  ::user (bu/only-keys :req [:user/email])
+  ::user-ref (u/only-keys :req [:user/id])
+  ::user (u/only-keys :req [:user/email])
   ...)
 
 (def rules
@@ -1280,7 +1277,7 @@ Some examples:
 (def rules
   {:public-users {:spec [::user-public-ref ::user-public]
                   ; Returns false iff :session/uid is nil.
-                  :get bu/authenticated?
+                  :get biff.rules/authenticated?
                   :write (fn [{:keys [session/uid] {:keys [user.public/id]} :doc}]
                            (= uid id))}
    :users {:spec [::user-ref ::user]
@@ -1295,10 +1292,10 @@ Some examples:
                                  (some #(contains? (:users %) uid) [doc old-doc])
                                  ; Checks that no keys other than :users have changed
                                  ; (supports varargs).
-                                 (bu/only-changed-keys? doc old-doc :users)
+                                 (biff.rules/only-changed-keys? doc old-doc :users)
                                  ; Checks that the value of :users (a set) hasn't changed except
                                  ; for the addition/removal of uid (supports varargs).
-                                 (bu/only-changed-elements? doc old-doc :users uid)))}})
+                                 (biff.rules/only-changed-elements? doc old-doc :users uid)))}})
 ```
 
 ```clojure

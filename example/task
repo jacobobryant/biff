@@ -12,7 +12,7 @@ setup () {
 }
 
 repl () {
-  BIFF_ENV=dev clj -m biff.core
+  BIFF_ENV=dev clj "$@" -m biff.core
 }
 
 cljs () {

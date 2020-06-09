@@ -1,13 +1,14 @@
 (ns ^:biff biff.core
   (:require
+    [clojure.edn :as edn]
     [clojure.java.classpath :as cp]
+    [clojure.set :as set]
     [clojure.string :as str]
     [clojure.tools.namespace.find :as tn-find]
     [clojure.tools.namespace.repl :as tn-repl]
     [orchestra.spec.test :as st]
     [nrepl.server :as nrepl]
     [biff.system :refer [start-biff]]
-    [biff.util :as bu]
     [trident.util :as u]
     [taoensso.timbre :as timbre :refer [log spy]]
     [immutant.web :as imm]))
@@ -37,11 +38,16 @@
   ([]
    (start (get-components)))
   ([components]
-   (reset! system (bu/start-system components))
+   (apply println "Starting" (map :name components))
+   (reset! system (u/start-system components))
+   (println "System started.")
    nil))
 
+(defn stop []
+  (u/stop-system @system))
+
 (defn refresh []
-  (bu/stop-system @system)
+  (stop)
   (tn-repl/refresh :after `start))
 
 (def toggle-nrepl
@@ -52,6 +58,12 @@
 (defn -main []
   (start (conj (get-components) toggle-nrepl)))
 
+(defn get-config [env]
+  (some-> "config.edn"
+    u/maybe-slurp
+    edn/read-string
+    (u/merge-config env)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def init
@@ -59,8 +71,8 @@
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
                   {:biff.init/keys [start-nrepl nrepl-port instrument]
-                   :or {nrepl-port 7888} :as sys} (merge sys (bu/get-config env))]
-              (timbre/merge-config! (bu/select-ns-as sys 'timbre nil))
+                   :or {nrepl-port 7888} :as sys} (merge sys (get-config env))]
+              (timbre/merge-config! (u/select-ns-as sys 'timbre nil))
               (when instrument
                 (st/instrument))
               (when (and start-nrepl nrepl-port)
@@ -93,11 +105,11 @@
                                :body "Not found."
                                :headers {"Content-Type" "text/plain"}})
                            {:port port})]
-              (update sys :trident.system/stop conj #(imm/stop server))))})
+              (update sys :sys/stop conj #(imm/stop server))))})
 
 (def components [init console web-server])
 
 (comment
   (u/pprint (deref system))
   (refresh)
-  (bu/stop-system @system))
+  (u/stop-system @system))

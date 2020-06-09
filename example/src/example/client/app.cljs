@@ -3,7 +3,7 @@
   (:require
     [clojure.pprint :refer [pprint]]
     [cljs.core.async :refer [<!]]
-    [biff.util :as bu]
+    [biff.client :as bc]
     [example.client.app.components :as c]
     [example.client.app.db :as db]
     [example.client.app.mutations :as m]
@@ -15,7 +15,7 @@
 
 (defn ^:export init []
   (reset! s/system
-    (bu/init-sub {:handler m/api
+    (bc/init-sub {:handler m/api
                   :sub-data db/sub-data
                   :subscriptions db/subscriptions}))
   (mount))

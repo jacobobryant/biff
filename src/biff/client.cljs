@@ -1,4 +1,4 @@
-(ns biff.util
+(ns biff.client
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
@@ -11,15 +11,6 @@
     [trident.util :as u]
     [clojure.set :as set]))
 
-(defn anomaly? [x]
-  (s/valid? (s/keys :req [:cognitect.anomalies/category] :opt [:cognitect.anomalies/message]) x))
-
-(defn anom [category & [message & kvs]]
-  (apply u/assoc-some
-    {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
-    :cognitect.anomalies/message message
-    kvs))
-
 (defn wrap-api-send [api-send ready-pr]
   (fn [event]
     (let [ch (chan)]
@@ -27,7 +18,7 @@
         (fn []
           (api-send event 5000
             (fn [response]
-              (when (anomaly? response)
+              (when (u/anomaly? response)
                 (u/pprint response))
               (put! ch (if response response ::no-response))))))
       ch)))
@@ -137,6 +128,8 @@
               (api-send [provider {:action :unsubscribe
                                    :query query}]))))))
     env))
+
+; todo move this to trident
 
 (defn adapt-react [Component props children]
   (.createElement js/React Component

@@ -1,14 +1,15 @@
 (ns example.routes
   (:require
-    [biff.util :as bu]
+    [biff.http :as bhttp]
     [crux.api :as crux]
+    [trident.util :as u]
     [ring.middleware.anti-forgery :as anti-forgery]))
 
 (defn echo [req]
   {:headers/Content-Type "application/edn"
    :body (prn (merge
                 (select-keys req [:params :body-params])
-                (bu/select-ns req 'params)))})
+                (u/select-ns req 'params)))})
 
 (defn whoami [{:keys [session/uid biff/db]}]
   (if (some? uid)
@@ -31,5 +32,5 @@
                :name ::whoami}]
    ; Same as whoami
    ["/whoami2" {:post whoami2
-                :middleware [bu/wrap-authorize]
+                :middleware [bhttp/wrap-authorize]
                 :name ::whoami2}]])

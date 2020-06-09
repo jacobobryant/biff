@@ -1,7 +1,6 @@
-(ns biff.util.http
+(ns biff.http
   (:require
-    [biff.util :as bu]
-    [cemerick.url :as url]
+    [ring.middleware.anti-forgery :as anti-forgery]
     [ring.middleware.head :as head]
     [trident.util :as u]
     [ring.util.time :as rtime]
@@ -11,16 +10,16 @@
     [ring.util.request :as request]
     [clojure.java.io :as io]
     [ring.middleware.defaults :as rd]
-    [ring.middleware.session.cookie :as cookie]
-    [reitit.ring :as reitit]
-    [rum.core :as rum]
-    [clojure.set :as set]
-    [taoensso.sente :as sente]
-    [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
-    [ring.middleware.anti-forgery :as anti-forgery]))
+    [reitit.ring :as reitit]))
 
-; deprecated, use biff.util/wrap-authorize
-(def wrap-authorize biff.util/wrap-authorize)
+(defn wrap-authorize [handler]
+  (anti-forgery/wrap-anti-forgery
+    (fn [req]
+      (if (some? (get-in req [:session :uid]))
+        (handler req)
+        {:status 401
+         :headers/Content-Type "text/plain"
+         :body "Not authorized."}))))
 
 (defn file-response [req file]
   (when (.isFile file)
@@ -47,7 +46,7 @@
   (when resp
     (-> {:body "" :status 200}
       (merge resp)
-      (bu/nest-string-keys [:headers :cookies]))))
+      (u/nest-string-keys [:headers :cookies]))))
 
 (defn wrap-nice-response [handler]
   (comp nice-response handler))

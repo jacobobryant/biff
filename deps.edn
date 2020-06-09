@@ -3,8 +3,6 @@
  {byte-transforms {:mvn/version "0.1.4"}
   cheshire {:mvn/version "5.10.0"}
   clj-http {:mvn/version "3.10.0"}
-  com.cognitect/anomalies {:mvn/version "0.1.12"}
-  com.stuartsierra/dependency {:mvn/version "1.0.0"}
   com.taoensso/sente {:mvn/version "1.15.0"}
   com.taoensso/timbre {:mvn/version "4.10.0"}
   crypto-password {:mvn/version "0.2.1"}
@@ -20,8 +18,8 @@
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
   org.immutant/web {:mvn/version "2.1.10"}
   org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
-  ovotech/ring-jwt {:mvn/version "1.2.5"}
   ring/ring-core {:mvn/version "1.8.0"}
   ring/ring-defaults {:mvn/version "0.3.2"}
   rum {:mvn/version "0.11.5"}
-  trident/util {:mvn/version "0.3.0"}}}
+  trident/jwt {:mvn/version "0.3.1"}
+  trident/util {:mvn/version "0.3.1"}}}
