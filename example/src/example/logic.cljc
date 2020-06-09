@@ -1,4 +1,4 @@
-(ns hello.logic)
+(ns example.logic)
 
 (defn check-line [board origin dir]
   (let [locations (doall (take 3 (iterate #(mapv + % dir) origin)))

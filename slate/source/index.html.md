@@ -131,42 +131,42 @@ When you run `clj -m biff.core`, Biff searches the classpath for plugins and the
 them in a certain order. To define a plugin, you must set `^:biff` metadata on a namespace
 and then set a `components` var to a list of plugin objects in that namespace:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/core.clj" target="_blank">
-src/hello/core.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/core.clj" target="_blank">
+src/example/core.clj</a></div>
 ```clojure
-(ns ^:biff hello.core
+(ns ^:biff example.core
   (:require
     [biff.system]
     [clojure.pprint :refer [pprint]]
-    [hello.handlers]
-    [hello.routes]
-    [hello.rules]
-    [hello.static]
-    [hello.triggers]))
+    [example.handlers]
+    [example.routes]
+    [example.rules]
+    [example.static]
+    [example.triggers]))
 
 (defn send-email [opts]
   (pprint [:send-email opts]))
 
-(defn start-hello [sys]
+(defn start-example [sys]
   (-> sys
-    (merge #:hello.biff.auth{:send-email send-email
+    (merge #:example.biff.auth{:send-email send-email
                              :on-signup "/signin/sent/"
                              :on-signin-request "/signin/sent/"
                              :on-signin-fail "/signin/fail/"
                              :on-signin "/app/"
                              :on-signout "/"})
-    (merge #:hello.biff{:routes hello.routes/routes
-                        :static-pages hello.static/pages
-                        :event-handler #(hello.handlers/api % (:?data %))
-                        :rules hello.rules/rules
-                        :triggers hello.triggers/triggers})
-    (biff.system/start-biff 'hello)))
+    (merge #:example.biff{:routes example.routes/routes
+                        :static-pages example.static/pages
+                        :event-handler #(example.handlers/api % (:?data %))
+                        :rules example.rules/rules
+                        :triggers example.triggers/triggers})
+    (biff.system/start-biff 'example)))
 
 (def components
-  [{:name :hello/core
+  [{:name :example/core
     :requires [:biff/init]
     :required-by [:biff/web-server]
-    :start start-hello}])
+    :start start-example}])
 ```
 
 `:biff/init` and `:biff/web-server` are plugins defined in the `biff.core`
@@ -196,7 +196,7 @@ development:
 # Configuration
 
 App-specific configuration can go in your plugin, as shown above. For example, we set
-`:hello.biff.auth/on-signin` so that clients will be redirected to `/app/` after they
+`:example.biff.auth/on-signin` so that clients will be redirected to `/app/` after they
 sign in successfully.
 
 Environment-specific configuration and secrets can go in `config.edn`. They will be read in
@@ -209,25 +209,24 @@ config.edn</a></div>
         :biff.crux.jdbc/password "..."
         :biff.crux.jdbc/host "..."
         :biff.crux.jdbc/port ...
-        :hello.biff/host "example.com"
-        :hello.biff.crux.jdbc/dbname "hello"
-        :hello.mailgun/api-key "..."}
+        :example.biff/host "example.com"
+        :example.mailgun/api-key "..."}
  :dev {:inherit [:prod]
        :biff/dev true
-       :hello.biff/host "localhost"}}
+       :example.biff/host "localhost"}}
 ```
 
 <aside class="warning">Keep this file out of source control if it contains any secrets.</aside>
 
 The system map is mostly flat, with namespaced keys. For example, Biff
-configuration for the example app is stored under the `:hello.biff` namespace.
+configuration for the example app is stored under the `:example.biff` namespace.
 You could run multiple Biff apps in the same process by using a different
 namespace, e.g. `(biff.system/start-biff sys 'another-app)`. Keys under
 the `:biff` namespace (e.g. `:biff/dev` from `config.edn` above) will become
 defaults for all Biff apps.
 
 Similarly, the return values from `biff.system/start-biff` will be namespaced. For example,
-you can get the Crux node in our example app with `(:hello.biff/node @biff.core/system)`.
+you can get the Crux node in our example app with `(:example.biff/node @biff.core/system)`.
 
 When the `:biff/init` plugin reads in your `config.edn` file, it will merge the
 nested maps according to the current environment and the value of `:inherit`.
@@ -356,10 +355,10 @@ will serve files from that directory.
 Biff gets static resources from two places. First, it will render HTML
 files from the value of `:biff/static-pages` on startup.
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/static.clj" target="_blank">
-src/hello/static.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/static.clj" target="_blank">
+src/example/static.clj</a></div>
 ```clojure
-(ns hello.static
+(ns example.static
   (:require
     [rum.core :as rum]))
 
@@ -419,7 +418,7 @@ by `:biff.static/resource-root`.
 biff/example $ tree resources/
 resources/
 └── www
-    └── hello
+    └── example
         └── js
             ├── ensure-signed-in.js
             └── ensure-signed-out.js
@@ -618,8 +617,8 @@ See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26
 
 Include this on your landing page:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello/js/ensure-signed-out.js" target="_blank">
-resources/www/hello/js/ensure-signed-out.js</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/example/js/ensure-signed-out.js" target="_blank">
+resources/www/example/js/ensure-signed-out.js</a></div>
 ```javascript
 fetch("/api/signed-in").then(response => {
   if (response.status == 200) {
@@ -630,8 +629,8 @@ fetch("/api/signed-in").then(response => {
 
 Include this on your app page:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello/js/ensure-signed-in.js" target="_blank">
-resources/www/hello/js/ensure-signed-in.js</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/example/js/ensure-signed-in.js" target="_blank">
+resources/www/example/js/ensure-signed-in.js</a></div>
 ```javascript
 fetch("/api/signed-in").then(response => {
   if (response.status != 200) {
@@ -668,10 +667,10 @@ The value of `:biff/routes` will be wrapped with some default middleware which, 
  - Nests any `:headers/*` or `:cookies/*` keys (so `:headers/Content-Type "text/plain"` expands
    to `:headers {"Content-Type" "text/plain"}`).
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
-src/hello/routes.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/routes.clj" target="_blank">
+src/example/routes.clj</a></div>
 ```clojure
-(ns hello.routes
+(ns example.routes
   (:require
     [biff.util :as bu]
     ...))
@@ -701,10 +700,10 @@ For endpoints that require authentication, you must wrap anti-forgery middleware
 be sure not to make any `GET` endpoints that require authentication as these bypass anti-forgery
 checks.
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/routes.clj" target="_blank">
-src/hello/routes.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/routes.clj" target="_blank">
+src/example/routes.clj</a></div>
 ```clojure
-(ns hello.routes
+(ns example.routes
   (:require
     [biff.util :as bu]
     [crux.api :as crux]
@@ -750,21 +749,21 @@ case this is unnecessary.
 
 Web sockets are the preferred method of communication. First, set `:biff/event-handler`:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/core.clj" target="_blank">
-src/hello/core.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/core.clj" target="_blank">
+src/example/core.clj</a></div>
 ```clojure
-(defn start-hello [sys]
+(defn start-example [sys]
   (-> sys
     ...
-    (merge #:hello.biff{:event-handler #(hello.handlers/api % (:?data %))
+    (merge #:example.biff{:event-handler #(example.handlers/api % (:?data %))
                         ...})
-    (biff.system/start-biff 'hello)))
+    (biff.system/start-biff 'example)))
 ```
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/handlers.clj" target="_blank">
-src/hello/handlers.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/handlers.clj" target="_blank">
+src/example/handlers.clj</a></div>
 ```clojure
-(ns hello.handlers
+(ns example.handlers
   (:require
     [biff.util :as bu]
     ...))
@@ -775,30 +774,30 @@ src/hello/handlers.clj</a></div>
   [{:keys [id]} _]
   (bu/anom :not-found (str "No method for " id)))
 
-(defmethod api :hello/move
+(defmethod api :example/move
   [{:keys [biff/db session/uid] :as sys} {:keys [game-id location]}]
   ...)
 
-(defmethod api :hello/echo
+(defmethod api :example/echo
   [{:keys [client-id biff/send-event]} arg]
-  (send-event client-id [:hello/prn ":hello/echo called"])
+  (send-event client-id [:example/prn ":example/echo called"])
   arg)
 ```
 
 Biff provides a helper function for initializing the web socket connection on the frontend:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
-src/hello/client/app.cljs</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/client/app.cljs" target="_blank">
+src/example/client/app.cljs</a></div>
 ```clojure
 (defn ^:export init []
-  (reset! hello.client.app.system/system
-    (biff.util/init-sub {:handler hello.client.app.mutations/api
+  (reset! example.client.app.system/system
+    (biff.util/init-sub {:handler example.client.app.mutations/api
                          ...}))
   ...)
 ```
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
-src/hello/client/app/mutations.cljs</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/client/app/mutations.cljs" target="_blank">
+src/example/client/app/mutations.cljs</a></div>
 ```clojure
 (defmulti api (comp first :?data))
 
@@ -810,18 +809,18 @@ src/hello/client/app/mutations.cljs</a></div>
   [_ anom]
   (pprint anom))
 
-(defmethod api :hello/prn
+(defmethod api :example/prn
   [_ arg]
   (prn arg))
 
 (defn api-send [& args]
-  (apply (:api-send @hello.client.app.system/system) args))
+  (apply (:api-send @example.client.app.system/system) args))
 
 (comment
   (go
-    (<! (api-send [:hello/echo {:foo "bar"}]))
+    (<! (api-send [:example/echo {:foo "bar"}]))
     ; => {:foo "bar"}
-    ; => ":hello/echo called"
+    ; => ":example/echo called"
     ))
 ```
 
@@ -831,8 +830,8 @@ You can send arbitrary transactions from the frontend. They will be submitted
 only if they pass certain authorization rules which you define (see
 [Rules](#rules)). Transactions look like this:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/mutations.cljs" target="_blank">
-src/hello/client/app/mutations.cljs</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/client/app/mutations.cljs" target="_blank">
+src/example/client/app/mutations.cljs</a></div>
 
 ```clojure
 (defn set-display-name [display-name]
@@ -1034,15 +1033,15 @@ You can also subscribe to individual documents:
 All this is most powerful when you make the `subscriptions` atom a derivation of
 `sub-data`:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app.cljs" target="_blank">
-src/hello/client/app.cljs</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/client/app.cljs" target="_blank">
+src/example/client/app.cljs</a></div>
 ```clojure
-(ns hello.client.app
+(ns example.client.app
   (:require
     [biff.util :as bu]
-    [hello.client.app.db :as db]
-    [hello.client.app.mutations :as m]
-    [hello.client.app.system :as s]
+    [example.client.app.db :as db]
+    [example.client.app.mutations :as m]
+    [example.client.app.system :as s]
     ...))
 
 ...
@@ -1055,12 +1054,12 @@ src/hello/client/app.cljs</a></div>
   ...)
 ```
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/client/app/db.cljs" target="_blank">
-src/hello/client/app/db.cljs</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/client/app/db.cljs" target="_blank">
+src/example/client/app/db.cljs</a></div>
 ```clojure
-(ns hello.client.app.db
+(ns example.client.app.db
   (:require
-    [hello.logic :as logic]
+    [example.logic :as logic]
     [trident.util :as u]
     [rum.core]))
 
@@ -1071,11 +1070,11 @@ src/hello/client/app/db.cljs</a></div>
   sub-data [:sub-data])
 
 ; same as (do
-;           (rum.core/derived-atom [sub-data] :hello.client.app.db/data
+;           (rum.core/derived-atom [sub-data] :example.client.app.db/data
 ;             (fn [sub-data]
 ;               (apply merge-with merge (vals sub-data))))
 ;           ...)
-(u/defderivations [sub-data] hello.client.app.db
+(u/defderivations [sub-data] example.client.app.db
   data (apply merge-with merge (vals sub-data))
 
   uid (get-in data [:uid nil :uid])
@@ -1150,9 +1149,9 @@ from the frontend (see [Transactions](#transactions) and
 
 The value of `:biff/rules` is a map of `table->rules`, for example:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/rules.clj" target="_blank">src/example/rules.clj</a></div>
 ```clojure
-(ns hello.rules
+(ns example.rules
   (:require
     [biff.util :as bu]
     [clojure.spec.alpha :as s]))
@@ -1276,7 +1275,7 @@ Key | Operations | Description
 
 Some examples:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/rules.clj" target="_blank">src/hello/rules.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/rules.clj" target="_blank">src/example/rules.clj</a></div>
 ```clojure
 (def rules
   {:public-users {:spec [::user-public-ref ::user-public]
@@ -1325,7 +1324,7 @@ Relevant config:
 Triggers let you run code in response to document writes. You must define a map of
 `table->operation->fn`, for example:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/triggers.clj" target="_blank">src/hello/triggers.clj</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/triggers.clj" target="_blank">src/example/triggers.clj</a></div>
 ```clojure
 (defn assign-players [{:keys [biff/node doc]
                        {:keys [users x o]} :doc :as env}]
@@ -1405,7 +1404,7 @@ other providers with little to no tweaking.
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">task</a></div>
 ```bash
-APP_NS="hello"
+APP_NS="example"
 CLJS_APPS="app"
 
 release-cljs () {

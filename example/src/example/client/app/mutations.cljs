@@ -1,8 +1,8 @@
-(ns hello.client.app.mutations
+(ns example.client.app.mutations
   (:require
     [clojure.pprint :refer [pprint]]
-    [hello.client.app.db :as db]
-    [hello.client.app.system :as s]))
+    [example.client.app.db :as db]
+    [example.client.app.system :as s]))
 
 (defmulti api (comp first :?data))
 (defmethod api :default
@@ -13,7 +13,7 @@
   [_ anom]
   (pprint anom))
 
-(defmethod api :hello/prn
+(defmethod api :example/prn
   [_ arg]
   (prn arg))
 
@@ -43,7 +43,7 @@
             :users [:db/union @db/uid]}))])))
 
 (defn move [location]
-  (api-send [:hello/move {:game-id @db/game-id :location location}]))
+  (api-send [:example/move {:game-id @db/game-id :location location}]))
 
 (defn new-game []
-  (api-send [:hello/new-game {:game-id @db/game-id}]))
+  (api-send [:example/new-game {:game-id @db/game-id}]))

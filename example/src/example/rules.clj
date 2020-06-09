@@ -1,4 +1,4 @@
-(ns hello.rules
+(ns example.rules
   (:require
     [biff.util :as bu]
     [clojure.spec.alpha :as s]))

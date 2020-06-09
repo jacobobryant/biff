@@ -1,6 +1,6 @@
-(ns hello.client.app.db
+(ns example.client.app.db
   (:require
-    [hello.logic :as logic]
+    [example.logic :as logic]
     [trident.util :as u]
     [rum.core]))
 
@@ -11,11 +11,11 @@
   sub-data [:sub-data])
 
 ; same as (do
-;           (rum.core/derived-atom [sub-data] :hello.client.app.db/data
+;           (rum.core/derived-atom [sub-data] :example.client.app.db/data
 ;             (fn [sub-data]
 ;               (apply merge-with merge (vals sub-data))))
 ;           ...)
-(u/defderivations [sub-data] hello.client.app.db
+(u/defderivations [sub-data] example.client.app.db
   data (apply merge-with merge (vals sub-data))
 
   uid (get-in data [:uid nil :uid])

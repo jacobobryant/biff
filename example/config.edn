@@ -2,9 +2,8 @@
         :biff.crux.jdbc/password "..."
         :biff.crux.jdbc/host "..."
         :biff.crux.jdbc/port ...
-        :hello.biff/host "example.com"
-        :hello.biff.crux.jdbc/dbname "hello"
-        :hello.mailgun/api-key "..."}
+        :example.biff/host "example.com"
+        :example.mailgun/api-key "..."}
  :dev {:inherit [:prod]
        :biff/dev true
-       :hello.biff/host "localhost"}}
+       :example.biff/host "localhost"}}

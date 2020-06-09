@@ -1,10 +1,10 @@
-(ns hello.client.app.components
+(ns example.client.app.components
   (:require
     [clojure.string :as str]
     [clojure.pprint :refer [pprint]]
-    [hello.client.app.db :as db]
-    [hello.client.app.mutations :as m]
-    [hello.logic :as logic]
+    [example.client.app.db :as db]
+    [example.client.app.mutations :as m]
+    [example.logic :as logic]
     [rum.core :as rum :refer [defc defcs react reactive static fragment local]]))
 
 (defn gap

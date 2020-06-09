@@ -1,4 +1,4 @@
-(ns hello.static
+(ns example.static
   (:require
     [rum.core :as rum]))
 

@@ -1,13 +1,13 @@
-(ns hello.client.app
+(ns example.client.app
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require
     [clojure.pprint :refer [pprint]]
     [cljs.core.async :refer [<!]]
     [biff.util :as bu]
-    [hello.client.app.components :as c]
-    [hello.client.app.db :as db]
-    [hello.client.app.mutations :as m]
-    [hello.client.app.system :as s]
+    [example.client.app.components :as c]
+    [example.client.app.db :as db]
+    [example.client.app.mutations :as m]
+    [example.client.app.system :as s]
     [rum.core :as rum]))
 
 (defn ^:export mount []
@@ -21,7 +21,7 @@
   (mount))
 
 (comment
-  (-> (m/api-send [:hello/echo {:foo "bar"}])
+  (-> (m/api-send [:example/echo {:foo "bar"}])
     <!
     pprint
     go))

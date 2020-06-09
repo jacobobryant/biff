@@ -4,6 +4,6 @@
                 :output-dir "www-dev/cljs/app"
                 :asset-path "/cljs/app"
                 :compiler-options {:infer-externs :auto}
-                :modules {:main {:init-fn hello.client.app/init
-                                 :entries [hello.client.app]}}
-                :devtools {:after-load hello.client.app/mount}}}}
+                :modules {:main {:init-fn example.client.app/init
+                                 :entries [example.client.app]}}
+                :devtools {:after-load example.client.app/mount}}}}

@@ -1,4 +1,4 @@
-(ns hello.triggers
+(ns example.triggers
   (:require
     [crux.api :as crux]
     [trident.util :as u]))

@@ -1,4 +1,4 @@
-(ns hello.routes
+(ns example.routes
   (:require
     [biff.util :as bu]
     [crux.api :as crux]
