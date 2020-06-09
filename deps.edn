@@ -4,24 +4,24 @@
   cheshire {:mvn/version "5.10.0"}
   clj-http {:mvn/version "3.10.0"}
   com.cognitect/anomalies {:mvn/version "0.1.12"}
-  crypto-password {:mvn/version "0.2.1"}
   com.stuartsierra/dependency {:mvn/version "1.0.0"}
+  com.taoensso/sente {:mvn/version "1.15.0"}
+  com.taoensso/timbre {:mvn/version "4.10.0"}
+  crypto-password {:mvn/version "0.2.1"}
   expound {:mvn/version "0.8.4"}
+  juxt/crux-core {:mvn/version "20.05-1.8.3-alpha"}
+  juxt/crux-jdbc {:mvn/version "20.05-1.8.3-alpha"}
+  juxt/crux-rocksdb {:mvn/version "20.05-1.8.3-alpha"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
   nrepl/nrepl {:mvn/version "0.5.3"}
-  juxt/crux-core {:mvn/version "20.05-1.8.3-alpha"}
-  juxt/crux-rocksdb {:mvn/version "20.05-1.8.3-alpha"}
-  juxt/crux-jdbc {:mvn/version "20.05-1.8.3-alpha"}
-  org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
   orchestra {:mvn/version "2019.02.06-1"}
   org.clojure/java.classpath {:mvn/version "1.0.0"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
   org.immutant/web {:mvn/version "2.1.10"}
+  org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
+  ovotech/ring-jwt {:mvn/version "1.2.5"}
   ring/ring-core {:mvn/version "1.8.0"}
   ring/ring-defaults {:mvn/version "0.3.2"}
   rum {:mvn/version "0.11.5"}
-  ovotech/ring-jwt {:mvn/version "1.2.5"}
-  com.taoensso/sente {:mvn/version "1.15.0"}
-  com.taoensso/timbre {:mvn/version "4.10.0"}
-  trident/util {:mvn/version "0.2.2"}}}
+  trident/util {:mvn/version "0.3.0"}}}

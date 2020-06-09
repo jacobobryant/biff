@@ -39,7 +39,7 @@
     rules))
 
 (defn set-defaults [sys app-ns]
-  (let [sys (merge sys (bu/select-ns-as sys app-ns 'biff))
+  (let [sys (merge sys (bu/select-ns-as sys (str app-ns ".biff") 'biff))
         {:biff/keys [dev host rules triggers]
          :keys [biff.auth/send-email
                 biff.web/port
@@ -52,7 +52,7 @@
     (merge
       {:biff.crux/topology :jdbc
        :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
-       :biff.crux.jdbc/dbname app-ns
+       :biff.crux.jdbc/dbname (str app-ns)
        :biff.web/port 8080
        :biff.static/root root
        :biff.static/resource-root (str "www/" app-ns)
@@ -186,4 +186,4 @@
     (-> sys
       (merge (select-keys new-sys [:trident.system/stop
                                    :biff.web/host->handler]))
-      (merge (bu/select-ns-as new-sys 'biff app-ns)))))
+      (merge (bu/select-ns-as new-sys 'biff (str app-ns ".biff"))))))

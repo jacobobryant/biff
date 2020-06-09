@@ -160,7 +160,7 @@ src/hello/core.clj</a></div>
                         :event-handler #(hello.handlers/api % (:?data %))
                         :rules hello.rules/rules
                         :triggers hello.triggers/triggers})
-    (biff.system/start-biff 'hello.biff)))
+    (biff.system/start-biff 'hello)))
 
 (def components
   [{:name :hello/core
@@ -222,7 +222,7 @@ config.edn</a></div>
 The system map is mostly flat, with namespaced keys. For example, Biff
 configuration for the example app is stored under the `:hello.biff` namespace.
 You could run multiple Biff apps in the same process by using a different
-namespace, e.g. `(biff.system/start-biff sys 'another-app.biff)`. Keys under
+namespace, e.g. `(biff.system/start-biff sys 'another-app)`. Keys under
 the `:biff` namespace (e.g. `:biff/dev` from `config.edn` above) will become
 defaults for all Biff apps.
 
@@ -293,7 +293,7 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
                           ; :biff.crux/topology is :jdbc. In this case, you must set
                           ; :biff.crux.jdbc/{user,password,host,port}.
-:biff.crux.jdbc/dbname app-ns
+:biff.crux.jdbc/dbname (str app-ns)
 :biff.crux.jdbc/dbtype "postgresql"
 
 :biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
@@ -419,7 +419,7 @@ by `:biff.static/resource-root`.
 biff/example $ tree resources/
 resources/
 └── www
-    └── hello.biff
+    └── hello
         └── js
             ├── ensure-signed-in.js
             └── ensure-signed-out.js
@@ -618,8 +618,8 @@ See <a href="https://github.com/jacobobryant/biff/issues/26" target="_blank">#26
 
 Include this on your landing page:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-out.js" target="_blank">
-resources/www/hello.biff/js/ensure-signed-out.js</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello/js/ensure-signed-out.js" target="_blank">
+resources/www/hello/js/ensure-signed-out.js</a></div>
 ```javascript
 fetch("/api/signed-in").then(response => {
   if (response.status == 200) {
@@ -630,8 +630,8 @@ fetch("/api/signed-in").then(response => {
 
 Include this on your app page:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello.biff/js/ensure-signed-in.js" target="_blank">
-resources/www/hello.biff/js/ensure-signed-in.js</a></div>
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/resources/www/hello/js/ensure-signed-in.js" target="_blank">
+resources/www/hello/js/ensure-signed-in.js</a></div>
 ```javascript
 fetch("/api/signed-in").then(response => {
   if (response.status != 200) {
@@ -758,7 +758,7 @@ src/hello/core.clj</a></div>
     ...
     (merge #:hello.biff{:event-handler #(hello.handlers/api % (:?data %))
                         ...})
-    (biff.system/start-biff 'hello.biff)))
+    (biff.system/start-biff 'hello)))
 ```
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/hello/handlers.clj" target="_blank">

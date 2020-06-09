@@ -25,7 +25,7 @@
                         :event-handler #(hello.handlers/api % (:?data %))
                         :rules hello.rules/rules
                         :triggers hello.triggers/triggers})
-    (biff.system/start-biff 'hello.biff)))
+    (biff.system/start-biff 'hello)))
 
 (def components
   [{:name :hello/core
