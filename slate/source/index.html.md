@@ -44,15 +44,18 @@ just stitch the libraries together yourself.
 Biff is currently alpha quality. Join `#biff` on <a
 href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
 discussion. Feel free to reach out for help, bug reports or anything else. Also
-see the <a href="https://github.com/jacobobryant/biff/issues"
-target="_blank">issues</a> on Github.
+see the issues and source on the <a
+href="https://github.com/jacobobryant/biff/issues" target="_blank">Github
+repo</a>.
 
 # Getting started
 
 The fastest way to get started with Biff is by cloning the Github repo and running the
 official example project (an implementation of Tic Tac Toe):
 
-1. Install dependencies (clj, npm and overmind)
+1. Install dependencies: <a href="https://clojure.org/guides/getting_started" target="_blank">Clojure</a>,
+   <a href="https://www.npmjs.com/get-npm" target="_blank">NPM</a> and
+   <a href="https://github.com/DarthSim/overmind#installation" target="_blank">Overmind</a>.
 2. `git clone https://github.com/jacobobryant/biff`
 3. `cd biff/example`
 4. `./task setup`
@@ -291,7 +294,7 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
                           ; :biff.crux/topology is :jdbc. In this case, you must set
                           ; :biff.crux.jdbc/{user,password,host,port}.
-:biff.crux.jdbc/dbname (str app-ns)
+:biff.crux.jdbc/dbname nil
 :biff.crux.jdbc/dbtype "postgresql"
 
 :biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
@@ -1355,13 +1358,14 @@ Key | Description
 
 ## Installation
 
-First, create an Ubuntu droplet on DigitalOcean. Make sure you have SSH access. If you've
-added your public cert to DigitalOcean already, this may be handled automatically.
+First, create an Ubuntu droplet on DigitalOcean. Make sure you've added your
+public key to `/root/.ssh/authorized_keys`. If you've added your public key to
+DigitalOcean already, this may be handled automatically.
 
-The following script includes setting up LetsEncrypt. Before running it, you'll
-need to point at the droplet any domain(s) you want to serve from Biff. The
-script will ask for a list of the domains and will generate a certificate for
-them.
+The following script includes setting up Let's Encrypt. Before running it,
+you'll need to point at the droplet any domain(s) you want to serve from Biff.
+The script will ask for a list of the domains and will generate a certificate
+for them.
 
 Log in as root and run this:
 
@@ -1375,12 +1379,11 @@ reboot
 `install.sh` will:
 
 1. Install dependencies
-2. Install Biff as a systemd service (i.e. autostart on boot)
-3. Setup Nginx
-4. Install certificates
-5. Setup firewall
-
-Currently it uses the root user to run Biff, but I'll fix that soon.
+2. Create a non-root user
+3. Install Biff as a systemd service (i.e. autostart on boot)
+4. Setup Nginx
+5. Install certificates
+6. Setup firewall
 
 If you ever want to update the list of domains served by Biff, just run
 something like the following:
@@ -1394,17 +1397,18 @@ other providers with little to no tweaking.
 
 ## Deployment
 
-1. Update `/root/biff/prod/config.edn` if needed (e.g. `scp config.edn
-   root@example.com:biff/prod/`).
+1. Copy `config.edn` from your local machine to `/home/biff/prod/config.edn`
+  (e.g. `scp config.edn biff@example.com:prod/`).
 2. Commit any static resources you need to your project's repo (or add some code to
-   download them from a CI server or something on startup). For example:
+   download them from a CI server or something on startup). For example, run `./task compile-cljs`
+   in the example app:
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">task</a></div>
 ```bash
 APP_NS="example"
 CLJS_APPS="app"
 
-release-cljs () {
+compile-cljs () {
   npx shadow-cljs release $CLJS_APPS
   for app in $CLJS_APPS; do
     mkdir -p resources/www/$APP_NS/cljs/$app
@@ -1414,13 +1418,15 @@ release-cljs () {
 ```
 
 <ol start="3">
-<li>On the first deploy, add your project to <code>/root/biff/prod/deps.edn</code>. On
-   future deploys, update the <code>:sha</code> values in that file.</li>
+<li>Before the first deploy, set <code>:git/url</code> for your project in <code>/home/biff/prod/deps.edn</code>. On
+   future deploys, update the <code>:sha</code> value in that file. You can also just delete <code>:sha</code> and
+   its value, in which case the latest commit in your repo will be deployed.</li>
 <li>Restart Biff: <code>systemctl restart biff</code></li>
 <li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started.</code>.</li>
 </ol>
 
-If you want to deploy your app from a private repo, you'll need to add a deploy
-certificate and configure Biff to add it to the keychain on startup. I'll add
-automation and instructions after the first person tells me they want
-to do this.
+If you want to deploy your app from a private repo, you'll need to <a
+href="https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys"
+target="_blank"> add a deploy key</a>. Biff will <a
+href="https://github.com/jacobobryant/biff/blob/master/prod/task"
+target="_blank"> add it to the keychain</a> for you on app startup.

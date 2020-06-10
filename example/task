@@ -23,7 +23,7 @@ dev () {
   overmind start
 }
 
-release-cljs () {
+compile-cljs () {
   npx shadow-cljs release $CLJS_APPS
   for app in $CLJS_APPS; do
     mkdir -p resources/www/$APP_NS/cljs/$app
@@ -31,9 +31,8 @@ release-cljs () {
   done
 }
 
-deploy () {
-  scp config.edn biff@$HOST:biff/template/
-  # ...
+push-config () {
+  scp config.edn biff@$HOST:prod/
 }
 
 "$@"
