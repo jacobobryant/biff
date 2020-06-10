@@ -421,16 +421,11 @@
 
 (defn run-triggers [env]
   (doseq [{:keys [table op triggers doc] :as env} (trigger-data env)]
-    (u/pprint [:calling-trigger table op])
     (try
       ((get-in triggers [table op]) env)
       (catch Exception e
         (.printStackTrace e)
         (log :error e "Couldn't run trigger")))))
-
-;(u/pprint ((juxt :id->change :subscriptions changesets) env))
-
-;(run-triggers env)
 
 (defn notify-tx [{:biff/keys [triggers send-event node]
                   :keys [biff.crux/subscriptions last-tx-id] :as env}]
@@ -446,7 +441,6 @@
                                            :db-after (crux/db node tx-time))
                                          (#(assoc % :id->change (get-id->change %))))
           changesets (changesets env)]
-      (println "Processed" (count txes) "txes")
       (future (u/fix-stdout (run-triggers env)))
       (doseq [{:keys [client-id query changeset event-id] :as result} changesets]
         (if (u/anomaly? result)

@@ -7,7 +7,9 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [clojure.java.io :as io]
+    [clojure.spec.alpha :as s]
     [crux.api :as crux]
+    [expound.alpha :as expound]
     [taoensso.sente :as sente]
     [ring.middleware.session.cookie :as cookie]
     [ring.middleware.anti-forgery :as anti-forgery]
@@ -38,11 +40,9 @@
          :or {port 8080}} sys
         root (or root (str "www/" host))
         root-dev (if dev "www-dev" root-dev)]
-    (assert (some? host))
     (merge
       {:biff.crux/topology :jdbc
        :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
-       :biff.crux.jdbc/dbname (str app-ns)
        :biff.web/port 8080
        :biff.static/root root
        :biff.static/resource-root (str "www/" app-ns)
@@ -60,6 +60,11 @@
       (when dev
         {:biff.crux/topology :standalone
          :biff.handler/secure-defaults false}))))
+
+(defn check-config [sys]
+  (when-not (contains? sys :biff/host)
+    (throw (ex-info ":biff/host not set. Do you need to add or update config.edn?" {})))
+  sys)
 
 (defn start-crux [sys]
   (let [opts (-> sys
@@ -189,15 +194,17 @@
   (copy-resources resource-root root))
 
 (defn start-biff [sys app-ns]
-  (let [new-sys (-> sys
-                  (set-defaults app-ns)
-                  start-crux
-                  start-sente
-                  start-tx-listener
-                  start-event-router
-                  set-auth-route
-                  set-handler)]
-    (write-static-resources new-sys)
-    (-> sys
-      (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
-      (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff"))))))
+  (binding [s/*explain-out* expound/printer]
+    (let [new-sys (-> sys
+                    (set-defaults app-ns)
+                    check-config
+                    start-crux
+                    start-sente
+                    start-tx-listener
+                    start-event-router
+                    set-auth-route
+                    set-handler)]
+      (write-static-resources new-sys)
+      (-> sys
+        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
+        (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff")))))))

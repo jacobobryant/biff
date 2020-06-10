@@ -3,6 +3,7 @@
     [clojure.edn :as edn]
     [clojure.java.classpath :as cp]
     [clojure.set :as set]
+    [clojure.spec.alpha :as s]
     [clojure.string :as str]
     [clojure.tools.namespace.find :as tn-find]
     [clojure.tools.namespace.repl :as tn-repl]
@@ -74,6 +75,7 @@
                    :or {nrepl-port 7888} :as sys} (merge sys (get-config env))]
               (timbre/merge-config! (u/select-ns-as sys 'timbre nil))
               (when instrument
+                (s/check-asserts true)
                 (st/instrument))
               (when (and start-nrepl nrepl-port)
                 (nrepl/start-server :port nrepl-port))
@@ -91,7 +93,7 @@
                                            :on-signin-request "/biff/signin-request"
                                            :on-signin-fail "/biff/signin-fail"
                                            :on-signout "/biff/signin"})
-                (start-biff 'console.biff))
+                (start-biff 'console))
               sys))})
 
 (def web-server
