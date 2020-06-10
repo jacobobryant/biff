@@ -3,6 +3,11 @@ set -e
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 run () {
+  if [ -f ~/.ssh/id_rsa ]; then
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/id_rsa
+  fi
+  clojure -Sresolve-tags
   clojure -m biff.core
 }
 

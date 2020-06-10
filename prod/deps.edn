@@ -1,5 +1,3 @@
 {:deps
- {github-jacobobryant/biff {:git/url "https://github.com/jacobobryant/biff"
-                            :tag "HEAD"}
-  github-you/yourapp {:git/url "..."
-                      :sha "..."}}}
+ {github-you/yourapp {:git/url "..."
+                      :tag "HEAD"}}}

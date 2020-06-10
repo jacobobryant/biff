@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-# todo set up non-root user
-
+# Dependencies
 apt update
 apt upgrade
 add-apt-repository ppa:certbot/certbot
@@ -11,20 +10,31 @@ curl -O https://download.clojure.org/install/linux-install-1.10.1.536.sh
 chmod +x linux-install-1.10.1.536.sh
 ./linux-install-1.10.1.536.sh
 
-(cd /root/biff/prod; clojure -Sresolve-tags)
+# Non-root user
+useradd -m biff
+cp -r prod /home/biff/
+mkdir -p /home/biff/.ssh
+if [ -f ~/.ssh/authorized_keys ]; then
+  cp ~/.ssh/authorized_keys /home/biff/.ssh/
+fi
+chown -R biff:biff /var/www/
+chown -R biff:biff /home/biff/prod/
+chown -R biff:biff /home/biff/.ssh/
 
+# Systemd service
 cat > /etc/systemd/system/biff.service << EOD
 [Unit]
 Description=Biff
 
 [Service]
-ExecStart=/root/biff/prod/task run
+ExecStart=sudo -u biff /home/biff/prod/task run
 
 [Install]
 WantedBy=multi-user.target
 EOD
 systemctl enable biff
 
+# Nginx
 rm /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/biff << EOD
 server {
@@ -46,8 +56,9 @@ server {
 EOD
 ln -s /etc/nginx/sites-{available,enabled}/biff
 systemctl restart nginx
-ln -s /var/www /root/biff/prod/www
+ln -s /var/www /home/biff/prod/www
 
+# Let's encrypt
 echo
 echo Running certbot now. When it asks if you\'d like to redirect HTTP requests to
 echo HTTPS, say yes.
@@ -55,14 +66,15 @@ read -p "Press Enter to continue"
 certbot --nginx
 systemctl restart nginx
 
+# Firewall
 ufw allow "Nginx Full"
 ufw allow OpenSSH
 ufw enable
 
 echo
 echo
-echo Installation complete. Edit /root/biff/prod/deps.edn and add your project.
-echo Then run \`reboot\` and then wait for a minute.
+echo Installation complete. Edit /home/biff/prod/deps.edn and set :git/url,
+echo then run \`reboot\`.
 echo
 echo Watch logs: \`journalctl -u biff -f\`
 echo Update: edit ~/biff/prod/deps.edn
