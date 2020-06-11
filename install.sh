@@ -13,13 +13,8 @@ chmod +x linux-install-1.10.1.536.sh
 # Non-root user
 useradd -m biff
 cp -r prod /home/biff/
-mkdir -p /home/biff/.ssh
-if [ -f ~/.ssh/authorized_keys ]; then
-  cp ~/.ssh/authorized_keys /home/biff/.ssh/
-fi
 chown -R biff:biff /var/www/
 chown -R biff:biff /home/biff/prod/
-chown -R biff:biff /home/biff/.ssh/
 
 # Systemd service
 cat > /etc/systemd/system/biff.service << EOD
@@ -27,7 +22,7 @@ cat > /etc/systemd/system/biff.service << EOD
 Description=Biff
 
 [Service]
-ExecStart=sudo -u biff /home/biff/prod/task run
+ExecStart=/usr/bin/sudo -u biff /home/biff/prod/task run
 
 [Install]
 WantedBy=multi-user.target

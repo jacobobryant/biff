@@ -21,7 +21,7 @@ target="_blank">Findka</a>, my startup. I started writing Biff after 18 months
 of experimenting with various web technologies like Firebase, Datomic and
 several Clojure web frameworks/libraries. It includes:
 
-- **Installation and deployment** on DigitalOcean.
+- **Installation and deployment** on DigitalOcean (or other VPS).
 - **Crux** (an immutable document database with Datalog queries).
 - **Subscriptions**. Specify what data the frontend needs declaratively, and
   Biff will keep it up-to-date.
@@ -45,7 +45,7 @@ Biff is currently alpha quality. Join `#biff` on <a
 href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
 discussion. Feel free to reach out for help, bug reports or anything else. Also
 see the issues and source on the <a
-href="https://github.com/jacobobryant/biff/issues" target="_blank">Github
+href="https://github.com/jacobobryant/biff" target="_blank">Github
 repo</a>.
 
 # Getting started
@@ -60,7 +60,7 @@ official example project (an implementation of Tic Tac Toe):
 3. `cd biff/example`
 4. `./task setup`
 5. `./task dev`
-6. Go to `localhost:9630` and start the `app` build
+6. Go to `localhost:9630` and start the `app` build.
 7. Go to `localhost:8080`
 
 You can tinker with this app and use it as a template for your own projects. See
@@ -207,7 +207,9 @@ by the `:biff/init` plugin.
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/config.edn" target="_blank">
 config.edn</a></div>
 ```clojure
-{:prod {:biff.crux.jdbc/user "..."
+{:prod {; If you set jdbc credentials, remove this file from source control!
+        :biff.crux.jdbc/dbname "..."
+        :biff.crux.jdbc/user "..."
         :biff.crux.jdbc/password "..."
         :biff.crux.jdbc/host "..."
         :biff.crux.jdbc/port ...
@@ -1397,7 +1399,30 @@ other providers with little to no tweaking.
 
 ## Deployment
 
-1. Copy `config.edn` from your local machine to `/home/biff/prod/config.edn`
+By default, Biff uses Postgres for storage in production. Managed
+Postgres is easy to set up in DigitalOcean. After doing that, you'll just need
+to set the `:biff.crux.jdbc/*` parameters in `config.edn`. Alternatively, you
+can set `:biff.crux/topology :standalone` to use filesystem storage in
+production (good for experimenting, but not recommended for non-hobby apps).
+
+<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/config.edn" target="_blank">
+config.edn</a></div>
+```clojure
+{:prod {; If you set jdbc credentials, remove this file from source control!
+        :biff.crux.jdbc/dbname "..."
+        :biff.crux.jdbc/user "..."
+        :biff.crux.jdbc/password "..."
+        :biff.crux.jdbc/host "..."
+        :biff.crux.jdbc/port ...
+        ; Uncomment to use filesystem storage in production instead of jdbc:
+        ; :biff.crux/topology :standalone
+        ...}
+ ...}
+```
+
+### Steps for deploying
+
+1. Copy `config.edn` from your local machine to `/home/biff/prod/config.edn` on the server
   (e.g. `scp config.edn biff@example.com:prod/`).
 2. Commit any static resources you need to your project's repo (or add some code to
    download them from a CI server or something on startup). For example, run `./task compile-cljs`
@@ -1418,11 +1443,14 @@ compile-cljs () {
 ```
 
 <ol start="3">
-<li>Before the first deploy, set <code>:git/url</code> for your project in <code>/home/biff/prod/deps.edn</code>. On
-   future deploys, update the <code>:sha</code> value in that file. You can also just delete <code>:sha</code> and
-   its value, in which case the latest commit in your repo will be deployed.</li>
-<li>Restart Biff: <code>systemctl restart biff</code></li>
-<li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started.</code>.</li>
+<li><strong>First deploy:</strong> set <code>:git/url</code> for your project in
+  <code>/home/biff/prod/deps.edn</code> on the server (e.g. <code>"https://github.com/example/example"</code>).
+  Then run <code>reboot</code>.<br>
+  <strong>Future deploys:</strong> update
+  the <code>:sha</code> value in that file, then run <code>systemctl restart biff</code>. Alternatively, you can delete
+  <code>:sha</code> and its value, in which case the sha for the latest commit in
+  your repo will be added to <code>deps.edn</code> on startup.</li>
+<li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started</code>.</li>
 </ol>
 
 If you want to deploy your app from a private repo, you'll need to <a
