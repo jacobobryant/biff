@@ -68,9 +68,4 @@ ufw enable
 
 echo
 echo
-echo Installation complete. Edit /home/biff/prod/deps.edn and set :git/url,
-echo then run \`reboot\`.
-echo
-echo Watch logs: \`journalctl -u biff -f\`
-echo Update: edit ~/biff/prod/deps.edn
-echo Restart: \`systemctl restart biff\`
+echo Installation complete.
