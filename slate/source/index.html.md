@@ -259,11 +259,13 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 ; === Config for biff.system/start-biff ===
 ; Note: app-ns is the second parameter in biff.system/start-biff
 
-; RECOMMENDED
+; REQUIRED
 :biff/host nil          ; The hostname this app will be served on, e.g. "example.com" for prod
                         ; or "localhost" for dev.
+
+; RECOMMENDED
 :biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
-                        ; {"/hello/" [:html [:body [:p "hello"]]]}
+                        ; {"/hello/" [:html [:body [:p {:style {:color "red"}} "hello"]]]}
 :biff/rules nil         ; An authorization rules data structure.
 :biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
                         ; Crux queries sent from the frontend. Functions in clojure.core
@@ -280,6 +282,7 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.auth/on-signout nil
 
 ; Ignored if :biff.crux/topology isn't :jdbc.
+:biff.crux.jdbc/dbname nil
 :biff.crux.jdbc/user nil
 :biff.crux.jdbc/password nil
 :biff.crux.jdbc/host nil
@@ -296,7 +299,6 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/* ...     ; Passed to crux.api/start-node (without the biff prefix) if
                           ; :biff.crux/topology is :jdbc. In this case, you must set
                           ; :biff.crux.jdbc/{user,password,host,port}.
-:biff.crux.jdbc/dbname nil
 :biff.crux.jdbc/dbtype "postgresql"
 
 :biff.static/root "www/{{value of :biff/host}}" ; Directory from which to serve static files.
@@ -456,11 +458,7 @@ Biff provides a set of HTTP endpoints for authentication:
 ## Sign up
 
 Sends the user an email with a sign-in link. Redirects to the value of
-`:biff.auth/on-signup`. If the email is sent successfully and the user
-hasn't already signed up, creates a user
-document in Crux with the email and a random UUID.
-
-The token included in the link will expire after 30 minutes.
+`:biff.auth/on-signup`. The token included in the link will expire after 30 minutes.
 
 ### HTTP Request
 
@@ -538,11 +536,16 @@ except:
 ## Sign in
 
 Verifies the given JWT and adds a `:uid` key to the user's session (expires in
-90 days). Redirects to the value of `:biff.auth/on-signin` (or
+90 days). Also sets a `:csrf` cookie, the value of which
+must be included in the `X-CSRF-Token` header for any HTTP requests that
+require authentication.
+
+If this is the first sign in, creates a user document in Crux with the email
+and a random UUID.
+
+Redirects to the value of `:biff.auth/on-signin` (or
 `:biff.auth/on-signin-fail` if the token is incorrect or expired).
 
-Also sets a `:csrf` cookie, the value of which must be included in the
-`X-CSRF-Token` header for any HTTP requests that require authentication.
 
 ### HTTP Request
 
