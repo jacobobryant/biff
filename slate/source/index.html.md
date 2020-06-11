@@ -1423,7 +1423,7 @@ config.edn</a></div>
 ### Steps for deploying
 
 1. Copy `config.edn` from your local machine to `/home/biff/prod/config.edn` on the server
-  (e.g. `scp config.edn biff@example.com:prod/`).
+  (e.g. `scp config.edn root@example.com:/home/biff/prod/`).
 2. Commit any static resources you need to your project's repo (or add some code to
    download them from a CI server or something on startup). For example, run `./task compile-cljs`
    in the example app:
@@ -1443,10 +1443,10 @@ compile-cljs () {
 ```
 
 <ol start="3">
-<li><strong>First deploy:</strong> set <code>:git/url</code> for your project in
+<li><strong>First deploy:</strong> Set <code>:git/url</code> for your project in
   <code>/home/biff/prod/deps.edn</code> on the server (e.g. <code>"https://github.com/example/example"</code>).
   Then run <code>reboot</code>.<br>
-  <strong>Future deploys:</strong> update
+  <strong>Future deploys:</strong> Update
   the <code>:sha</code> value in that file, then run <code>systemctl restart biff</code>. Alternatively, you can delete
   <code>:sha</code> and its value, in which case the sha for the latest commit in
   your repo will be added to <code>deps.edn</code> on startup.</li>
