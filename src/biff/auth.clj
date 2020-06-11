@@ -43,23 +43,6 @@
 (defn email= [s1 s2]
   (.equalsIgnoreCase s1 s2))
 
-(defn get-uid [{:keys [biff/node biff/db email]}]
-  (or (:user/id
-        (ffirst
-          (crux/q db
-            {:find '[e]
-             :args [{'input-email email}]
-             :where '[[e :user/email email]
-                      [(biff.auth/email= email input-email)]]})))
-    (doto (java.util.UUID/randomUUID)
-      ; todo set account created date
-      (#(crux/submit-tx
-          node
-          [[:crux.tx/put
-            {:crux.db/id {:user/id %}
-             :user/id %
-             :user/email email}]])))))
-
 (defn send-signin-link [{:keys [params params/email biff.auth/send-email biff/base-url template location]
                          :as env}]
   (let [link (signin-link (assoc env
@@ -68,33 +51,39 @@
     (send-email {:to email
                  :template template
                  :data {:biff.auth/link link}})
-    (get-uid (assoc env :email email))
     {:status 302
      :headers/Location location}))
 
-(defn signin [{:keys [params/token session]
+(defn signin [{:keys [params/token session biff/db biff/node]
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
-  (if-some [claims (-> token
-                     (tjwt/decode {:secret (jwt-key env)
-                                   :alg :HS256})
-                    u/catchall)]
-    (let [uid (get-uid (merge env (select-keys claims [:email])))
-          claims (not-empty (dissoc claims :email :iss :iat :exp))]
-      (bcrux/submit-admin-tx
-        env
-        {[:users {:user/id uid}]
-         (u/assoc-some
-           {:db/update true
-            :last-signed-in (u/now)
-            :claims claims})})
-      ; todo set last signin date
+  (if-some [{:keys [email] :as claims}
+            (-> token
+              (tjwt/decode {:secret (jwt-key env)
+                            :alg :HS256})
+              u/catchall)]
+    (let [new-user-ref {:user/id (java.util.UUID/randomUUID)}
+          user (merge
+                 {:crux.db/id new-user-ref
+                  :user/email email}
+                 new-user-ref
+                 (ffirst
+                   (crux/q db
+                     {:find '[e]
+                      :args [{'input-email email}]
+                      :where '[[e :user/email email]
+                               [(biff.auth/email= email input-email)]]
+                      :full-results? true}))
+                 (u/assoc-some
+                   {:last-signed-in (u/now)}
+                   :claims (not-empty (dissoc claims :email :iss :iat :exp))))]
+      (crux/submit-tx node [[:crux.tx/put user]])
       {:status 302
        :headers/Location on-signin
        :cookies/csrf {:path "/"
                       :max-age (* 60 60 24 90)
                       :value (force anti-forgery/*anti-forgery-token*)}
-       :session (assoc session :uid uid)})
+       :session (assoc session :uid (:user/id user))})
     {:status 302
      :headers/Location on-signin-fail}))
 
