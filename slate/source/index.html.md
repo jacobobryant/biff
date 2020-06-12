@@ -252,8 +252,9 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.init/start-nrepl true
 :biff.init/nrepl-port 7888
 :biff.init/instrument false ; Calls orchestra.spec.test/instrument if true.
-:timbre/* ...               ; These keys are passed to taoensso.timbre/merge-config!
-                            ; (without the timbre prefix).
+:biff.init/timbre true
+:timbre/* ...               ; If :biff.init/timbre is true, these keys are passed to
+                            ; taoensso.timbre/merge-config! (without the timbre prefix).
 
 
 ; === Config for biff.system/start-biff ===

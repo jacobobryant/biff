@@ -71,9 +71,10 @@
   {:name :biff/init
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-                  {:biff.init/keys [start-nrepl nrepl-port instrument]
-                   :or {nrepl-port 7888} :as sys} (merge sys (get-config env))]
-              (timbre/merge-config! (u/select-ns-as sys 'timbre nil))
+                  {:biff.init/keys [start-nrepl nrepl-port instrument timbre]
+                   :or {nrepl-port 7888 timbre true} :as sys} (merge sys (get-config env))]
+              (when timbre
+                (timbre/merge-config! (u/select-ns-as sys 'timbre nil)))
               (when instrument
                 (s/check-asserts true)
                 (st/instrument))
