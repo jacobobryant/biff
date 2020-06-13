@@ -55,7 +55,7 @@ official example project (an implementation of Tic Tac Toe):
 
 1. Install dependencies: <a href="https://clojure.org/guides/getting_started" target="_blank">Clojure</a>,
    <a href="https://www.npmjs.com/get-npm" target="_blank">NPM</a> and
-   <a href="https://github.com/DarthSim/overmind#installation" target="_blank">Overmind</a>.
+   (optionally) <a href="https://github.com/DarthSim/overmind#installation" target="_blank">Overmind</a>.
 2. `git clone https://github.com/jacobobryant/biff`
 3. `cd biff/example`
 4. `./task setup`
@@ -78,9 +78,9 @@ task</a></div>
 set -e
 
 setup () {
-  which clj npm overmind > /dev/null # Assert dependencies
+  which clj npm > /dev/null # Assert dependencies
   npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
-  clj -Stree > /dev/null # Download project dependencies
+  clj -Sresolve-tags
 }
 
 repl () {
@@ -92,7 +92,15 @@ cljs () {
 }
 
 dev () {
-  overmind start
+  # Download dependencies first. This prevents clj and shadow-cljs from trying
+  # to clone new git dependencies at the same time which causes an error.
+  clojure -Spath > /dev/null
+  if which overmind > /dev/null 2>&1 ; then
+    overmind start
+  else
+    cljs &
+    repl
+  fi
 }
 
 ...
@@ -107,11 +115,11 @@ repl: ./task repl
 cljs: ./task cljs
 ```
 
-So `./task dev` will use Overmind to run `clj` and `shadow-cljs` in the same
-terminal window. Hit `ctrl-c` to exit. If you'd like to restart just one
-process, run e.g. `overmind restart repl` in another window. You can easily add
-new build tasks by creating new functions in `task`. Also, I recommend putting
-`alias t='./task'` in your `.bashrc`.
+So `./task dev` will run `./task repl` and `./task cljs` in the same terminal
+window. Hit `ctrl-c` to exit. If you'd like to restart just one process and you
+have Overmind installed, run e.g. `overmind restart repl` in another window.
+You can easily add new build tasks by creating new functions in `task`. Also, I
+recommend putting `alias t='./task'` in your `.bashrc`.
 
 To fetch the latest Biff version, start out with only `:git/url` and `:tag` in the dependency:
 
