@@ -100,7 +100,8 @@
 (def web-server
   {:name :biff/web-server
    :requires [:biff/init]
-   :start (fn [{:biff.web/keys [host->handler port] :as sys}]
+   :start (fn [{:biff.web/keys [host->handler port]
+                :or {port 8080} :as sys}]
             (let [server (imm/run
                            #(if-some [handler (get host->handler (:server-name %))]
                               (handler %)
