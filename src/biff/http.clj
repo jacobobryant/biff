@@ -62,8 +62,8 @@
                            [(reitit/create-default-handler
                               {:not-found not-found})])
         ring-defaults (-> (if secure-defaults
-                            rd/site-defaults
-                            rd/secure-site-defaults)
+                            rd/secure-site-defaults
+                            rd/site-defaults)
                         (update :session merge {:store session-store
                                                 :cookie-name "ring-session"})
                         (assoc-in [:session :cookie-attrs :max-age] (* 60 60 24 90))
