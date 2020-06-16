@@ -63,6 +63,12 @@ official example project (an implementation of Tic Tac Toe):
 6. Go to `localhost:9630` and start the `app` build.
 7. Go to `localhost:8080`
 
+**Note:** if you're on Windows/don't have Bash, you'll need to run the
+commands inside `task` individually (translated to whatever shell you're
+using). Also, you may need to install
+<a href="https://www.microsoft.com/en-us/download/details.aspx?id=48145" target="_blank">this package</a>
+(see <a href="https://github.com/facebook/rocksdb/issues/2531" target="_blank">facebook/rocksdb#2531</a>).
+
 You can tinker with this app and use it as a template for your own projects. See
 [Production](#production) when you want to deploy.
 
