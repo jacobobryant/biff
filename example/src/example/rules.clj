@@ -13,7 +13,7 @@
   ::user-public-ref (u/only-keys :req [:user.public/id])
   :user/id uuid?
   ::user-ref (u/only-keys :req [:user/id])
-  ::user (u/only-keys :req [:user/email])
+  ::user (s/keys :req [:user/email])
   ::users (s/and set? (s/coll-of :user/id))
   :game/id (s/and string? #(<= 1 (count %) 10))
   ::game-ref (u/only-keys :req [:game/id])
