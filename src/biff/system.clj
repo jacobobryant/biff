@@ -139,7 +139,8 @@
         bcrux/wrap-sub
         bcrux/wrap-tx
         (wrap-env sys)
-        wrap-event-handler))))
+        wrap-event-handler)
+      {:simple-auto-threading? true})))
 
 (defn set-auth-route [sys]
   (update sys :biff/routes conj (auth/route sys)))
