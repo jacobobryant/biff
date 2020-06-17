@@ -43,16 +43,18 @@
 (defn email= [s1 s2]
   (.equalsIgnoreCase s1 s2))
 
-(defn send-signin-link [{:keys [params params/email biff.auth/send-email biff/base-url template location]
+(defn send-signin-link [{:keys [params params/email biff/base-url template location]
+                         :biff.auth/keys [send-email honeypot]
                          :as env}]
-  (let [link (signin-link (assoc env
-                            :claims params
-                            :url (str base-url "/api/signin")))]
-    (send-email {:to email
-                 :template template
-                 :data {:biff.auth/link link}})
-    {:status 302
-     :headers/Location location}))
+  (when (nil? (some->> honeypot (get params)))
+    (let [link (signin-link (assoc env
+                              :claims params
+                              :url (str base-url "/api/signin")))]
+      (send-email {:to email
+                   :template template
+                   :data {:biff.auth/link link}})))
+  {:status 302
+   :headers/Location location})
 
 (defn signin [{:keys [params/token session biff/db biff/node]
                :biff.auth/keys [on-signin on-signin-fail]

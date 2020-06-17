@@ -290,6 +290,9 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff/event-handler nil ; A Sente event handler function.
 
 :biff.auth/send-email nil ; A function.
+:biff.auth/honeypot nil   ; A (keywordized) form parameter name, e.g. :somefield. If this
+                          ; is set, signups/signins with this parameter set will be ignored.
+                          ; Use it to trick simple bots.
 :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
 :biff.auth/on-signin-request nil
 :biff.auth/on-signin-fail nil
@@ -458,6 +461,9 @@ Relevant config:
 
 ```clojure
 :biff.auth/send-email nil ; A function.
+:biff.auth/honeypot nil   ; A (keywordized) form parameter name, e.g. :somefield. If this
+                          ; is set, signups/signins with this parameter set will be ignored.
+                          ; Use it to trick simple bots.
 :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
 :biff.auth/on-signin-request nil
 :biff.auth/on-signin-fail nil
@@ -472,8 +478,9 @@ Biff provides a set of HTTP endpoints for authentication:
 
 ## Sign up
 
-Sends the user an email with a sign-in link. Redirects to the value of
-`:biff.auth/on-signup`. The token included in the link will expire after 30 minutes.
+Sends the user an email with a sign-in link (unless `:biff.auth/honeypot` flags
+the request).  The token included in the link will expire after 30 minutes.
+Redirects to the value of `:biff.auth/on-signup`.
 
 ### HTTP Request
 
