@@ -44,9 +44,9 @@
   (.equalsIgnoreCase s1 s2))
 
 (defn send-signin-link [{:keys [params params/email biff/base-url template location]
-                         :biff.auth/keys [send-email honeypot]
+                         :biff.auth/keys [send-email bot-fn]
                          :as env}]
-  (when (nil? (some->> honeypot (get params)))
+  (when-not (and bot-fn (bot-fn env))
     (let [link (signin-link (assoc env
                               :claims params
                               :url (str base-url "/api/signin")))]
