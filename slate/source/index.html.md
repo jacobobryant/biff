@@ -1487,3 +1487,43 @@ href="https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys"
 target="_blank"> add a deploy key</a>. Biff will <a
 href="https://github.com/jacobobryant/biff/blob/master/prod/task"
 target="_blank"> add it to the keychain</a> for you on app startup.
+
+# FAQ
+
+## Why Crux and not Datomic?
+
+I used Datomic pretty heavily in my own projects for about a year prior to
+switching to Firestore and then Crux. My opinion on Datomic vs. Crux is that
+Datomic is more powerful and can probably scale better, but Crux is  easier to
+get started with and has a lot less operational overhead for small projects (in
+terms of developer time). I've had many headaches from my time using Datomic
+(<a href="https://jacobobryant.com/post/2019/aws-battles-ep-1/" target="_blank">and AWS</a>,
+which Datomic Cloud is coupled to). On the other hand, using Crux has
+been smooth&mdash;and you can use DigitalOcean instead of AWS (yay). Since
+Biff prioritizes the solo-developer / early-stage / rapid-prototyping use-case,
+I think Crux is a much better fit. Whereas if I was in a situation with many
+developers/delivering an application that I knew would have scale once
+released, Datomic Cloud Ions I think would be great.
+
+Off the top of my head, a few more reasons:
+
+ - I like that Crux doesn't enforce schema, which made it easy for Biff to use
+   it's own schema (i.e. rules). I also think it's better for rapid-prototyping,
+   when you're still figuring out the schema and it changes often.
+
+ - Although Crux is less featureful, it's good enough for me. It's immutable
+   and has datalog queries. In some cases, it makes Crux easier to use which
+   could be considered a benefit for some situations. e.g. transactions in Crux
+   are much less complex than in Datomic.
+
+ - Crux is open-source. I'm a pragmatist and I don't mind using a closed source
+   DB like Datomic in an app. But for Biff, a web framework intended for other
+   people to build their apps on too, I'd rather not have a hard dependency on
+   something closed-source. It'd suck if a feature broke in Datomic that was
+   critical for Biff but low-priority for Cognitect. (I have a small budgeting
+   app on Datomic that was down for several months because of that).
+
+ - For hobby projects, you can run Crux on DigitalOcean with filesystem
+   persistence for $5/month, whereas Datomic Cloud starts at $30/month. Doesn't
+   matter for a startup of course, but I wouldn't want to be shelling out
+   $30/month forever just to keep that budgeting app running.
