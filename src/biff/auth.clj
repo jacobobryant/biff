@@ -44,13 +44,13 @@
   (.equalsIgnoreCase s1 s2))
 
 (defn send-signin-link [{:keys [params params/email biff/base-url template location]
-                         :biff.auth/keys [send-email bot-fn]
+                         :biff.auth/keys [send-email]
                          :as env}]
-  (when-not (and bot-fn (bot-fn env))
-    (let [link (signin-link (assoc env
-                              :claims params
-                              :url (str base-url "/api/signin")))]
-      (send-email {:to email
+  (let [link (signin-link (assoc env
+                            :claims params
+                            :url (str base-url "/api/signin")))]
+    (send-email (merge env
+                  {:to email
                    :template template
                    :data {:biff.auth/link link}})))
   {:status 302

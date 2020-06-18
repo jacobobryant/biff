@@ -290,8 +290,6 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff/event-handler nil ; A Sente event handler function.
 
 :biff.auth/send-email nil ; A function.
-:biff.auth/bot-fn         ; A function returning true if a signup/signin request should
-                          ; be ignored.
 :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
 :biff.auth/on-signin-request nil
 :biff.auth/on-signin-fail nil
@@ -460,8 +458,6 @@ Relevant config:
 
 ```clojure
 :biff.auth/send-email nil ; A function.
-:biff.auth/bot-fn         ; A function returning true if a signup/signin request should
-                          ; be ignored.
 :biff.auth/on-signup nil  ; Redirect route, e.g. "/signup/success/".
 :biff.auth/on-signin-request nil
 :biff.auth/on-signin-fail nil
@@ -478,13 +474,6 @@ Biff provides a set of HTTP endpoints for authentication:
 
 Sends the user an email with a sign-in link. The token included in the link
 will expire after 30 minutes. Redirects to the value of `:biff.auth/on-signup`.
-
-If `:biff.auth/bot-fn` is set, it will be called with the Ring request. If it
-returns true, the email will not be sent. Note that even without this setting,
-user accounts will only be created after the email recipient clicks the
-confirmation link. So in most cases, you won't need to worry about accounts
-being created for bots. But this setting will help prevent you from sending
-email to bots/spam targets in the first place.
 
 ### HTTP Request
 
@@ -508,9 +497,11 @@ email | The user's email address.
 The `:biff.auth/send-email` function will be called with the following options:
 
 ```clojure
-(send-email {:to "alice@example.com"
-             :template :biff.auth/signup
-             :data {:biff.auth/link "https://example.com/api/signin?token=..."}})
+(send-email (merge
+              ring-request
+              {:to "alice@example.com"
+               :template :biff.auth/signup
+               :data {:biff.auth/link "https://example.com/api/signin?token=..."}}))
 ```
 
 You will have to provide a `send-email` function which generates an email from
@@ -549,6 +540,15 @@ to the console). If you use Mailgun, you can do something like this:
        ...})
     (biff.system/start-biff 'example.biff)))
 ```
+
+### Dealing with bots
+
+The above example is susceptible to abuse from bots. An account isn't created
+until the user clicks the confirmation link, but it's better not to send emails
+to bots/spam victims in the first place. You'll need to use your own method for
+deciding if signups come from bots. The map passed to `send-email` includes the
+Ring request specifically so you can check the form parameters and make that
+decision.
 
 ## Request sign-in
 
