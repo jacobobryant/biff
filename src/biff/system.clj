@@ -118,7 +118,7 @@
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
           (when (not-empty disconnected)
             (apply swap! subscriptions dissoc disconnected)))))
-    (update sys :sys/close conj #(.close listener))))
+    (update sys :sys/stop conj #(.close listener))))
 
 (defn wrap-event-handler [handler]
   (fn [{:keys [?reply-fn] :as event}]
