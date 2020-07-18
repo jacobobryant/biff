@@ -51,13 +51,13 @@
   (stop)
   (tn-repl/refresh :after `start))
 
-(def toggle-nrepl
-  {:name ::toggle-nrepl
+(def set-first-start
+  {:name ::set-first-start
    :required-by [:biff/init]
-   :start #(merge {:biff.init/start-nrepl true} %)})
+   :start #(merge {:biff/first-start true} %)})
 
 (defn -main []
-  (start (conj (get-components) toggle-nrepl)))
+  (start (conj (get-components) set-first-start)))
 
 (defn get-config [env]
   (some-> "config.edn"
@@ -71,14 +71,16 @@
   {:name :biff/init
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-                  {:biff.init/keys [start-nrepl nrepl-port instrument timbre]
-                   :or {nrepl-port 7888 timbre true} :as sys} (merge sys (get-config env))]
+                  {:keys [first-start]
+                   :biff.init/keys [start-nrepl nrepl-port instrument timbre]
+                   :or {start-nrepl true nrepl-port 7888 timbre true}
+                   :as sys} (merge sys (get-config env))]
               (when timbre
                 (timbre/merge-config! (u/select-ns-as sys 'timbre nil)))
               (when instrument
                 (s/check-asserts true)
                 (st/instrument))
-              (when (and start-nrepl nrepl-port)
+              (when (and first-start start-nrepl nrepl-port)
                 (nrepl/start-server :port nrepl-port))
               sys))})
 
