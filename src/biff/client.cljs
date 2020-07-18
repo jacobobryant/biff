@@ -23,8 +23,10 @@
               (put! ch (if response response ::no-response))))))
       ch)))
 
-(defn wrap-handler [handler {:keys [subscriptions api-send ready]}]
+(defn wrap-handler [handler {:keys [verbose subscriptions api-send ready]}]
   (fn [{:keys [id ?data] :as event}]
+    (when (and verbose (= id :chsk/recv))
+      (u/pprint ?data))
     (when (= id :chsk/state)
       (let [[old-state new-state] ?data]
         (when (:first-open? new-state)
@@ -102,12 +104,13 @@
     (add-watch sub-atom ::maintain-subscriptions watch)
     (watch nil nil #{} @sub-atom)))
 
-(defn init-sub [{:keys [sub-data subscriptions handler url]
+(defn init-sub [{:keys [verbose sub-data subscriptions handler url]
                  :or {url "/api/chsk"
                       handler (constantly nil)}}]
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
         {:keys [api-send] :as env} (init-sente {:handler handler
+                                                :verbose verbose
                                                 :subscriptions subscriptions
                                                 :url url})]
     (maintain-subscriptions subscriptions
