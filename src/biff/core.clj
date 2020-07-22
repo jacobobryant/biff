@@ -71,7 +71,7 @@
   {:name :biff/init
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-                  {:keys [first-start]
+                  {:keys [biff/first-start]
                    :biff.init/keys [start-nrepl nrepl-port instrument timbre]
                    :or {start-nrepl true nrepl-port 7888 timbre true}
                    :as sys} (merge sys (get-config env))]
