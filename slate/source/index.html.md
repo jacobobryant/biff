@@ -1159,9 +1159,8 @@ perform joins on the client. This should be sufficient for many situations.
 
 However, it won't work if you need an aggregation of a set of documents that's
 too large to send to the client (not to mention each client), or if the client
-isn't allowed to see the individual documents. To handle that, I'd like to
-eventually try integrating <a href="https://materialize.io"
-target="_blank">Materialize</a>.
+isn't allowed to see the individual documents. To handle that, I've been working on
+a <a href="https://materialize.io" target="_blank">Materialize</a> integration.
 
 # Rules
 

@@ -9,7 +9,7 @@
     [example.triggers]))
 
 (defn send-email [opts]
-  (clojure.pprint/pprint [:send-email opts]))
+  (clojure.pprint/pprint [:send-email (select-keys opts [:to :template :data])]))
 
 (defn start-example [sys]
   (tn/set-refresh-dirs "src" "../../src")
