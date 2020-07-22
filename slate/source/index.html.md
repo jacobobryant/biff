@@ -48,6 +48,35 @@ see the issues and source on the <a
 href="https://github.com/jacobobryant/biff" target="_blank">Github
 repo</a>.
 
+## Comparison to Firebase
+
+Basically, if you like Firebase and you like Clojure backend dev, you might
+enjoy using Biff for your next side project. Same if you like the idea of
+Firebase but in practice you have issues with it. If you want something mature
+or you like having a Node/ClojureScript backend, Firebase is a great choice. <a
+href="https://github.com/jacobobryant/mystery-cows" target="_blank">Here's a non-trivial
+example</a> of using Firebase with ClojureScript.
+
+Some shared features:
+
+ - Natural modeling of graph data
+ - Basic query subscriptions (no joins)
+ - Client-side transactions
+ - Authorization rules
+ - Triggers
+ - Authentication built-in
+
+Some differences:
+
+ - Biff has a long-running JVM/Clojure backend instead of an ephemeral
+   Node/ClojureScript backend => better library ecosystem IMO and lower response
+   times/no cold start.
+ - Firebase has way more features and is vastly more mature.
+ - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
+ - <a href="https://opencrux.com/" target="_blank">Crux</a> (the database Biff uses) is immutable and has Datalog queries.
+ - Authorization rules in Firebase are IMO error-prone and hard to debug.
+ - Firebase supports password and SSO authentication.
+
 # Getting started
 
 The fastest way to get started with Biff is by cloning the Github repo and running the
