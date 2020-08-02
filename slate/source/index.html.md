@@ -1460,7 +1460,8 @@ By default, Biff uses Postgres for storage in production. Managed
 Postgres is easy to set up in DigitalOcean. After doing that, you'll just need
 to set the `:biff.crux.jdbc/*` parameters in `config.edn`. Alternatively, you
 can set `:biff.crux/topology :standalone` to use filesystem storage in
-production (good for experimenting, but not recommended for non-hobby apps).
+production (good for experimenting, but not recommended for non-hobby apps). **Also**,
+you must the hostname key (`:example.biff/host` in the example app).
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/config.edn" target="_blank">
 config.edn</a></div>
@@ -1473,6 +1474,7 @@ config.edn</a></div>
         :biff.crux.jdbc/port ...
         ; Uncomment to use filesystem storage in production instead of jdbc:
         ; :biff.crux/topology :standalone
+        :example.biff/host "example.com" ; change this
         ...}
  ...}
 ```

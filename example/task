@@ -40,7 +40,7 @@ compile-cljs () {
 }
 
 push-config () {
-  scp config.edn biff@$HOST:prod/
+  scp config.edn root@$HOST:/home/biff/prod/
 }
 
 "$@"
