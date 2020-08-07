@@ -130,8 +130,13 @@
       {:where where}
       :args (dissoc args 'doc))))
 
+(defn coll-not-map? [x]
+  (and
+    (coll? x)
+    (not (map? x))))
+
 (defn crux== [& args]
-  (let [[colls xs] (u/split-by coll? args)
+  (let [[colls xs] (u/split-by coll-not-map? args)
         sets (map set colls)]
     (if (empty? xs)
       (not-empty (apply set/intersection sets))
@@ -188,8 +193,18 @@
   (let [doc (apply dissoc doc
               (cond-> [:crux.db/id]
                 (map? id) (concat (keys id))))
-        id-valid? (s/valid? id-spec id)
-        doc-valid? (s/valid? doc-spec doc)]
+        id-valid? (try
+                    (s/valid? id-spec id)
+                    (catch Exception e
+                      (println "Exception while checking spec:"
+                        (pr-str id-spec) (pr-str id))
+                      (.printStackTrace e)))
+        doc-valid? (try
+                     (s/valid? doc-spec doc)
+                     (catch Exception e
+                       (println "Exception while checking spec:"
+                         (pr-str id-spec) (pr-str id))
+                       (.printStackTrace e)))]
     (when verbose
       (cond
         (not id-valid?) (expound id-spec id)
@@ -496,7 +511,7 @@
                           :admin true})
         anom (u/anomaly? tx)]
     (when anom
-      (u/pprint anom))
+      (u/pprint tx))
     (if anom
       tx
       (crux/submit-tx node tx))))
