@@ -52,13 +52,19 @@
   (comp nice-response handler))
 
 (defn make-handler [{:keys [session-store secure-defaults roots
-                            not-found-path routes default-routes]}]
-  (let [not-found #(-> %
-                     (file-response (io/file not-found-path))
-                     (assoc :status 404))
+                            not-found-path spa-path routes default-routes]}]
+  (let [not-found (if not-found-path
+                    #(-> %
+                       (file-response (io/file not-found-path))
+                       (assoc :status 404))
+                    (constantly {:status 404
+                                 :body "Not found."
+                                 :headers/Content-Type "text/plain"}))
         default-handlers (concat
                            default-routes
                            (map file-handler roots)
+                           (when spa-path
+                             [#(file-response % (io/file spa-path))])
                            [(reitit/create-default-handler
                               {:not-found not-found})])
         ring-defaults (-> (if secure-defaults

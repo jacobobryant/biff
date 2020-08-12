@@ -148,6 +148,7 @@
 (defn set-handler [{:biff/keys [routes host node]
                     :biff.handler/keys [roots
                                         secure-defaults
+                                        spa-path
                                         not-found-path] :as sys}]
   (let [cookie-key (bt/decode (auth/get-key (assoc sys
                                               :k :cookie-key
@@ -159,6 +160,7 @@
                    :session-store session-store
                    :secure-defaults secure-defaults
                    :not-found-path not-found-path
+                   :spa-path spa-path
                    :routes [(into ["" {:middleware [[wrap-env sys]]}]
                               routes)]})]
     (update sys :biff.web/host->handler assoc host handler)))
