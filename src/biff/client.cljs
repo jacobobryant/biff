@@ -131,26 +131,3 @@
               (api-send [provider {:action :unsubscribe
                                    :query query}]))))))
     env))
-
-; todo move this to trident
-
-(defn adapt-react [Component props children]
-  (.createElement js/React Component
-    (->> props
-      (u/map-vals (fn [v]
-                    (cond-> v
-                      (fn? v) (comp #(js->clj % :keywordize-keys true)))))
-      clj->js)
-    (array children)))
-
-(defn adapt-class [react-class & args]
-  (let [[opts children] (if (map? (first args))
-                          [(first args) (rest args)]
-                          [{} args])
-        type# (first children)]
-    (let [new-children (if (vector? type#)
-                         [(sablono.interpreter/interpret children)]
-                         children)]
-
-      (apply js/React.createElement react-class
-        (clj->js (sablono.util/html-to-dom-attrs opts)) new-children))))
