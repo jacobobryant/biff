@@ -22,7 +22,7 @@ cljs () {
 dev () {
   # Download dependencies first. This prevents clj and shadow-cljs from trying
   # to clone new git dependencies at the same time which causes an error.
-  clojure -Spath > /dev/null
+  clj -Spath > /dev/null
   if which overmind > /dev/null 2>&1 ; then
     overmind start
   else
