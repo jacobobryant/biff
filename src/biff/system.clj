@@ -41,7 +41,7 @@
         using-proxy (cond
                       dev false
                       (some? using-proxy) using-proxy
-                      :default (= host "localhost"))
+                      :default (not= host "localhost"))
         root (or root (str "www/" host))
         root-dev (if dev "www-dev" root-dev)]
     (merge
