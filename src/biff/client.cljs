@@ -23,10 +23,8 @@
               (put! ch (if response response ::no-response))))))
       ch)))
 
-(defn wrap-handler [handler {:keys [verbose subscriptions api-send ready]}]
+(defn wrap-handler [handler {:keys [subscriptions api-send ready]}]
   (fn [{:keys [id ?data] :as event}]
-    (when (and verbose (= id :chsk/recv))
-      (u/pprint ?data))
     (when (= id :chsk/state)
       (let [[old-state new-state] ?data]
         (when (:first-open? new-state)
@@ -110,22 +108,30 @@
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
         {:keys [api-send] :as env} (init-sente {:handler handler
-                                                :verbose verbose
                                                 :subscriptions subscriptions
                                                 :url url})]
     (maintain-subscriptions subscriptions
       (fn [[provider query]]
-        (let [ch (chan)]
+        (let [ch (chan)
+              merge-changeset' (if verbose
+                                 (fn [db changeset]
+                                   (u/pprint [:got-query-results [provider query] changeset])
+                                   (merge-changeset db changeset))
+                                 merge-changeset)]
+          (when verbose
+            (u/pprint [:subscribed-to [provider query]]))
           (swap! sub-channels assoc-in [provider query] ch)
           (api-send [provider {:action :subscribe
                                :query query}])
           (go
             (<! (u/merge-subscription-results!
                   {:sub-data-atom sub-data
-                   :merge-result merge-changeset
+                   :merge-result merge-changeset'
                    :sub-key [provider query]
                    :sub-channel ch}))
             (fn []
+              (when verbose
+                (u/pprint [:unsubscribed-to [provider query]]))
               (swap! sub-channels update provider dissoc query)
               (close! ch)
               (api-send [provider {:action :unsubscribe
