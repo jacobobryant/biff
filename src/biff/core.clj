@@ -102,15 +102,16 @@
 (def web-server
   {:name :biff/web-server
    :requires [:biff/init]
-   :start (fn [{:biff.web/keys [host->handler port]
-                :or {port 8080} :as sys}]
+   :start (fn [{:biff.web/keys [host->handler host port]
+                :or {host "localhost"
+                     port 8080} :as sys}]
             (let [server (imm/run
                            #(if-some [handler (get host->handler (:server-name %))]
                               (handler %)
                               {:status 404
                                :body "Not found."
                                :headers {"Content-Type" "text/plain"}})
-                           {:port port})]
+                           {:host host :port port})]
               (update sys :sys/stop conj #(imm/stop server))))})
 
 (def components [init console web-server])

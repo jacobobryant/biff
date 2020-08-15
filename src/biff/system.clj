@@ -32,12 +32,16 @@
 
 (defn set-defaults [sys app-ns]
   (let [sys (merge sys (u/select-ns-as sys (str app-ns ".biff") 'biff))
-        {:biff/keys [dev host rules triggers]
+        {:biff/keys [dev host rules triggers using-proxy]
          :keys [biff.auth/send-email
                 biff.web/port
                 biff.static/root
                 biff.static/root-dev]
          :or {port 8080}} sys
+        using-proxy (cond
+                      dev false
+                      (some? using-proxy) using-proxy
+                      :default (= host "localhost"))
         root (or root (str "www/" host))
         root-dev (if dev "www-dev" root-dev)]
     (merge
@@ -54,11 +58,12 @@
        :biff.handler/roots (if root-dev
                              [root-dev root]
                              [root])
-       :biff/base-url (if (= host "localhost")
-                        (str "http://localhost:" port)
-                        (str "https://" host))}
+       :biff/base-url (if using-proxy
+                        (str "https://" host)
+                        (str "http://" host ":" port))}
       (when dev
         {:biff.crux/topology :standalone
+         :biff.web/host "0.0.0.0"
          :biff.handler/secure-defaults false}))))
 
 (defn check-config [sys]
@@ -209,5 +214,5 @@
                     set-handler)]
       (write-static-resources new-sys)
       (-> sys
-        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
+        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler :biff.web/host]))
         (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff")))))))

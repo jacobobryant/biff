@@ -333,7 +333,9 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/port nil
 
 :biff/dev false ; When true, sets the following config options (overriding any specified values):
-                ; {:biff.crux/topology :standalone
+                ; {:biff/using-proxy false
+                ;  :biff.crux/topology :standalone
+                ;  :biff.web/host "0.0.0.0"
                 ;  :biff.handler/secure-defaults false
                 ;  :biff.static/root-dev "www-dev"}
 
@@ -353,6 +355,8 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                    ; or just site-defaults.
 
+:biff/using-proxy (= host "localhost") ; Used for setting :biff/base-url.
+
 
 ; === Config for the :biff/web-server plugin ===
 
@@ -360,6 +364,8 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
                             ; requests. For example:
                             ; {"localhost" (constantly {:status 200 ...})
                             ;  "example.com" (constantly {:status 200 ...})}
+:biff.web/host "localhost"  ; Host for the web server to listen on. localhost is used in prod
+                            ; because requests are proxied through Nginx.
 :biff.web/port 8080         ; Port for the web server to listen on. Also used in
                             ; biff.system/start-biff.
 ```
