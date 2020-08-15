@@ -352,6 +352,8 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
 
 :biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
+:biff.handler/spa-path nil         ; If set, takes precedence over not-found-path (and sets http
+                                     status to 200).
 :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                    ; or just site-defaults.
 
