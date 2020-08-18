@@ -154,7 +154,6 @@
         (log :error e "Couldn't run trigger")))))
 
 (defn client-results [{:keys [biff/db-client batch client-id subscriptions] :as env}]
-  (def env env)
   (let [; todo: delay the values if/when needed.
         query->id->doc (get-query->id->doc
                          {:queries (distinct (mapcat keys (vals subscriptions)))
