@@ -2,10 +2,6 @@
 set -e
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-dev () {
-  BIFF_ENV=dev clj -m biff.core
-}
-
 docs-dev () {
   cd slate
   bundle exec middleman server

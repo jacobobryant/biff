@@ -1,18 +1,21 @@
 #!/bin/bash
 set -e
+cd "$(dirname "$BASH_SOURCE[0]")"
+CLJ_VERSION=1.10.1.536
 
 # Dependencies
 apt update
 apt upgrade
 add-apt-repository ppa:certbot/certbot
 apt install nginx python-certbot-nginx default-jre
-curl -O https://download.clojure.org/install/linux-install-1.10.1.536.sh
-chmod +x linux-install-1.10.1.536.sh
-./linux-install-1.10.1.536.sh
+curl -O https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh
+chmod +x linux-install-$CLJ_VERSION.sh
+./linux-install-$CLJ_VERSION.sh
+rm linux-install-$CLJ_VERSION.sh
 
 # Non-root user
 useradd -m biff
-cp -r prod /home/biff/
+cp -r . /home/biff/
 chown -R biff:biff /var/www/
 chown -R biff:biff /home/biff/prod/
 

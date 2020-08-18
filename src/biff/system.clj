@@ -63,7 +63,6 @@
                         (str "http://" host ":" port))}
       (when dev
         {:biff.crux/topology :standalone
-         :biff.web/host "0.0.0.0"
          :biff.handler/secure-defaults false}))))
 
 (defn check-config [sys]
@@ -214,5 +213,5 @@
                     set-handler)]
       (write-static-resources new-sys)
       (-> sys
-        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler :biff.web/host]))
+        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
         (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff")))))))

@@ -1,2 +1,0 @@
-{:dev {:biff/dev true
-       :biff/host "localhost"}}

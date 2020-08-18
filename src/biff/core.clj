@@ -102,10 +102,14 @@
 (def web-server
   {:name :biff/web-server
    :requires [:biff/init]
-   :start (fn [{:biff.web/keys [host->handler host port]
+   :start (fn [{:biff/keys [dev]
+                :biff.web/keys [host->handler host port]
                 :or {host "localhost"
                      port 8080} :as sys}]
-            (let [server (imm/run
+            (let [host (if dev
+                         "0.0.0.0"
+                         host)
+                  server (imm/run
                            #(if-some [handler (get host->handler (:server-name %))]
                               (handler %)
                               {:status 404
