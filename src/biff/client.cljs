@@ -34,8 +34,6 @@
           (doseq [[provider query] @subscriptions]
             (api-send [provider {:action :resubscribe
                                  :query query}])))))
-
-    ;(u/pprint event)
     (handler event)))
 
 (defn csrf []
@@ -64,7 +62,6 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
-        ;(u/pprint [:got-message id ?data])
         (if-some [ch (some-> sub-channels
                        (get id)
                        (get (:query ?data)))]
@@ -102,6 +99,21 @@
     (add-watch sub-atom ::maintain-subscriptions watch)
     (watch nil nil #{} @sub-atom)))
 
+(defn merge-subscription-results!
+  "Continually merge results from subscription into sub-data-atom. Returns a channel
+  that delivers sub-channel after the first result has been merged."
+  [{:keys [sub-data-atom merge-result sub-key sub-channel]}]
+  (go
+    (let [merge! #(swap! sub-data-atom update sub-key merge-result %)]
+      (merge! (<! sub-channel))
+      (go-loop []
+        (if-some [result (<! sub-channel)]
+          (do
+            (merge! result)
+            (recur))
+          (swap! sub-data-atom dissoc sub-key)))
+      sub-channel)))
+
 (defn init-sub [{:keys [verbose sub-data subscriptions handler url]
                  :or {url "/api/chsk"
                       handler (constantly nil)}}]
@@ -124,7 +136,7 @@
           (api-send [provider {:action :subscribe
                                :query query}])
           (go
-            (<! (u/merge-subscription-results!
+            (<! (merge-subscription-results!
                   {:sub-data-atom sub-data
                    :merge-result merge-changeset'
                    :sub-key [provider query]
