@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$BASH_SOURCE[0]")"
+cd "$(dirname "${BASH_SOURCE[0]}")"
 CLJ_VERSION=1.10.1.536
 
 # Dependencies
