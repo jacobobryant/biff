@@ -71,8 +71,8 @@
   {:name :biff/init
    :start (fn [sys]
             (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-                  {:keys [biff/first-start]
-                   :biff.init/keys [start-nrepl nrepl-port instrument timbre]
+                  {:biff/keys [first-start dev]
+                   :biff.init/keys [start-nrepl nrepl-port instrument timbre start-shadow]
                    :or {start-nrepl true nrepl-port 7888 timbre true}
                    :as sys} (merge sys (get-config env))]
               (when timbre
@@ -80,8 +80,10 @@
               (when instrument
                 (s/check-asserts true)
                 (st/instrument))
-              (when (and first-start start-nrepl nrepl-port)
+              (when (and first-start start-nrepl nrepl-port (not dev))
                 (nrepl/start-server :port nrepl-port))
+              (when (and first-start (or dev start-shadow))
+                ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
               sys))})
 
 (def console

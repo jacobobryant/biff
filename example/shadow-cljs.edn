@@ -1,5 +1,5 @@
 {:deps {:aliases [:cljs]}
- :nrepl {:port 7890}
+ :nrepl {:port 7888}
  :builds {:app {:target :browser
                 :output-dir "www-dev/cljs/app"
                 :asset-path "/cljs/app"

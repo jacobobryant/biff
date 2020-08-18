@@ -8,27 +8,11 @@ HOST="example.com"
 setup () {
   which clj npm > /dev/null # Assert dependencies
   npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
-  clj -Sresolve-tags
-}
-
-repl () {
-  BIFF_ENV=dev clj "$@" -m biff.core
-}
-
-cljs () {
-  npx shadow-cljs server
 }
 
 dev () {
-  # Download dependencies first. This prevents clj and shadow-cljs from trying
-  # to clone new git dependencies at the same time which causes an error.
-  clj -Spath > /dev/null
-  if which overmind > /dev/null 2>&1 ; then
-    overmind start
-  else
-    cljs &
-    repl
-  fi
+  clj -Sresolve-tags
+  BIFF_ENV=dev clj -A:cljs "$@" -m biff.core
 }
 
 compile-cljs () {
