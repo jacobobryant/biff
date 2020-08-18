@@ -15,9 +15,11 @@ search: true
 
 Biff is designed to make web development with Clojure fast and easy, especially
 for early stage startups and hobby projects. Over time I'd like to make it
-suitable for apps that need scale as well.
-I use it in production for <a href="https://findka.com"
-target="_blank">Findka</a>, my startup. I started writing Biff after 18 months
+suitable for apps that need scale as well. I use it in production for <a
+href="https://findka.com" target="_blank">Findka</a>, my startup. It is
+currently alpha quality and may have breaking changes.
+
+I started writing Biff after 18 months
 of experimenting with various web technologies like Firebase, Datomic and
 several Clojure web frameworks/libraries. It includes:
 
@@ -41,41 +43,21 @@ easy to take apart (without forking). This should help mitigate the main
 drawback of frameworks, which is that it's often less work in the long run to
 just stitch the libraries together yourself.
 
-Biff is currently alpha quality. Join `#biff` on <a
-href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
-discussion. Feel free to reach out for help, bug reports or anything else. Also
-see the issues and source on the <a
-href="https://github.com/jacobobryant/biff" target="_blank">Github
-repo</a>.
+## Resources
 
-## Comparison to Firebase
+ - Join `#biff` on <a href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
+discussion. Feel free to reach out for help, bug reports or anything else.
+ - See the issues and source on <a href="https://github.com/jacobobryant/biff"
+target="_blank">Github</a>
+ - Watch <a
+href="https://www.youtube.com/watch?v=oYwhrq8hDFo" target="_blank">a
+presentation</a> I gave at the Clojure Mid-Cities meetup.
+ - See the <a href="#faq">FAQ</a> section for comparison to other frameworks.
 
-Basically, if you like Firebase and you like Clojure backend dev, you might
-enjoy using Biff for your next side project. Same if you like the idea of
-Firebase but in practice you have issues with it. If you want something mature
-or you like having a Node/ClojureScript backend, Firebase is a great choice. <a
-href="https://github.com/jacobobryant/mystery-cows" target="_blank">Here's a non-trivial
-example</a> of using Firebase with ClojureScript.
+## Contributing
 
-Some shared features:
-
- - Natural modeling of graph data
- - Basic query subscriptions (no joins)
- - Client-side transactions
- - Authorization rules
- - Triggers
- - Authentication built-in
-
-Some differences:
-
- - Biff has a long-running JVM/Clojure backend instead of an ephemeral
-   Node/ClojureScript backend => better library ecosystem IMO and lower response
-   times/no cold start.
- - Firebase has way more features and is vastly more mature.
- - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
- - <a href="https://opencrux.com/" target="_blank">Crux</a> (the database Biff uses) is immutable and has Datalog queries.
- - Authorization rules in Firebase are IMO error-prone and hard to debug.
- - Firebase supports password and SSO authentication.
+For hacking on Biff, change the example project's dependency to `:local/root
+".."`. PRs welcome, but I recommend contacting me on `#biff` first.
 
 # Getting started
 
@@ -83,8 +65,7 @@ The fastest way to get started with Biff is by cloning the Github repo and runni
 official example project (an implementation of Tic Tac Toe):
 
 1. Install dependencies: <a href="https://clojure.org/guides/getting_started" target="_blank">Clojure</a>,
-   <a href="https://www.npmjs.com/get-npm" target="_blank">NPM</a> and
-   (optionally) <a href="https://github.com/DarthSim/overmind#installation" target="_blank">Overmind</a>.
+   <a href="https://www.npmjs.com/get-npm" target="_blank">NPM</a>.
 2. `git clone https://github.com/jacobobryant/biff`
 3. `cd biff/example`
 4. `./task setup`
@@ -115,27 +96,11 @@ set -e
 setup () {
   which clj npm > /dev/null # Assert dependencies
   npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
-  clj -Sresolve-tags
-}
-
-repl () {
-  BIFF_ENV=dev clj -m biff.core
-}
-
-cljs () {
-  npx shadow-cljs server
 }
 
 dev () {
-  # Download dependencies first. This prevents clj and shadow-cljs from trying
-  # to clone new git dependencies at the same time which causes an error.
-  clojure -Spath > /dev/null
-  if which overmind > /dev/null 2>&1 ; then
-    overmind start
-  else
-    cljs &
-    repl
-  fi
+  clj -Sresolve-tags
+  BIFF_ENV=dev clj -A:cljs "$@" -m biff.core
 }
 
 ...
@@ -143,32 +108,11 @@ dev () {
 "$@"
 ```
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/Procfile" target="_blank">
-Procfile</a></div>
-```shell
-repl: ./task repl
-cljs: ./task cljs
-```
-
-So `./task dev` will run `./task repl` and `./task cljs` in the same terminal
-window. Hit `ctrl-c` to exit. If you'd like to restart just one process and you
-have Overmind installed, run e.g. `overmind restart repl` in another window.
 You can easily add new build tasks by creating new functions in `task`. Also, I
 recommend putting `alias t='./task'` in your `.bashrc`.
 
-To fetch the latest Biff version, start out with only `:git/url` and `:tag` in the dependency:
-
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/deps.edn" target="_blank">
-deps.edn</a></div>
-```clojure
-{...
- :deps
- {github-jacobobryant/biff
-  {:git/url "https://github.com/jacobobryant/biff"
-   :tag "HEAD"}}}
-```
-
-Then run `clj -Sresolve-tags`. The latest commit hash will be added to `deps.edn`.
+`./task dev` will fetch the latest Biff version for you (via `clj -Sresolve-tags`). To update Biff,
+remove the `:sha "..."` key from `deps.edn` and run `./task dev` again.
 
 # Backend entrypoint
 
@@ -294,11 +238,14 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 
 :biff.init/start-nrepl true
 :biff.init/nrepl-port 7888
+:biff.init/start-shadow false
 :biff.init/instrument false ; Calls orchestra.spec.test/instrument if true.
 :biff.init/timbre true
 :timbre/* ...               ; If :biff.init/timbre is true, these keys are passed to
                             ; taoensso.timbre/merge-config! (without the timbre prefix).
-
+:biff/dev false ; When true, sets the following config options (overriding any specified values):
+                ; {:biff.init/start-shadow true
+                ;  :biff.init/start-nrepl false} ; shadow-cljs has its own nrepl server.
 
 ; === Config for biff.system/start-biff ===
 ; Note: app-ns is the second parameter in biff.system/start-biff
@@ -332,10 +279,12 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/host nil
 :biff.crux.jdbc/port nil
 
+:biff.handler/spa-path nil ; If set, takes precedence over not-found-path (and sets http
+                             status to 200).
+
 :biff/dev false ; When true, sets the following config options (overriding any specified values):
                 ; {:biff/using-proxy false
                 ;  :biff.crux/topology :standalone
-                ;  :biff.web/host "0.0.0.0"
                 ;  :biff.handler/secure-defaults false
                 ;  :biff.static/root-dev "www-dev"}
 
@@ -352,12 +301,10 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.static/resource-root "www/{{app-ns}}"     ; Resource directory where static files are stored.
 
 :biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
-:biff.handler/spa-path nil         ; If set, takes precedence over not-found-path (and sets http
-                                     status to 200).
 :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                    ; or just site-defaults.
 
-:biff/using-proxy (= host "localhost") ; Used for setting :biff/base-url.
+:biff/using-proxy (not= {{value of :biff/host}} "localhost") ; Used for setting :biff/base-url.
 
 
 ; === Config for the :biff/web-server plugin ===
@@ -370,6 +317,8 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
                             ; because requests are proxied through Nginx.
 :biff.web/port 8080         ; Port for the web server to listen on. Also used in
                             ; biff.system/start-biff.
+:biff/dev false ; When true, sets the following config options (overriding any specified values):
+                ; {:biff.web/host "0.0.0.0"}
 ```
 
 The following keys are added to the system map by `biff.system/start-biff`:
@@ -381,11 +330,12 @@ The following keys are added to the system map by `biff.system/start-biff`:
  - `:biff.crux/subscriptions`: An atom used to keep track of which clients have subscribed
    to which queries.
 
-`biff.system/start-biff` merges the system map into incoming Ring requests and Sente events. It also
-adds `:biff/db` (a Crux DB value) on each new request/event.
-Note that
-the keys will not be prefixed yet&mdash;so within a request/event handler, you'd use `:biff/node` to get
-the Crux node, but within a separate Biff plugin you'd use e.g. `:example.biff/node`.
+`biff.system/start-biff` merges the system map into incoming Ring requests and
+Sente events. It also adds `:biff/db` (a Crux DB value) on each new
+request/event. Note that the keys will be prefixed just before `start-biff`
+returns&mdash;so within a request/event handler, you'd use `:biff/node` to get
+the Crux node, but within a subsequent Biff plugin you'd use e.g.
+`:example.biff/node`.
 
 # Static resources
 
@@ -586,6 +536,10 @@ to bots/spam victims in the first place. You'll need to use your own method for
 deciding if signups come from bots. The map passed to `send-email` includes the
 Ring request specifically so you can check the form parameters and make that
 decision.
+
+If you render the login form with JS, you may not need to deal with this for a
+while. If you render it statically (like in the example app), you'll have to
+deal with it sooner.
 
 ## Request sign-in
 
@@ -1438,8 +1392,7 @@ Log in as root and run this:
 
 ```bash
 git clone https://github.com/jacobobryant/biff
-cd biff
-./install.sh
+./biff/prod/install.sh
 reboot
 ```
 
@@ -1469,7 +1422,7 @@ Postgres is easy to set up in DigitalOcean. After doing that, you'll just need
 to set the `:biff.crux.jdbc/*` parameters in `config.edn`. Alternatively, you
 can set `:biff.crux/topology :standalone` to use filesystem storage in
 production (good for experimenting, but not recommended for non-hobby apps). **Also**,
-you must the hostname key (`:example.biff/host` in the example app).
+you must set the hostname key (`:example.biff/host` in the example app).
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/config.edn" target="_blank">
 config.edn</a></div>
@@ -1491,9 +1444,9 @@ config.edn</a></div>
 
 1. Copy `config.edn` from your local machine to `/home/biff/prod/config.edn` on the server
   (e.g. `scp config.edn root@example.com:/home/biff/prod/`).
-2. Commit any static resources you need to your project's repo (or add some code to
-   download them from a CI server or something on startup). For example, run `./task compile-cljs`
-   in the example app:
+2. Commit any static resources you need to your project's repo (or write your
+   own code to download them from a CI server). For example, run `./task
+   compile-cljs` in the example app:
 
 <div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/task" target="_blank">task</a></div>
 ```bash
@@ -1510,14 +1463,20 @@ compile-cljs () {
 ```
 
 <ol start="3">
-<li><strong>First deploy:</strong> Set <code>:git/url</code> for your project in
-  <code>/home/biff/prod/deps.edn</code> on the server (e.g. <code>"https://github.com/example/example"</code>).
-  Then run <code>reboot</code>.<br>
-  <strong>Future deploys:</strong> Update
-  the <code>:sha</code> value in that file, then run <code>systemctl restart biff</code>. Alternatively, you can delete
-  <code>:sha</code> and its value, in which case the sha for the latest commit in
-  your repo will be added to <code>deps.edn</code> on startup.</li>
-<li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be live after you see <code>System started</code>.</li>
+
+  <li><strong>First deploy:</strong> Set <code>:git/url</code> for your project
+  in <code>/home/biff/prod/deps.edn</code> on the server (e.g.
+  <code>"https://github.com/example/example"</code>). Then run
+  <code>reboot</code>. The latest commit hash will be fetched from your repo
+  and added to the file on startup.<br>
+
+  <strong>Future deploys:</strong> Delete <code>:sha "..."</code> from
+  <code>/home/biff/prod/deps.edn</code> so that the latest commit hash will be
+  fetched again on startup. Alternatively, you can specify the
+  <code>:sha</code> value explicitly (e.g. for rollbacks).</code>
+
+  <li>Watch the logs: <code>journalctl -u biff -f</code>. Your app should be
+  live after you see <code>System started</code>.</li>
 </ol>
 
 If you want to deploy your app from a private repo, you'll need to <a
@@ -1527,6 +1486,51 @@ href="https://github.com/jacobobryant/biff/blob/master/prod/task"
 target="_blank"> add it to the keychain</a> for you on app startup.
 
 # FAQ
+
+## Comparison to Firebase
+
+Basically, if you like Firebase and you like Clojure backend dev, you might
+enjoy using Biff for your next side project. Same if you like the idea of
+Firebase but in practice you have issues with it. If you want something mature
+or you like having a Node/ClojureScript backend, Firebase is a great choice. <a
+href="https://github.com/jacobobryant/mystery-cows" target="_blank">Here's a non-trivial
+example</a> of using Firebase with ClojureScript.
+
+Some shared features:
+
+ - Natural modeling of graph data
+ - Basic query subscriptions (no joins)
+ - Client-side transactions
+ - Authorization rules
+ - Triggers
+ - Authentication built-in
+
+Some differences:
+
+ - Biff has a long-running JVM/Clojure backend instead of an ephemeral
+   Node/ClojureScript backend => better library ecosystem IMO and lower response
+   times/no cold start.
+ - Firebase has way more features and is vastly more mature.
+ - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
+ - <a href="https://opencrux.com/" target="_blank">Crux</a> (the database Biff uses) is immutable and has Datalog queries.
+ - Authorization rules in Firebase are IMO error-prone and hard to debug.
+ - Firebase supports password and SSO authentication.
+
+## Comparison to Fulcro
+
+Similarities:
+
+ - Both contain some code for moving data between frontend and backend, hence
+   they can both be described as "full-stack frameworks."
+
+Differences:
+
+ - Fulcro is primarily a front-end framework while Biff is primarily backend.
+ - Biff prioritizes the low end of the "market" (early-stage startups and hobby
+   projects, as mentioned).
+ - Biff is much smaller and younger.
+ - Biff's scope includes devops.
+
 
 ## Why Crux and not Datomic?
 
