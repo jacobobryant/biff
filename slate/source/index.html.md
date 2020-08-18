@@ -280,7 +280,7 @@ Note: `:foo/*` is used to denote all keywords prefixed by `:foo/` or `:foo.`.
 :biff.crux.jdbc/port nil
 
 :biff.handler/spa-path nil ; If set, takes precedence over not-found-path (and sets http
-                             status to 200).
+                           ; status to 200).
 
 :biff/dev false ; When true, sets the following config options (overriding any specified values):
                 ; {:biff/using-proxy false
@@ -668,14 +668,16 @@ fetch("/api/signed-in").then(response => {
 Relevant config:
 
 ```clojure
-:biff/routes nil        ; A vector of Reitit routes.
-:biff/event-handler nil ; A Sente event handler function.
+:biff/routes nil           ; A vector of Reitit routes.
+:biff/event-handler nil    ; A Sente event handler function.
 :biff.handler/not-found-path "{{value of :biff.static/root}}/404.html"
+:biff.handler/spa-path nil ; If set, takes precedence over not-found-path (and sets http
+                           ; status to 200).
 :biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                    ; or just site-defaults.
-:biff/dev false ; When true, sets the following config options (overriding any specified values):
-                ; {:biff.handler/secure-defaults false
-                ;  ...}
+:biff/dev false            ; When true, sets the following config options (overriding any
+                           ; specified values):
+                           ; {:biff.handler/secure-defaults false}
 ```
 
 ## HTTP
@@ -1010,14 +1012,15 @@ If you want to subscribe to a query, `swap!` it into `subscriptions`. If you
 want to unsubscribe, `swap!` it out. Biff will populate `sub-data` with the
 results of your queries and remove old data when you unsubscribe. You can then
 use the contents of that atom to drive your UI. The contents of `sub-data` is a
-map of the form `subscription->doc-id->doc`, for example:
+map of the form `subscription->table->id->doc`, for example:
 
 ```clojure
 {[:biff/sub '{:table :users
               :where ...}]
- {{:user/id #uuid "some-uuid"} {:name "Sven"
-                                :age 250
-                                ...}}}
+ {:users
+  {{:user/id #uuid "some-uuid"} {:name "Sven"
+                                 :age 250
+                                 ...}}}}
 ```
 
 Note the subscription format again:
