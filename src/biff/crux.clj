@@ -258,7 +258,7 @@
                                                    f)) params))))
                fail
                rule-clauses)))))
-  (get-trigger-data [_ {:biff/keys [rules triggers node] :as env} {:keys [txes]}]
+  (get-trigger-data [db-client {:biff/keys [rules triggers node] :as env} {:keys [txes]}]
     (for [{:keys [crux.tx/tx-time crux.tx.event/tx-events] :as tx} txes
           :let [db (crux/db node tx-time)
                 db-before (crux/db node (time-before tx-time))]
@@ -275,6 +275,7 @@
           :let [specs (get-in rules [table :spec])]
           :when (and (= trigger-op doc-op)
                   (some #(doc-valid? {:specs specs
+                                      :db-client db-client
                                       :doc %}) [doc doc-before]))]
       (assoc env
         :table table
