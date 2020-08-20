@@ -10,6 +10,7 @@
   juxt/crux-core {:mvn/version "20.05-1.8.4-alpha"}
   juxt/crux-jdbc {:mvn/version "20.05-1.8.4-alpha"}
   juxt/crux-rocksdb {:mvn/version "20.05-1.8.4-alpha"}
+  metosin/muuntaja {:mvn/version "0.6.7"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount {:mvn/version "0.1.16"}
   nrepl/nrepl {:mvn/version "0.5.3"}

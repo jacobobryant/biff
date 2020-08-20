@@ -1,5 +1,6 @@
 (ns biff.http
   (:require
+    [muuntaja.middleware :as muuntaja]
     [ring.middleware.anti-forgery :as anti-forgery]
     [ring.middleware.head :as head]
     [trident.util :as u]
@@ -81,4 +82,6 @@
         (reitit/router routes)
         (apply reitit/routes default-handlers))
       wrap-nice-response
+      muuntaja/wrap-params
+      muuntaja/wrap-format
       (rd/wrap-defaults ring-defaults))))
