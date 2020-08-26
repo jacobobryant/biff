@@ -84,8 +84,10 @@
                  :jdbc (merge
                          {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
                           :crux.jdbc/dbtype "postgresql"}
-                         (u/select-ns opts 'crux.jdbc))))]
-    (crux/start-node opts)))
+                         (u/select-ns opts 'crux.jdbc))))
+        node (crux/start-node opts)]
+    (crux/sync node)
+    node))
 
 (u/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
