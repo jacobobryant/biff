@@ -43,10 +43,16 @@
 (defn email= [s1 s2]
   (.equalsIgnoreCase s1 s2))
 
-(defn send-signin-link [{:keys [params params/email biff/base-url template location]
+(defn send-signin-link [{:keys [params/email biff/base-url template location]
                          :biff.auth/keys [send-email]
                          :as env}]
-  (let [link (signin-link (assoc env
+  (let [{:keys [params] :as env} (update env :params
+                                   (fn [m] (u/map-vals
+                                             #(if (coll? %)
+                                                (some not-empty %)
+                                                %)
+                                             m)))
+        link (signin-link (assoc env
                             :claims params
                             :url (str base-url "/api/signin")))]
     (send-email (merge env
