@@ -161,6 +161,7 @@
         session-store (cookie/cookie-store {:key cookie-key})
         handler (http/make-handler
                   {:roots roots
+                   :domain host
                    :session-store session-store
                    :secure-defaults secure-defaults
                    :not-found-path not-found-path

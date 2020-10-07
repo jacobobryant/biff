@@ -62,7 +62,7 @@
   {:status 302
    :headers/Location location})
 
-(defn signin [{:keys [params/token session biff/db biff/node]
+(defn signin [{:keys [params/token session biff/db biff/node biff/host]
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
   (if-some [{:keys [email] :as claims}
@@ -90,6 +90,7 @@
        :headers/Location on-signin
        :cookies/csrf {:path "/"
                       :max-age (* 60 60 24 90)
+                      :domain host
                       :value (force anti-forgery/*anti-forgery-token*)}
        :session (assoc session :uid (:user/id user))})
     {:status 302
@@ -117,10 +118,10 @@
                                                   :template :biff.auth/signin
                                                   :location on-signin-request))
                        :name ::signin-request}]
-   ["/signin" {:get signin
+   ["/signin" {:get #(signin %)
                :name ::signin
                :middleware [anti-forgery/wrap-anti-forgery]}]
-   ["/signout" {:get signout
+   ["/signout" {:get #(signout %)
                 :name ::signout}]
-   ["/signed-in" {:get signed-in?
+   ["/signed-in" {:get #(signed-in? %)
                   :name ::signed-in}]])

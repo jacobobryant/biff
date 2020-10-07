@@ -52,7 +52,7 @@
 (defn wrap-nice-response [handler]
   (comp nice-response handler))
 
-(defn make-handler [{:keys [session-store secure-defaults roots
+(defn make-handler [{:keys [session-store secure-defaults roots domain
                             not-found-path spa-path routes default-routes]}]
   (let [not-found (if not-found-path
                     #(-> %
@@ -73,7 +73,8 @@
                             rd/site-defaults)
                         (update :session merge {:store session-store
                                                 :cookie-name "ring-session"})
-                        (assoc-in [:session :cookie-attrs :max-age] (* 60 60 24 90))
+                        (update-in [:session :cookie-attrs] merge {:max-age (* 60 60 24 90)
+                                                                   :domain domain})
                         (update :security merge {:anti-forgery false
                                                  :ssl-redirect false})
                         (assoc :static false))]
