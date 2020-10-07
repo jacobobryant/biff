@@ -508,7 +508,7 @@
 ; ==============================================================================
 
 ; Deprecated, use submit-tx
-(defn submit-admin-tx [{:biff/keys [node db rules]} tx]
+(defn submit-admin-tx [{:biff/keys [node db rules] :as sys} tx]
   (let [db (or db (crux/db node))
         tx (authorize-tx {:tx tx
                           :biff/db db
@@ -521,13 +521,12 @@
       tx
       (crux/submit-tx node tx))))
 
-(defn submit-tx [{:biff/keys [node db rules]} tx]
+(defn submit-tx [{:biff/keys [node db rules] :as sys} tx]
   (let [db (or db (crux/db node))
         tx (authorize-tx {:tx tx
                           :biff/db db
                           :biff/rules rules
                           :admin true})]
     (when (u/anomaly? tx)
-      (u/pprint tx)
       (throw (ex-info "Invalid transaction." tx)))
     (crux/submit-tx node tx)))

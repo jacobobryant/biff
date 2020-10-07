@@ -125,5 +125,4 @@
 (comment
   (u/pprint (deref system))
   (refresh)
-  (u/stop-system @system)
-  (start))
+  (u/stop-system @system))
