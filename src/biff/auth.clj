@@ -90,6 +90,7 @@
        :headers/Location on-signin
        :cookies/csrf {:path "/"
                       :max-age (* 60 60 24 90)
+                      :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
        :session (assoc session :uid (:user/id user))})
     {:status 302

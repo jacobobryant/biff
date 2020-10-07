@@ -73,7 +73,9 @@
                             rd/site-defaults)
                         (update :session merge {:store session-store
                                                 :cookie-name "ring-session"})
-                        (assoc-in [:session :cookie-attrs :max-age] (* 60 60 24 90))
+                        (update-in [:session :cookie-attrs] merge {:max-age (* 60 60 24 90)
+                                                                   :same-site :lax})
+
                         (update :security merge {:anti-forgery false
                                                  :ssl-redirect false})
                         (assoc :static false))]
