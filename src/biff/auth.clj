@@ -92,6 +92,12 @@
                       :max-age (* 60 60 24 90)
                       :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
+       ; todo figure out why this is necessary.
+       :session-cookie-attrs {:path "/"
+                              :http-only true
+                              :same-site :lax
+                              :secure true
+                              :max-age (* 60 60 24 90)}
        :session (assoc session :uid (:user/id user))})
     {:status 302
      :headers/Location on-signin-fail}))
