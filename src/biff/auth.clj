@@ -62,7 +62,7 @@
   {:status 302
    :headers/Location location})
 
-(defn signin [{:keys [params/token session biff/db biff/node]
+(defn signin [{:keys [params/token session biff/db biff/node biff.handler/secure-defaults]
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
   (if-some [{:keys [email] :as claims}
@@ -92,11 +92,11 @@
                       :max-age (* 60 60 24 90)
                       :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
-       ; todo figure out why this is necessary.
+       ; todo figure out why this is necessary. We already set :lax in biff.http.
        :session-cookie-attrs {:path "/"
                               :http-only true
                               :same-site :lax
-                              :secure true
+                              :secure secure-defaults
                               :max-age (* 60 60 24 90)}
        :session (assoc session :uid (:user/id user))})
     {:status 302
@@ -124,10 +124,10 @@
                                                   :template :biff.auth/signin
                                                   :location on-signin-request))
                        :name ::signin-request}]
-   ["/signin" {:get signin
+   ["/signin" {:get #(signin %)
                :name ::signin
                :middleware [anti-forgery/wrap-anti-forgery]}]
-   ["/signout" {:get signout
+   ["/signout" {:get #(signout %)
                 :name ::signout}]
-   ["/signed-in" {:get signed-in?
+   ["/signed-in" {:get #(signed-in? %)
                   :name ::signed-in}]])

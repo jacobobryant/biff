@@ -75,7 +75,6 @@
                                                 :cookie-name "ring-session"})
                         (update-in [:session :cookie-attrs] merge {:max-age (* 60 60 24 90)
                                                                    :same-site :lax})
-
                         (update :security merge {:anti-forgery false
                                                  :ssl-redirect false})
                         (assoc :static false))]
