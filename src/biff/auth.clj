@@ -1,20 +1,20 @@
 (ns biff.auth
   (:require
-    [crux.api :as crux]
-    [ring.middleware.anti-forgery :as anti-forgery]
     [biff.crux :as bcrux]
     [byte-streams :as bs]
-    [crypto.random :as random]
-    [trident.util :as u]
-    [trident.jwt :as tjwt]
-    [clojure.string :as str]
+    [byte-transforms :as bt]
     [cemerick.url :as url]
-    [byte-transforms :as bt]))
+    [clojure.string :as str]
+    [crux.api :as crux]
+    [crypto.random :as random]
+    [ring.middleware.anti-forgery :as anti-forgery]
+    [trident.jwt :as tjwt]
+    [trident.util :as u]))
 
 (defn get-key [{:keys [biff/node biff/db k] :as env}]
   (or (get (crux/entity db :biff.auth/keys) k)
     (doto (bs/to-string (bt/encode (random/bytes 16) :base64))
-      (#(bcrux/submit-admin-tx
+      (#(bcrux/submit-tx
           env
           {[:biff/auth-keys :biff.auth/keys]
            {:db/merge true
@@ -43,8 +43,11 @@
 (defn email= [s1 s2]
   (.equalsIgnoreCase s1 s2))
 
-(defn send-signin-link [{:keys [params/email biff/base-url template location]
-                         :biff.auth/keys [send-email]
+(defn send-signin-link [{:keys [params/email
+                                biff/base-url
+                                biff/send-email
+                                template
+                                location]
                          :as env}]
   (let [{:keys [params] :as env} (update env :params
                                    (fn [m] (u/map-vals
@@ -118,7 +121,7 @@
   ["/api"
    ["/signup" {:post #(send-signin-link (assoc %
                                           :template :biff.auth/signup
-                                          :location (or on-signup on-signin-request)))
+                                          :location on-signup))
                :name ::signup}]
    ["/signin-request" {:post #(send-signin-link (assoc %
                                                   :template :biff.auth/signin

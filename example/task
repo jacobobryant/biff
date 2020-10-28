@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-APP_NS="example"
-CLJS_APPS="app"
 HOST="example.com"
 
 setup () {
@@ -11,16 +9,14 @@ setup () {
 }
 
 dev () {
-  clj -Sresolve-tags
-  BIFF_ENV=dev clj -A:cljs "$@" -m biff.core
+  clj -X:deps git-resolve-tags
+  BIFF_ENV=dev clj -A:cljs "$@" -M -m example.core
 }
 
 compile-cljs () {
   npx shadow-cljs release $CLJS_APPS
-  for app in $CLJS_APPS; do
-    mkdir -p resources/www/$APP_NS/cljs/$app
-    cp {www-dev,resources/www/$APP_NS}/cljs/$app/main.js
-  done
+  mkdir -p resources/www/cljs/app
+  cp {www-dev,resources/www}/cljs/app/main.js
 }
 
 push-config () {

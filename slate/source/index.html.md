@@ -61,6 +61,9 @@ For hacking on Biff, change the example project's dependency to `:local/root
 
 # Getting started
 
+**Note:** As of 19 Oct, the `./task dev` command below is broken due to a bug
+in tools.deps. I'll update these docs with a workaround soon.
+
 The fastest way to get started with Biff is by cloning the Github repo and running the
 official example project (an implementation of Tic Tac Toe):
 

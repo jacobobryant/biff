@@ -5,10 +5,7 @@
     [rum.core]))
 
 (defonce db (atom {}))
-
-; same as (do (rum.core/cursor-in db [:sub-data]) ...)
-(u/defcursors db
-  sub-data [:sub-data])
+(defonce sub-data (atom {}))
 
 ; same as (do
 ;           (rum.core/derived-atom [sub-data] :example.client.app.db/data

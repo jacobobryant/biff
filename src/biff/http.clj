@@ -1,17 +1,17 @@
 (ns biff.http
   (:require
-    [muuntaja.middleware :as muuntaja]
-    [ring.middleware.anti-forgery :as anti-forgery]
-    [ring.middleware.head :as head]
-    [trident.util :as u]
-    [ring.util.time :as rtime]
-    [ring.util.io :as rio]
-    [clojure.string :as str]
-    [ring.util.codec :as codec]
-    [ring.util.request :as request]
     [clojure.java.io :as io]
+    [clojure.string :as str]
+    [muuntaja.middleware :as muuntaja]
+    [reitit.ring :as reitit]
+    [ring.middleware.anti-forgery :as anti-forgery]
     [ring.middleware.defaults :as rd]
-    [reitit.ring :as reitit]))
+    [ring.middleware.head :as head]
+    [ring.util.codec :as codec]
+    [ring.util.io :as rio]
+    [ring.util.request :as request]
+    [ring.util.time :as rtime]
+    [trident.util :as u]))
 
 (defn wrap-authorize [handler]
   (anti-forgery/wrap-anti-forgery
@@ -43,14 +43,13 @@
             file (io/file path)]
         (file-response req file)))))
 
-(defn nice-response [resp]
-  (when resp
-    (-> {:body "" :status 200}
-      (merge resp)
-      (u/nest-string-keys [:headers :cookies]))))
-
-(defn wrap-nice-response [handler]
-  (comp nice-response handler))
+(defn wrap-sugary-response [handler]
+  (fn [resp]
+    (let [resp (handler resp)]
+      (when resp
+        (-> {:body "" :status 200}
+          (merge resp)
+          (u/nest-string-keys [:headers :cookies]))))))
 
 (defn make-handler [{:keys [session-store secure-defaults roots
                             not-found-path spa-path routes default-routes]}]
@@ -82,7 +81,7 @@
       (reitit/ring-handler
         (reitit/router routes)
         (apply reitit/routes default-handlers))
-      wrap-nice-response
+      wrap-sugary-response
       muuntaja/wrap-params
       muuntaja/wrap-format
       (rd/wrap-defaults ring-defaults))))

@@ -1,38 +1,36 @@
-(ns ^:biff example.core
+(ns example.core
   (:require
-    [biff.system]
+    [biff.core :as biff]
     [clojure.tools.namespace.repl :as tn]
-    [example.handlers]
-    [example.routes]
-    [example.rules]
-    [example.static]
-    [example.triggers]))
+    [example.handlers :refer [api]]
+    [example.routes :refer [routes]]
+    [example.rules :refer [rules]]
+    [example.static :refer [pages]]
+    [example.triggers :refer [triggers]]))
 
 (defn send-email [opts]
   (clojure.pprint/pprint [:send-email (select-keys opts [:to :template :data])]))
 
-(defn start-example [sys]
-  (tn/set-refresh-dirs "src" "../../src")
-  (-> sys
-    (merge #:example.biff.auth{:send-email send-email
-                               :on-signup "/signin/sent/"
-                               :on-signin-request "/signin/sent/"
-                               :on-signin-fail "/signin/fail/"
-                               :on-signin "/app/"
-                               :on-signout "/"})
-    (merge #:example.biff{:routes example.routes/routes
-                          :static-pages example.static/pages
-                          :event-handler #(example.handlers/api % (:?data %))
-                          :rules example.rules/rules
-                          :triggers example.triggers/triggers})
-    (biff.system/start-biff 'example)))
+(defn start [opts]
+  (tn/set-refresh-dirs "src" "../../src") ; For hacking on Biff
+  (biff/start-spa
+    (merge opts
+      #:biff{:routes routes
+             :static-pages pages
+             :event-handler #(api % (:?data %))
+             :rules #'rules
+             :triggers #'triggers
+             :send-email send-email
+             :after-refresh `after-refresh})))
 
-(def components
-  [{:name :example/core
-    :requires [:biff/init]
-    :required-by [:biff/web-server]
-    :start start-example}])
+(defn -main []
+  (start {:biff/first-start true}))
+
+(defn after-refresh []
+  (start nil))
 
 (comment
-  (crux.api/submit-tx (:example.biff/node @biff.core/system)
-    [[:crux.tx/delete {:game/id "test"}]]))
+  ; Useful REPL commands:
+  (biff.core/refresh)
+  (->> @biff.core/system keys sorted (run! prn))
+  )

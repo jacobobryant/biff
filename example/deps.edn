@@ -3,8 +3,9 @@
                                thheller/shadow-cljs {:mvn/version "2.8.40"}
                                binaryage/devtools {:mvn/version "0.9.10"}
                                binaryage/oops {:mvn/version "0.7.0"}
-                               cljs-http {:mvn/version "0.1.46"}}}}
+                               cljs-http/cljs-http {:mvn/version "0.1.46"}}}}
  :deps
  {github-jacobobryant/biff
-  {:git/url "https://github.com/jacobobryant/biff"
+  {:local/root ".."
+   ;:git/url "https://github.com/jacobobryant/biff"
    :tag "HEAD"}}}

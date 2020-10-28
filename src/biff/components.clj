@@ -1,25 +1,28 @@
-(ns biff.system
+(ns biff.components
   (:require
-    [biff.http :as http]
     [biff.auth :as auth]
+    [biff.crux :as bcrux]
+    [biff.http :as http]
     [biff.rules :as rules]
     [byte-transforms :as bt]
-    [clojure.set :as set]
-    [clojure.string :as str]
+    [clojure.edn :as edn]
     [clojure.java.io :as io]
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
+    [clojure.string :as str]
     [crux.api :as crux]
     [expound.alpha :as expound]
-    [taoensso.sente :as sente]
-    [ring.middleware.session.cookie :as cookie]
+    [immutant.web :as imm]
+    [nrepl.server :as nrepl]
+    [orchestra.spec.test :as st]
     [ring.middleware.anti-forgery :as anti-forgery]
+    [ring.middleware.session.cookie :as cookie]
     [rum.core :as rum]
+    [taoensso.sente :as sente]
     [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
-    [biff.crux :as bcrux]
-    [taoensso.timbre :refer [log spy]]
+    [taoensso.timbre :as timbre]
     [trident.util :as u])
-  (:import
-    [java.nio.file Paths]))
+  (:import [java.nio.file Paths]))
 
 (defn wrap-env [handler {:keys [biff/node] :as sys}]
   (comp handler
@@ -30,31 +33,64 @@
           (merge (u/prepend-keys "session" (get req :session)))
           (merge (u/prepend-keys "params" (get req :params))))))))
 
-(defn set-defaults [sys app-ns]
-  (let [sys (merge sys (u/select-ns-as sys (str app-ns ".biff") 'biff))
-        {:biff/keys [dev host rules triggers using-proxy]
-         :keys [biff.auth/send-email
-                biff.web/port
+(defn concrete [x]
+  (cond
+    (var? x) @x
+    (fn? x) (x)
+    :default x))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn init [sys]
+  (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
+        config (some-> "config.edn"
+                 u/maybe-slurp
+                 edn/read-string
+                 (u/merge-config env))
+        {:biff/keys [first-start dev]
+         :biff.init/keys [start-nrepl nrepl-port instrument timbre start-shadow]
+         :or {start-nrepl true nrepl-port 7888 timbre true}
+         :as sys} (merge sys config)]
+    (when timbre
+      (timbre/merge-config! (u/select-ns-as sys 'timbre nil)))
+    (when instrument
+      (s/check-asserts true)
+      (st/instrument))
+    (when (and first-start start-nrepl nrepl-port (not dev))
+      (nrepl/start-server :port nrepl-port))
+    (when (and first-start (or dev start-shadow))
+      ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
+    sys))
+
+(defn set-defaults [sys]
+  (let [{:biff/keys [dev host rules triggers using-proxy]
+         :keys [biff.web/port
                 biff.static/root
                 biff.static/root-dev]
          :or {port 8080}} sys
         using-proxy (cond
                       dev false
                       (some? using-proxy) using-proxy
-                      :default (not= host "localhost"))
-        root (or root (str "www/" host))
+                      :default (not (#{"localhost" nil} host)))
+        root (or root "www")
         root-dev (if dev "www-dev" root-dev)]
     (merge
-      {:biff.crux/topology :jdbc
-       :biff.crux/storage-dir (str "data/" app-ns "/crux-db")
+      {:biff/host "localhost"
+       :biff.auth/on-signup "/signin-sent/"
+       :biff.auth/on-signin-request "/signin-sent/"
+       :biff.auth/on-signin-fail "/signin-fail/"
+       :biff.auth/on-signin "/app/"
+       :biff.auth/on-signout "/"
+       :biff.crux/topology :jdbc
+       :biff.crux/storage-dir "data/crux-db"
        :biff.web/port 8080
        :biff.static/root root
-       :biff.static/resource-root (str "www/" app-ns)
+       :biff.static/resource-root "www"
        :biff.handler/secure-defaults true
        :biff.handler/not-found-path (str root "/404.html")}
       sys
-      {:biff/rules (rules/expand-ops (merge rules rules/rules))
-       :biff/triggers (rules/expand-ops triggers)
+      {:biff/rules #(rules/expand-ops (merge (concrete rules) rules/rules))
+       :biff/triggers #(rules/expand-ops (concrete triggers))
        :biff.handler/roots (if root-dev
                              [root-dev root]
                              [root])
@@ -65,11 +101,6 @@
         {:biff.crux/topology :standalone
          :biff.handler/secure-defaults false}))))
 
-(defn check-config [sys]
-  (when-not (contains? sys :biff/host)
-    (throw (ex-info ":biff/host not set. Do you need to add or update config.edn?" {})))
-  sys)
-
 (defn start-crux [sys]
   (let [opts (-> sys
                (u/select-ns-as 'biff.crux 'crux)
@@ -78,7 +109,7 @@
         node (bcrux/start-node opts)]
     (-> sys
       (assoc :biff/node node)
-      (update :sys/stop conj #(.close node)))))
+      (update :biff/stop conj #(.close node)))))
 
 (defn start-sente [sys]
   (let [{:keys [ch-recv send-fn connected-uids
@@ -149,25 +180,26 @@
 (defn set-auth-route [sys]
   (update sys :biff/routes conj (auth/route sys)))
 
-(defn set-handler [{:biff/keys [routes host node]
+(defn set-handler [{:biff/keys [routes node]
                     :biff.handler/keys [roots
                                         secure-defaults
                                         spa-path
                                         not-found-path] :as sys}]
-  (let [cookie-key (bt/decode (auth/get-key (assoc sys
-                                              :k :cookie-key
-                                              :biff/db (crux/db node)))
-                     :base64)
-        session-store (cookie/cookie-store {:key cookie-key})
-        handler (http/make-handler
-                  {:roots roots
-                   :session-store session-store
-                   :secure-defaults secure-defaults
-                   :not-found-path not-found-path
-                   :spa-path spa-path
-                   :routes [(into ["" {:middleware [[wrap-env sys]]}]
-                              routes)]})]
-    (update sys :biff.web/host->handler assoc host handler)))
+  (let [cookie-key (-> (assoc sys
+                         :k :cookie-key
+                         :biff/db (crux/db node))
+                     auth/get-key
+                     (bt/decode :base64))
+        session-store (cookie/cookie-store {:key cookie-key})]
+    (assoc sys :biff.web/handler
+      (http/make-handler
+        {:roots roots
+         :session-store session-store
+         :secure-defaults secure-defaults
+         :not-found-path not-found-path
+         :spa-path spa-path
+         :routes [(into ["" {:middleware [[wrap-env sys]]}]
+                    routes)]}))))
 
 (defn copy-resources [src-root dest-root]
   (when-some [resource-root (io/resource src-root)]
@@ -198,20 +230,15 @@
   [{:biff.static/keys [root resource-root]
     :keys [biff/static-pages] :as sys}]
   (export-rum static-pages root)
-  (copy-resources resource-root root))
+  (copy-resources resource-root root)
+  sys)
 
-(defn start-biff [sys app-ns]
-  (binding [s/*explain-out* expound/printer]
-    (let [new-sys (-> sys
-                    (set-defaults app-ns)
-                    check-config
-                    start-crux
-                    start-sente
-                    start-tx-listener
-                    start-event-router
-                    set-auth-route
-                    set-handler)]
-      (write-static-resources new-sys)
-      (-> sys
-        (merge (select-keys new-sys [:sys/stop :biff.web/host->handler]))
-        (merge (u/select-ns-as new-sys 'biff (str app-ns ".biff")))))))
+(defn start-web-server [{:biff/keys [dev]
+                         :biff.web/keys [handler host port]
+                         :or {host "localhost"
+                              port 8080} :as sys}]
+  (let [host (if dev
+               "0.0.0.0"
+               host)
+        server (imm/run handler {:host host :port port})]
+    (update sys :sys/stop conj #(imm/stop server))))

@@ -45,7 +45,7 @@
 
 (def pages
   {"/" home
-   "/signin/sent/" signin-sent
-   "/signin/fail/" signin-fail
+   "/signin-sent/" signin-sent
+   "/signin-fail/" signin-fail
    "/app/" app
    "/404.html" not-found})

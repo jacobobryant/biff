@@ -3,13 +3,19 @@
     [biff.protocols :as proto]
     [clojure.core.async :refer [go <!!]]
     [clojure.java.io :as io]
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [clojure.walk :as walk]
-    [clojure.set :as set]
     [crux.api :as crux]
-    [expound.alpha :refer [expound]]
+    [expound.alpha :as expound]
     [taoensso.timbre :refer [log spy]]
     [trident.util :as u]))
+
+(defn concrete [x]
+  (cond
+    (var? x) @x
+    (fn? x) (x)
+    :default x))
 
 (defn dissoc-clean [m k1 k2]
   (let [m (update m k1 dissoc k2)]
@@ -101,7 +107,8 @@
            (try
              (doto (s/valid? x-spec x)
                #(when (and verbose (not %))
-                  (expound x-spec x)))
+                  (binding [s/*explain-out* expound/printer]
+                    (expound/expound x-spec x))))
              (catch Exception e
                (println "Exception while checking spec:"
                  (pr-str x-spec) (pr-str x))
@@ -113,6 +120,7 @@
   (let [query-type (if (contains? query :id)
                      :get
                      :query)
+        rules (concrete rules)
         auth-fn (get-in rules [table query-type])
         specs (get-in rules [table :spec])
         anom-message (cond
@@ -148,10 +156,11 @@
     (into {})))
 
 (defn run-triggers [{:keys [biff/db-client batch] :as env}]
-  (doseq [{:keys [table op triggers doc] :as env} (proto/get-trigger-data db-client env batch)]
+  (doseq [{:keys [trigger-fn] :as env} (proto/get-trigger-data db-client env batch)]
     (try
-      ((get-in triggers [table op]) env)
+      (trigger-fn env)
       (catch Exception e
+        (def env env)
         (.printStackTrace e)
         (log :error e "Couldn't run trigger")))))
 
@@ -272,9 +281,9 @@
                          (nil? doc) :delete
                          (nil? doc-before) :create
                          :default :update)]
-          [table op->fn] triggers
+          [table op->fn] (concrete triggers)
           [trigger-op f] op->fn
-          :let [specs (get-in rules [table :spec])]
+          :let [specs (get-in (concrete rules) [table :spec])]
           :when (and (= trigger-op doc-op)
                   (some #(doc-valid? {:specs specs
                                       :db-client db-client
@@ -282,6 +291,7 @@
       (assoc env
         :table table
         :op trigger-op
+        :trigger-fn f
         :doc doc
         :doc-before doc-before
         :db db
@@ -441,7 +451,7 @@
       (and (some? doc'')
         (some not
           (map s/valid?
-            (get-in rules [table :spec])
+            (get-in (concrete rules) [table :spec])
             [id' doc''])))
       (u/anom :incorrect "Document doesn't meet spec."
         :doc doc
@@ -463,7 +473,7 @@
                        {:keys [table op] :as doc-tx-data}]
   (if admin
     doc-tx-data
-    (u/letdelay [auth-fn (get-in rules [table op])
+    (u/letdelay [auth-fn (get-in (concrete rules) [table op])
                  result (auth-fn (merge env doc-tx-data))
                  anom-fn #(merge (u/anom :forbidden %)
                             (select-keys doc-tx-data [:table :id]))]
@@ -486,9 +496,8 @@
                  tx (into {} tx*)
                  env (assoc env :tx tx :current-time current-time)
                  auth-result (mapv #(authorize-write env (second %)) tx)
-                 crux-tx (u/forv [{:keys [op cas old-doc doc id]} auth-result]
+                 crux-tx (u/forv [{:keys [op old-doc doc id]} auth-result]
                            (cond
-                             cas            [:crux.tx/cas old-doc doc]
                              (= op :delete) [:crux.tx/delete id]
                              :default       [:crux.tx/put doc]))]
       (or
@@ -507,24 +516,9 @@
 
 ; ==============================================================================
 
-; Deprecated, use submit-tx
-(defn submit-admin-tx [{:biff/keys [node db rules]} tx]
-  (let [db (or db (crux/db node))
-        tx (authorize-tx {:tx tx
-                          :biff/db db
-                          :biff/rules rules
-                          :admin true})
-        anom (u/anomaly? tx)]
-    (when anom
-      (u/pprint tx))
-    (if anom
-      tx
-      (crux/submit-tx node tx))))
-
 (defn submit-tx [{:biff/keys [node db rules]} tx]
-  (let [db (or db (crux/db node))
-        tx (authorize-tx {:tx tx
-                          :biff/db db
+  (let [tx (authorize-tx {:tx tx
+                          :biff/db (or db (crux/db node))
                           :biff/rules rules
                           :admin true})]
     (when (u/anomaly? tx)
