@@ -7,9 +7,9 @@
   com.taoensso/timbre {:mvn/version "4.10.0"}
   crypto-password/crypto-password {:mvn/version "0.2.1"}
   expound/expound {:mvn/version "0.8.4"}
-  juxt/crux-core {:mvn/version "20.05-1.8.4-alpha"}
-  juxt/crux-jdbc {:mvn/version "20.05-1.8.4-alpha"}
-  juxt/crux-rocksdb {:mvn/version "20.05-1.8.4-alpha"}
+  juxt/crux-core {:mvn/version "20.09-1.12.1-beta"}
+  juxt/crux-jdbc {:mvn/version "20.09-1.12.1-beta"}
+  juxt/crux-rocksdb {:mvn/version "20.09-1.12.1-beta"}
   metosin/muuntaja {:mvn/version "0.6.7"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount/mount {:mvn/version "0.1.16"}

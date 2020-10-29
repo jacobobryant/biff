@@ -82,15 +82,22 @@
 (defn start-node ^crux.api.ICruxAPI [{:keys [topology storage-dir]
                                       :or {topology :standalone} :as opts}]
   (let [opts (merge
-               {:crux.kv/db-dir (str (io/file storage-dir "db"))}
+               {:crux/index-store {:kv-store {:crux/module 'crux.rocksdb/->kv-store
+                                              :db-dir (io/file storage-dir "db")}}}
                (case topology
-                 :standalone {:crux.node/topology '[crux.standalone/topology crux.kv.rocksdb/kv-store]
-                              :crux.standalone/event-log-dir (str (io/file storage-dir "eventlog"))
-                              :crux.standalone/event-log-kv-store 'crux.kv.rocksdb/kv}
-                 :jdbc (merge
-                         {:crux.node/topology '[crux.jdbc/topology crux.kv.rocksdb/kv-store]
-                          :crux.jdbc/dbtype "postgresql"}
-                         (u/select-ns opts 'crux.jdbc))))
+                 :standalone
+                 {:rocksdb-golden {:crux/module 'crux.rocksdb/->kv-store
+                                   :db-dir (io/file storage-dir "eventlog")}
+                  :crux/document-store {:kv-store :rocksdb-golden}
+                  :crux/tx-log {:kv-store :rocksdb-golden}}
+
+                 :jdbc
+                 {:crux.jdbc/connection-pool {:dialect {:crux/module 'crux.jdbc.psql/->dialect}
+                                              :db-spec (u/select-ns-as opts 'crux.jdbc nil)}
+                  :crux/tx-log {:crux/module 'crux.jdbc/->tx-log
+                                :connection-pool :crux.jdbc/connection-pool}
+                  :crux/document-store {:crux/module 'crux.jdbc/->document-store
+                                        :connection-pool :crux.jdbc/connection-pool}}))
         node (crux/start-node opts)]
     (crux/sync node)
     node))
@@ -231,9 +238,10 @@
                [_ doc-id] tx-events]
            doc-id)
       distinct
-      (map (fn [doc-id]
-             [doc-id (mapv #(crux/entity % doc-id) [db-before db-after])]))
-      (remove #(apply = (second %)))
+      (keep (fn [doc-id]
+              (let [[before after] (mapv #(crux/entity % doc-id) [db-before db-after])]
+                (when (not= before after)
+                  [(some :crux.db/id [before after]) [before after]]))))
       (into {})))
   (query-contains-doc? [_ {:keys [id where args]} doc]
     (if (some? id)

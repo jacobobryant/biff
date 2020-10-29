@@ -5,6 +5,7 @@
     [biff.http :as http]
     [biff.rules :as rules]
     [byte-transforms :as bt]
+    [clojure.core.async :as async]
     [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.set :as set]
@@ -133,6 +134,7 @@
                                   :name ::chsk}]]
     (-> sys
       (update :biff/routes conj sente-route)
+      (update :biff/stop conj #(async/close! ch-recv))
       (assoc
         :biff/send-event send-fn
         :biff.sente/ch-recv ch-recv
