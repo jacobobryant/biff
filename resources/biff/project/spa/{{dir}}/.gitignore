@@ -1,6 +1,8 @@
+.cpcache
+.shadow-cljs/
 config/
+data
+infra/.terraform/
+node_modules
 www
 www-dev
-.cpcache
-node_modules
-data

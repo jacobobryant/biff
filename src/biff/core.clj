@@ -17,12 +17,13 @@
           (reduce (fn [sys component]
                     (component sys))
             (merge {:biff/stop '()} config)
-            components))])
-  (println)
-  (println "System started.")
-  (when dev
-    (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\". Then go to http://localhost:8080.")
-    (println "Also see \`./task help\' for a complete list of commands.")))
+            components))]
+    (println)
+    (println "System started.")
+    (when dev
+      (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\" -> \"Dashboard\".")
+      (println "After the build finishes, go to http://localhost:8080.")
+      (println "Also see `./task help` for a complete list of commands."))))
 
 (defn start-spa [config]
   (start-system config

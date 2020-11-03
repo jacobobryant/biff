@@ -1,9 +1,11 @@
 (ns biff.project
   (:require
+    [biff.project.terraform.digitalocean :as do]
     [biff.util :as bu]
     [cheshire.core :as cheshire]
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
+    [clojure.set :as set]
     [clojure.string :as str]
     [selmer.parser :as selmer]))
 
@@ -39,14 +41,15 @@
       :parent-path parent-path
       :main-ns-path main-ns-path)))
 
-(defn copy-files [root opts]
+(defn copy-files [root {:keys [files] :as opts}]
   (let [src-file-prefix (.getPath (io/resource root))]
     (doseq [src-file (filter #(.isFile %)
                        (file-seq (io/file (io/resource root))))
-            :let [dest-path (-> src-file
-                              .getPath
-                              (str/replace-first src-file-prefix "")
-                              (selmer/render opts))]]
+            :let [src-file-postfix (-> src-file
+                                     .getPath
+                                     (str/replace-first src-file-prefix ""))
+                  dest-path (selmer/render src-file-postfix opts)]
+            :when (or (nil? files) (contains? files src-file-postfix))]
       (io/make-parents dest-path)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
@@ -67,49 +70,6 @@
                    :script "run-provisioners.sh"}]
    :variables {:digitalocean_api_key "{{env `DIGITALOCEAN_API_KEY`}}"}
    :sensitive-variables ["digitalocean_api_key"]})
-
-(defn tf-config [opts]
-  {:terraform
-   {:required_providers
-    {:digitalocean
-     {:source "digitalocean/digitalocean"
-      :version "1.22.2"}}}
-
-   :variable
-   {:digitalocean_api_key {}
-    :github_deploy_key {}
-    :image_id {}}
-
-   :provider
-   {:digitalocean
-    {:token "var.digitalocean_api_key"}}
-
-   :resource
-   [{:digitalocean_droplet
-     {:webserver
-      {:image "var.image_id"
-       :name "biff-webserver"
-       :region "nyc1"
-       :size "s-1vcpu-1gb"
-       :private_networking true
-       :connection {:host "self.ipv4_address"
-                    :user "root"
-                    :type "ssh"
-                    :timeout "2m"}
-       :provisioner [{:file
-                      {:source "config/main.edn"
-                       :destination "/home/biff/config/main.edn"}}
-                     {:file
-                      {:content "var.github_deploy_key"
-                       :destination "/home/biff.ssh/id_rsa"}}]}}}
-
-    {:digitalocean_record
-     {... {:domain "..."
-           :type "A"
-           :name "..."
-           :value "digitalocean_droplet.webserver.ipv4_address"}}}]})
-
-; todo add config for postgres
 
 (defn init-spa [opts]
   (println "Creating a SPA project.")
@@ -133,6 +93,8 @@
     (copy-files "biff/project/spa/" opts)
     (spit (str dir "/infra/webserver.json")
       (cheshire/generate-string default-packer-config {:pretty true}))
+    (spit (str dir "/infra/system.tf.json")
+      (cheshire/generate-string (do/system opts) {:pretty true}))
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
       (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
@@ -147,9 +109,22 @@
     (println "Run `./task help` for more info.")))
 
 (defn update-spa-files [sys]
-  ; todo individual files
-  (spit "infra/webserver.json"
-    (cheshire/generate-string default-packer-config {:pretty true})))
+  (let [opts (set/rename-keys sys {:biff/host :host})]
+    (copy-files "biff/project/spa/{{dir}}/"
+      (assoc opts
+        :files #{"all-tasks/10-biff"
+                 "infra/provisioners/10-wait"
+                 "infra/provisioners/20-dependencies"
+                 "infra/provisioners/30-non-root-user"
+                 "infra/provisioners/40-app"
+                 "infra/provisioners/50-systemd"
+                 "infra/provisioners/60-nginx"
+                 "infra/provisioners/70-firewall"
+                 "infra/run-provisioners.sh"}))
+    (spit "infra/webserver.json"
+      (cheshire/generate-string default-packer-config {:pretty true}))
+    (spit "infra/system.tf.json"
+      (cheshire/generate-string (do/system opts) {:pretty true}))))
 
 (defn init-mpa [opts]
   nil)

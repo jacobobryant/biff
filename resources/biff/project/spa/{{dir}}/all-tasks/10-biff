@@ -16,7 +16,9 @@ init () {
     npm install --save-dev shadow-cljs tailwindcss onchange
   fi
   build-css-dev
-  #(cd infra; terraform init)
+  (cd infra; terraform init)
+  echo
+  echo Initialization complete.
 }
 
 dev () {
