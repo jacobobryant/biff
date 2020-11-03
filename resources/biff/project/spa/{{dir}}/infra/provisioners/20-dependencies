@@ -1,0 +1,13 @@
+# Managed by Biff
+apt-get -y upgrade
+apt-get -y install nginx default-jre
+snap install core
+snap refresh core
+snap install --classic certbot
+ln -s /snap/bin/certbot /usr/bin/certbot
+
+CLJ_VERSION=1.10.1.727
+curl -O https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh
+chmod +x linux-install-$CLJ_VERSION.sh
+./linux-install-$CLJ_VERSION.sh
+rm linux-install-$CLJ_VERSION.sh

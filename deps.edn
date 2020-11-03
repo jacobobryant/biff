@@ -21,5 +21,6 @@
   ring/ring-core {:mvn/version "1.8.0"}
   ring/ring-defaults {:mvn/version "0.3.2"}
   rum/rum {:mvn/version "0.11.5"}
+  selmer/selmer {:mvn/version "1.12.23"}
   trident/jwt {:mvn/version "0.3.2"}
   trident/util {:mvn/version "0.3.2"}}}

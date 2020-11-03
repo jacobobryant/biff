@@ -1,0 +1,183 @@
+#!/bin/bash
+# Managed by Biff. Don't edit this file. Edit other files in all-tasks instead.
+
+# === DEV ===
+
+build-css-dev () {
+  npx tailwindcss build tailwind.css -o www-dev/css/main.css
+}
+
+init () {
+  if [ -f package.json ]; then
+    npm install
+  else
+    npm init -y
+    npm install --save react react-dom
+    npm install --save-dev shadow-cljs tailwindcss onchange
+  fi
+  build-css-dev
+  #(cd infra; terraform init)
+}
+
+dev () {
+  npx onchange tailwind.css -- ./task build-css-dev &
+  BIFF_ENV=dev clj -A:cljs "$@" -M -m $MAIN_NS
+}
+
+
+# === BUILD ===
+
+current-image-id () {
+  curl -X GET -H 'Content-Type: application/json' \
+              -H "Authorization: Bearer $DIGITALOCEAN_API_KEY" \
+              "https://api.digitalocean.com/v2/images?private=true" \
+    | node -e "
+    var stdin = process.stdin,
+        inputChunks = [];
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    stdin.on('data', function (chunk) {
+        inputChunks.push(chunk);
+    });
+    stdin.on('end', function () {
+        var imageId = JSON.parse(inputChunks.join(''))
+                          .images
+                          .filter(x => x.name === 'biff-webserver')
+                          .sort((x, y) => (x.created_at < y.created_at) ? 1 : -1)[0]
+                          .id;
+        console.log(imageId);
+    });"
+}
+
+build-image () {
+  cat > infra/provisioners/00-config << EOD
+# Managed by Biff
+export MAIN_NS="$MAIN_NS"
+export AUTHORIZED_KEYS="$AUTHORIZED_KEYS"
+export HOST="$HOST"
+export LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
+export GIT_URL="$GIT_URL"
+EOD
+  (cd infra; packer build webserver.json)
+  sed -i "s/.*IMAGE_ID.*/export IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
+}
+
+build-css () {
+  NODE_ENV=production npx tailwindcss build tailwind.css -o resources/www/css/main.css
+}
+
+build-cljs () {
+  npx shadow-cljs release $CLJS_APPS
+  for app in $CLJS_APPS; do
+    mkdir -p resources/www/cljs/$app
+    cp {www-dev,resources/www}/cljs/$app/main.js
+  done
+}
+
+build-assets () {
+  css-prod
+  build-cljs
+}
+
+
+# === DEPLOY ===
+
+tf () {
+  export TF_VAR_digitalocean_api_key="${DIGITALOCEAN_API_KEY}"
+  export TF_VAR_deploy_key="${DEPLOY_KEY}"
+  export TF_VAR_image_id="${IMAGE_ID}"
+  (cd infra; terraform "$@")
+}
+
+deploy () {
+  if ! (git status | grep -q "nothing to commit"); then
+    echo You have uncommitted files. You must commit and push before deploying.
+    exit 1
+  fi
+  echo Updating config...
+  scp config/main.edn root@$HOST:/home/biff/config/main.edn
+  echo Deploying app...
+  ssh root@$HOST systemctl restart biff
+  echo Watching logs. Hit Ctrl-C to exit.
+  ssh root@$HOST journalctl -u biff -f
+}
+
+
+# === MONITOR ===
+
+prod-connect () {
+  ssh -NL 7800:localhost:7888 root@$HOST
+}
+
+logs () {
+  ssh root@$HOST journalctl -u biff -f -n 300
+}
+
+
+# === OTHER ===
+
+help () {
+  cat <<EOD
+DEVELOP
+
+./task init
+
+  Run this if you just created this project or if you just cloned this project
+  on a new machine.
+
+./task dev
+
+  Starts your app. After you see "System started", go to localhost:9630 and go
+  to "Builds" -> "start watch". Then go to localhost:8080. Connect your editor
+  to nrepl on port 7888. Changes to tailwind.css will be applied whenever you
+  save the file.
+
+BUILD
+
+./task build-image
+
+  Builds a VM image with Packer. Do this at least once before deploying.
+  Use \`./task tf apply\` to deploy the new image.
+
+./task build-assets
+
+  Compiles your CSS and ClojureScript for production. Run this before each
+  deploy (unless you didn't change anything). For now, commit and push
+  the output (I'll add CI support later).
+
+DEPLOY
+
+./task tf [command]
+
+  Runs \`terraform [command]\` with needed environment variables set. Use
+  \`./task tf apply\` to deploy infrastructure changes. The first time you run
+  this, it will also deploy your app. Use \`./task tf plan\` to do a dry run.
+
+  If you've already created infrastructure before using Terraform,
+  you may need to use \`./task tf import\`. See
+  https://www.terraform.io/docs/import/usage.html.
+
+./task deploy
+
+  Restarts your app in production using the latest pushed commit.
+
+MONITOR
+
+./task prod-connect
+
+  Starts an SSH tunnel. Connect nrepl to port 7800 to eval code in production.
+  (Be careful).
+
+./task logs
+
+  Watches the production logs, starting with the last 300 lines.
+
+---
+
+Tip: put \`alias t=./task\` in your .bashrc file.
+
+See https://findka.com/biff for reference documentation. For additional help,
+join #biff on Clojurians Slack (http://clojurians.net) or send me an email
+(tmp.2020@jacobobryant.com).
+EOD
+}

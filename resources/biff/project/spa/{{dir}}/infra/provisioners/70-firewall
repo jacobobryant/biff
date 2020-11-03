@@ -1,0 +1,4 @@
+# Managed by Biff
+ufw allow "Nginx Full"
+ufw allow OpenSSH
+ufw enable

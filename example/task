@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-HOST="example.com"
-
 setup () {
   which clj npm > /dev/null # Assert dependencies
   npm install # Or `npm init; npm install --save-dev shadow-cljs; npm install --save react react-dom`
@@ -17,10 +15,6 @@ compile-cljs () {
   npx shadow-cljs release $CLJS_APPS
   mkdir -p resources/www/cljs/app
   cp {www-dev,resources/www}/cljs/app/main.js
-}
-
-push-config () {
-  scp config.edn root@$HOST:/home/biff/prod/
 }
 
 "$@"

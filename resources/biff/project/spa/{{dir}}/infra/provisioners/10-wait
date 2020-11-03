@@ -1,0 +1,6 @@
+# Managed by Biff
+sleep 30
+echo waiting for apt to finish
+while (ps aux | grep [a]pt); do
+  sleep 5
+done

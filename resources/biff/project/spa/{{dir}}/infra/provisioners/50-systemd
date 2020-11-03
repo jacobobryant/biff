@@ -1,0 +1,17 @@
+# Managed by Biff
+cat > /etc/systemd/system/biff.service << EOD
+[Unit]
+Description=Biff
+
+[Service]
+ExecStart=/home/biff/run-as-root.sh
+
+[Install]
+WantedBy=multi-user.target
+EOD
+systemctl enable biff
+cat > /etc/systemd/journald.conf << EOD
+[Journal]
+Storage=persistent
+EOD
+systemctl restart systemd-journald

@@ -1,0 +1,5 @@
+# Put custom tasks in this file.
+
+foo () {
+  echo running task foo.
+}

@@ -1,0 +1,9 @@
+{:deps {:aliases [:cljs]}
+ :nrepl {:port 7888}
+ :builds {:app {:target :browser
+                :output-dir "www-dev/cljs/app"
+                :asset-path "/cljs/app"
+                :compiler-options {:infer-externs :auto}
+                :modules {:main {:init-fn {{parent-ns}}.client.app/init
+                                 :entries [{{parent-ns}}.client.app]}}
+                :devtools {:after-load {{parent-ns}}.client.app/mount}}}}

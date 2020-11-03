@@ -44,7 +44,7 @@
 
 (defn init [sys]
   (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-        config (some-> "config.edn"
+        config (some-> "config/main.edn"
                  u/maybe-slurp
                  edn/read-string
                  (u/merge-config env))

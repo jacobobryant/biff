@@ -252,7 +252,7 @@
             [binding-clauses constant-clauses] (u/split-by (comp symbol? second) attr-clauses)
             {:keys [args fail]} (reduce (fn [{:keys [args fail]} [attr sym]]
                                           (let [value (get doc attr)]
-                                            {:args (assoc args attr value)
+                                            {:args (assoc args sym value)
                                              :fail (or fail
                                                      (not (contains? doc attr))
                                                      (and
@@ -274,6 +274,10 @@
                          (not (apply (resolve-fn (condp = f
                                                    '== `crux==
                                                    '!= `crux!=
+                                                   '< `u/compare<
+                                                   '<= `u/compare<=
+                                                   '> `u/compare>
+                                                   '>= `u/compare>=
                                                    f)) params))))
                fail
                rule-clauses)))))
@@ -427,9 +431,9 @@
   (let [generated-id (nil? id)
         merge-update (or merge-doc update-doc)
         id' (or id (java.util.UUID/randomUUID))
-        old-doc (crux/entity db id')
+        doc-before (crux/entity db id')
         doc' (cond->> doc
-               merge-update (merge old-doc))
+               merge-update (merge doc-before))
         doc'' (when (some? doc')
                 (->>
                   (when (map? id') (keys id'))
@@ -439,7 +443,7 @@
                   (map (fn [[k v]]
                          [k (if (and (vector? v) (#{:db/union :db/disj} (first v)))
                               (let [[op x] v
-                                    old-xs (get old-doc k)]
+                                    old-xs (get doc-before k)]
                                 (case op
                                   :db/union ((fnil conj #{}) old-xs x)
                                   :db/disj ((fnil disj #{}) old-xs x)))
@@ -451,7 +455,7 @@
         :doc doc
         :ident [table id])
 
-      (and update-doc (nil? old-doc))
+      (and update-doc (nil? doc-before))
       (u/anom :incorrect "Attempted to update on a new document."
         :doc doc
         :ident [table id'])
@@ -469,12 +473,12 @@
       [[table id'] {:table table
                     :id id'
                     :generated-id generated-id
-                    :old-doc old-doc
+                    :doc-before doc-before
                     :doc (cond-> (assoc doc'' :crux.db/id id')
                            (map? id') (merge id'))
                     :op (cond
                           (nil? doc'') :delete
-                          (nil? old-doc) :create
+                          (nil? doc-before) :create
                           :default :update)}])))
 
 (defn authorize-write [{:keys [biff/rules admin] :as env}
@@ -504,7 +508,7 @@
                  tx (into {} tx*)
                  env (assoc env :tx tx :current-time current-time)
                  auth-result (mapv #(authorize-write env (second %)) tx)
-                 crux-tx (u/forv [{:keys [op old-doc doc id]} auth-result]
+                 crux-tx (u/forv [{:keys [op doc id]} auth-result]
                            (cond
                              (= op :delete) [:crux.tx/delete id]
                              :default       [:crux.tx/put doc]))]

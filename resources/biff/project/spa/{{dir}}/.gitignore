@@ -1,0 +1,6 @@
+config/
+www
+www-dev
+.cpcache
+node_modules
+data
