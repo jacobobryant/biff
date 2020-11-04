@@ -4,6 +4,7 @@
     [biff.crux :as bcrux]
     [biff.http :as http]
     [biff.rules :as rules]
+    [biff.util :as bu]
     [byte-transforms :as bt]
     [clojure.core.async :as async]
     [clojure.edn :as edn]
@@ -13,17 +14,17 @@
     [clojure.string :as str]
     [crux.api :as crux]
     [expound.alpha :as expound]
-    [immutant.web :as imm]
     [nrepl.server :as nrepl]
     [orchestra.spec.test :as st]
+    [ring.adapter.jetty9 :as jetty]
     [ring.middleware.anti-forgery :as anti-forgery]
     [ring.middleware.session.cookie :as cookie]
     [rum.core :as rum]
     [taoensso.sente :as sente]
-    [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]
-    [taoensso.timbre :as timbre]
-    [trident.util :as u])
-  (:import [java.nio.file Paths]))
+    [taoensso.sente.server-adapters.jetty9 :refer [get-sch-adapter]]
+    [taoensso.timbre :as timbre])
+  (:import
+    [java.nio.file Paths]))
 
 (defn wrap-env [handler {:keys [biff/node] :as sys}]
   (comp handler
@@ -31,29 +32,28 @@
       (let [req (:ring-req event-or-request event-or-request)]
         (-> (merge sys event-or-request)
           (assoc :biff/db (crux/db node))
-          (merge (u/prepend-keys "session" (get req :session)))
-          (merge (u/prepend-keys "params" (get req :params))))))))
+          (merge (bu/prepend-keys "session" (get req :session)))
+          (merge (bu/prepend-keys "params" (get req :params))))))))
 
-(defn concrete [x]
-  (cond
-    (var? x) @x
-    (fn? x) (x)
-    :default x))
+(defn merge-config [config env]
+  (let [env-order (concat (get-in config [env :inherit]) [env])]
+    (apply merge (map config env-order))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn init [sys]
   (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-        config (some-> "config/main.edn"
-                 u/maybe-slurp
-                 edn/read-string
-                 (u/merge-config env))
+        config (bu/catchall
+                 (-> "config/main.edn"
+                   slurp
+                   edn/read-string
+                   (merge-config env)))
         {:biff/keys [first-start dev]
          :biff.init/keys [start-nrepl nrepl-port instrument timbre start-shadow]
          :or {start-nrepl true nrepl-port 7888 timbre true}
          :as sys} (merge sys config)]
     (when timbre
-      (timbre/merge-config! (u/select-ns-as sys 'timbre nil)))
+      (timbre/merge-config! (bu/select-ns-as sys 'timbre nil)))
     (when instrument
       (s/check-asserts true)
       (st/instrument))
@@ -88,10 +88,11 @@
        :biff.static/root root
        :biff.static/resource-root "www"
        :biff.handler/secure-defaults true
-       :biff.handler/not-found-path (str root "/404.html")}
+       :biff.handler/not-found-path (str root "/404.html")
+       :biff.handler/spa-path (str root "/app/index.html")}
       sys
-      {:biff/rules #(rules/expand-ops (merge (concrete rules) rules/rules))
-       :biff/triggers #(rules/expand-ops (concrete triggers))
+      {:biff/rules #(rules/expand-ops (merge (bu/concrete rules) rules/rules))
+       :biff/triggers #(rules/expand-ops (bu/concrete triggers))
        :biff.handler/roots (if root-dev
                              [root-dev root]
                              [root])
@@ -104,7 +105,7 @@
 
 (defn start-crux [sys]
   (let [opts (-> sys
-               (u/select-ns-as 'biff.crux 'crux)
+               (bu/select-ns-as 'biff.crux 'crux)
                (set/rename-keys {:crux/topology :topology
                                  :crux/storage-dir :storage-dir}))
         node (bcrux/start-node opts)]
@@ -146,7 +147,7 @@
         subscriptions (atom {})
         sys (assoc sys :biff.crux/subscriptions subscriptions)
         notify-tx-opts (-> sys
-                         (merge (u/select-ns-as sys 'biff nil))
+                         (merge (bu/select-ns-as sys 'biff nil))
                          (assoc :last-tx-id last-tx-id))
         listener (crux/listen node {:crux/event-type :crux/indexed-tx}
                    (fn [ev] (bcrux/notify-tx notify-tx-opts)))]
@@ -159,12 +160,12 @@
 
 (defn wrap-event-handler [handler]
   (fn [{:keys [?reply-fn] :as event}]
-    (u/fix-stdout
+    (bu/fix-stdout
       (let [response (try
                        (handler event)
                        (catch Exception e
                          (.printStackTrace e)
-                         (u/anom :fault)))]
+                         (bu/anom :fault)))]
         (when ?reply-fn
           (?reply-fn response))))))
 
@@ -242,5 +243,10 @@
   (let [host (if dev
                "0.0.0.0"
                host)
-        server (imm/run handler {:host host :port port})]
-    (update sys :sys/stop conj #(imm/stop server))))
+        server (jetty/run-jetty handler
+                 {:host host
+                  :port port
+                  :join? false
+                  :websockets {"/api/chsk" handler}
+                  :allow-null-path-info true})]
+    (update sys :sys/stop conj #(jetty/stop-server server))))

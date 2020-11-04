@@ -15,7 +15,7 @@
 (defn ^:export init []
   (reset! s/system
     (bc/init-sub {:handler m/api
-                  :sub-data db/sub-data
+                  :sub-results db/sub-results
                   :subscriptions db/subscriptions}))
   (rfe/start!
     (rf/router c/routes)

@@ -1,5 +1,6 @@
 (ns biff.http
   (:require
+    [biff.util :as bu]
     [clojure.java.io :as io]
     [clojure.string :as str]
     [muuntaja.middleware :as muuntaja]
@@ -10,8 +11,7 @@
     [ring.util.codec :as codec]
     [ring.util.io :as rio]
     [ring.util.request :as request]
-    [ring.util.time :as rtime]
-    [trident.util :as u]))
+    [ring.util.time :as rtime]))
 
 (defn wrap-authorize [handler]
   (anti-forgery/wrap-anti-forgery
@@ -25,10 +25,10 @@
 (defn file-response [req file]
   (when (.isFile file)
     (head/head-response
-      (u/assoc-some
+      (bu/assoc-some
         {:body file
          :status 200
-         :headers/Content-Length (.length file)
+         :headers/Content-Length (str (.length file))
          :headers/Last-Modified (rtime/format-date (rio/last-modified-date file))}
         :headers/Content-Type (when (str/ends-with? (.getPath file) ".html")
                                 "text/html"))
@@ -49,7 +49,7 @@
       (when resp
         (-> {:body "" :status 200}
           (merge resp)
-          (u/nest-string-keys [:headers :cookies]))))))
+          (bu/nest-string-keys [:headers :cookies]))))))
 
 (defn make-handler [{:keys [session-store secure-defaults roots
                             not-found-path spa-path routes default-routes]}]

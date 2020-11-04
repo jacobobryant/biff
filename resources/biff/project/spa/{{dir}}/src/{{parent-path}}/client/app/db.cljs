@@ -5,12 +5,12 @@
 ; See https://findka.com/biff/#subscriptions
 
 ; Same as (do
-;           (def sub-data (atom {}))
+;           (def sub-results (atom {}))
 ;           (def message-cutoff (atom (js/Date.)))
 ;           ...)
 (br/defatoms
-  ; sub-data contains a map of query->table->id->doc.
-  sub-data {}
+  ; sub-results contains a map of query->table->id->doc.
+  sub-results {}
   message-cutoff (js/Date.)
   route {})
 
@@ -19,8 +19,8 @@
 ; the change to take effect.
 (br/defderivations
   ; data is an atom that contains a map of table->id->doc. It will be updated
-  ; whenever sub-data changes.
-  data (apply merge-with merge (vals @sub-data))
+  ; whenever sub-results changes.
+  data (apply merge-with merge (vals @sub-results))
 
   ; :uid is a singleton, so the document ID is nil.
   uid (get-in @data [:uid nil :uid])

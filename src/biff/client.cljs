@@ -2,14 +2,14 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
-    [sablono.util]
+    [biff.util :as bu]
+    [cljs.core.async :as async :refer [close! <! >! take! put! chan promise-chan mult tap]]
+    [clojure.set :as set]
     [clojure.spec.alpha :as s]
     [goog.net.Cookies]
-    [cemerick.url :as url]
-    [taoensso.sente :as sente]
-    [cljs.core.async :as async :refer [close! <! >! take! put! chan promise-chan mult tap]]
-    [trident.util :as u]
-    [clojure.set :as set]))
+    [lambdaisland.uri :as uri]
+    [sablono.util]
+    [taoensso.sente :as sente]))
 
 (defn wrap-api-send [api-send ready-pr]
   (fn [event]
@@ -18,8 +18,8 @@
         (fn []
           (api-send event 5000
             (fn [response]
-              (when (u/anomaly? response)
-                (u/pprint response))
+              (when (bu/anomaly? response)
+                (bu/pprint response))
               (put! ch (if response response ::no-response))))))
       ch)))
 
@@ -91,7 +91,7 @@
                             (<! (async/map vector (map sub-fn new-subs))))]
         (swap! sub->unsub-fn merge (zipmap new-subs new-unsub-fns))
         (doseq [f (map @sub->unsub-fn old-subs)]
-          (if (u/chan? f)
+          (if (bu/chan? f)
             (close! f)
             (f)))
         (swap! sub->unsub-fn #(apply dissoc % old-subs)))
@@ -100,21 +100,21 @@
     (watch nil nil #{} @sub-atom)))
 
 (defn merge-subscription-results!
-  "Continually merge results from subscription into sub-data-atom. Returns a channel
+  "Continually merge results from subscription into sub-results-atom. Returns a channel
   that delivers sub-channel after the first result has been merged."
-  [{:keys [sub-data-atom merge-result sub-key sub-channel]}]
+  [{:keys [sub-results-atom merge-result sub-key sub-channel]}]
   (go
-    (let [merge! #(swap! sub-data-atom update sub-key merge-result %)]
+    (let [merge! #(swap! sub-results-atom update sub-key merge-result %)]
       (merge! (<! sub-channel))
       (go-loop []
         (if-some [result (<! sub-channel)]
           (do
             (merge! result)
             (recur))
-          (swap! sub-data-atom dissoc sub-key)))
+          (swap! sub-results-atom dissoc sub-key)))
       sub-channel)))
 
-(defn init-sub [{:keys [verbose sub-data subscriptions handler url]
+(defn init-sub [{:keys [verbose sub-results subscriptions handler url]
                  :or {url "/api/chsk"
                       handler (constantly nil)}}]
   (let [sub-channels (atom {})
@@ -127,23 +127,23 @@
         (let [ch (chan)
               merge-changeset' (if verbose
                                  (fn [db changeset]
-                                   (u/pprint [:got-query-results [provider query] changeset])
+                                   (bu/pprint [:got-query-results [provider query] changeset])
                                    (merge-changeset db changeset))
                                  merge-changeset)]
           (when verbose
-            (u/pprint [:subscribed-to [provider query]]))
+            (bu/pprint [:subscribed-to [provider query]]))
           (swap! sub-channels assoc-in [provider query] ch)
           (api-send [provider {:action :subscribe
                                :query query}])
           (go
             (<! (merge-subscription-results!
-                  {:sub-data-atom sub-data
+                  {:sub-results-atom sub-results
                    :merge-result merge-changeset'
                    :sub-key [provider query]
                    :sub-channel ch}))
             (fn []
               (when verbose
-                (u/pprint [:unsubscribed-to [provider query]]))
+                (bu/pprint [:unsubscribed-to [provider query]]))
               (swap! sub-channels update provider dissoc query)
               (close! ch)
               (api-send [provider {:action :unsubscribe

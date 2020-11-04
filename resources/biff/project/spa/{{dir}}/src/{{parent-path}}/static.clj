@@ -62,8 +62,8 @@
    "/app/" app
    "/404.html" not-found})
 
-; To update static files, delete the #_ and then eval this namespace.
-; (Don't forget to put the #_ back)
+; To update static files in development, delete the #_ and then eval this
+; namespace. (Don't forget to put the #_ back when you're done).
 #_(do
     (biff.components/write-static-resources
       (assoc @biff.core/system :biff/static-pages pages))

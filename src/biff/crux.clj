@@ -1,6 +1,7 @@
 (ns biff.crux
   (:require
     [biff.protocols :as proto]
+    [biff.util :as bu]
     [clojure.core.async :refer [go <!!]]
     [clojure.java.io :as io]
     [clojure.set :as set]
@@ -8,19 +9,7 @@
     [clojure.walk :as walk]
     [crux.api :as crux]
     [expound.alpha :as expound]
-    [taoensso.timbre :refer [log spy]]
-    [trident.util :as u]))
-
-(defn concrete [x]
-  (cond
-    (var? x) @x
-    (fn? x) (x)
-    :default x))
-
-(defn dissoc-clean [m k1 k2]
-  (let [m (update m k1 dissoc k2)]
-    (cond-> m
-      (empty? (get m k1)) (dissoc k1))))
+    [taoensso.timbre :refer [log spy]]))
 
 (defn tx-log* [{:keys [node after-tx with-ops]
                 :or {after-tx nil with-ops false}}]
@@ -51,7 +40,7 @@
 (defn normalize-query [{:keys [table where args id] :as query}]
   (if (some? id)
     {:id id}
-    (u/assoc-some
+    (bu/assoc-some
       {:where where}
       :args (dissoc args 'doc))))
 
@@ -61,7 +50,7 @@
     (not (map? x))))
 
 (defn crux== [& args]
-  (let [[colls xs] (u/split-by coll-not-map? args)
+  (let [[colls xs] (bu/split-by coll-not-map? args)
         sets (map set colls)]
     (if (empty? xs)
       (not-empty (apply set/intersection sets))
@@ -93,7 +82,7 @@
 
                  :jdbc
                  {:crux.jdbc/connection-pool {:dialect {:crux/module 'crux.jdbc.psql/->dialect}
-                                              :db-spec (u/select-ns-as opts 'crux.jdbc nil)}
+                                              :db-spec (bu/select-ns-as opts 'crux.jdbc nil)}
                   :crux/tx-log {:crux/module 'crux.jdbc/->tx-log
                                 :connection-pool :crux.jdbc/connection-pool}
                   :crux/document-store {:crux/module 'crux.jdbc/->document-store
@@ -102,7 +91,7 @@
     (crux/sync node)
     node))
 
-(u/sdefs
+(bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
   ::tx (s/coll-of (s/tuple ::ident (s/nilable map?))))
 
@@ -127,7 +116,7 @@
   (let [query-type (if (contains? query :id)
                      :get
                      :query)
-        rules (concrete rules)
+        rules (bu/concrete rules)
         auth-fn (get-in rules [table query-type])
         specs (get-in rules [table :spec])
         anom-message (cond
@@ -137,9 +126,9 @@
                                          :db-client db-client
                                          :specs specs
                                          :doc doc})) "Doc doesn't meet specs."
-                       (not (u/catchall (auth-fn env))) "Doc rejected by auth fn.")]
+                       (not (bu/catchall (auth-fn env))) "Doc rejected by auth fn.")]
     (if anom-message
-      (u/anom :forbidden anom-message
+      (bu/anom :forbidden anom-message
         :norm-query query
         :table table)
       doc)))
@@ -191,28 +180,33 @@
                                           :query query
                                           :doc %}
                                          (proto/batch->auth-fn-opts db-client batch))))
-                               (filter u/anomaly?)
+                               (filter bu/anomaly?)
                                first)
-                ident->doc (u/map-keys #(vector table %) id->doc)]]
+                ident->doc (bu/map-keys #(vector table %) id->doc)]]
       {:auth-anomaly auth-anomaly
        :client-id client-id
        :query (assoc query :table table)
        :event-id event-id
        :ident->doc ident->doc})))
 
+(defn dissoc-cascade [m k1 k2]
+  (let [m (update m k1 dissoc k2)]
+    (cond-> m
+      (empty? (get m k1)) (dissoc k1))))
+
 (defn notify-tx* [{:biff/keys [send-event db-client]
                    :keys [biff.crux/subscriptions] :as env}]
   (when-some [batch (proto/get-batch! db-client env)]
-    (future (u/fix-stdout (run-triggers (assoc env :batch batch))))
+    (future (bu/fix-stdout (run-triggers (assoc env :batch batch))))
     (doseq [{:keys [auth-anomaly client-id query event-id ident->doc]}
             (client-results (assoc env
                               :subscriptions @subscriptions
                               :batch batch))]
       (if (some? auth-anomaly)
         (do
-          (u/pprint auth-anomaly)
-          (swap! subscriptions dissoc-clean client-id query)
-          (send-event client-id [:biff/error (u/anom
+          (bu/pprint auth-anomaly)
+          (swap! subscriptions dissoc-cascade client-id query)
+          (send-event client-id [:biff/error (bu/anom
                                                :forbidden "Query not allowed."
                                                :query query)]))
         (send-event client-id [event-id {:query query
@@ -248,8 +242,8 @@
       (= id (:crux.db/id doc))
       (let [args (assoc args 'doc (:crux.db/id doc))
             where (walk/postwalk #(get args % %) where)
-            [attr-clauses rule-clauses] (u/split-by (comp keyword? first) where)
-            [binding-clauses constant-clauses] (u/split-by (comp symbol? second) attr-clauses)
+            [attr-clauses rule-clauses] (bu/split-by (comp keyword? first) where)
+            [binding-clauses constant-clauses] (bu/split-by (comp symbol? second) attr-clauses)
             {:keys [args fail]} (reduce (fn [{:keys [args fail]} [attr sym]]
                                           (let [value (get doc attr)]
                                             {:args (assoc args sym value)
@@ -274,10 +268,10 @@
                          (not (apply (resolve-fn (condp = f
                                                    '== `crux==
                                                    '!= `crux!=
-                                                   '< `u/compare<
-                                                   '<= `u/compare<=
-                                                   '> `u/compare>
-                                                   '>= `u/compare>=
+                                                   '< `bu/compare<
+                                                   '<= `bu/compare<=
+                                                   '> `bu/compare>
+                                                   '>= `bu/compare>=
                                                    f)) params))))
                fail
                rule-clauses)))))
@@ -293,9 +287,9 @@
                          (nil? doc) :delete
                          (nil? doc-before) :create
                          :default :update)]
-          [table op->fn] (concrete triggers)
+          [table op->fn] (bu/concrete triggers)
           [trigger-op f] op->fn
-          :let [specs (get-in (concrete rules) [table :spec])]
+          :let [specs (get-in (bu/concrete rules) [table :spec])]
           :when (and (= trigger-op doc-op)
                   (some #(doc-valid? {:specs specs
                                       :db-client db-client
@@ -322,17 +316,17 @@
   [{:keys [biff/db biff/fn-whitelist session/uid] event-id :id} {:keys [table] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
         {:keys [where id args] :as norm-query} (normalize-query query)]
-    (u/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
-                 crux-query (cond->
-                              {:find '[doc]
-                               :where (mapv #(cond->> %
-                                               (attr-clause? %) (into ['doc]))
-                                        where)}
-                              args (assoc :args [args]))]
+    (bu/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
+                  crux-query (cond->
+                               {:find '[doc]
+                                :where (mapv #(cond->> %
+                                                (attr-clause? %) (into ['doc]))
+                                         where)}
+                               args (assoc :args [args]))]
       (cond
-        (not= query (assoc norm-query :table table)) (u/anom :incorrect "Invalid query format."
+        (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
                                                        :query query)
-        (not fns-authorized) (u/anom :forbidden "Function call not allowed."
+        (not fns-authorized) (bu/anom :forbidden "Function call not allowed."
                                :query query)
         :default {:norm-query norm-query
                   :query-info {:table table
@@ -344,34 +338,34 @@
   [{:keys [biff/db biff/fn-whitelist session/uid] event-id :id :as env} {:keys [table] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
         {:keys [where id args] :as norm-query} (normalize-query query)]
-    (u/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
-                 crux-query (cond->
-                              {:find '[doc]
-                               :where (mapv #(cond->> %
-                                               (attr-clause? %) (into ['doc]))
-                                        where)}
-                              args (assoc :args [args]))
-                 docs (if (some? id)
-                        (some-> (crux/entity db id) vector)
-                        (map #(crux/entity db (first %))
-                          (crux/q db crux-query)))
-                 authorize-anom (->> docs
-                                  (map #(->> {:doc %
-                                              :table table
-                                              :biff/db-client (CruxClient.)
-                                              :query norm-query}
-                                          (merge env)
-                                          authorize-read))
-                                  (filter u/anomaly?)
-                                  first)
-                 changeset (u/map-from
-                             (fn [{:crux.db/keys [id]}]
-                               [table id])
-                             docs)]
+    (bu/letdelay [fns-authorized (every? #(or (attr-clause? %) (fn-whitelist (ffirst %))) where)
+                  crux-query (cond->
+                               {:find '[doc]
+                                :where (mapv #(cond->> %
+                                                (attr-clause? %) (into ['doc]))
+                                         where)}
+                               args (assoc :args [args]))
+                  docs (if (some? id)
+                         (some-> (crux/entity db id) vector)
+                         (map #(crux/entity db (first %))
+                           (crux/q db crux-query)))
+                  authorize-anom (->> docs
+                                   (map #(->> {:doc %
+                                               :table table
+                                               :biff/db-client (CruxClient.)
+                                               :query norm-query}
+                                           (merge env)
+                                           authorize-read))
+                                   (filter bu/anomaly?)
+                                   first)
+                  changeset (bu/map-from
+                              (fn [{:crux.db/keys [id]}]
+                                [table id])
+                              docs)]
       (cond
-        (not= query (assoc norm-query :table table)) (u/anom :incorrect "Invalid query format."
+        (not= query (assoc norm-query :table table)) (bu/anom :incorrect "Invalid query format."
                                                        :query query)
-        (not fns-authorized) (u/anom :forbidden "Function call not allowed."
+        (not fns-authorized) (bu/anom :forbidden "Function call not allowed."
                                :query query)
         authorize-anom authorize-anom
         :default {:norm-query norm-query
@@ -384,7 +378,7 @@
 (defn crux-subscribe!
   [{:keys [biff/send-event biff.crux/subscriptions client-id id] :as env} query]
   (let [{:keys [norm-query query-info sub-data] :as result} (crux-subscribe* env query)]
-    (if-not (u/anomaly? result)
+    (if-not (bu/anomaly? result)
       (do
         (send-event client-id [id sub-data])
         (swap! subscriptions assoc-in [client-id norm-query] query-info))
@@ -394,7 +388,7 @@
   [{:keys [biff.crux/subscriptions session/uid client-id id] :as env}
    {:keys [table] :as query}]
   (let [{:keys [norm-query query-info] :as result} (crux-resubscribe* env query)]
-    (if-not (u/anomaly? result)
+    (if-not (bu/anomaly? result)
       (swap! subscriptions assoc-in [client-id norm-query] query-info)
       result)))
 
@@ -420,8 +414,8 @@
                      (= action :subscribe) (crux-subscribe! env query)
                      (= action :unsubscribe) (crux-unsubscribe! env query)
                      (= action :resubscribe) (crux-resubscribe! env query)
-                     :default (u/anom :incorrect "Invalid action." :action action))]
-        (when (u/anomaly? result)
+                     :default (bu/anom :incorrect "Invalid action." :action action))]
+        (when (bu/anomaly? result)
           result)))))
 
 ; ==============================================================================
@@ -451,21 +445,21 @@
                   (into {})))]
     (cond
       (and generated-id merge-update)
-      (u/anom :incorrect "Attempted to merge or update on a new document."
+      (bu/anom :incorrect "Attempted to merge or update on a new document."
         :doc doc
         :ident [table id])
 
       (and update-doc (nil? doc-before))
-      (u/anom :incorrect "Attempted to update on a new document."
+      (bu/anom :incorrect "Attempted to update on a new document."
         :doc doc
         :ident [table id'])
 
       (and (some? doc'')
         (some not
           (map s/valid?
-            (get-in (concrete rules) [table :spec])
+            (get-in (bu/concrete rules) [table :spec])
             [id' doc''])))
-      (u/anom :incorrect "Document doesn't meet spec."
+      (bu/anom :incorrect "Document doesn't meet spec."
         :doc doc
         :ident [table id'])
 
@@ -485,10 +479,10 @@
                        {:keys [table op] :as doc-tx-data}]
   (if admin
     doc-tx-data
-    (u/letdelay [auth-fn (get-in (concrete rules) [table op])
-                 result (auth-fn (merge env doc-tx-data))
-                 anom-fn #(merge (u/anom :forbidden %)
-                            (select-keys doc-tx-data [:table :id]))]
+    (bu/letdelay [auth-fn (get-in (bu/concrete rules) [table op])
+                  result (auth-fn (merge env doc-tx-data))
+                  anom-fn #(merge (bu/anom :forbidden %)
+                             (select-keys doc-tx-data [:table :id]))]
       (cond
         (nil? auth-fn) (anom-fn "No auth function.")
         (not result) (anom-fn "Document rejected by auth fn.")
@@ -497,24 +491,25 @@
 (defn authorize-tx [{:keys [tx current-time] :as env
                      :or {current-time (java.util.Date.)}}]
   (if-not (s/valid? ::tx tx)
-    (u/anom :incorrect "Invalid transaction shape."
+    (bu/anom :incorrect "Invalid transaction shape."
       :tx tx)
-    (u/letdelay [tx* (->> tx
-                       (walk/postwalk
-                         #(case %
-                            :db/current-time current-time
-                            %))
-                       (map #(prep-doc env %)))
-                 tx (into {} tx*)
-                 env (assoc env :tx tx :current-time current-time)
-                 auth-result (mapv #(authorize-write env (second %)) tx)
-                 crux-tx (u/forv [{:keys [op doc id]} auth-result]
-                           (cond
-                             (= op :delete) [:crux.tx/delete id]
-                             :default       [:crux.tx/put doc]))]
+    (bu/letdelay [tx* (->> tx
+                        (walk/postwalk
+                          #(case %
+                             :db/current-time current-time
+                             %))
+                        (map #(prep-doc env %)))
+                  tx (into {} tx*)
+                  env (assoc env :tx tx :current-time current-time)
+                  auth-result (mapv #(authorize-write env (second %)) tx)
+                  crux-tx (vec
+                            (for [{:keys [op doc id]} auth-result]
+                              (cond
+                                (= op :delete) [:crux.tx/delete id]
+                                :default       [:crux.tx/put doc])))]
       (or
-        (first (filter u/anomaly? tx*))
-        (first (filter u/anomaly? auth-result))
+        (first (filter bu/anomaly? tx*))
+        (first (filter bu/anomaly? auth-result))
         crux-tx))))
 
 (defn wrap-tx [handler]
@@ -522,7 +517,7 @@
     (if (not= id :biff/tx)
       (handler env)
       (let [tx (authorize-tx (set/rename-keys env {:?data :tx}))]
-        (if (u/anomaly? tx)
+        (if (bu/anomaly? tx)
           tx
           (crux/submit-tx node tx))))))
 
@@ -533,7 +528,7 @@
                           :biff/db (or db (crux/db node))
                           :biff/rules rules
                           :admin true})]
-    (when (u/anomaly? tx)
-      (u/pprint tx)
+    (when (bu/anomaly? tx)
+      (bu/pprint tx)
       (throw (ex-info "Invalid transaction." tx)))
     (crux/submit-tx node tx)))

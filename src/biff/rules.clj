@@ -1,9 +1,9 @@
 (ns biff.rules
   (:require
-    [trident.util :as u]))
+    [biff.util :as bu]))
 
 (defn expand-ops [rules]
-  (u/map-vals
+  (bu/map-vals
     (fn [table-rules]
       (into {}
         (for [[k v] table-rules
@@ -36,10 +36,10 @@
 (defn authenticated? [{:session/keys [uid]}]
   (some? uid))
 
-(u/sdefs
+(bu/sdefs
   ::jwt-key string?
   ::cookie-key string?
-  :biff/auth-keys (u/only-keys :opt-un [::jwt-key ::cookie-key]))
+  :biff/auth-keys (bu/only-keys :opt-un [::jwt-key ::cookie-key]))
 
 (def rules
   {:biff/auth-keys {:spec [#{:biff.auth/keys} :biff/auth-keys]}})

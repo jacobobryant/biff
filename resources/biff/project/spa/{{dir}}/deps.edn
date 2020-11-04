@@ -7,4 +7,4 @@
  :deps
  {github-jacobobryant/biff
   {:git/url "https://github.com/jacobobryant/biff"
-   :sha "b2b575fc47faafe3d752798a0172f4dc2a451b44"}}}
+   :sha "{{sha}}"}}}

@@ -3,24 +3,24 @@
  {byte-transforms/byte-transforms {:mvn/version "0.1.4"}
   cheshire/cheshire {:mvn/version "5.10.0"}
   clj-http/clj-http {:mvn/version "3.10.0"}
-  com.taoensso/sente {:mvn/version "1.15.0"}
+  com.taoensso/sente {:mvn/version "1.16.0"}
   com.taoensso/timbre {:mvn/version "4.10.0"}
   crypto-password/crypto-password {:mvn/version "0.2.1"}
   expound/expound {:mvn/version "0.8.4"}
+  info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"}
   juxt/crux-core {:mvn/version "20.09-1.12.1-beta"}
   juxt/crux-jdbc {:mvn/version "20.09-1.12.1-beta"}
   juxt/crux-rocksdb {:mvn/version "20.09-1.12.1-beta"}
+  lambdaisland/uri {:mvn/version "1.4.54"}
   metosin/muuntaja {:mvn/version "0.6.7"}
   metosin/reitit-ring {:mvn/version "0.3.7"}
   mount/mount {:mvn/version "0.1.16"}
   nrepl/nrepl {:mvn/version "0.5.3"}
   orchestra/orchestra {:mvn/version "2019.02.06-1"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
-  org.immutant/web {:mvn/version "2.1.10"}
   org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
+  ovotech/ring-jwt {:mvn/version "1.2.5"}
   ring/ring-core {:mvn/version "1.8.0"}
   ring/ring-defaults {:mvn/version "0.3.2"}
   rum/rum {:mvn/version "0.11.5"}
-  selmer/selmer {:mvn/version "1.12.23"}
-  trident/jwt {:mvn/version "0.3.2"}
-  trident/util {:mvn/version "0.3.2"}}}
+  selmer/selmer {:mvn/version "1.12.23"}}}
