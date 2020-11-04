@@ -49,19 +49,21 @@
                    edn/read-string
                    (merge-config env)))
         {:biff/keys [first-start dev]
-         :biff.init/keys [start-nrepl nrepl-port instrument timbre start-shadow]
-         :or {start-nrepl true nrepl-port 7888 timbre true}
+         :biff.init/keys [start-nrepl start-shadow nrepl-port instrument timbre]
+         :or {nrepl-port 7888 timbre true}
          :as sys} (merge sys config)]
-    (when timbre
-      (timbre/merge-config! (bu/select-ns-as sys 'timbre nil)))
-    (when instrument
-      (s/check-asserts true)
-      (st/instrument))
-    (when (and first-start start-nrepl nrepl-port (not dev))
-      (nrepl/start-server :port nrepl-port))
-    (when (and first-start (or dev start-shadow))
-      ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
-    sys))
+    (let [start-nrepl (if (some? start-nrepl) start-nrepl (not dev))
+          start-shadow (if (some? start-shadow) start-shadow dev)]
+      (when timbre
+        (timbre/merge-config! (bu/select-ns-as sys 'timbre nil)))
+      (when instrument
+        (s/check-asserts true)
+        (st/instrument))
+      (when (and start-nrepl first-start nrepl-port)
+        (nrepl/start-server :port nrepl-port))
+      (when (and start-shadow first-start)
+        ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
+      sys)))
 
 (defn set-defaults [sys]
   (let [{:biff/keys [dev host rules triggers using-proxy]
@@ -250,3 +252,13 @@
                   :websockets {"/api/chsk" handler}
                   :allow-null-path-info true})]
     (update sys :sys/stop conj #(jetty/stop-server server))))
+
+(defn start-jobs [{:keys [biff/jobs] :as sys}]
+  (update sys :biff/stop into
+    (for [{:keys [offset-minutes period-minutes job-fn]} jobs]
+      (let [closeable (chime/chime-at
+                        (->> (bu/add-seconds (java.util.Date.) (* 60 offset-minutes))
+                          (iterate #(bu/add-seconds % (* period-minutes 60)))
+                          (map #(.toInstant %)))
+                        (fn [_] (job-fn sys)))]
+        #(.close closeable)))))

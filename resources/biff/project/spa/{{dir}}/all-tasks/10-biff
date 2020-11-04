@@ -16,8 +16,14 @@ init () {
     npm install --save-dev shadow-cljs tailwindcss onchange
   fi
   build-css-dev
-  (cd infra; terraform init)
-  echo
+  if ! which packer > /dev/null; then
+    echo Before deploying, you must install Packer. See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
+  fi
+  if ! which terraform > /dev/null; then
+    echo Before deploying, you must install Terraform and run \`(cd infra; terraform init)\`. See https://learn.hashicorp.com/tutorials/terraform/install-cli.
+  else
+    (cd infra; terraform init)
+  fi
   echo Initialization complete.
 }
 
@@ -143,19 +149,17 @@ DEVELOP
 
 ./task dev
 
-  Starts your app. After you see "System started", go to localhost:9630 and go
-  to "Builds" -> "start watch". Then go to localhost:8080. Connect your editor
-  to nrepl on port 7888. Changes to tailwind.css will be applied whenever you
-  save the file.
+  Starts your app locally. Also, changes to tailwind.css will be applied
+  whenever you save the file.
 
 BUILD
 
 ./task build-image
 
-  Builds a VM image with Packer. Do this at least once before deploying.
-  Use \`./task tf apply\` to deploy the new image.
-
   *Note*: update the contents of config/ before running this command.
+
+  Builds a VM image with Packer. Run this at least once before deploying.
+  Use \`./task tf apply\` to deploy the new image.
 
 ./task build-assets
 

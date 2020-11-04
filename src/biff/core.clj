@@ -21,8 +21,10 @@
     (println)
     (println "System started.")
     (when dev
+      (println)
       (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\" -> \"Dashboard\".")
       (println "After the build finishes, go to http://localhost:8080.")
+      (println "Connect your editor to nrepl port 7888.")
       (println "Also see `./task help` for a complete list of commands."))))
 
 (defn start-spa [config]
@@ -36,4 +38,20 @@
      c/set-auth-route
      c/set-handler
      c/write-static-resources
-     c/start-web-server]))
+     c/start-web-server
+     c/start-jobs]))
+
+; If you don't need ClojureScript/React, call this instead of start-spa.
+(defn start-mpa [config]
+  (start-system config
+    [#(merge {:biff.init/start-nrepl true
+              :biff.init/start-shadow false} %)
+     c/init
+     c/set-defaults
+     #(dissoc % :biff.handler/spa-path)
+     c/start-crux
+     c/set-auth-route
+     c/set-handler
+     c/write-static-resources
+     c/start-web-server
+     c/start-jobs]))

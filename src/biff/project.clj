@@ -72,7 +72,7 @@
    :sensitive-variables ["digitalocean_api_key"]})
 
 (defn init-spa [opts]
-  (println "Creating a SPA project.")
+  ;(println "Creating a SPA project.")
   (let [{:keys [dir] :as opts}
         (-> opts
           (get-opts [{:k :sha
@@ -126,32 +126,26 @@
     (spit "infra/system.tf.json"
       (cheshire/generate-string (do/system opts) {:pretty true}))))
 
-(defn init-mpa [opts]
-  nil)
+;(defn init-mpa [opts]
+;  nil)
 
-(defn update-mpa-files [sys]
-  nil)
-
-(defn dev [_]
-  ((requiring-resolve 'nrepl.server/start-server) :port 7800)
-  (println "started"))
-#_(init-spa
-  {:dir "foobar"
-   :host "example.com"
-   :main-ns 'hey.core})
+;(defn update-mpa-files [sys]
+;  nil)
 
 (defn -main []
-  (println "Creating a new Biff project. Available project types:")
-  (println)
-  (println "  1. SPA (single-page application). Includes ClojureScript, React, and")
-  (println "     Biff's subscribable queries. Good for highly interactive applications.")
-  (println)
-  (println "  2. MPA (multi-page application). Uses server-side rendering instead of")
-  (println "     React etc. Good for simpler applications.")
-  (println)
-  (print "Choose a project type ([spa]/mpa): ")
-  (flush)
-  (if (str/starts-with? (str/lower-case (read-line)) "m")
-    (init-mpa {})
-    (init-spa {}))
+  ; todo uncomment this after implementing init-mpa, update-mpa-files
+  ;(println "Creating a new Biff project. Available project types:")
+  ;(println)
+  ;(println "  1. SPA (single-page application). Includes ClojureScript, React, and")
+  ;(println "     Biff's subscribable queries. Good for highly interactive applications.")
+  ;(println)
+  ;(println "  2. MPA (multi-page application). Uses server-side rendering instead of")
+  ;(println "     React etc. Good for simpler applications.")
+  ;(println)
+  ;(print "Choose a project type ([spa]/mpa): ")
+  ;(flush)
+  ;(if (str/starts-with? (str/lower-case (read-line)) "m")
+  ;  (init-mpa {})
+  ;  (init-spa {}))
+  (init-spa {})
   (System/exit 0))

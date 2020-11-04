@@ -16,7 +16,8 @@
 
 ; This function lets Biff manage non-Clojure files for you (e.g.
 ; all-tasks/10-biff, and the contents of infra/). If you need more control,
-; replace the body of this function with the contents of project/update-spa-files.
+; replace the body of this function with the contents of project/update-spa-files
+; (see https://github.com/jacobobryant/biff/blob/master/src/biff/project.clj).
 ; Repeat as far as needed.
 (defn update-files [sys]
   (when (or (:biff/dev sys) (:biff/update-project-files sys))
@@ -24,7 +25,8 @@
   sys)
 
 ; This is your app's main entry point. As with update-files, you can copy the
-; contents of biff/start-spa into this function for more control.
+; contents of biff/start-spa into this function for more control. See
+; https://github.com/jacobobryant/biff/blob/master/src/biff/core.clj.
 (defn start [first-start]
   (biff/start-spa
     #:biff{:first-start first-start
