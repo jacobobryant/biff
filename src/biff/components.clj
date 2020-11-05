@@ -6,6 +6,7 @@
     [biff.rules :as rules]
     [biff.util :as bu]
     [byte-transforms :as bt]
+    [chime.core :as chime]
     [clojure.core.async :as async]
     [clojure.edn :as edn]
     [clojure.java.io :as io]
@@ -43,15 +44,15 @@
 
 (defn init [sys]
   (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-        config (bu/catchall
-                 (-> "config/main.edn"
-                   slurp
-                   edn/read-string
-                   (merge-config env)))
+        unmerged-config (bu/catchall
+                          (-> "config/main.edn"
+                            slurp
+                            edn/read-string))
+        config (some-> unmerged-config (merge-config env))
         {:biff/keys [first-start dev]
          :biff.init/keys [start-nrepl start-shadow nrepl-port instrument timbre]
          :or {nrepl-port 7888 timbre true}
-         :as sys} (merge sys config)]
+         :as sys} (merge sys config {:biff/unmerged-config unmerged-config})]
     (let [start-nrepl (if (some? start-nrepl) start-nrepl (not dev))
           start-shadow (if (some? start-shadow) start-shadow dev)]
       (when timbre
@@ -71,6 +72,7 @@
                 biff.static/root
                 biff.static/root-dev]
          :or {port 8080}} sys
+        host (or (when-not dev host) "localhost")
         using-proxy (cond
                       dev false
                       (some? using-proxy) using-proxy
@@ -78,13 +80,12 @@
         root (or root "www")
         root-dev (if dev "www-dev" root-dev)]
     (merge
-      {:biff/host "localhost"
-       :biff.auth/on-signup "/signin-sent/"
-       :biff.auth/on-signin-request "/signin-sent/"
-       :biff.auth/on-signin-fail "/signin-fail/"
-       :biff.auth/on-signin "/app/"
+      {:biff.auth/on-signup "/signin-sent"
+       :biff.auth/on-signin-request "/signin-sent"
+       :biff.auth/on-signin-fail "/signin-fail"
+       :biff.auth/on-signin "/app"
        :biff.auth/on-signout "/"
-       :biff.crux/topology :jdbc
+       :biff.crux/topology :standalone
        :biff.crux/storage-dir "data/crux-db"
        :biff.web/port 8080
        :biff.static/root root
@@ -93,7 +94,8 @@
        :biff.handler/not-found-path (str root "/404.html")
        :biff.handler/spa-path (str root "/app/index.html")}
       sys
-      {:biff/rules #(rules/expand-ops (merge (bu/concrete rules) rules/rules))
+      {:biff/host host
+       :biff/rules #(rules/expand-ops (merge (bu/concrete rules) rules/rules))
        :biff/triggers #(rules/expand-ops (bu/concrete triggers))
        :biff.handler/roots (if root-dev
                              [root-dev root]
@@ -158,7 +160,7 @@
         (let [disconnected (set/difference (:any old-uids) (:any new-uids))]
           (when (not-empty disconnected)
             (apply swap! subscriptions dissoc disconnected)))))
-    (update sys :sys/stop conj #(.close listener))))
+    (update sys :biff/stop conj #(.close listener))))
 
 (defn wrap-event-handler [handler]
   (fn [{:keys [?reply-fn] :as event}]
@@ -173,7 +175,7 @@
 
 (defn start-event-router [{:keys [biff.sente/ch-recv biff/event-handler]
                            :or {event-handler (constantly nil)} :as sys}]
-  (update sys :sys/stop conj
+  (update sys :biff/stop conj
     (sente/start-server-chsk-router! ch-recv
       (-> event-handler
         bcrux/wrap-sub
@@ -205,6 +207,21 @@
          :spa-path spa-path
          :routes [(into ["" {:middleware [[wrap-env sys]]}]
                     routes)]}))))
+
+(defn start-web-server [{:biff/keys [dev]
+                         :biff.web/keys [handler host port]
+                         :or {host "localhost"
+                              port 8080} :as sys}]
+  (let [host (if dev
+               "0.0.0.0"
+               host)
+        server (jetty/run-jetty handler
+                 {:host host
+                  :port port
+                  :join? false
+                  :websockets {"/api/chsk" handler}
+                  :allow-null-path-info true})]
+    (update sys :biff/stop conj #(jetty/stop-server server))))
 
 (defn copy-resources [src-root dest-root]
   (when-some [resource-root (io/resource src-root)]
@@ -238,21 +255,6 @@
   (copy-resources resource-root root)
   sys)
 
-(defn start-web-server [{:biff/keys [dev]
-                         :biff.web/keys [handler host port]
-                         :or {host "localhost"
-                              port 8080} :as sys}]
-  (let [host (if dev
-               "0.0.0.0"
-               host)
-        server (jetty/run-jetty handler
-                 {:host host
-                  :port port
-                  :join? false
-                  :websockets {"/api/chsk" handler}
-                  :allow-null-path-info true})]
-    (update sys :sys/stop conj #(jetty/stop-server server))))
-
 (defn start-jobs [{:keys [biff/jobs] :as sys}]
   (update sys :biff/stop into
     (for [{:keys [offset-minutes period-minutes job-fn]} jobs]
@@ -262,3 +264,21 @@
                           (map #(.toInstant %)))
                         (fn [_] (job-fn sys)))]
         #(.close closeable)))))
+
+(defn print-spa-help [{:keys [biff/dev] :as sys}]
+  (when dev
+    (println)
+    (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\" -> \"Dashboard\".")
+    (println "After the build finishes, go to http://localhost:8080.")
+    (println "Connect your editor to nrepl port 7888.")
+    (println "See `./task help` for a complete list of commands.")
+    (println))
+  sys)
+
+(defn print-mpa-help [{:keys [biff/dev] :as sys}]
+  (when dev
+    (println)
+    (println "Go to http://localhost:8080. Connect your editor to nrepl port 7888.")
+    (println "See `./task help` for a complete list of commands.")
+    (println))
+  sys)

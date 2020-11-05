@@ -12,20 +12,11 @@
     (tn-repl/refresh :after after-refresh)))
 
 (defn start-system [config components]
-  (let [{:keys [biff/dev biff.init/nrepl-port]}
-        (reset! system
-          (reduce (fn [sys component]
-                    (component sys))
-            (merge {:biff/stop '()} config)
-            components))]
-    (println)
-    (println "System started.")
-    (when dev
-      (println)
-      (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\" -> \"Dashboard\".")
-      (println "After the build finishes, go to http://localhost:8080.")
-      (println "Connect your editor to nrepl port 7888.")
-      (println "Also see `./task help` for a complete list of commands."))))
+  (reset! system
+    (reduce (fn [sys component]
+              (component sys))
+      (merge {:biff/stop '()} config)
+      components)))
 
 (defn start-spa [config]
   (start-system config
@@ -37,11 +28,11 @@
      c/start-event-router
      c/set-auth-route
      c/set-handler
-     c/write-static-resources
      c/start-web-server
-     c/start-jobs]))
+     c/write-static-resources
+     c/start-jobs
+     c/print-spa-help]))
 
-; If you don't need ClojureScript/React, call this instead of start-spa.
 (defn start-mpa [config]
   (start-system config
     [#(merge {:biff.init/start-nrepl true
@@ -52,6 +43,7 @@
      c/start-crux
      c/set-auth-route
      c/set-handler
-     c/write-static-resources
      c/start-web-server
-     c/start-jobs]))
+     c/write-static-resources
+     c/start-jobs
+     c/print-mpa-help]))

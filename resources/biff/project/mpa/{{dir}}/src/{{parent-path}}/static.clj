@@ -44,11 +44,6 @@
     [:p "Invalid sign-in token."]
     signin-form))
 
-(def app
-  (base-page {:scripts ["/js/ensure-signed-in.js"
-                        "/cljs/app/main.js"]}
-    [:#app "Loading..."]))
-
 (def not-found
   (base-page {}
     [:p "Not found."]))
@@ -59,7 +54,6 @@
    ; Same as "/signin-sent/index.html" signin-sent
    "/signin-sent/" signin-sent
    "/signin-fail/" signin-fail
-   "/app/" app
    "/404.html" not-found})
 
 ; To update static files during development, delete the #_ and then eval this

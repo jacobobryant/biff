@@ -1,9 +1,15 @@
 #!/bin/bash
-# Managed by Biff. Don't edit this file. Edit other files in all-tasks instead.
+# Managed by Biff.
+
+# Don't edit files/parts of files with ^this^ message. It means that Biff might
+# update the file (e.g. when new versions come out), which would overwrite your
+# changes. If you want Biff to stop managing files for you, remove the call to
+# biff.project/update-{% if spa %}s{% else %}m{% endif %}pa-files in your app's main namespace.
 
 # === DEV ===
 
 build-css-dev () {
+  mkdir -p www-dev/css/
   npx tailwindcss build tailwind.css -o www-dev/css/main.css
 }
 
@@ -12,25 +18,27 @@ init () {
     npm install
   else
     npm init -y
-    npm install --save react react-dom
+    {% if spa %}npm install --save react react-dom
     npm install --save-dev shadow-cljs tailwindcss onchange
+    {% else %}npm install --save-dev tailwindcss onchange{% endif %}
   fi
   build-css-dev
   if ! which packer > /dev/null; then
     echo Before deploying, you must install Packer. See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
   fi
   if ! which terraform > /dev/null; then
-    echo Before deploying, you must install Terraform and run \`(cd infra; terraform init)\`. See https://learn.hashicorp.com/tutorials/terraform/install-cli.
+    echo 'Before deploying, you must install Terraform and run \`(cd infra; terraform init)\`. See https://learn.hashicorp.com/tutorials/terraform/install-cli.'
   else
     (cd infra; terraform init)
   fi
+  echo
   echo Initialization complete.
 }
 
 dev () {
   npx onchange tailwind.css -- ./task build-css-dev &
   trap 'kill $(jobs -p) 2> /dev/null' EXIT
-  BIFF_ENV=dev clj -A:cljs "$@" -M -m $MAIN_NS
+  BIFF_ENV=dev clj {% if spa %}-A:cljs {% endif %}"$@" -M -m $MAIN_NS
 }
 
 
@@ -75,7 +83,7 @@ build-css () {
   NODE_ENV=production npx tailwindcss build tailwind.css -o resources/www/css/main.css
 }
 
-build-cljs () {
+{% if spa %}build-cljs () {
   npx shadow-cljs release $CLJS_APPS
   for app in $CLJS_APPS; do
     mkdir -p resources/www/cljs/$app
@@ -83,10 +91,10 @@ build-cljs () {
   done
 }
 
-build-assets () {
+{% endif %}build-assets () {
   build-css
-  build-cljs
-}
+{% if spa %}  build-cljs
+{% endif %}}
 
 
 # === DEPLOY ===
@@ -127,12 +135,12 @@ deploy () {
 
 # === MONITOR ===
 
-prod-connect () {
-  ssh -NL 7800:localhost:7888 root@$HOST
-}
-
 logs () {
   ssh root@$HOST journalctl -u biff -f -n 300
+}
+
+prod-connect () {
+  ssh -NL 7800:localhost:7888 root@$HOST
 }
 
 
@@ -163,9 +171,9 @@ BUILD
 
 ./task build-assets
 
-  Compiles your CSS and ClojureScript for production. Run this before each
-  deploy (unless you didn't change anything). For now, commit and push
-  the output (I'll add CI support later).
+  Compiles your CSS {% if spa %}and ClojureScript {% endif %}for production. Run this before each
+  deploy (unless you didn't change anything). For now, commit and push the
+  output (I'll add CI support later).
 
 DEPLOY
 
@@ -173,9 +181,9 @@ DEPLOY
 
 ./task generate-deploy-key
 
-  Generates an SSH private/public key pair which you can use to deploy your code
-  from a private git repository. If you're deploying from a public repo, you can
-  ignore this command.
+  Generates an SSH private/public key pair which you can use to deploy your
+  code from a private git repository. If you're deploying from a public repo,
+  you can ignore this command.
 
 ./task tf [command]
 
@@ -183,11 +191,11 @@ DEPLOY
   \`./task tf apply\` to deploy infrastructure changes. The first time you run
   this, it will also deploy your app. Use \`./task tf plan\` to do a dry run.
 
-  If you've already created infrastructure before using Terraform,
-  you may need to use \`./task tf import\`. See
+  If you've already created infrastructure before using Terraform, you may need
+  to use \`./task tf import\`. See
   https://www.terraform.io/docs/import/usage.html. For example, if you've
-  already imported the domain example.com into DigitalOcean, you'll need to
-  run \`./task tf import digitalocean_domain.default example.com\` (see
+  already imported the domain example.com into DigitalOcean, you'll need to run
+  \`./task tf import digitalocean_domain.default example.com\` (see
   https://registry.terraform.io/providers/digitalocean/digitalocean/latest/docs/resources/domain#import).
 
 ./task deploy

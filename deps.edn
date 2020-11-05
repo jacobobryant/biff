@@ -8,6 +8,7 @@
   crypto-password/crypto-password {:mvn/version "0.2.1"}
   expound/expound {:mvn/version "0.8.4"}
   info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"}
+  jarohen/chime {:mvn/version "0.3.2"}
   juxt/crux-core {:mvn/version "20.09-1.12.1-beta"}
   juxt/crux-jdbc {:mvn/version "20.09-1.12.1-beta"}
   juxt/crux-rocksdb {:mvn/version "20.09-1.12.1-beta"}

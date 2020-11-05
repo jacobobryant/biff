@@ -1,0 +1,5 @@
+{:paths ["src" "resources"]
+ :deps
+ {github-jacobobryant/biff
+  {:git/url "https://github.com/jacobobryant/biff"
+   :sha "{{sha}}"}}}

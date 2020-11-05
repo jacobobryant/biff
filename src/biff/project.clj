@@ -71,8 +71,7 @@
    :variables {:digitalocean_api_key "{{env `DIGITALOCEAN_API_KEY`}}"}
    :sensitive-variables ["digitalocean_api_key"]})
 
-(defn init-spa [opts]
-  ;(println "Creating a SPA project.")
+(defn init [{:keys [template-path] :as opts}]
   (let [{:keys [dir] :as opts}
         (-> opts
           (get-opts [{:k :sha
@@ -90,7 +89,8 @@
           (update :dir str)
           (update :main-ns symbol)
           add-derived)]
-    (copy-files "biff/project/spa/" opts)
+    (copy-files "biff/project/base/" opts)
+    (copy-files template-path opts)
     (spit (str dir "/infra/webserver.json")
       (cheshire/generate-string default-packer-config {:pretty true}))
     (spit (str dir "/infra/system.tf.json")
@@ -108,9 +108,17 @@
     (println)
     (println "Run `./task help` for more info.")))
 
-(defn update-spa-files [sys]
-  (let [opts (set/rename-keys sys {:biff/host :host})]
-    (copy-files "biff/project/spa/{{dir}}/"
+(defn init-spa [opts]
+  (println "Creating a SPA project.")
+  (init (assoc opts :spa true :template-path "biff/project/spa/")))
+
+(defn init-mpa [opts]
+  (println "Creating an MPA project.")
+  (init (assoc opts :mpa true :template-path "biff/project/mpa/")))
+
+(defn update-files [{:keys [template-path] :as sys}]
+  (let [opts (assoc sys :host (get-in sys [:biff/unmerged-config :prod :biff/host]))]
+    (copy-files "biff/project/base/{{dir}}/"
       (assoc opts
         :files #{"all-tasks/10-biff"
                  "infra/provisioners/10-wait"
@@ -126,26 +134,24 @@
     (spit "infra/system.tf.json"
       (cheshire/generate-string (do/system opts) {:pretty true}))))
 
-;(defn init-mpa [opts]
-;  nil)
+(defn update-spa-files [sys]
+  (update-files (assoc sys :spa true)))
 
-;(defn update-mpa-files [sys]
-;  nil)
+(defn update-mpa-files [sys]
+  (update-files (assoc sys :mpa true)))
 
 (defn -main []
-  ; todo uncomment this after implementing init-mpa, update-mpa-files
-  ;(println "Creating a new Biff project. Available project types:")
-  ;(println)
-  ;(println "  1. SPA (single-page application). Includes ClojureScript, React, and")
-  ;(println "     Biff's subscribable queries. Good for highly interactive applications.")
-  ;(println)
-  ;(println "  2. MPA (multi-page application). Uses server-side rendering instead of")
-  ;(println "     React etc. Good for simpler applications.")
-  ;(println)
-  ;(print "Choose a project type ([spa]/mpa): ")
-  ;(flush)
-  ;(if (str/starts-with? (str/lower-case (read-line)) "m")
-  ;  (init-mpa {})
-  ;  (init-spa {}))
-  (init-spa {})
+  (println "Creating a new Biff project. Available project types:")
+  (println)
+  (println "  1. SPA (single-page application). Includes ClojureScript, React, and")
+  (println "     Biff's subscribable queries. Good for highly interactive applications.")
+  (println)
+  (println "  2. MPA (multi-page application). Uses server-side rendering instead of")
+  (println "     React etc. Good for simpler applications.")
+  (println)
+  (print "Choose a project type ([spa]/mpa): ")
+  (flush)
+  (if (str/starts-with? (str/lower-case (read-line)) "m")
+    (init-mpa {})
+    (init-spa {}))
   (System/exit 0))
