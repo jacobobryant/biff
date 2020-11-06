@@ -101,7 +101,9 @@ build-css () {
 # === DEPLOY ===
 
 generate-deploy-key () {
-  ssh-keygen -t rsa -b 4096 -f config/deploy-key -N ""
+  echo When you\'re asked for a passphrase, leave it empty.
+  echo
+  ssh-keygen -t rsa -b 4096 -f config/deploy-key
   echo
   echo If you\'re using Github, enter the contents of config/deploy-key.pub
   echo at https://github.com/your_username/your_repo/settings/keys

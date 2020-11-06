@@ -48,7 +48,7 @@
                  :size "s-1vcpu-1gb"
                  :private_networking true
                  :ssh_keys ["${var.ssh_key_fingerprint}"]
-                 :connection {:host "self.ipv4_address"
+                 :connection {:host "${self.ipv4_address}"
                               :user "root"
                               :type "ssh"
                               :timeout "2m"}
