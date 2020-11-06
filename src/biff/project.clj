@@ -1,6 +1,6 @@
 (ns biff.project
   (:require
-    [biff.project.terraform.digitalocean :as do]
+    [biff.project.infra :as infra]
     [biff.util :as bu]
     [cheshire.core :as cheshire]
     [clojure.java.io :as io]
@@ -53,24 +53,6 @@
       (io/make-parents dest-path)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
-(def default-packer-config
-  {:builders [{:type "digitalocean"
-               :api_token "{{user `digitalocean_api_key`}}"
-               :image "ubuntu-20-04-x64"
-               :region "nyc1"
-               :size "s-1vcpu-1gb"
-               :private_networking true
-               :snapshot_name "biff-webserver"
-               :ssh_username "root"
-               :monitoring true}]
-   :provisioners [{:type "file"
-                   :source "./provisioners"
-                   :destination "/tmp/"}
-                  {:type "shell"
-                   :script "run-provisioners.sh"}]
-   :variables {:digitalocean_api_key "{{env `DIGITALOCEAN_API_KEY`}}"}
-   :sensitive-variables ["digitalocean_api_key"]})
-
 (defn init [{:keys [template-path] :as opts}]
   (let [{:keys [dir] :as opts}
         (-> opts
@@ -92,9 +74,9 @@
     (copy-files "biff/project/base/" opts)
     (copy-files template-path opts)
     (spit (str dir "/infra/webserver.json")
-      (cheshire/generate-string default-packer-config {:pretty true}))
+      (cheshire/generate-string infra/default-packer-config {:pretty true}))
     (spit (str dir "/infra/system.tf.json")
-      (cheshire/generate-string (do/system opts) {:pretty true}))
+      (cheshire/generate-string (infra/default-terraform-config opts) {:pretty true}))
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
       (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
@@ -130,9 +112,9 @@
                  "infra/provisioners/70-firewall"
                  "infra/run-provisioners.sh"}))
     (spit "infra/webserver.json"
-      (cheshire/generate-string default-packer-config {:pretty true}))
+      (cheshire/generate-string infra/default-packer-config {:pretty true}))
     (spit "infra/system.tf.json"
-      (cheshire/generate-string (do/system opts) {:pretty true}))))
+      (cheshire/generate-string (infra/default-terraform-config opts) {:pretty true}))))
 
 (defn update-spa-files [sys]
   (update-files (assoc sys :spa true)))

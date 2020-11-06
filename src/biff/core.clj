@@ -27,7 +27,7 @@
      c/start-tx-listener
      c/start-event-router
      c/set-auth-route
-     c/set-handler
+     c/set-http-handler
      c/start-web-server
      c/write-static-resources
      c/start-jobs
@@ -39,10 +39,10 @@
               :biff.init/start-shadow false} %)
      c/init
      c/set-defaults
-     #(dissoc % :biff.handler/spa-path)
+     #(dissoc % :biff.http/spa-path)
      c/start-crux
      c/set-auth-route
-     c/set-handler
+     c/set-http-handler
      c/start-web-server
      c/write-static-resources
      c/start-jobs

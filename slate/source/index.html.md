@@ -46,18 +46,13 @@ Core features (a few of these were inspired by Firebase):
   you can use server-side rendering instead of React and ClojureScript.
 - **Great documentation!**
 
-PRs welcome.
-
 ## Resources
 
- - Join `#biff` on <a href="http://clojurians.net" target="_blank">Clojurians Slack</a> for
+ - Join `#biff` on [Clojurians Slack](http://clojurians.net) for
 discussion. Feel free to reach out for help, bug reports or anything else.
- - See the issues and source on <a href="https://github.com/jacobobryant/biff"
-target="_blank">Github</a>
- - Watch <a
-href="https://www.youtube.com/watch?v=oYwhrq8hDFo" target="_blank">a
-presentation</a> I gave at the Clojure Mid-Cities meetup.
- - See the <a href="#faq">FAQ</a> section for comparison to other frameworks.
+ - See the issues and source on [Github](https://github.com/jacobobryant/biff)
+ - Watch [a presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
+ - See the [FAQ](#faq) section for comparison to other frameworks.
 
 # Getting started
 
@@ -289,14 +284,8 @@ here's the component which starts Jetty:
 
 <div class="file-heading">biff.components</div>
 ```clojure
-(defn start-web-server [{:biff/keys [dev]
-                         :biff.web/keys [handler host port]
-                         :or {host "localhost"
-                              port 8080} :as sys}]
-  (let [host (if dev
-               "0.0.0.0"
-               host)
-        server (jetty/run-jetty handler
+(defn start-web-server [{:biff.web/keys [handler host port] :as sys}]
+  (let [server (jetty/run-jetty handler
                  {:host host
                   :port port
                   :join? false
@@ -322,7 +311,7 @@ replace those two function calls with their respective bodies like so:
 <div class="file-heading">src/example/core.clj</div>
 ```clojure
 (require '[biff.components :as c])
-(require '[biff.project.terraform.digitalocean :as do])
+(require '[biff.project.infra :as infra])
 
 (defn start [first-start]
   (let [sys (biff.core/start-system {...}
@@ -333,7 +322,7 @@ replace those two function calls with their respective bodies like so:
                c/start-tx-listener
                c/start-event-router
                c/set-auth-route
-               c/set-handler
+               c/set-http-handler
                c/start-web-server
                c/write-static-resources
                c/start-jobs
@@ -353,9 +342,10 @@ replace those two function calls with their respective bodies like so:
                        "infra/run-provisioners.sh"}))
           (spit "infra/webserver.json"
             (cheshire/generate-string
-              biff.project/default-packer-config {:pretty true}))
+              infra/default-packer-config {:pretty true}))
           (spit "infra/system.tf.json"
-            (cheshire/generate-string (do/system opts) {:pretty true}))))
+            (cheshire/generate-string
+              (infra/default-terraform-config opts) {:pretty true}))))
     (println "System started.")))
 ```
 
@@ -437,11 +427,11 @@ the following sections for a deeper explanation.
 :biff.crux.jdbc/host nil
 :biff.crux.jdbc/port nil
 
-:biff.handler/not-found-path "/404.html"
-:biff.handler/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
-                                         ; (and sets http status to 200 instead of 404).
-:biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
-                                   ; or just site-defaults.
+:biff.http/not-found-path "/404.html"
+:biff.http/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
+                                      ; (and sets http status to 200 instead of 404).
+:biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
+                                ; or just site-defaults.
 
 :biff.web/host "localhost" ; Host that the web server will listen on. localhost is used in
                            ; production because requests are reverse-proxied through nginx.
@@ -453,7 +443,7 @@ the following sections for a deeper explanation.
                 ; Also overrides values for these keys:
                 :biff/host "localhost"
                 :biff.crux/topology :standalone
-                :biff.handler/secure-defaults false
+                :biff.http/secure-defaults false
                 :biff.web/host "0.0.0.0"
 ```
 
@@ -767,13 +757,13 @@ Relevant config:
 
 ```clojure
 :biff/routes nil ; A vector of Reitit routes.
-:biff.handler/not-found-path "/404.html"
-:biff.handler/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
-                                         ; (and sets http status to 200 instead of 404).
-:biff.handler/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
-                                   ; or just site-defaults.
+:biff.http/not-found-path "/404.html"
+:biff.http/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
+                                      ; (and sets http status to 200 instead of 404).
+:biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
+                                ; or just site-defaults.
 :biff/dev false ; When true, overrides values for these keys:
-                :biff.handler/secure-defaults false
+                :biff.http/secure-defaults false
                 ...
 ```
 
@@ -1025,9 +1015,9 @@ correct, the transaction above would succeed given these rules:
            :write (constantly false)}})
 ```
 
-But if the `:user/id` value was incorrect (and thus refers to a non-existant
+But if the `:user/id` value was incorrect (and thus refers to a non-existent
 user), the transaction would fail. It would also fail if you set `:display-name
-123` instead of `:display-name "alice"` in the transaction.
+123` or `:display-name nil` instead of `:display-name "alice"` in the transaction.
 
 You can also use bypass Biff's transactions and use Crux's API directly:
 
@@ -1130,7 +1120,7 @@ also have to whitelist any predicate function calls (like
 whitelisted for you.
 
 I haven't yet added support for `or`, `not`, etc. clauses in subscriptions. See
-<a href="https://github.com/jacobobryant/biff/issues/9" target="_blank">#9</a>.
+[#9](https://github.com/jacobobryant/biff/issues/9).
 
 You can also subscribe to individual documents:
 
@@ -1234,7 +1224,6 @@ from the frontend (see [Transactions](#transactions) and
 
 The value of `:biff/rules` is a map of `table->rules`, for example:
 
-<div class="file-heading"><a href="https://github.com/jacobobryant/biff/blob/master/example/src/example/rules.clj" target="_blank">src/example/rules.clj</a></div>
 ```clojure
 (ns example.rules
   (:require
@@ -1466,9 +1455,8 @@ Each element of `:biff/jobs` is a map with three keys. For example:
 Basically, if you like Firebase and you like Clojure backend dev, you might
 enjoy using Biff for your next side project. Same if you like the idea of
 Firebase but in practice you have issues with it. If you want something mature
-or you like having a Node/ClojureScript backend, Firebase is a great choice. <a
-href="https://github.com/jacobobryant/mystery-cows" target="_blank">Here's a non-trivial
-example</a> of using Firebase with ClojureScript.
+or you like having a Node/ClojureScript backend, Firebase is a great choice. [Here's a non-trivial
+example](https://github.com/jacobobryant/mystery-cows) of using Firebase with ClojureScript.
 
 Some shared features:
 
@@ -1486,7 +1474,7 @@ Some differences:
    times/no cold start.
  - Firebase has way more features and is vastly more mature.
  - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
- - <a href="https://opencrux.com/" target="_blank">Crux</a> (the database Biff uses) is immutable and has Datalog queries.
+ - [Crux](https://opencrux.com/) (the database Biff uses) is immutable and has Datalog queries.
  - Authorization rules in Firebase are IMO error-prone and hard to debug.
  - Firebase supports password and SSO authentication.
 
@@ -1508,35 +1496,37 @@ Differences:
 
 ## Why Crux and not Datomic?
 
+Short answer: Like Vim, Arch Linux, and Clojure itself, Crux is one of those
+pieces of software that sparks joy.
+
 I used Datomic pretty heavily in my own projects for about a year prior to
 switching to Firestore and then Crux. My opinion on Datomic vs. Crux is that
-Datomic is more powerful and can probably scale better, but Crux is  easier to
-get started with and has a lot less operational overhead for small projects (in
+Datomic is more powerful and maybe can scale better, but Crux is  easier to get
+started with and has a lot less operational overhead for small projects (in
 terms of developer time). I've had many headaches from my time using Datomic
-(<a href="https://jacobobryant.com/post/2019/aws-battles-ep-1/" target="_blank">and AWS</a>,
-which Datomic Cloud is coupled to). On the other hand, using Crux has
-been smooth&mdash;and you can use DigitalOcean instead of AWS (yay). Since
-Biff prioritizes the solo-developer / early-stage / rapid-prototyping use-case,
-I think Crux is a much better fit. Whereas if I was in a situation with many
+([and AWS](https://jacobobryant.com/post/2019/aws-battles-ep-1/), which Datomic
+Cloud is coupled to). On the other hand, using Crux has been smooth&mdash;and
+you can use DigitalOcean instead of AWS (yay). Since Biff prioritizes the
+solo-developer / early-stage / rapid-prototyping use-case, I think Crux is a
+much better fit. Whereas if I was in a situation with many
 developers/delivering an application that I knew would have scale once
-released, Datomic Cloud Ions I think would be great.
+released, Datomic Cloud Ions would be worth considering (but even then, I
+personally would probably stick with Crux&mdash;I just love Crux).
 
 Off the top of my head, a few more reasons:
+
+ - The document model is easier to reason about than the datom model. Building
+   Biff on Datomic would have been more complex.
 
  - I like that Crux doesn't enforce schema, which made it easy for Biff to use
    it's own schema (i.e. rules). I also think it's better for rapid-prototyping,
    when you're still figuring out the schema and it changes often.
 
- - Although Crux is less featureful, it's good enough for me. It's immutable
-   and has datalog queries. In some cases, it makes Crux easier to use which
-   could be considered a benefit for some situations. e.g. transactions in Crux
-   are much less complex than in Datomic.
-
  - Crux is open-source. I'm a pragmatist and I don't mind using a closed source
    DB like Datomic in an app. But for Biff, a web framework intended for other
    people to build their apps on too, I'd rather not have a hard dependency on
    something closed-source. It'd suck if a feature broke in Datomic that was
-   critical for Biff but low-priority for Cognitect. (I have a small budgeting
+   critical for Biff but low-priority for Cognitect. (I had a small budgeting
    app on Datomic that was down for several months because of that).
 
  - For hobby projects, you can run Crux on DigitalOcean with filesystem

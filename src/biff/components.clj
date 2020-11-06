@@ -70,9 +70,9 @@
        :biff.auth/on-signin "/app"
        :biff.auth/on-signout "/"
        :biff.crux/topology :standalone
-       :biff.handler/secure-defaults true
-       :biff.handler/not-found-path "/404.html"
-       :biff.handler/spa-path "/app/index.html"
+       :biff.http/secure-defaults true
+       :biff.http/not-found-path "/404.html"
+       :biff.http/spa-path "/app/index.html"
        :biff.web/host (if dev "0.0.0.0" "localhost")
        :biff.web/port port}
       sys
@@ -82,21 +82,21 @@
        :biff/base-url (if using-proxy
                         (str "https://" host)
                         (str "http://" host ":" port))
-       :biff.handler/root "www"
+       :biff.http/root "www"
        :biff.static/resource-root "www"}
       (when dev
         {:biff.crux/topology :standalone
-         :biff.handler/secure-defaults false}))))
+         :biff.http/secure-defaults false}))))
 
 (defn start-crux [{:keys [biff/topology] :as sys}]
   (let [index-store {:kv-store {:crux/module 'crux.rocksdb/->kv-store
-                                :db-dir (io/file "data/crux-db/db")}}
+                                :db-dir (io/file "data/crux-db/index")}}
         node (crux/start-node
                (case topology
                  :standalone
                  {:crux/index-store index-store
                   :rocksdb-golden {:crux/module 'crux.rocksdb/->kv-store
-                                   :db-dir (io/file "data/crux-db/eventlog")}
+                                   :db-dir (io/file "data/crux-db/tx-log-doc-store")}
                   :crux/document-store {:kv-store :rocksdb-golden}
                   :crux/tx-log {:kv-store :rocksdb-golden}}
 
@@ -184,11 +184,12 @@
 (defn set-auth-route [sys]
   (update sys :biff/routes conj (auth/route sys)))
 
-(defn set-handler [{:biff/keys [routes node]
-                    :biff.handler/keys [secure-defaults
-                                        root
-                                        spa-path
-                                        not-found-path] :as sys}]
+(defn set-http-handler
+  [{:biff/keys [routes node]
+    :biff.http/keys [secure-defaults
+                     root
+                     spa-path
+                     not-found-path] :as sys}]
   (let [cookie-key (-> (assoc sys
                          :k :cookie-key
                          :biff/db (crux/db node))
