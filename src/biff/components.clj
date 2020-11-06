@@ -52,6 +52,9 @@
       (when (and first-start start-nrepl)
         (nrepl/start-server :port 7888))
       (when (and first-start start-shadow)
+        ; Without this, I sometimes get the following when loading localhost:9630:
+        ; java.lang.Exception: Unable to resolve spec: :edn-query-language.core/property
+        (require 'edn-query-language.core)
         ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
       sys)))
 
@@ -82,13 +85,13 @@
        :biff/base-url (if using-proxy
                         (str "https://" host)
                         (str "http://" host ":" port))
-       :biff.http/root "www"
+       :biff.static/root "www"
        :biff.static/resource-root "www"}
       (when dev
         {:biff.crux/topology :standalone
          :biff.http/secure-defaults false}))))
 
-(defn start-crux [{:keys [biff/topology] :as sys}]
+(defn start-crux [{:keys [biff.crux/topology] :as sys}]
   (let [index-store {:kv-store {:crux/module 'crux.rocksdb/->kv-store
                                 :db-dir (io/file "data/crux-db/index")}}
         node (crux/start-node
@@ -107,8 +110,7 @@
                   :crux/tx-log {:crux/module 'crux.jdbc/->tx-log
                                 :connection-pool :crux.jdbc/connection-pool}
                   :crux/document-store {:crux/module 'crux.jdbc/->document-store
-                                        :connection-pool :crux.jdbc/connection-pool}}))
-        node (crux/start-node opts)]
+                                        :connection-pool :crux.jdbc/connection-pool}}))]
     (crux/sync node)
     (-> sys
       (assoc :biff/node node)
@@ -185,11 +187,12 @@
   (update sys :biff/routes conj (auth/route sys)))
 
 (defn set-http-handler
-  [{:biff/keys [routes node]
-    :biff.http/keys [secure-defaults
-                     root
-                     spa-path
-                     not-found-path] :as sys}]
+  [{:keys [biff/routes
+           biff/node
+           biff.static/root
+           biff.http/secure-defaults
+           biff.http/spa-path
+           biff.http/not-found-path] :as sys}]
   (let [cookie-key (-> (assoc sys
                          :k :cookie-key
                          :biff/db (crux/db node))
