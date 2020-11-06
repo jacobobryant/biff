@@ -16,14 +16,12 @@
     [crux.api :as crux]
     [expound.alpha :as expound]
     [nrepl.server :as nrepl]
-    [orchestra.spec.test :as st]
     [ring.adapter.jetty9 :as jetty]
     [ring.middleware.anti-forgery :as anti-forgery]
     [ring.middleware.session.cookie :as cookie]
     [rum.core :as rum]
     [taoensso.sente :as sente]
-    [taoensso.sente.server-adapters.jetty9 :refer [get-sch-adapter]]
-    [taoensso.timbre :as timbre])
+    [taoensso.sente.server-adapters.jetty9 :refer [get-sch-adapter]])
   (:import
     [java.nio.file Paths]))
 
@@ -44,41 +42,27 @@
 
 (defn init [sys]
   (let [env (keyword (or (System/getenv "BIFF_ENV") :prod))
-        unmerged-config (bu/catchall
-                          (-> "config/main.edn"
-                            slurp
-                            edn/read-string))
+        unmerged-config (bu/catchall (edn/read-string (slurp "config/main.edn")))
         config (some-> unmerged-config (merge-config env))
         {:biff/keys [first-start dev]
-         :biff.init/keys [start-nrepl start-shadow nrepl-port instrument timbre]
-         :or {nrepl-port 7888 timbre true}
+         :biff.init/keys [start-nrepl start-shadow]
          :as sys} (merge sys config {:biff/unmerged-config unmerged-config})]
     (let [start-nrepl (if (some? start-nrepl) start-nrepl (not dev))
           start-shadow (if (some? start-shadow) start-shadow dev)]
-      (when timbre
-        (timbre/merge-config! (bu/select-ns-as sys 'timbre nil)))
-      (when instrument
-        (s/check-asserts true)
-        (st/instrument))
-      (when (and start-nrepl first-start nrepl-port)
-        (nrepl/start-server :port nrepl-port))
-      (when (and start-shadow first-start)
+      (when (and first-start start-nrepl)
+        (nrepl/start-server :port 7888))
+      (when (and first-start start-shadow)
         ((requiring-resolve 'shadow.cljs.devtools.server/start!)))
       sys)))
 
 (defn set-defaults [sys]
-  (let [{:biff/keys [dev host rules triggers using-proxy]
-         :keys [biff.web/port
-                biff.static/root
-                biff.static/root-dev]
+  (let [{:biff/keys [dev host rules triggers]
+         :keys [biff.web/port]
          :or {port 8080}} sys
         host (or (when-not dev host) "localhost")
-        using-proxy (cond
-                      dev false
-                      (some? using-proxy) using-proxy
-                      :default (not (#{"localhost" nil} host)))
-        root (or root "www")
-        root-dev (if dev "www-dev" root-dev)]
+        using-proxy (if dev
+                      false
+                      (not= "localhost" host))]
     (merge
       {:biff.auth/on-signup "/signin-sent"
        :biff.auth/on-signin-request "/signin-sent"
@@ -86,33 +70,46 @@
        :biff.auth/on-signin "/app"
        :biff.auth/on-signout "/"
        :biff.crux/topology :standalone
-       :biff.crux/storage-dir "data/crux-db"
-       :biff.web/port 8080
-       :biff.static/root root
-       :biff.static/resource-root "www"
        :biff.handler/secure-defaults true
-       :biff.handler/not-found-path (str root "/404.html")
-       :biff.handler/spa-path (str root "/app/index.html")}
+       :biff.handler/not-found-path "/404.html"
+       :biff.handler/spa-path "/app/index.html"
+       :biff.web/host (if dev "0.0.0.0" "localhost")
+       :biff.web/port port}
       sys
       {:biff/host host
        :biff/rules #(rules/expand-ops (merge (bu/concrete rules) rules/rules))
        :biff/triggers #(rules/expand-ops (bu/concrete triggers))
-       :biff.handler/roots (if root-dev
-                             [root-dev root]
-                             [root])
        :biff/base-url (if using-proxy
                         (str "https://" host)
-                        (str "http://" host ":" port))}
+                        (str "http://" host ":" port))
+       :biff.handler/root "www"
+       :biff.static/resource-root "www"}
       (when dev
         {:biff.crux/topology :standalone
          :biff.handler/secure-defaults false}))))
 
-(defn start-crux [sys]
-  (let [opts (-> sys
-               (bu/select-ns-as 'biff.crux 'crux)
-               (set/rename-keys {:crux/topology :topology
-                                 :crux/storage-dir :storage-dir}))
-        node (bcrux/start-node opts)]
+(defn start-crux [{:keys [biff/topology] :as sys}]
+  (let [index-store {:kv-store {:crux/module 'crux.rocksdb/->kv-store
+                                :db-dir (io/file "data/crux-db/db")}}
+        node (crux/start-node
+               (case topology
+                 :standalone
+                 {:crux/index-store index-store
+                  :rocksdb-golden {:crux/module 'crux.rocksdb/->kv-store
+                                   :db-dir (io/file "data/crux-db/eventlog")}
+                  :crux/document-store {:kv-store :rocksdb-golden}
+                  :crux/tx-log {:kv-store :rocksdb-golden}}
+
+                 :jdbc
+                 {:crux/index-store index-store
+                  :crux.jdbc/connection-pool {:dialect {:crux/module 'crux.jdbc.psql/->dialect}
+                                              :db-spec (bu/select-ns-as sys 'biff.crux.jdbc nil)}
+                  :crux/tx-log {:crux/module 'crux.jdbc/->tx-log
+                                :connection-pool :crux.jdbc/connection-pool}
+                  :crux/document-store {:crux/module 'crux.jdbc/->document-store
+                                        :connection-pool :crux.jdbc/connection-pool}}))
+        node (crux/start-node opts)]
+    (crux/sync node)
     (-> sys
       (assoc :biff/node node)
       (update :biff/stop conj #(.close node)))))
@@ -188,8 +185,8 @@
   (update sys :biff/routes conj (auth/route sys)))
 
 (defn set-handler [{:biff/keys [routes node]
-                    :biff.handler/keys [roots
-                                        secure-defaults
+                    :biff.handler/keys [secure-defaults
+                                        root
                                         spa-path
                                         not-found-path] :as sys}]
   (let [cookie-key (-> (assoc sys
@@ -200,7 +197,7 @@
         session-store (cookie/cookie-store {:key cookie-key})]
     (assoc sys :biff.web/handler
       (http/make-handler
-        {:roots roots
+        {:root root
          :session-store session-store
          :secure-defaults secure-defaults
          :not-found-path not-found-path
@@ -208,14 +205,8 @@
          :routes [(into ["" {:middleware [[wrap-env sys]]}]
                     routes)]}))))
 
-(defn start-web-server [{:biff/keys [dev]
-                         :biff.web/keys [handler host port]
-                         :or {host "localhost"
-                              port 8080} :as sys}]
-  (let [host (if dev
-               "0.0.0.0"
-               host)
-        server (jetty/run-jetty handler
+(defn start-web-server [{:biff.web/keys [handler host port] :as sys}]
+  (let [server (jetty/run-jetty handler
                  {:host host
                   :port port
                   :join? false

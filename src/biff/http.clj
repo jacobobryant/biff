@@ -51,9 +51,11 @@
           (merge resp)
           (bu/nest-string-keys [:headers :cookies]))))))
 
-(defn make-handler [{:keys [session-store secure-defaults roots
+(defn make-handler [{:keys [session-store secure-defaults root
                             not-found-path spa-path routes default-routes]}]
-  (let [not-found (if not-found-path
+  (let [spa-path (str root spa-path)
+        not-found-path (str root not-found-path)
+        not-found (if not-found-path
                     #(-> %
                        (file-response (io/file not-found-path))
                        (assoc :status 404))
@@ -62,7 +64,7 @@
                                  :headers/Content-Type "text/plain"}))
         default-handlers (concat
                            default-routes
-                           (map file-handler roots)
+                           [(file-handler root)]
                            (when spa-path
                              [#(file-response % (io/file spa-path))])
                            [(reitit/create-default-handler

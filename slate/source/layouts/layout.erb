@@ -45,13 +45,8 @@ under the License.
     <% else %>
       <%= javascript_include_tag  "all_nosearch" %>
     <% end %>
-    <script src="https://www.googletagmanager.com/gtag/js?id=UA-166593834-1" async="async"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'UA-166593834-1');
-    </script>
+    <script src="https://sa.findka.com/latest.js" defer="defer" async="async"></script>
+    <noscript><img alt="" src="https://sa.findka.com/noscript.gif"/></noscript>
   </head>
 
   <body class="<%= page_classes %>" data-languages="<%=h language_tabs.map{ |lang| lang.is_a?(Hash) ? lang.keys.first : lang }.to_json %>">
@@ -62,8 +57,8 @@ under the License.
       </span>
     </a>
     <div class="toc-wrapper">
-      <a href="https://findka.com" target="_blank" style="text-decoration:none;">
-      <div class="sponsored-by">Sponsored by</div>
+      <a href="https://findka.com" style="text-decoration:none;">
+      <div style="height:15px"></div>
         <%= image_tag "logo.png", class: 'logo' %></a>
       <% if current_page.data.search %>
         <div class="search">
@@ -101,6 +96,7 @@ under the License.
         <div class="main-heading">
           <div class="main">Biff</div>
           <div class="sub">A web framework + self-hosted deployment solution for Clojure</div>
+          <div style="margin-top:5px"><a href="https://jacobobryant.com">Jacob O'Bryant</a></div>
         </div>
         <%= page_content %>
       </div>

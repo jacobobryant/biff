@@ -66,31 +66,6 @@
       sym
       (symbol "clojure.core" (name sym)))))
 
-; ==============================================================================
-
-(defn start-node ^crux.api.ICruxAPI [{:keys [topology storage-dir]
-                                      :or {topology :standalone} :as opts}]
-  (let [opts (merge
-               {:crux/index-store {:kv-store {:crux/module 'crux.rocksdb/->kv-store
-                                              :db-dir (io/file storage-dir "db")}}}
-               (case topology
-                 :standalone
-                 {:rocksdb-golden {:crux/module 'crux.rocksdb/->kv-store
-                                   :db-dir (io/file storage-dir "eventlog")}
-                  :crux/document-store {:kv-store :rocksdb-golden}
-                  :crux/tx-log {:kv-store :rocksdb-golden}}
-
-                 :jdbc
-                 {:crux.jdbc/connection-pool {:dialect {:crux/module 'crux.jdbc.psql/->dialect}
-                                              :db-spec (bu/select-ns-as opts 'crux.jdbc nil)}
-                  :crux/tx-log {:crux/module 'crux.jdbc/->tx-log
-                                :connection-pool :crux.jdbc/connection-pool}
-                  :crux/document-store {:crux/module 'crux.jdbc/->document-store
-                                        :connection-pool :crux.jdbc/connection-pool}}))
-        node (crux/start-node opts)]
-    (crux/sync node)
-    node))
-
 (bu/sdefs
   ::ident (s/cat :table keyword? :id (s/? any?))
   ::tx (s/coll-of (s/tuple ::ident (s/nilable map?))))

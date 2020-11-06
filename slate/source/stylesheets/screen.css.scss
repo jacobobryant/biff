@@ -80,14 +80,6 @@ html, body {
     margin-bottom: $logo-margin;
   }
 
-  .sponsored-by {
-    color: white;
-    text-align: center;
-    margin-top: 15px;
-    font-weight: initial;
-    text-decoration: none;
-  }
-
   &>.search {
     position: relative;
 
@@ -401,8 +393,8 @@ html, body {
 
   hr {
     margin: 2em 0;
-    border-top: 2px solid $examples-bg;
-    border-bottom: 2px solid $main-bg;
+    border: 0;
+    border-bottom: 1px solid #ccc;
   }
 
   table {
@@ -716,6 +708,7 @@ body {
   padding: 0.7em 28px;
   background-color: #4c7222;
   font-family: Consolas, Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif;
+  color: white;
 
   a {
     color: white;

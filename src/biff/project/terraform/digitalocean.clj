@@ -1,6 +1,7 @@
 (ns biff.project.terraform.digitalocean
   (:require
     [clojure.string :as str]))
+; I am greatly tempted to rename this ns to biff.project.doterraform
 
 (def terraform
   {:required_providers

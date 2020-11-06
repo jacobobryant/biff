@@ -9,5 +9,4 @@
         ;:biff.crux.jdbc/port ...
         :biff/host "{{host}}"}
  :dev {:inherit [:prod]
-       :biff/dev true
-       :biff/host "localhost"}}
+       :biff/dev true}}

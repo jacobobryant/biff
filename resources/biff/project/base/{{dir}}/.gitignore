@@ -6,5 +6,4 @@
 /infra/terraform.tfstate
 /infra/terraform.tfstate.backup
 /node_modules/
-/www-dev/
 /www/

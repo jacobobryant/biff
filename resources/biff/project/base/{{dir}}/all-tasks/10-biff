@@ -9,8 +9,8 @@
 # === DEV ===
 
 build-css-dev () {
-  mkdir -p www-dev/css/
-  npx tailwindcss build tailwind.css -o www-dev/css/main.css
+  mkdir -p www/css/
+  npx tailwindcss build tailwind.css -o www/css/main.css
 }
 
 init () {
@@ -22,7 +22,6 @@ init () {
     npm install --save-dev shadow-cljs tailwindcss onchange
     {% else %}npm install --save-dev tailwindcss onchange{% endif %}
   fi
-  build-css-dev
   if ! which packer > /dev/null; then
     echo Before deploying, you must install Packer. See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
   fi
@@ -36,7 +35,7 @@ init () {
 }
 
 dev () {
-  npx onchange tailwind.css -- ./task build-css-dev &
+  npx onchange -i tailwind.css -- ./task build-css-dev &
   trap 'kill $(jobs -p) 2> /dev/null' EXIT
   BIFF_ENV=dev clj {% if spa %}-A:cljs {% endif %}"$@" -M -m $MAIN_NS
 }
@@ -87,7 +86,7 @@ build-css () {
   npx shadow-cljs release $CLJS_APPS
   for app in $CLJS_APPS; do
     mkdir -p resources/www/cljs/$app
-    cp {www-dev,resources/www}/cljs/$app/main.js
+    cp {www,resources/www}/cljs/$app/main.js
   done
 }
 

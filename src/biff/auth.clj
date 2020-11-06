@@ -131,7 +131,7 @@
              200
              403)})
 
-(defn route [{:biff.auth/keys [on-signup on-signin-request] :as sys}]
+(defn route [{:biff.auth/keys [on-signup on-signin-request]}]
   ["/api"
    ["/signup" {:post #(send-signin-link (assoc %
                                           :template :biff.auth/signup
