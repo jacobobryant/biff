@@ -10,7 +10,7 @@
     [rum.core :as rum]
     [{{parent-ns}}.static :as static]))
 
-; See https://findka.com/biff/#http
+; See https://findka.com/biff/#http-routes
 
 ; Test it out:
 ; curl http://localhost:8080/echo?foo=bar

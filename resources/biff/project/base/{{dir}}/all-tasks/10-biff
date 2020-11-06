@@ -20,13 +20,15 @@ init () {
     npm init -y
     {% if spa %}npm install --save react react-dom
     npm install --save-dev shadow-cljs tailwindcss onchange
-    {% else %}npm install --save-dev tailwindcss onchange{% endif %}
-  fi
+{% else %}npm install --save-dev tailwindcss onchange
+{% endif %}  fi
   if ! which packer > /dev/null; then
-    echo Before deploying, you must install Packer. See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
+    echo Before deploying, you must install Packer.
+    echo See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
   fi
   if ! which terraform > /dev/null; then
-    echo 'Before deploying, you must install Terraform and run \`(cd infra; terraform init)\`. See https://learn.hashicorp.com/tutorials/terraform/install-cli.'
+    echo 'Before deploying, you must install Terraform and run `(cd infra; terraform init)`.'
+    echo See https://learn.hashicorp.com/tutorials/terraform/install-cli.
   else
     (cd infra; terraform init)
   fi
@@ -99,7 +101,7 @@ build-css () {
 # === DEPLOY ===
 
 generate-deploy-key () {
-  ssh-keygen -t rsa -b 4096 -f config/deploy-key
+  ssh-keygen -t rsa -b 4096 -f config/deploy-key -N ""
   echo
   echo If you\'re using Github, enter the contents of config/deploy-key.pub
   echo at https://github.com/your_username/your_repo/settings/keys
@@ -220,7 +222,6 @@ MONITOR
 Tip: put \`alias t=./task\` in your .bashrc file.
 
 See https://findka.com/biff for more documentation. For additional help,
-join #biff on Clojurians Slack (http://clojurians.net) or send me an email
-(tmp.2020@jacobobryant.com).
+join #biff on Clojurians Slack (http://clojurians.net).
 EOD
 }

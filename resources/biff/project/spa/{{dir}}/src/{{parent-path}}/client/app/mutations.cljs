@@ -6,6 +6,8 @@
     [{{parent-ns}}.client.app.db :as db]
     [{{parent-ns}}.client.app.system :as s]))
 
+; See https://findka.com/biff/#web-sockets
+
 (defmulti api (comp first :?data))
 (defmethod api :default
   [{[event-id] :?data} data]

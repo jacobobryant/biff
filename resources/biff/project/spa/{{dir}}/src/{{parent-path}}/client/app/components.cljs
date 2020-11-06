@@ -1,12 +1,12 @@
 (ns {{parent-ns}}.client.app.components
-  (:require-macros [cljs.core.async.macros :refer [go]])
   (:require
-    [cljs.core.async :refer [<! timeout]]
     [clojure.pprint :as pp]
     [reitit.frontend.easy :as rfe]
     [rum.core :as rum :refer [react defc defcs reactive local]]
     [{{parent-ns}}.client.app.db :as db]
     [{{parent-ns}}.client.app.mutations :as m]))
+
+; See https://github.com/tonsky/rum
 
 (def routes
   [["/app/" {:name :crud}]

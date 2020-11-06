@@ -267,15 +267,17 @@ middleware functions. The system map includes all the configuration values,
 using flat, namespaced keys. It also includes any resources or values that
 components choose to pass on.
 
-Biff's components do the following (and more):
+Biff's components do the following:
 
 - Read `config/main.edn`.
+- Start an nrepl server.
+- (In dev) start Shadow CLJS.
 - Start a Crux node.
+- Start a Crux transaction listener, which notifies clients when data they've
+  subscribed to has changed. It also runs database triggers.
 - Listen for websocket connections and sets up event handlers (via Sente).
 - Set up HTTP routes (via Reitit), including routes for authentication.
 - Start a web server (Jetty).
-- Start a Crux transaction listener, which notifies clients when data they've
-  subscribed to has changed. It also runs database triggers.
 - Populate `www/` with static resources.
 - Schedule recurring jobs.
 

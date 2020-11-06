@@ -1,6 +1,6 @@
 (ns {{parent-ns}}.static)
 
-; See https://findka.com/biff/#static-resources
+; See https://findka.com/biff/#static-resources-2
 ; and https://github.com/tonsky/rum
 
 (defn base-page [{:keys [scripts] :as opts} & contents]

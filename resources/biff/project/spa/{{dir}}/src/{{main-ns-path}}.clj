@@ -33,7 +33,7 @@
                      :jobs jobs
                      :send-email send-email
                      :after-refresh `after-refresh})]
-    (when (or (:biff/dev sys) (:biff/update-project-files sys))
+    (when (:biff/dev sys)
       ; This function lets Biff manage non-Clojure files for you (e.g.
       ; all-tasks/10-biff, and the contents of infra/).
       (project/update-spa-files sys))
