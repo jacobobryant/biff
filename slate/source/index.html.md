@@ -61,7 +61,7 @@ First, install [clj](https://clojure.org/guides/getting_started) and
 up-to-date. Then run this command to create a new Biff project:
 
 ```
-curl https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh | bash
+bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)
 ```
 
 That script will create a minimal, working CRUD app which demonstrates most of
@@ -81,7 +81,7 @@ Here's an example of running the `new-project.sh` script above:
 
 <div class="highlight">
 <pre class="highlight">
-<code>$ <span style="color:cyan">curl https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh | bash</span>
+<code>$ <span style="color:cyan">bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)</span>
 Creating a new Biff project. Available project types:
 
   1. SPA (single-page application). Includes ClojureScript, React, and
