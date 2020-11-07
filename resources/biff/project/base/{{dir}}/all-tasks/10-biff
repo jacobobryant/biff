@@ -30,6 +30,7 @@ init () {
     echo 'Before deploying, you must install Terraform and run `(cd infra; terraform init)`.'
     echo See https://learn.hashicorp.com/tutorials/terraform/install-cli.
   else
+    echo 'Running `terraform init`. Sometimes this can take a while (see https://github.com/hashicorp/terraform/issues/15798).'
     (cd infra; terraform init)
   fi
   echo

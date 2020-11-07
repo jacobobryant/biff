@@ -39,8 +39,8 @@
    :headers/Content-Type "text/plain"})
 
 (defn form [{:keys [event]} & contents]
-  [:form {:method "post"
-          :action "/api/write"}
+  [:form.mb-0 {:method "post"
+               :action "/api/write"}
    [:input {:type "hidden"
             :name "__anti-forgery-token"
             :value *anti-forgery-token*}]
