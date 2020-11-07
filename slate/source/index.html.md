@@ -57,8 +57,8 @@ discussion. Feel free to reach out for help, bug reports or anything else.
 # Getting started
 
 First, install [clj](https://clojure.org/guides/getting_started) and
-[npm](https://www.npmjs.com/get-npm) if you haven't already. Make sure clj is
-up-to-date. Then run this command to create a new Biff project:
+[npm](https://www.npmjs.com/get-npm) if you haven't already. Then run this
+command to create a new Biff project:
 
 ```
 bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)
@@ -372,7 +372,7 @@ The default environment is `:prod`. This can be overridden by setting the
 `BIFF_ENV` environment variable:
 
 ```shell
-BIFF_ENV=dev clj -M -m example.core
+BIFF_ENV=dev clj -m example.core
 ```
 
 So this:
