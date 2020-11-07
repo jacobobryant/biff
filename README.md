@@ -9,7 +9,17 @@ PRs welcome, especially if you want to tackle some of the current issues (there 
 
 The easiest way to hack on Biff is to start a new project (with `new-project.sh`) and then change the Biff dependency in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo" ...}`. Then just run `./task init; ./task dev`. Eval `(biff.core/refresh)` as needed.
 
-Run `./task docs-dev` to edit the documentation.
+### Documentation
+
+Prereqs: See [slate/README.md](slate/README.md). You'll need Ruby; then run:
+
+```shell
+cd slate
+gem install bundler
+bundle install
+```
+
+After that, you can just run `./task docs-dev` to work on the documentation.
 
 ## License
 
