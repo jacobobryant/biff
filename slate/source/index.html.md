@@ -66,8 +66,9 @@ curl https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh |
 
 That script will create a minimal, working CRUD app which demonstrates most of
 Biff's features. You'll be guided through the process of starting the app,
-trying it out, exploring the code, and deploying. You can refer back to the
-documentation here as needed.
+trying it out, and exploring the code. You can refer back to the documentation
+here as needed. When you're ready to deploy, check out
+[Deployment](#deployment).
 
 The project templates are set up for a Unix environment, no Windows support
 out-of-the-box yet (though I'm assuming that WSL is fine).
@@ -1449,6 +1450,96 @@ Each element of `:biff/jobs` is a map with three keys. For example:
     :period-minutes 2
     :job-fn #'some-job}])
 ```
+
+# Deployment
+
+See [Overview > Infrastructure](#infrastructure).
+
+When you're ready to deploy, follow these steps:
+
+**1. Set up DigitalOcean**
+
+Biff comes with Terraform config for DigitalOcean. You can write your own
+config if you want to use a different provider (see [Overview >
+Decomposing](#decomposing)), but for now I'll assume you're using DigitalOcean.
+If you don't already have an account, you can sign up with [my referral
+link](https://m.do.co/c/141610534c91) which will give you $100 of credit for 60
+days (and $25 for me if you stick with them).
+
+You'll also need a domain that [points to DigitalOcean's
+nameservers](https://www.digitalocean.com/community/tutorials/how-to-point-to-digitalocean-nameservers-from-common-domain-registrars).
+
+**2. Update config**
+
+In `config/main.edn`, make sure `:biff/host` is set to the domain you want to
+use for your production app (e.g. `myapp.example.com`). If you've changed
+this since creating your Biff project, run `./task dev` (or
+`(biff.core/refresh)`) to make sure the Terraform config file
+(`infra/system.tf.json`) is up-to-date.
+
+In `config/task.env`, update the following environment variables:
+
+ - `DIGITALOCEAN_API_KEY`
+ - `HOST` (should be the same as `:biff/host`)
+ - `LETSENCRYPT_EMAIL`
+ - `GIT_URL`
+
+Put your personal SSH public key in `config/ssh-public-key`. For example:
+`cp ~/.ssh/id_rsa.pub config/ssh-public-key`. This will let Terraform (and you)
+run commands on the server after it's provisioned.
+
+Run `./task generate-deploy-key`. This will write a new SSH private key to
+`config/deploy-key`, which will let the server download your code from git
+(assuming you're using a private repo. If not, you can ignore this step). The
+public key will be in `config/deploy-key.pub`. You'll need to give that key
+read access to your git repo. If you're using Github, you can do this at
+`https://github.com/your_username/your_repo/settings/keys` -> `Add deploy key`.
+
+**3. Create an image**
+
+Run `./task build-image`. It'll take 3-5 minutes. The command will write the new image
+ID to `config/task.env`, for example:
+
+```shell
+$ grep IMAGE_ID config/task.env
+export IMAGE_ID=12345 # Managed by Biff.
+```
+
+**4. Update repo**
+
+Build your CSS and ClojureScript for production with `./task build-assets`.
+They'll be written to `resources/www/css/main.css` and
+`resources/www/cljs/app/main.js`. Commit those files (and all other changes) to
+your repo and push. Whenever your app starts on the server, it will fetch the
+latest commit from your repo and run that.
+
+**5. Deploy with Terraform**
+
+If you've already added your domain to DigitalOcean (i.e. it shows up at
+[https://cloud.digitalocean.com/networking/domains](https://cloud.digitalocean.com/networking/domains)),
+you'll need to import it into Terraform. For example: `./task tf import
+digitalocean_domain.default example.com`.
+
+Then run `./task tf apply`. Terraform will show you the changes to be made, and
+it'll ask for confirmation before it does anything. After the command finishes, watch the logs
+with `./task logs`. You should eventually see `System started.` Once you do, your app is live!
+
+**6. Future deploys**
+
+For future deploys, simply push the changes to your repo and then run `./task
+deploy`. This will restart your app's process on the server, which will cause
+it to re-fetch the latest commit.
+
+If you make any infrastructure changes, you can re-run `./task tf apply`.
+If you made image changes, re-run `./task build-image` first.
+
+**7. Cleanup**
+
+You can remove the resources provisioned by Terraform with `./task tf destroy`.
+However, that will also remove the domain from DigitalOcean which you may not
+want. Instead, you can delete resources manually from the DigitalOcean web
+console. While you're there, you can delete the image(s) you created (these
+won't be deleted by `./task tf destroy`).
 
 # FAQ
 
