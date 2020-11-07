@@ -42,13 +42,17 @@
       :main-ns-path main-ns-path)))
 
 (defn copy-files [root {:keys [files] :as opts}]
-  (let [src-file-prefix (.getPath (io/resource root))]
+  (let [src-file-prefix (str (.getPath (io/file (io/resource root))) "/")]
     (doseq [src-file (filter #(.isFile %)
                        (file-seq (io/file (io/resource root))))
             :let [src-file-postfix (-> src-file
                                      .getPath
                                      (str/replace-first src-file-prefix ""))
-                  dest-path (selmer/render src-file-postfix opts)]
+                  dest-path (-> src-file-postfix
+                              (selmer/render opts)
+                              ; We add _ to clojure template file paths so that they don't
+                              ; get eval'd by biff.core/refresh.
+                              (str/replace #"_$" ""))]
             :when (or (nil? files) (contains? files src-file-postfix))]
       (io/make-parents dest-path)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
@@ -98,14 +102,14 @@
   (println "Creating an MPA project.")
   (init (assoc opts :mpa true :template-path "biff/project/mpa/")))
 
-(defn update-files [{:keys [template-path] :as sys}]
+(defn update-files [sys]
   (let [opts (assoc sys :host (get-in sys [:biff/unmerged-config :prod :biff/host]))]
     (copy-files "biff/project/base/{{dir}}/"
       (assoc opts
         :files #{"all-tasks/10-biff"
                  "infra/provisioners/10-wait"
                  "infra/provisioners/20-dependencies"
-                 "infra/provisioners/30-non-root-user"
+                 "infra/provisioners/30-users"
                  "infra/provisioners/40-app"
                  "infra/provisioners/50-systemd"
                  "infra/provisioners/60-nginx"

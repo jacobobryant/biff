@@ -247,7 +247,7 @@ Your app is started by running the `-main` function from your app's main namespa
 (defn start [first-start]
   (let [sys (biff.core/start-spa {:biff/first-start first-start
                                   ...})]
-    (when (get sys :biff/update-project-files (:biff/dev sys))
+    (when (:biff/dev sys)
       (biff.project/update-spa-files sys))
     (println "System started.")))
 
@@ -276,7 +276,8 @@ Biff's components do the following:
 - Start a Crux node.
 - Start a Crux transaction listener, which notifies clients when data they've
   subscribed to has changed. It also runs database triggers.
-- Listen for websocket connections and sets up event handlers (via Sente).
+- Listen for web socket connections (via sente).
+- Set up web socket event handlers, including front-end query and transaction handlers.
 - Set up HTTP routes (via Reitit), including routes for authentication.
 - Start a web server (Jetty).
 - Populate `www/` with static resources.
@@ -330,14 +331,14 @@ replace those two function calls with their respective bodies like so:
                c/write-static-resources
                c/start-jobs
                c/print-spa-help])]
-    (when (get sys :biff/update-project-files (:biff/dev sys))
+    (when (:biff/dev sys)
       (let [opts (assoc sys ...)]
           (biff.project/copy-files "biff/project/base/{{dir}}/"
             (assoc opts
               :files #{"all-tasks/10-biff"
                        "infra/provisioners/10-wait"
                        "infra/provisioners/20-dependencies"
-                       "infra/provisioners/30-non-root-user"
+                       "infra/provisioners/30-users"
                        "infra/provisioners/40-app"
                        "infra/provisioners/50-systemd"
                        "infra/provisioners/60-nginx"
