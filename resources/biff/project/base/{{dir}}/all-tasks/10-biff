@@ -110,15 +110,7 @@ generate-deploy-key () {
   echo at https://github.com/your_username/your_repo/settings/keys
 }
 
-ensure-clean-commit () {
-  if ! (git status | grep -q "nothing to commit"); then
-    echo You have uncommitted files. You must commit and push before deploying.
-    exit 1
-  fi
-}
-
 tf () {
-  ensure-clean-commit
   export TF_VAR_digitalocean_api_key="${DIGITALOCEAN_API_KEY}"
   export TF_VAR_deploy_key="${DEPLOY_KEY}"
   export TF_VAR_image_id="${IMAGE_ID}"
@@ -127,7 +119,6 @@ tf () {
 }
 
 deploy () {
-  ensure-clean-commit
   echo Updating config...
   scp config/main.edn root@$HOST:/home/biff/config/main.edn
   echo Deploying app...
@@ -144,6 +135,7 @@ logs () {
 }
 
 prod-connect () {
+  echo Connect your repl to port 7800.
   ssh -NL 7800:localhost:7888 root@$HOST
 }
 
@@ -227,4 +219,12 @@ Tip: put \`alias t=./task\` in your .bashrc file.
 See https://findka.com/biff for more documentation. For additional help,
 join #biff on Clojurians Slack (http://clojurians.net).
 EOD
+}
+
+--help () {
+  help
+}
+
+-h () {
+  help
 }
