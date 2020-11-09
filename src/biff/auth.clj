@@ -113,7 +113,7 @@
        :session-cookie-attrs {:path "/"
                               :http-only true
                               :same-site :lax
-                              :secure secure-defaults
+                              :secure (boolean secure-defaults)
                               :max-age (* 60 60 24 90)}
        :session (assoc session :uid (:user/id user))})
     {:status 302
