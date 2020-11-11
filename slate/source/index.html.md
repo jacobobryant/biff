@@ -432,8 +432,11 @@ the following sections for a deeper explanation.
 :biff.crux.jdbc/port nil
 
 :biff.http/not-found-path "/404.html"
-:biff.http/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
-                                      ; (and sets http status to 200 instead of 404).
+:biff.http/spa-path "/app/index.html" ; If set, takes precedence over :biff.http/not-found-path and
+                                      ; sets http status to 200 instead of 404, unless the
+                                      ; requested file path is prefixed by one of
+                                      ; :biff.http/asset-paths.
+:biff.http/asset-paths #{"/cljs/" "/js/" "/css/"} ; See :biff.http/spa-path.
 :biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                 ; or just site-defaults.
 
@@ -762,8 +765,11 @@ Relevant config:
 ```clojure
 :biff/routes nil ; A vector of Reitit routes.
 :biff.http/not-found-path "/404.html"
-:biff.http/spa-path "/app/index.html" ; If set, takes precedence over not-found-path
-                                      ; (and sets http status to 200 instead of 404).
+:biff.http/spa-path "/app/index.html" ; If set, takes precedence over :biff.http/not-found-path and
+                                      ; sets http status to 200 instead of 404, unless the
+                                      ; requested file path is prefixed by one of
+                                      ; :biff.http/asset-paths.
+:biff.http/asset-paths #{"/cljs/" "/js/" "/css/"} ; See :biff.http/spa-path.
 :biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
                                 ; or just site-defaults.
 :biff/dev false ; When true, overrides values for these keys:

@@ -51,8 +51,13 @@
           (merge resp)
           (bu/nest-string-keys [:headers :cookies]))))))
 
+(defn spa-handler [req {:keys [spa-path asset-paths]}]
+  (when-not (some #(str/starts-with? (:uri req) %) asset-paths)
+    (file-response req (io/file spa-path))))
+
 (defn make-handler [{:keys [session-store secure-defaults root
-                            not-found-path spa-path routes default-routes]}]
+                            not-found-path spa-path asset-paths
+                            routes default-routes]}]
   (let [spa-path (str root spa-path)
         not-found-path (str root not-found-path)
         not-found (if not-found-path
@@ -66,7 +71,8 @@
                            default-routes
                            [(file-handler root)]
                            (when spa-path
-                             [#(file-response % (io/file spa-path))])
+                             [#(spa-handler % {:spa-path spa-path
+                                               :asset-paths asset-paths})])
                            [(reitit/create-default-handler
                               {:not-found not-found})])
         ring-defaults (-> (if secure-defaults

@@ -76,6 +76,7 @@
        :biff.http/secure-defaults true
        :biff.http/not-found-path "/404.html"
        :biff.http/spa-path "/app/index.html"
+       :biff.http/asset-paths #{"/cljs/" "/js/" "/css/"}
        :biff.web/host (if dev "0.0.0.0" "localhost")
        :biff.web/port port}
       sys
@@ -192,7 +193,8 @@
            biff.static/root
            biff.http/secure-defaults
            biff.http/spa-path
-           biff.http/not-found-path] :as sys}]
+           biff.http/not-found-path
+           biff.http/asset-paths] :as sys}]
   (let [cookie-key (-> (assoc sys
                          :k :cookie-key
                          :biff/db (crux/db node))
@@ -206,6 +208,7 @@
          :secure-defaults secure-defaults
          :not-found-path not-found-path
          :spa-path spa-path
+         :asset-paths asset-paths
          :routes [(into ["" {:middleware [[wrap-env sys]]}]
                     routes)]}))))
 
