@@ -54,6 +54,37 @@ discussion. Feel free to reach out for help, bug reports or anything else.
  - Watch [a presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
  - See the [FAQ](#faq) section for comparison to other frameworks.
 
+## Contributing
+
+The most helpful way to contribute is to use Biff and write tutorials/blog
+about it based on your experience. I'd be happy to list your articles under
+[Resources](#resources) and promote them myself, not that I have a large
+following.
+
+PRs are also welcome, especially if you want to tackle some of the [current
+issues](https://github.com/jacobobryant/biff/issues). There are several that I
+don't think would require too much time. If you're planning something
+significant, you might want to bring it up in `#biff` on Clojurians Slack.
+
+The easiest way to hack on Biff is to start a new project (see [Getting
+Started](#getting-started)) and then change the Biff dependency in `deps.edn` to
+`{:local/root "/path/to/cloned/biff/repo" ...}`. Then just run `./task init;
+./task dev`. Eval `(biff.core/refresh)` as needed.
+
+### Documentation
+
+You'll need Ruby; then run:
+
+```shell
+cd slate
+gem install bundler
+bundle install
+cd ..
+```
+
+After that, you can run `./task docs-dev` to work on the documentation. See the
+[Slate README](https://github.com/jacobobryant/biff/tree/master/slate).
+
 # Getting started
 
 First, install [clj](https://clojure.org/guides/getting_started) and
@@ -71,7 +102,7 @@ here as needed. When you're ready to deploy, check out
 [Deployment](#deployment).
 
 The project templates are set up for a Unix environment, no Windows support
-out-of-the-box yet (though I'm assuming that WSL is fine).
+out-of-the-box (though I assume WSL is fine).
 
 # Overview
 
@@ -1460,9 +1491,8 @@ Each element of `:biff/jobs` is a map with three keys. For example:
 
 # Deployment
 
-See [Overview > Infrastructure](#infrastructure).
-
-When you're ready to deploy, follow these steps:
+See [Overview > Infrastructure](#infrastructure). When you're ready to deploy,
+follow these steps:
 
 **1. Set up DigitalOcean**
 
@@ -1560,7 +1590,7 @@ example](https://github.com/jacobobryant/mystery-cows) of using Firebase with Cl
 
 Some shared features:
 
- - Natural modeling of graph data
+ - Flexible data modeling
  - Basic query subscriptions (no joins)
  - Client-side transactions
  - Authorization rules
