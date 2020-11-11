@@ -266,7 +266,7 @@
 (defn print-spa-help [{:keys [biff/dev] :as sys}]
   (when dev
     (println)
-    (println "Go to http://localhost:9630 -> \"Builds\" -> \"start watch\" -> \"Dashboard\".")
+    (println "Go to http://localhost:9630/builds -> \"start watch\" -> \"Dashboard\".")
     (println "After the build finishes, go to http://localhost:8080.")
     (println "Connect your editor to nrepl port 7888.")
     (println "See `./task help` for a complete list of commands.")
