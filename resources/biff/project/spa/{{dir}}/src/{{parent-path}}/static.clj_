@@ -37,7 +37,7 @@
 (def signin-sent
   (base-page {}
     [:p "Sign-in link sent, please check your inbox."]
-    [:p.text-sm "(Just kidding: click on the sign-in link that was printed to the console.)"]))
+    [:p.text-sm "(Just kidding: click on the sign-in link that was printed to the terminal.)"]))
 
 (def signin-fail
   (base-page {}
