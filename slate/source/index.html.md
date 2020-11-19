@@ -276,8 +276,10 @@ Your app is started by running the `-main` function from your app's main namespa
 <div class="file-heading">src/example/core.clj</div>
 ```clojure
 (defn start [first-start]
-  (let [sys (biff.core/start-spa {:biff/first-start first-start
-                                  ...})]
+  (let [sys (biff.core/start-system
+              {:biff/first-start first-start
+               ...}
+              biff.core/default-spa-components)]
     (when (:biff/dev sys)
       (biff.project/update-spa-files sys))
     (println "System started.")))
@@ -293,13 +295,13 @@ means that when you update Biff (by changing the `:sha` value in `deps.edn`),
 those non-Clojure files will also get updated. You shouldn't change any of
 those files by hand, because your changes will get overwritten.
 
-`biff.core/start-spa` takes a system map and passes it through a number of
+`biff.core/start-system` takes a system map and passes it through a number of
 component functions. It's kind of like passing a Ring request through
 middleware functions. The system map includes all the configuration values,
 using flat, namespaced keys. It also includes any resources or values that
 components choose to pass on.
 
-Biff's components do the following:
+Biff's default components do the following:
 
 - Read `config/main.edn`.
 - Start an nrepl server.
@@ -334,22 +336,21 @@ When all components have finished, the result is stored in `biff.core/system`
 `(biff.core/refresh)` (I recommend binding an editor shortcut to that).
 That will call all the functions in `:biff/stop`, reload Clojure files with
 tools.deps.namespace.repl, and then restart your app with
-`biff.core/start-spa`.
+`biff.core/start-system`.
 
 ## Decomposing
 
-To a degree, you can modify the behavior of `biff.core/start-spa` and
-`biff.project/update-spa-files` by passing in certain configuration values.
-When you need more flexibility, you can decompose Biff. For example, you can
-replace those two function calls with their respective bodies like so:
+To a degree, you can modify the behavior of Biff by passing in certain
+configuration values. When you need more flexibility, you can decompose Biff.
+For example, you can replace `default-spa-components` like so:
 
 <div class="file-heading">src/example/core.clj</div>
 ```clojure
 (require '[biff.components :as c])
-(require '[biff.project.infra :as infra])
 
 (defn start [first-start]
   (let [sys (biff.core/start-system {...}
+              ; Add or remove components as needed.
               [c/init
                c/set-defaults
                c/start-crux
@@ -362,6 +363,17 @@ replace those two function calls with their respective bodies like so:
                c/write-static-resources
                c/start-jobs
                c/print-spa-help])]
+    ...))
+```
+
+And you can replace `biff.project/update-spa-files` with its body:
+
+```clojure
+(require '[biff.project.infra :as infra])
+
+(defn start [first-start]
+  (let [sys (biff.core/start-system {...}
+              ...)]
     (when (:biff/dev sys)
       (let [opts (assoc sys ...)]
           (biff.project/copy-files "biff/project/base/{{dir}}/"
@@ -384,7 +396,7 @@ replace those two function calls with their respective bodies like so:
     (println "System started.")))
 ```
 
-You can repeat this process until you have the level of flexibility you need.
+This should give you the flexibility you need.
 
 <hr>
 
@@ -394,7 +406,7 @@ experiment. You can refer back here when you need more information.
 
 # Configuration
 
-Configuration can be set in code (by passing it in to `biff.core/start-spa`) and
+Configuration can be set in code (by passing it in to `biff.core/start-system`) and
 in `config/main.edn`. When Biff reads in `config/main.edn`, it will merge the
 nested maps according to the current environment and the value of `:inherit`.
 The result is merged into the system map.
