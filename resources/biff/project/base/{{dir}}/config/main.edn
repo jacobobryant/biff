@@ -1,4 +1,5 @@
-{:prod {; Standalone topology is only recommended for development.
+{:prod {; Standalone topology in production is only recommended for getting
+        ; started.
         :biff.crux/topology :standalone
         ; Uncomment to use jdbc in production:
         ;:biff.crux/topology :jdbc
