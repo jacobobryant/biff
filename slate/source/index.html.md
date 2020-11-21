@@ -56,12 +56,12 @@ discussion. Feel free to reach out for help, bug reports or anything else.
 
 ## Contributing
 
-The most helpful way to contribute is to use Biff and write tutorials/blog
-about it based on your experience. I'd be happy to list your articles under
-[Resources](#resources) and promote them myself, not that I have a large
-following.
+The most helpful way to contribute is to use Biff and let me know what problems
+you run into. You can also write tutorials or blog about your experience. I'd
+be happy to list your articles under [Resources](#resources) and promote them
+myself, not that I have a large following.
 
-PRs are also welcome, especially if you want to tackle some of the [current
+PRs are welcome too, especially if you want to tackle some of the [current
 issues](https://github.com/jacobobryant/biff/issues). There are several that I
 don't think would require too much time. If you're planning something
 significant, you might want to bring it up in `#biff` on Clojurians Slack.
@@ -82,8 +82,9 @@ bundle install
 cd ..
 ```
 
-After that, you can run `./task docs-dev` to work on the documentation. See the
-[Slate README](https://github.com/jacobobryant/biff/tree/master/slate).
+After that, you can run `./task docs-dev` and edit `slate/source/index.html.md`
+to work on the documentation. See the [Slate
+README](https://github.com/jacobobryant/biff/tree/master/slate).
 
 # Getting started
 
