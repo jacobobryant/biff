@@ -55,7 +55,7 @@
   (when-not (some #(str/starts-with? (:uri req) %) asset-paths)
     (file-response req (io/file spa-path))))
 
-(defn make-handler [{:keys [session-store secure-defaults root
+(defn make-handler [{:keys [session-store secure-defaults root dev-root
                             not-found-path spa-path asset-paths
                             routes default-routes]}]
   (let [spa-path (str root spa-path)
@@ -69,6 +69,8 @@
                                  :headers/Content-Type "text/plain"}))
         default-handlers (concat
                            default-routes
+                           (when dev-root
+                             [(file-handler dev-root)])
                            [(file-handler root)]
                            (when spa-path
                              [#(spa-handler % {:spa-path spa-path

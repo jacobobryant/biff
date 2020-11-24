@@ -11,13 +11,10 @@ p {
 
 @responsive {
   .btn {
-    @apply px-4 py-2 bg-blue-500 text-white rounded;
-  }
-  .btn:hover, .btn:focus {
-    @apply bg-blue-700;
+    @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 focus:bg-blue-700;
   }
   .input-text {
-    @apply border border-gray-500 rounded p-2;
+    @apply border border-gray-500 rounded p-2 focus:outline-none focus:ring focus:border-blue-300
   }
 }
 

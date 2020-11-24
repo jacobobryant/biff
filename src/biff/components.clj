@@ -87,7 +87,8 @@
                         (str "https://" host)
                         (str "http://" host ":" port))
        :biff.static/root "www"
-       :biff.static/resource-root "www"}
+       :biff.static/resource-root "www"
+       :biff.static/dev-root "www-dev"}
       (when dev
         {:biff.crux/topology :standalone
          :biff.http/secure-defaults false}))))
@@ -191,6 +192,7 @@
   [{:keys [biff/routes
            biff/node
            biff.static/root
+           biff.static/dev-root
            biff.http/secure-defaults
            biff.http/spa-path
            biff.http/not-found-path
@@ -204,6 +206,7 @@
     (assoc sys :biff.web/handler
       (http/make-handler
         {:root root
+         :dev-root dev-root
          :session-store session-store
          :secure-defaults secure-defaults
          :not-found-path not-found-path

@@ -213,12 +213,12 @@ in other files, such as `all-tasks/20-example`.
 ### Static resources
 
 `./task dev` starts your app on `localhost:8080`. Your app will serve files
-from `www/`, which is populated from several sources:
+from `www/` and `www-dev/`, which are populated from several sources:
 
- - The contents of `resources/www/` are copied over.
- - HTML files are generated from `src/example/static.clj`.
- - Your CLJS code (under `src/example/client/`) is compiled to `www/cljs/app/main.js`.
- - `tailwind.css` is compiled to `www/css/main.css`.
+ - The contents of `resources/www/` are copied to `www/`.
+ - HTML files are generated from `src/example/static.clj` and placed in `www/`.
+ - Your CLJS code (under `src/example/client/`) is compiled to `www-dev/cljs/app/main.js`.
+ - `tailwind.css` is compiled to `www-dev/css/main.css`.
 
 In production, only the first two points apply. Before deploying, you'll use `./task build-assets`
 to add your production CLJS and CSS to `resources/www/` so it can be checked into your git repository
@@ -257,7 +257,7 @@ You'll need to update all of these files before deploying.
 Before deploying, you'll create a VM image (via Packer) with `./task
 build-image`. That task will read from `infra/webserver.json`, and it will run
 the scripts under `infra/provisioners/`. If you need to customize the image,
-you can add more scripts and rerun `./task build-image`.
+you can add more scripts and re-run `./task build-image`.
 
 After that, you can create a server and deploy your app (via Terraform) with
 `./task tf apply`. You'll need to commit and push first. When the server

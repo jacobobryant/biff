@@ -9,8 +9,8 @@
 # === DEV ===
 
 build-css-dev () {
-  mkdir -p www/css/
-  npx tailwindcss build tailwind.css -o www/css/main.css
+  mkdir -p www-dev/css/
+  npx tailwindcss-cli build tailwind.css -o www-dev/css/main.css
 }
 
 init () {
@@ -19,25 +19,17 @@ init () {
   else
     npm init -y
     {% if spa %}npm install --save react react-dom
-    npm install --save-dev shadow-cljs tailwindcss onchange
-{% else %}npm install --save-dev tailwindcss onchange
+    npm install --save-dev shadow-cljs tailwindcss-cli onchange
+{% else %}npm install --save-dev tailwindcss-cli onchange
 {% endif %}  fi
-  if ! which packer > /dev/null; then
-    echo Before deploying, you must install Packer.
-    echo See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
-  fi
-  if ! which terraform > /dev/null; then
-    echo 'Before deploying, you must install Terraform and run `(cd infra; terraform init)`.'
-    echo See https://learn.hashicorp.com/tutorials/terraform/install-cli.
-  else
-    echo 'Running `terraform init`. Sometimes this can take a while (see https://github.com/hashicorp/terraform/issues/15798).'
-    (cd infra; terraform init)
-  fi
   echo
   echo Initialization complete.
 }
 
 dev () {
+  if ! [ -e node_modules ]; then
+    init
+  fi
   npx onchange -i tailwind.css -- ./task build-css-dev &
   trap 'kill $(jobs -p) 2> /dev/null' EXIT
   BIFF_ENV=dev clj {% if spa %}-A:cljs {% endif %}"$@" -m $MAIN_NS
@@ -69,13 +61,17 @@ current-image-id () {
 }
 
 build-image () {
+  if ! which packer > /dev/null; then
+    echo You must install Packer before running this command. See https://learn.hashicorp.com/tutorials/packer/getting-started-install.
+    exit 1
+  fi
   cat > infra/provisioners/00-config << EOD
 # Managed by Biff
-export MAIN_NS="$MAIN_NS"
-export AUTHORIZED_KEYS="$PUBLIC_KEY"
-export HOST="$HOST"
-export LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
-export GIT_URL="$GIT_URL"
+MAIN_NS="$MAIN_NS"
+AUTHORIZED_KEYS="$PUBLIC_KEY"
+HOST="$HOST"
+LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
+GIT_URL="$GIT_URL"
 EOD
   (cd infra; packer build webserver.json)
   sed -i "s/.*IMAGE_ID.*/export IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
@@ -89,7 +85,12 @@ build-css () {
   npx shadow-cljs release $CLJS_APPS
   for app in $CLJS_APPS; do
     mkdir -p resources/www/cljs/$app
-    cp {www,resources/www}/cljs/$app/main.js
+    if [ -e www-dev/cljs/$app/main.js ]; then
+      cp {www-dev,resources/www}/cljs/$app/main.js
+    else
+      # For backwards compatibility. See #64.
+      cp {www,resources/www}/cljs/$app/main.js
+    fi
   done
 }
 
@@ -111,6 +112,18 @@ generate-deploy-key () {
 }
 
 tf () {
+  if [ -z "$IMAGE_ID" ]; then
+    echo You must run \`./task build-image\` before running this command.
+    exit 1
+  fi
+  if ! which terraform > /dev/null; then
+    echo You must install Terraform before running this command. See https://learn.hashicorp.com/tutorials/terraform/install-cli.
+    exit 1
+  fi
+  if ! [ -e infra/.terraform ]; then
+    echo 'Running `terraform init`. Sometimes this can take a few minutes (see https://github.com/hashicorp/terraform/issues/15798).'
+    (cd infra; terraform init)
+  fi
   export TF_VAR_digitalocean_api_key="${DIGITALOCEAN_API_KEY}"
   export TF_VAR_deploy_key="${DEPLOY_KEY}"
   export TF_VAR_image_id="${IMAGE_ID}"
@@ -173,8 +186,6 @@ BUILD
 
 DEPLOY
 
-*Note*: update the contents of config/ before running these commands.
-
 ./task generate-deploy-key
 
   Generates an SSH private/public key pair which you can use to deploy your
@@ -182,6 +193,8 @@ DEPLOY
   you can ignore this command.
 
 ./task tf [command]
+
+  *Note*: update the contents of config/ before running this command.
 
   Runs \`terraform [command]\` with needed environment variables set. Use
   \`./task tf apply\` to deploy infrastructure changes. The first time you run
