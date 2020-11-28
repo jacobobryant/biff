@@ -73,8 +73,9 @@ HOST="$HOST"
 LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
 GIT_URL="$GIT_URL"
 EOD
+  export DIGITALOCEAN_API_KEY
   (cd infra; packer build webserver.json)
-  sed -i "s/.*IMAGE_ID.*/export IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
+  sed -i "s/.*IMAGE_ID.*/IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
 }
 
 build-css () {
