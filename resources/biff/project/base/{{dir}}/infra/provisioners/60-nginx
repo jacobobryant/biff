@@ -6,6 +6,7 @@ server {
     listen [::]:80 default_server;
     server_name _;
     root /var/www/biff;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
     location / {
         try_files \$uri \$uri/ @proxy;
     }
