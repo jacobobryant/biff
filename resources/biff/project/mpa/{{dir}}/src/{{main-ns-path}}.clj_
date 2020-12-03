@@ -2,16 +2,11 @@
   (:require
     [biff.core :as biff]
     [biff.project :as project]
-    [clojure.pprint :as pp]
+    [{{parent-ns}}.email :refer [send-email]]
     [{{parent-ns}}.jobs :refer [jobs]]
     [{{parent-ns}}.routes :refer [routes]]
     [{{parent-ns}}.rules :refer [rules]]
     [{{parent-ns}}.static :refer [pages]]))
-
-; You'll need to provide your own send-email implementation. Soon I'll provide
-; a default implementation using Mailgun.
-(defn send-email [opts]
-  (pp/pprint [:send-email (select-keys opts [:to :template :data])]))
 
 ; This is your app's main entry point. When you reach the point where you
 ; need more flexibility than what Biff provides out of the box, replace
@@ -25,7 +20,7 @@
                      :static-pages pages
                      :rules #'rules
                      :jobs jobs
-                     :send-email send-email
+                     :send-email #'send-email
                      :after-refresh `after-refresh}
               biff/default-mpa-components)]
     (when (:biff/dev sys)
