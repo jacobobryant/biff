@@ -56,7 +56,7 @@
                                 {:source "../config/main.edn"
                                  :destination "/home/biff/config/main.edn"}}
                                {:file
-                                {:content "${var.deploy_key}"
+                                {:content "${var.deploy_key}\n"
                                  :destination "/home/biff/.ssh/id_rsa"}}]}}}
               (do-domain opts)
               (do-a-record opts)]})

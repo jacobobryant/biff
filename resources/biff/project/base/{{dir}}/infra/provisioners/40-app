@@ -4,7 +4,9 @@ cat > /home/biff/run-as-root.sh << EOD
 cd /home/biff
 if ! [ -f certbot-ran ]; then
   sleep 30
-  certbot --nginx -d $HOST -n --agree-tos -m $LETSENCRYPT_EMAIL
+  if ! certbot --nginx -d $HOST -n --agree-tos -m $LETSENCRYPT_EMAIL ; then
+    systemctl restart biff
+  fi
   systemctl restart nginx
   touch certbot-ran
 fi

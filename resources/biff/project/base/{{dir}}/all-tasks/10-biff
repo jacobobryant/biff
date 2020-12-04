@@ -145,6 +145,7 @@ deploy () {
 # === MONITOR ===
 
 logs () {
+  echo If you see \"No journal files were found.\", run \`ssh root@$HOST reboot\` to fix it.
   ssh root@$HOST journalctl -u biff -f -n 300
 }
 
