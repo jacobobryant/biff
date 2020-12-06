@@ -46,11 +46,15 @@ Core features (a few of these were inspired by Firebase):
   you can use server-side rendering instead of React and ClojureScript.
 - **Great documentation!**
 
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/mKqjJH3WiqI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
+
 ## Resources
 
  - Join `#biff` on [Clojurians Slack](http://clojurians.net) for
 discussion. Feel free to reach out for help, bug reports or anything else.
- - See the issues and source on [Github](https://github.com/jacobobryant/biff)
+ - See the issues and source on [Github](https://github.com/jacobobryant/biff).
+ - Watch [a presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020.
+ - Watch [a workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020.
  - Watch [a presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
  - See the [FAQ](#faq) section for comparison to other frameworks.
 
@@ -104,6 +108,8 @@ here as needed. When you're ready to deploy, check out
 
 The project templates are set up for a Unix environment, no Windows support
 out-of-the-box (though I assume WSL is fine).
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=96" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
 # Overview
 
@@ -404,6 +410,10 @@ This should give you the flexibility you need.
 The rest of this documentation covers Biff's individual features in-depth. The
 fastest way to learn Biff is probably to create a new project and then
 experiment. You can refer back here when you need more information.
+
+Here's a demonstration of adding a feature to a Biff application:
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=1808" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
 # Configuration
 
@@ -1504,8 +1514,9 @@ Each element of `:biff/jobs` is a map with three keys. For example:
 
 # Deployment
 
-See [Overview > Infrastructure](#infrastructure). When you're ready to deploy,
-follow these steps:
+See [Overview > Infrastructure](#infrastructure).
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=568" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
 **1. Set up DigitalOcean**
 
