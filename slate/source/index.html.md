@@ -53,8 +53,9 @@ Core features (a few of these were inspired by Firebase):
  - Join `#biff` on [Clojurians Slack](http://clojurians.net) for
 discussion. Feel free to reach out for help, bug reports or anything else.
  - See the issues and source on [Github](https://github.com/jacobobryant/biff).
- - Watch [a presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020.
- - Watch [a workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020.
+ - Watch [a presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020 ([slides](https://jacobobryant.com/misc/reclojure-2020-jacobobryant.pdf)).
+ - Watch [a workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020
+   ([code](https://github.com/jacobobryant/biff-workshop)).
  - Watch [a presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
  - See the [FAQ](#faq) section for comparison to other frameworks.
 
@@ -106,8 +107,7 @@ trying it out, and exploring the code. You can refer back to the documentation
 here as needed. When you're ready to deploy, check out
 [Deployment](#deployment).
 
-The project templates are set up for a Unix environment, no Windows support
-out-of-the-box (though I assume WSL is fine).
+If you're on Windows, you'll need to use Windows Subsystem for Linux.
 
 <p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=96" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
@@ -411,7 +411,8 @@ The rest of this documentation covers Biff's individual features in-depth. The
 fastest way to learn Biff is probably to create a new project and then
 experiment. You can refer back here when you need more information.
 
-Here's a demonstration of adding a feature to a Biff application:
+Here's a demonstration of adding a feature to a Biff application
+([short version](https://github.com/jacobobryant/biff-workshop/commit/76a76d5f774c29785e4d22e1741ec4fb491ae819)):
 
 <p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=1808" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
