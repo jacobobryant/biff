@@ -77,9 +77,9 @@
                    :template template
                    :data {:biff.auth/link link}})))
   {:status 302
-   :headers/Location location})
+   :headers/Location (str (uri/join base-url location))})
 
-(defn signin [{:keys [params/token session biff/db biff/node biff.handler/secure-defaults]
+(defn signin [{:keys [params/token session biff/base-url biff/db biff/node biff.handler/secure-defaults]
                :biff.auth/keys [on-signin on-signin-fail]
                :as env}]
   (if-some [{:keys [email] :as claims}
@@ -104,7 +104,7 @@
                    :claims (not-empty (dissoc claims :email :iss :iat :exp))))]
       (crux/submit-tx node [[:crux.tx/put user]])
       {:status 302
-       :headers/Location on-signin
+       :headers/Location (str (uri/join base-url on-signin))
        :cookies/csrf {:path "/"
                       :max-age (* 60 60 24 90)
                       :same-site :lax
@@ -117,11 +117,11 @@
                               :max-age (* 60 60 24 90)}
        :session (assoc session :uid (:user/id user))})
     {:status 302
-     :headers/Location on-signin-fail}))
+     :headers/Location (str (uri/join base-url on-signin-fail))}))
 
-(defn signout [{:keys [biff.auth/on-signout]}]
+(defn signout [{:keys [biff.auth/on-signout biff/base-url]}]
   {:status 302
-   :headers/Location on-signout
+   :headers/Location (str (uri/join base-url on-signout))
    :cookies/ring-session {:value "" :max-age 0}
    :cookies/csrf {:value "" :max-age 0}
    :session nil})
