@@ -1,12 +1,17 @@
 # Managed by Biff
 cat > /home/biff/run-as-root.sh << EOD
 #!/bin/bash
+set -e
 cd /home/biff
+if ! [ -f rebooted ]; then
+  # For some reason, `./task logs` won't work until you reboot.
+  touch rebooted
+  reboot
+fi
 if ! [ -f certbot-ran ]; then
+  echo Sleeping for 30 seconds before running certbot...
   sleep 30
-  if ! certbot --nginx -d $HOST -n --agree-tos -m $LETSENCRYPT_EMAIL ; then
-    systemctl restart biff
-  fi
+  certbot --nginx -d $HOST -n --agree-tos -m $LETSENCRYPT_EMAIL
   systemctl restart nginx
   touch certbot-ran
 fi
