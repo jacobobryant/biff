@@ -13,14 +13,21 @@ build-css-dev () {
   npx tailwindcss-cli build tailwind.css -o www-dev/css/main.css
 }
 
+ensure-module-installed () {
+  module=$1
+  if ! npm list $module > /dev/null; then
+    npm install --save-dev $module
+  fi
+}
+
 init () {
   if [ -f package.json ]; then
     npm install
   else
     npm init -y
     {% if spa %}npm install --save react react-dom
-    npm install --save-dev shadow-cljs tailwindcss-cli onchange
-{% else %}npm install --save-dev tailwindcss-cli onchange
+    npm install --save-dev shadow-cljs tailwindcss-cli onchange clean-css-cli
+{% else %}npm install --save-dev tailwindcss-cli onchange clean-css-cli
 {% endif %}  fi
   echo
   echo Initialization complete.
@@ -79,7 +86,12 @@ EOD
 }
 
 build-css () {
-  NODE_ENV=production npx tailwindcss build tailwind.css -o resources/www/css/main.css
+  ensure-module-installed clean-css-cli
+  out=resources/www/css/main.css
+  min=resources/www/css/main.min.css
+  NODE_ENV=production npx tailwindcss build tailwind.css -o $out
+  npx cleancss -o $min $out
+  mv $min $out
 }
 
 {% if spa %}build-cljs () {
