@@ -67,9 +67,9 @@ be happy to list your articles under [Resources](#resources) and promote them
 myself, not that I have a large following.
 
 PRs are welcome too, especially if you want to tackle some of the [current
-issues](https://github.com/jacobobryant/biff/issues). There are several that I
-don't think would require too much time. If you're planning something
-significant, you might want to bring it up in `#biff` on Clojurians Slack.
+issues](https://github.com/jacobobryant/biff/issues). If you're planning
+something significant, you might want to bring it up in `#biff` on Clojurians
+Slack.
 
 The easiest way to hack on Biff is to start a new project (see [Getting
 Started](#getting-started)) and then change the Biff dependency in `deps.edn` to
@@ -93,9 +93,16 @@ README](https://github.com/jacobobryant/biff/tree/master/slate).
 
 # Getting started
 
-First, install [clj](https://clojure.org/guides/getting_started) and
-[npm](https://www.npmjs.com/get-npm) if you haven't already. Then run this
-command to create a new Biff project:
+Requirements:
+
+ - Linux, Mac or Windows Subsystem for Linux
+ - [clj](https://clojure.org/guides/getting_started)
+ - rlwrap (try `which rlwrap`)
+ - npm
+ - node v12.0.0+
+ - Note: I've had mixed reports about using JDK 15. If it doesn't work, try 8 or 11.
+
+Run this command to create a new Biff project:
 
 ```
 bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)
@@ -106,8 +113,6 @@ Biff's features. You'll be guided through the process of starting the app,
 trying it out, and exploring the code. You can refer back to the documentation
 here as needed. When you're ready to deploy, check out
 [Deployment](#deployment).
-
-If you're on Windows, you'll need to use Windows Subsystem for Linux.
 
 <p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=96" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
@@ -1559,7 +1564,8 @@ read access to your git repo. If you're using Github, you can do this at
 
 **3. Create an image**
 
-Run `./task build-image`. It'll take 3-5 minutes. The command will write the new image
+Run `./task build-image`. It'll take 3-5 minutes. Some of the output will be
+red; this is (probably) OK. If successful, the command will write the new image
 ID to `config/task.env`, for example:
 
 ```shell
@@ -1577,14 +1583,23 @@ latest commit from your repo and run that.
 
 **5. Deploy with Terraform**
 
-If you've already added your domain to DigitalOcean (i.e. it shows up at
-[https://cloud.digitalocean.com/networking/domains](https://cloud.digitalocean.com/networking/domains)),
-you'll need to import it into Terraform. For example: `./task tf import
+If you've already added your domain to DigitalOcean (i.e. it shows up under
+[Networking > Domains](https://cloud.digitalocean.com/networking/domains)),
+you'll need to import it into Terraform. For example, if your app's domain is
+`foo.example.com`, then you'll need to run `./task tf import
 digitalocean_domain.default example.com`.
 
-Then run `./task tf apply`. Terraform will show you the changes to be made, and
-it'll ask for confirmation before it does anything. After the command finishes, watch the logs
-with `./task logs`. You should eventually see `System started.` Once you do, your app is live!
+You might also need to do the following before proceeding:
+
+ - Run `eval $(ssh-agent); ssh-add`.
+ - Add your personal SSH public key to the DigitalOcean console. Go to
+ [Settings > Security](https://cloud.digitalocean.com/account/security),
+ click "Add SSH Key", then paste in the contents of `config/ssh-public-key`.
+
+Run `./task tf apply`. Terraform will show you the changes to
+be made, and it'll ask for confirmation before it does anything. After the
+command finishes, watch the logs with `./task logs`. You should eventually see
+`System started.` Once you do, your app is live!
 
 **6. Future deploys**
 
