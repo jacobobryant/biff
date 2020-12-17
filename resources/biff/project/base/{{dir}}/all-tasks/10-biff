@@ -82,7 +82,7 @@ GIT_URL="$GIT_URL"
 EOD
   export DIGITALOCEAN_API_KEY
   (cd infra; packer build webserver.json)
-  sed -i "s/.*IMAGE_ID.*/IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
+  perl -pi -e "s/.*IMAGE_ID.*/IMAGE_ID=\"$(current-image-id)\" # Managed by Biff/" config/task.env
 }
 
 build-css () {
@@ -158,6 +158,7 @@ deploy () {
 
 logs () {
   echo If you see \"No journal files were found.\", run \`ssh root@$HOST reboot\` to fix it.
+  echo
   ssh root@$HOST journalctl -u biff -f -n 300
 }
 
