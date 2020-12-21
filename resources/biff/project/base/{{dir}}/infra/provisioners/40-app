@@ -1,4 +1,5 @@
 # Managed by Biff
+
 cat > /home/biff/run-as-root.sh << EOD
 #!/bin/bash
 set -e
@@ -18,25 +19,22 @@ fi
 sudo -u biff ./run-as-biff.sh
 EOD
 chmod +x /home/biff/run-as-root.sh
+
 cat > /home/biff/run-as-biff.sh << EOD
 #!/bin/bash
 eval "\$(ssh-agent -s)"
 ssh-add ~/.ssh/id_rsa
-sed -i 's/:sha ".*"//' deps.edn
+sha="\$(git ls-remote "$GIT_URL" HEAD | awk '{ print \$1 }')"
+printf '{:deps {github-username/repo {:git/url "%s" :sha "%s"}}}\n' \\
+       "$GIT_URL" "\$sha" > deps.edn
 while true; do
-    clojure -X:deps git-resolve-tags
     clojure -M -m $MAIN_NS
     echo Your app crashed. Restarting in 2 seconds...
     sleep 2
 done
 EOD
 chmod +x /home/biff/run-as-biff.sh
-cat > /home/biff/deps.edn << EOD
-{:deps
- {github-username/repo-$RANDOM
-  {:git/url "$GIT_URL"
-   :tag "HEAD"}}}
-EOD
+
 mkdir /home/biff/config
 mkdir /var/www/biff
 chown -R biff:biff /var/www/
