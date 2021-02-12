@@ -1,5 +1,4 @@
 # Managed by Biff
-apt-get -y upgrade
 apt-get -y install nginx default-jre
 snap install core
 snap refresh core

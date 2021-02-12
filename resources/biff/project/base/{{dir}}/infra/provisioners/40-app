@@ -5,7 +5,7 @@ cat > /home/biff/run-as-root.sh << EOD
 set -e
 cd /home/biff
 if ! [ -f rebooted ]; then
-  # For some reason, `./task logs` won't work until you reboot.
+  # For some reason, \`./task logs\` won't work until you reboot.
   touch rebooted
   reboot
 fi
