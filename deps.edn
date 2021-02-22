@@ -18,6 +18,8 @@
   nrepl/nrepl {:mvn/version "0.5.3"}
   org.clojure/tools.namespace {:mvn/version "1.0.0"}
   org.postgresql/postgresql {:mvn/version "42.2.12.jre7"}
+  ;; add this because tools.deps.alpha no longer includes it
+  org.slf4j/slf4j-nop {:mvn/version "1.7.25"}
   ovotech/ring-jwt {:mvn/version "1.2.5"}
   ring/ring-core {:mvn/version "1.8.0"}
   ring/ring-defaults {:mvn/version "0.3.2"}
