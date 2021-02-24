@@ -39,7 +39,7 @@ dev () {
   fi
   npx onchange -i tailwind.css -- ./task build-css-dev &
   trap 'kill $(jobs -p) 2> /dev/null' EXIT
-  BIFF_ENV=dev clj {% if spa %}-A:cljs {% endif %}"$@" -m $MAIN_NS
+  BIFF_ENV=dev clj -M{% if spa %}:cljs{% endif %} "$@" -m $MAIN_NS
 }
 
 

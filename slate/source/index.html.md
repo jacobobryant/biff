@@ -432,7 +432,7 @@ The default environment is `:prod`. This can be overridden by setting the
 `BIFF_ENV` environment variable:
 
 ```shell
-BIFF_ENV=dev clj -m example.core
+BIFF_ENV=dev clj -M -m example.core
 ```
 
 So this:
