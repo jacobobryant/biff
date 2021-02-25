@@ -39,8 +39,10 @@ dev () {
   fi
   npx onchange -i tailwind.css -- ./task build-css-dev &
   trap 'kill $(jobs -p) 2> /dev/null' EXIT
-  chkapi=`clj -Sdescribe | grep repl-aliases`
-  mopt="-A" && [[ -n $chkapi ]] && mopt="-M"
+  mopt="-A"
+  if clj -Sdescribe | grep -q repl-aliases; then
+    mopt="-M"
+  fi
   BIFF_ENV=dev clj $mopt{% if spa %}:cljs{% endif %} "$@" -m $MAIN_NS
 }
 
