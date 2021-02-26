@@ -22,11 +22,11 @@
        coll?])))
 
 (defn postwalk-reduce [f acc x]
-  (reduce f
-    (if (cardinality-many? x)
-      (reduce (partial postwalk-reduce f) acc x)
-      acc)
-    [x]))
+  (f
+   (if (cardinality-many? x)
+     (reduce (partial postwalk-reduce f) acc x)
+     acc)
+   x))
 
 (defn deref-form? [x]
   (and
