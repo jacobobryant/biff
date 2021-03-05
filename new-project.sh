@@ -4,4 +4,4 @@ mopt=""
 if clj -Sdescribe | grep -q repl-aliases; then
   mopt="-M"
 fi
-clj -Sdeps "$deps" "$mopt" -m biff.project
+clj -Sdeps "$deps" $mopt -m biff.project
