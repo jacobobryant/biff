@@ -50,46 +50,14 @@ Core features (a few of these were inspired by Firebase):
 
 ## Resources
 
- - Join `#biff` on [Clojurians Slack](http://clojurians.net) for
-discussion. Feel free to reach out for help, bug reports or anything else.
- - See the issues and source on [Github](https://github.com/jacobobryant/biff).
- - Watch [a presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020 ([slides](https://jacobobryant.com/misc/reclojure-2020-jacobobryant.pdf)).
- - Watch [a workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020
+ - Discussion: `#biff` on [Clojurians Slack](http://clojurians.net).
+ - Issues and source code: [Github](https://github.com/jacobobryant/biff).
+ - [An interview](https://console.substack.com/p/console-49) on The Console.
+ - [An interview](https://soundcloud.com/user-959992602/s4-e27-biff-with-jacob-obryant/s-fpVxrTrP9ZJ) on the ClojureScript Podcast.
+ - [A presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020 ([slides](https://jacobobryant.com/misc/reclojure-2020-jacobobryant.pdf)).
+ - [A workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020
    ([code](https://github.com/jacobobryant/biff-workshop)).
- - Watch [a presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
- - See the [FAQ](#faq) section for comparison to other frameworks.
-
-## Contributing
-
-The most helpful way to contribute is to use Biff and let me know what problems
-you run into. You can also write tutorials or blog about your experience. I'd
-be happy to list your articles under [Resources](#resources) and promote them
-myself, not that I have a large following.
-
-PRs are welcome too, especially if you want to tackle some of the [current
-issues](https://github.com/jacobobryant/biff/issues). If you're planning
-something significant, you might want to bring it up in `#biff` on Clojurians
-Slack.
-
-The easiest way to hack on Biff is to start a new project (see [Getting
-Started](#getting-started)) and then change the Biff dependency in `deps.edn` to
-`{:local/root "/path/to/cloned/biff/repo" ...}`. Then just run `./task init;
-./task dev`. Eval `(biff.core/refresh)` as needed.
-
-### Documentation
-
-You'll need Ruby; then run:
-
-```shell
-cd slate
-gem install bundler
-bundle install
-cd ..
-```
-
-After that, you can run `./task docs-dev` and edit `slate/source/index.html.md`
-to work on the documentation. See the [Slate
-README](https://github.com/jacobobryant/biff/tree/master/slate).
+ - [A presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
 
 # Getting started
 
@@ -1617,6 +1585,38 @@ However, that will also remove the domain from DigitalOcean which you may not
 want. Instead, you can delete resources manually from the DigitalOcean web
 console. While you're there, you can delete the image(s) you created (these
 won't be deleted by `./task tf destroy`).
+
+# Contributing
+
+The most helpful way to contribute is to use Biff and let me know what problems
+you run into. You can also write tutorials or blog about your experience. I'd
+be happy to list your articles under [Resources](#resources) and promote them
+myself, not that I have a large following.
+
+PRs are welcome too, especially if you want to tackle some of the [current
+issues](https://github.com/jacobobryant/biff/issues). If you're planning
+something significant, you might want to bring it up in `#biff` on Clojurians
+Slack.
+
+The easiest way to hack on Biff is to start a new project (see [Getting
+Started](#getting-started)) and then change the Biff dependency in `deps.edn` to
+`{:local/root "/path/to/cloned/biff/repo" ...}`. Then just run `./task init;
+./task dev`. Eval `(biff.core/refresh)` as needed.
+
+## Documentation
+
+You'll need Ruby; then run:
+
+```shell
+cd slate
+gem install bundler
+bundle install
+cd ..
+```
+
+After that, you can run `./task docs-dev` and edit `slate/source/index.html.md`
+to work on the documentation. See the [Slate
+README](https://github.com/jacobobryant/biff/tree/master/slate).
 
 # FAQ
 
