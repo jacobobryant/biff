@@ -1,9 +1,9 @@
 # Biff
 
-See [findka.com/biff](https://findka.com/biff/).
+See [biff.findka.com](https://biff.findka.com/).
 
 ## License
 
-Distributed under the [EPL v2.0](LICENSE)
+Distributed under the [MIT License](LICENSE).
 
-Copyright &copy; 2020 [Jacob O'Bryant](https://jacobobryant.com).
+Copyright &copy; 2021 [Jacob O'Bryant](https://jacobobryant.com).
