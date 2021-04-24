@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -e
+
+if [ -f config/task.env ]; then
+  source config/task.env
+fi
+
+{% if spa %}init () {
+  if [ -f package.json ]; then
+    npm install
+  else
+    npm init -y
+    npm install --save react react-dom
+    npm install --save-dev shadow-cljs
+  fi
+}
+
+{% endif %}dev () {
+  cd config
+  source dev.env
+  cd -
+  clj -A:css:test{% if spa %}:cljs{% endif %} -X:dev
+}
+
+tests () {
+  clj -X:test
+}
+
+build () {
+  tests
+  clj -X:css :watch? false
+  {% if spa %}npx shadow-cljs release app
+  {% endif %}clj -X:uberjar
+}
+
+logs () {
+  ssh root@$TASK_HOST journalctl -u app -f -n 300
+}
+
+deploy () {
+  scp config/prod.env app@$TASK_HOST:config.env
+  time git push prod master
+}
+
+prod-repl () {
+  echo Connect to nrepl port 7888
+  ssh -NL 7888:localhost:7888 root@$TASK_HOST
+}
+
+"$@"

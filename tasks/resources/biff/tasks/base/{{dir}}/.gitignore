@@ -1,0 +1,6 @@
+/.cpcache/
+/.shadow-cljs/
+/config/
+/node_modules/
+/storage/
+/target/

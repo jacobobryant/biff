@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-for f in config/task.env all-tasks/*; do
-  source $f
-done
-
-"$@"

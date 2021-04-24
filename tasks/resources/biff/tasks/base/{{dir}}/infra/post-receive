@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e
+set +x
+
+# Build
+./task build
+
+# Release
+dir="$HOME/releases/$(date "+%Y-%m-%d_%T")"
+mkdir -p $dir
+cp target/app.jar ~/config.env $dir
+cat > $dir/run.sh << EOD
+#!/usr/bin/env bash
+cd $dir
+source config.env
+java -jar app.jar
+EOD
+chmod +x $dir/run.sh
+rm -f ~/releases/current
+ln -s $dir ~/releases/current
+
+# Run
+sudo systemctl restart app
+
+# Cleanup
+for dir in $(ls | grep -v current | head -n -10); do
+  rm -r $dir
+done
