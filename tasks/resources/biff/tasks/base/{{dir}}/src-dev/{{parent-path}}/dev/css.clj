@@ -1,4 +1,4 @@
-(ns {{parent-ns}}.css
+(ns {{parent-ns}}.dev.css
   (:require
     [clojure.string :as str]
     [garden.core :as garden]

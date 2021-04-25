@@ -1,0 +1,19 @@
+(ns example.config
+  (:require [flub.core :as flub]))
+
+(def env-keys
+  ; env key | clj key | coerce fn
+  [["CRUX_TOPOLOGY"      :biff.crux/topology keyword]
+   ["CRUX_JDBC_DBNAME"   :biff.crux.jdbc/dbname]
+   ["CRUX_JDBC_USER"     :biff.crux.jdbc/user]
+   ["CRUX_JDBC_PASSWORD" :biff.crux.jdbc/password]
+   ["CRUX_JDBC_HOST"     :biff.crux.jdbc/host]
+   ["CRUX_JDBC_PORT"     :biff.crux.jdbc/port #(Long/parseLong %)]
+   ["HOST"               :biff/host]
+   ["BIFF_DEV"           :biff/dev #(= "true" %)]
+   ["MAILGUN_KEY"        :mailgun/api-key]
+   ["MAILGUN_ENDPOINT"   :mailgun/endpoint]
+   ["MAILGUN_FROM"       :mailgun/from]])
+
+(defn merge-config [sys]
+  (merge sys (flub/read-env env-keys)))

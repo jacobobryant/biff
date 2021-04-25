@@ -53,7 +53,6 @@
                               (str/replace #"_$" ""))]
             :when (or (nil? files) (contains? files src-file-postfix))]
       (io/make-parents dest-path)
-      (println "rendering" src-file)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
 (defn generate-key [length]

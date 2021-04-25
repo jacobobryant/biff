@@ -19,27 +19,24 @@ fi
   cd config
   source dev.env
   cd -
-  clj -A:css:test{% if spa %}:cljs{% endif %} -X:dev
-}
-
-tests () {
-  clj -X:test
+  echo Starting an nrepl server. Go to {{parent-ns}}.dev to start the app.
+  clj -A:dev -M -m nrepl.cmdline --port 7888
 }
 
 build () {
-  tests
-  clj -X:css :watch? false
+  clj -A:dev -X {{parent-ns}}.dev/run-tests
+  clj -A:dev -X {{parent-ns}}.dev/css
   {% if spa %}npx shadow-cljs release app
   {% endif %}clj -X:uberjar
-}
-
-logs () {
-  ssh root@$TASK_HOST journalctl -u app -f -n 300
 }
 
 deploy () {
   scp config/prod.env app@$TASK_HOST:config.env
   time git push prod master
+}
+
+logs () {
+  ssh root@$TASK_HOST journalctl -u app -f -n 300
 }
 
 prod-repl () {
