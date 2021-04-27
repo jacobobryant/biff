@@ -2,4 +2,5 @@
  :tasks {docs:dev biff.bb/docs:dev
          docs:build biff.bb/docs:build
          libs:sync-dev biff.bb/libs:sync-dev
-         libs:sync biff.bb/libs:sync}}
+         libs:sync biff.bb/libs:sync
+         foo biff.bb/foo}}

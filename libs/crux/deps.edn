@@ -1,0 +1,12 @@
+{:deps
+ {juxt/crux-core {:mvn/version "21.04-1.16.0-beta"},
+  juxt/crux-rocksdb {:mvn/version "21.04-1.16.0-beta"},
+  metosin/malli {:mvn/version "0.4.0"},
+  biff/util
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/util",
+   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
+  biff/malli
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/malli",
+   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"}}}

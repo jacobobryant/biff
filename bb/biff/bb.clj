@@ -1,5 +1,8 @@
 (ns biff.bb
   (:require [babashka.fs :as fs]
+            [clojure.edn :as edn]
+            [clojure.pprint :refer [pprint]]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]))
 
@@ -23,7 +26,7 @@
       (mapcat get-parents)
       distinct
       not-empty
-      (apply get-ancestors))))
+      (get-ancestors get-parents))))
 
 (defn docs:dev []
   (sh "bundle xec middleman server"
@@ -38,7 +41,7 @@
   (let [{:keys [projects deps git-url group-id]} (edn/read-string (slurp "libs.edn"))
         sha (str/trim (sh "git rev-parse HEAD"))]
     (doseq [[proj-name config] projects
-            :let [dir (fs/file "libs" proj-name)
+            :let [dir (fs/file "libs" (str proj-name))
                   proj-ancestors (get-ancestors
                                    #(get-in projects [% :projects])
                                    (:projects config))
@@ -52,7 +55,7 @@
                                            :deps/root (str "libs/" p)
                                            :sha sha})]))}]]
       (when-not (fs/directory? dir)
-        (fs/create-dir dir))
+        (fs/create-dirs dir))
       (spit (fs/file dir "deps.edn") (with-out-str (pprint proj-deps))))))
 
 (defn libs:sync-dev []

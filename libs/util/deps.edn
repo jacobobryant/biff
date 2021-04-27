@@ -1,0 +1,1 @@
+{:deps {org.clojure/tools.namespace {:mvn/version "0.2.11"}}}
