@@ -4,7 +4,18 @@
                             :sha "{{sha}}"}
   flub/core                {:git/url "https://github.com/jacobobryant/flub"
                             :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
-                            :deps/root "core"}}
+                            :deps/root "core"}
+  flub/components          {:git/url "https://github.com/jacobobryant/flub"
+                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
+                            :deps/root "components"}
+  flub/middleware          {:git/url "https://github.com/jacobobryant/flub"
+                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
+                            :deps/root "middleware"}
+  flub/crux                {:git/url "https://github.com/jacobobryant/flub"
+                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
+                            :deps/root "crux"
+                            :exclusions [juxt/crux-core
+                                         juxt/crux-rocksdb]}}
  :aliases
  {:dev {:extra-paths ["src-dev"]
         :extra-deps {girouette/processor

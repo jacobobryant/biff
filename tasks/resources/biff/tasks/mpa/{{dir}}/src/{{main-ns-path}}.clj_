@@ -1,8 +1,14 @@
 (ns {{main-ns}}
   (:require
+    [biff.auth :as auth]
     [biff.components :as c]
     [biff.core :as biff]
-    [biff.project :as project]
+    [flub.core :as flub]
+    [flub.components :as fc]
+    [flub.crux :as flux]
+    [flub.middleware :as fmid]
+    [reitit.ring :as reitit]
+    [ring.middleware.session.cookie :as cookie]
     [{{parent-ns}}.config :refer [merge-config]]
     [{{parent-ns}}.email :refer [send-email]]
     [{{parent-ns}}.jobs :refer [jobs]]
@@ -11,27 +17,83 @@
     [{{parent-ns}}.static :refer [pages]])
   (:gen-class))
 
+(defn error [{:keys [which]}]
+  (let [[status msg] (case which
+                       :not-found [404 "Not found."]
+                       :method-not-allowed [405 "Not allowed."]
+                       :not-acceptable [406 "Not acceptable."])]
+    {:status status
+     :headers {"Content-Type" "text/plain"}
+     :body msg}))
+
+(defn default-handlers [{:keys [error]}]
+  [(reitit/create-resource-handler
+     {:path "/"})
+   (reitit/create-default-handler
+     (->> [:not-found :method-not-allowed :not-acceptable]
+          (map (fn [k]
+                 [k #(error (assoc % :which k))]))
+          (into {})))])
+
+(defn wrap-print-requests [handler]
+  (fn [req]
+    (let [resp (handler req)]
+      (println (:status resp) (:request-method req) (:uri req))
+      resp)))
+
+(defn wrap-flub-biff [handler]
+  (fn [req]
+    (handler (assoc req :biff/db @(:flub.crux/db req)))))
+
+(defn wrap-middleware [{:keys [flub.crux/node
+                               flub.web/cookie-secret
+                               flub.web/secure-cookies
+                               flub.web/handler
+                               flub.web/on-error]
+                        :or {on-error (constantly
+                                        {:status 500
+                                         :headers {"Content-Type" "text/plain"}
+                                         :body "Internal error."})}
+                        :as sys}]
+  (let [store (cookie/cookie-store
+                {:key (flub/base64-decode cookie-secret)})]
+    (assoc sys :flub.web/handler
+           (-> handler
+               wrap-flub-biff
+               (flux/wrap-db {:node node})
+               (fmid/wrap-defaults {:session-store store
+                                    :secure secure-cookies
+                                    :env sys
+                                    :on-error on-error})
+               wrap-print-requests))))
+
 (def components
   [merge-config
    c/set-defaults
    #(dissoc % :biff.http/spa-path)
    c/start-crux
-   c/set-auth-route
-   c/set-http-handler
-   c/start-web-server
-   (fn [{:keys [biff/base-url] :as sys}]
-     (println "Jetty started on" base-url)
-     sys)
-   c/write-static-resources
-   c/start-jobs])
+   (fn [sys]
+     (merge sys
+            (flub/select-ns-as sys 'biff.web 'flub.web)
+            (flub/select-ns-as sys 'biff.crux 'flub.crux)
+            {:flub.crux/node (:biff/node sys)}))
+   fc/reitit
+   (fn [sys]
+     (update sys :flub.reitit/routes conj (auth/route sys)))
+   wrap-middleware
+   fc/jetty
+   c/start-jobs
+   (fn [{:keys [flub/stop] :as sys}]
+     (update sys :biff/stop into stop))])
 
 (defn -main []
   (biff/start-system
-    #:biff{:routes routes
-           :static-pages pages
-           :rules #'rules
-           :jobs jobs
-           :send-email #'send-email
-           :after-refresh `-main}
+    {:flub.reitit/routes routes
+     :flub.reitit/default-handlers (default-handlers {:error error})
+     :biff/static-pages pages
+     :biff/rules #'rules
+     :biff/jobs jobs
+     :biff/send-email #'send-email
+     :biff/after-refresh `-main}
     components)
   (println "System started."))

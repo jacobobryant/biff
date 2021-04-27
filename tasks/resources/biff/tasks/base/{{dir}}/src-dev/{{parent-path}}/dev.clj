@@ -1,5 +1,7 @@
 (ns {{parent-ns}}.dev
-  (:require [{{parent-ns}}.test]
+  (:require [{{parent-ns}}.static :refer [pages]]
+            [{{parent-ns}}.test]
+            [biff.components :as bc]
             [clojure.test :as t]
             [girouette.processor :as gir]))
 
@@ -13,9 +15,18 @@
              :apply-classes {{parent-ns}}.dev.css/apply-classes}
            opts)))
 
+(defn build [_]
+  (let [{:keys [fail error]} (run-tests)]
+    (if (< 0 (+ fail error))
+      (System/exit 1)
+      (do
+        (css nil)
+        (bc/export-rum pages "target/resources/public")))))
+
 (comment
-  ; Compile css in background:
+  ; Compile resources:
   (.start (Thread. #(css {:watch? true})))
+  (bc/export-rum pages "target/resources/public")
 
   ; Start the app:
   ((requiring-resolve '{{main-ns}}/-main))

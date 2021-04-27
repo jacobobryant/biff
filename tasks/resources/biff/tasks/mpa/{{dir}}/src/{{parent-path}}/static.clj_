@@ -58,7 +58,4 @@
 
 ; To update static files during development, delete the #_ and then eval this
 ; namespace. (Don't forget to put the #_ back when you're done).
-#_(do
-    (biff.components/write-static-resources
-      (assoc @biff.core/system :biff/static-pages pages))
-    nil)
+#_(biff.components/export-rum pages "target/resources/public")

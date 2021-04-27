@@ -1,4 +1,4 @@
-(ns example.config
+(ns {{parent-ns}}.config
   (:require [flub.core :as flub]))
 
 (def env-keys
@@ -13,7 +13,12 @@
    ["BIFF_DEV"           :biff/dev #(= "true" %)]
    ["MAILGUN_KEY"        :mailgun/api-key]
    ["MAILGUN_ENDPOINT"   :mailgun/endpoint]
-   ["MAILGUN_FROM"       :mailgun/from]])
+   ["MAILGUN_FROM"       :mailgun/from]
+   ["JWT_SECRET"         :flub.web/jwt-secret]
+   ["COOKIE_SECRET"      :flub.web/cookie-secret]
+   ["SECURE_COOKIES"     :flub.web/secure-cookies #(= "true" %)]])
 
 (defn merge-config [sys]
-  (merge sys (flub/read-env env-keys)))
+  (merge sys
+         {:flux.web/secure-cookies true}
+         (flub/read-env env-keys)))

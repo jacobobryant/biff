@@ -24,8 +24,7 @@ fi
 }
 
 build () {
-  clj -A:dev -X {{parent-ns}}.dev/run-tests
-  clj -A:dev -X {{parent-ns}}.dev/css
+  clj -A:dev -X {{parent-ns}}.dev/build
   {% if spa %}npx shadow-cljs release app
   {% endif %}clj -X:uberjar
 }

@@ -13,6 +13,7 @@
     [{{parent-ns}}.triggers :refer [triggers]])
   (:gen-class))
 
+; todo update this ns
 (def components
   [merge-config
    c/set-defaults
