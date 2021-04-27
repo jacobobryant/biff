@@ -1,0 +1,43 @@
+{:git-url "https://github.com/jacobobryant/biff"
+ :group-id "biff"
+ :projects
+ {util       {:deps [org.clojure/tools.namespace]}
+  components {:deps [nrepl/nrepl
+                     info.sunng/ring-jetty9-adapter
+                     metosin/reitit-ring]}
+  crux       {:deps [juxt/crux-core
+                     juxt/crux-rocksdb
+                     metosin/malli]
+              :projects [util
+                         malli]}
+  extra      {:deps [buddy/buddy-sign
+                     clj-http/clj-http
+                     lambdaisland/uri]
+              :projects [util]}
+  malli      {:deps [metosin/malli]}
+  middleware {:deps [metosin/muuntaja
+                     ring/ring-defaults]
+              :projects [util]}
+  views      {:deps [rum/rum]}
+  all        {:projects [util
+                         components
+                         crux
+                         extra
+                         malli
+                         middleware
+                         views
+                         all]}}
+ :deps
+ {buddy/buddy-sign               {:mvn/version "3.3.0"}
+  clj-http/clj-http              {:mvn/version "3.10.0"}
+  info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"}
+  juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
+  juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
+  lambdaisland/uri               {:mvn/version "1.4.54"}
+  metosin/malli                  {:mvn/version "0.4.0"}
+  metosin/muuntaja               {:mvn/version "0.6.7"}
+  metosin/reitit-ring            {:mvn/version "0.3.7"}
+  nrepl/nrepl                    {:mvn/version "0.6.0"}
+  org.clojure/tools.namespace    {:mvn/version "0.2.11"}
+  ring/ring-defaults             {:mvn/version "0.3.2"}
+  rum/rum                        {:mvn/version "0.11.4"}}}
