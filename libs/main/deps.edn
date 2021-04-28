@@ -1,4 +1,5 @@
-{:deps
+{:paths ["src"],
+ :deps
  {biff/views {:local/root "../libs/views"},
   biff/crux {:local/root "../libs/crux"},
   biff/util {:local/root "../libs/util"},

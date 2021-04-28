@@ -1,4 +1,4 @@
-{:deps {:local/root "libs/tasks"}
+{:deps {biff/tasks {:local/root "libs/tasks"}}
  :tasks {docs:dev      biff.tasks.bb/docs:dev
          docs:build    biff.tasks.bb/docs:build
          libs:sync-dev biff.tasks.bb/libs:sync-dev
