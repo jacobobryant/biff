@@ -2,4 +2,4 @@
  :deps
  {nrepl/nrepl {:mvn/version "0.6.0"},
   info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"},
-  metosin/reitit-ring {:mvn/version "0.3.7"}}}
+  metosin/reitit-ring {:mvn/version "0.5.13"}}}

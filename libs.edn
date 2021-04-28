@@ -38,7 +38,7 @@
   lambdaisland/uri               {:mvn/version "1.4.54"}
   metosin/malli                  {:mvn/version "0.4.0"}
   metosin/muuntaja               {:mvn/version "0.6.7"}
-  metosin/reitit-ring            {:mvn/version "0.3.7"}
+  metosin/reitit-ring            {:mvn/version "0.5.13"}
   nrepl/nrepl                    {:mvn/version "0.6.0"}
   org.clojure/tools.namespace    {:mvn/version "0.2.11"}
   ring/ring-defaults             {:mvn/version "0.3.2"}
