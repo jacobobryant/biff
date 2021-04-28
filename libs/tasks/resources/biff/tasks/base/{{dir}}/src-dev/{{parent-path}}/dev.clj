@@ -32,10 +32,10 @@
   ((requiring-resolve '{{main-ns}}/-main))
 
   ; Inspect app state:
-  (->> @biff.core/system keys sort (run! prn))
+  (->> @biff.util-tmp/system keys sort (run! prn))
 
   ; Stop the app, reload files, restart the app:
-  (biff.core/refresh)
+  (biff.util-tmp/refresh)
 
   ; Run tests:
   (run-tests)
