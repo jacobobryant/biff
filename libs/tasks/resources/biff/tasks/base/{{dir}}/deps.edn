@@ -1,8 +1,8 @@
 {:paths ["src" "resources" "target/resources"]
  :deps
- {biff/all {:git/url "https://github.com/jacobobryant/biff"
-            :deps/root "libs/all"
-            :sha "{{sha}}"}
+ {biff/main {:git/url "https://github.com/jacobobryant/biff"
+             :deps/root "libs/main"
+             :sha "{{sha}}"}
   biff/old {:git/url "https://github.com/jacobobryant/biff"
             :sha "{{sha}}"}}
  :aliases
