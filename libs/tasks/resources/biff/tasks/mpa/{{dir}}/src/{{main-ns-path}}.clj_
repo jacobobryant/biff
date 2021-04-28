@@ -17,29 +17,14 @@
     [{{parent-ns}}.static :refer [pages]])
   (:gen-class))
 
-(defn error [{:keys [which]}]
-  (let [[status msg] (case which
+(defn on-error [{:keys [reitit-error]}]
+  (let [[status msg] (case reitit-error
                        :not-found [404 "Not found."]
                        :method-not-allowed [405 "Not allowed."]
                        :not-acceptable [406 "Not acceptable."])]
     {:status status
-     :headers {"Content-Type" "text/plain"}
+     :headers/Content-Type "text/plain"
      :body msg}))
-
-(defn default-handlers [{:keys [error]}]
-  [(reitit/create-resource-handler
-     {:path "/"})
-   (reitit/create-default-handler
-     (->> [:not-found :method-not-allowed :not-acceptable]
-          (map (fn [k]
-                 [k #(error (assoc % :which k))]))
-          (into {})))])
-
-(defn wrap-print-requests [handler]
-  (fn [req]
-    (let [resp (handler req)]
-      (println (:status resp) (:request-method req) (:uri req))
-      resp)))
 
 (defn wrap-biff-crux [handler]
   (fn [req]
@@ -85,7 +70,7 @@
 (defn -main []
   (bu/start-system
     {:biff.reitit/routes routes
-     :biff.reitit/default-handlers (default-handlers {:error error})
+     :biff.reitit/on-error on-error
      :biff/static-pages pages
      :biff/rules #'rules
      :biff/jobs jobs
