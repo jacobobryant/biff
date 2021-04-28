@@ -1,6 +1,6 @@
 (ns biff.extra
   (:require
-    [buddy.sign.nonce :as nonce]
+    [buddy.core.nonce :as nonce]
     [buddy.sign.jwt :as jwt]
     [clj-http.client :as http]
     [biff.util-tmp :as bu]

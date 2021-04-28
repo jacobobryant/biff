@@ -1,7 +1,7 @@
 .nrepl-port
 /.cpcache/
 /.shadow-cljs/
-/config/
+{{ "/config/" }}
 /data/
 /node_modules/
 /storage/
