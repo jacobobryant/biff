@@ -54,23 +54,34 @@
         (flush)
         (on-error req t)))))
 
+(defn wrap-log-requests [handler]
+  (fn [req]
+    (let [resp (handler req)]
+      ; TODO at some point replace this with a logging library or something
+      ; (See https://www.reddit.com/r/Clojure/comments/2pd8yv/why_you_cant_use_println_for_logging/)
+      (println (:status resp) (:request-method req) (:uri req))
+      resp)))
+
 (defn wrap-defaults [handler {:keys [session-store
                                      secure
                                      session-max-age
                                      on-error
                                      env]
-                              :or {session-max-age (* 60 60 24 90)}}]
-  (let [ring-defaults (-> (if secure
-                            rd/secure-site-defaults
-                            rd/site-defaults)
-                        (update :session merge {:store session-store
-                                                :cookie-name "ring-session"})
-                        (update-in [:session :cookie-attrs]
-                          merge {:max-age session-max-age
-                                 :same-site :lax})
-                        (update :security merge {:anti-forgery false
-                                                 :ssl-redirect false})
-                        (assoc :static false))]
+                              :or {session-max-age (* 60 60 24 90)}
+                              :as opts}]
+  (let [changes {[:session :store]                   session-store
+                 [:session :cookie-name]             "ring-session"
+                 [:session :cookie-attrs :max-age]   session-max-age
+                 [:session :cookie-attrs :same-site] :lax
+                 [:security :anti-forgery]           false
+                 [:security :ssl-redirect]           false
+                 [:static]                           false}
+        ring-defaults (reduce (fn [m [path value]]
+                                (assoc-in m path value))
+                              (if secure
+                                rd/secure-site-defaults
+                                rd/site-defaults)
+                              changes)]
     (-> handler
       (wrap-env env)
       wrap-flat-keys
@@ -78,4 +89,5 @@
       muuntaja/wrap-format
       (wrap-static (select-keys opts [:root :path->file]))
       (rd/wrap-defaults ring-defaults)
-      (wrap-internal-error {:on-error on-error}))))
+      (wrap-internal-error {:on-error on-error})
+      wrap-log-requests)))
