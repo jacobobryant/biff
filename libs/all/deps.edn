@@ -1,29 +1,8 @@
 {:deps
- {biff/views
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/views",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/crux
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/crux",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/util
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/util",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/extra
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/extra",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/middleware
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/middleware",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/components
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/components",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"},
-  biff/malli
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/malli",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"}}}
+ {biff/views {:local/root "../libs/views"},
+  biff/crux {:local/root "../libs/crux"},
+  biff/util {:local/root "../libs/util"},
+  biff/extra {:local/root "../libs/extra"},
+  biff/middleware {:local/root "../libs/middleware"},
+  biff/components {:local/root "../libs/components"},
+  biff/malli {:local/root "../libs/malli"}}}

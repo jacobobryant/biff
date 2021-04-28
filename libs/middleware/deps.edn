@@ -1,7 +1,4 @@
 {:deps
  {metosin/muuntaja {:mvn/version "0.6.7"},
   ring/ring-defaults {:mvn/version "0.3.2"},
-  biff/util
-  {:git/url "https://github.com/jacobobryant/biff",
-   :deps/root "libs/util",
-   :sha "646715f409bc8245c4004e78fed9325dacf3e05d"}}}
+  biff/util {:local/root "../libs/util"}}}
