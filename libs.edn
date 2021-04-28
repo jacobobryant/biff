@@ -19,7 +19,7 @@
                      ring/ring-defaults]
               :projects [util]}
   views      {:deps [rum/rum]}
-  all        {:projects [util
+  main       {:projects [util
                          components
                          crux
                          extra

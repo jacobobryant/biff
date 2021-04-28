@@ -45,7 +45,10 @@
                   proj-ancestors (get-ancestors
                                    #(get-in projects [% :projects])
                                    (:projects config))
-                  proj-deps {:deps (into
+                  proj-deps {:paths (if (fs/directory? (fs/file dir "resources"))
+                                      ["src" "resources"]
+                                      ["src"])
+                             :deps (into
                                      (select-keys deps (:deps config))
                                      (for [p proj-ancestors]
                                        [(symbol group-id (str p))

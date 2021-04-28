@@ -4,7 +4,7 @@
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as str]
-    [flub.core :as flub]
+    [biff.util :as bu]
     [selmer.parser :as selmer]))
 
 (defn prompt [{:keys [msg default] :as opts}]
@@ -26,7 +26,7 @@
     key-infos))
 
 (defn latest-biff-sha []
-  (-> (flub/sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "HEAD")
+  (-> (bu/sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "HEAD")
     (str/split #"\s+")
     first))
 
@@ -56,7 +56,7 @@
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
 (defn generate-key [length]
-  (flub/base64-encode (nonce/random-bytes length)))
+  (bu/base64-encode (nonce/random-bytes length)))
 
 (defn init [{:keys [template-path spa] :as opts}]
   (if spa
@@ -79,9 +79,9 @@
                  :cookie-key (generate-key 16)))]
     (copy-files "biff/tasks/base/" opts)
     (copy-files template-path opts)
-    (flub/sh "chmod" "+x" (str dir "/task"))
+    (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
-      (flub/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
+      (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
     (println)
     (println "Your project is ready. Run the following commands to get started:")
     (println)

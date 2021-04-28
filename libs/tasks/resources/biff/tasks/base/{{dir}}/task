@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO use bb tasks
 set -e
 
 if [ -f config/task.env ]; then

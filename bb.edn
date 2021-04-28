@@ -1,6 +1,6 @@
-{:paths ["bb"]
- :tasks {docs:dev biff.bb/docs:dev
-         docs:build biff.bb/docs:build
-         libs:sync-dev biff.bb/libs:sync-dev
-         libs:sync biff.bb/libs:sync
-         foo biff.bb/foo}}
+{:deps {:local/root "libs/tasks"}
+ :tasks {docs:dev      biff.tasks.bb/docs:dev
+         docs:build    biff.tasks.bb/docs:build
+         libs:sync-dev biff.tasks.bb/libs:sync-dev
+         libs:sync     biff.tasks.bb/libs:sync
+         foo           biff.tasks.bb/foo}}

@@ -1,4 +1,4 @@
-{:paths ["src" "resources"]
+{:paths ["src"]
  :deps
  {byte-transforms/byte-transforms {:mvn/version "0.1.4"}
   cheshire/cheshire {:mvn/version "5.10.0"}

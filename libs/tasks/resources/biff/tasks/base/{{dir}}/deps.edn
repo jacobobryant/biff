@@ -1,21 +1,10 @@
 {:paths ["src" "resources" "target/resources"]
  :deps
- {github-jacobobryant/biff {:git/url "https://github.com/jacobobryant/biff"
-                            :sha "{{sha}}"}
-  flub/core                {:git/url "https://github.com/jacobobryant/flub"
-                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
-                            :deps/root "core"}
-  flub/components          {:git/url "https://github.com/jacobobryant/flub"
-                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
-                            :deps/root "components"}
-  flub/middleware          {:git/url "https://github.com/jacobobryant/flub"
-                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
-                            :deps/root "middleware"}
-  flub/crux                {:git/url "https://github.com/jacobobryant/flub"
-                            :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"
-                            :deps/root "crux"
-                            :exclusions [juxt/crux-core
-                                         juxt/crux-rocksdb]}}
+ {biff/all {:git/url "https://github.com/jacobobryant/biff"
+            :deps/root "libs/all"
+            :sha "{{sha}}"}
+  biff/old {:git/url "https://github.com/jacobobryant/biff"
+            :sha "{{sha}}"}}
  :aliases
  {:dev {:extra-paths ["src-dev"]
         :extra-deps {girouette/processor

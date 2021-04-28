@@ -1,5 +1,5 @@
 (ns {{parent-ns}}.config
-  (:require [flub.core :as flub]))
+  (:require [biff.util-tmp :as bu]))
 
 (def env-keys
   ; env key | clj key | coerce fn
@@ -14,11 +14,11 @@
    ["MAILGUN_KEY"        :mailgun/api-key]
    ["MAILGUN_ENDPOINT"   :mailgun/endpoint]
    ["MAILGUN_FROM"       :mailgun/from]
-   ["JWT_SECRET"         :flub.web/jwt-secret]
-   ["COOKIE_SECRET"      :flub.web/cookie-secret]
-   ["SECURE_COOKIES"     :flub.web/secure-cookies #(= "true" %)]])
+   ["JWT_SECRET"         :biff.web/jwt-secret]
+   ["COOKIE_SECRET"      :biff.web/cookie-secret]
+   ["SECURE_COOKIES"     :biff.web/secure-cookies #(= "true" %)]])
 
 (defn merge-config [sys]
   (merge sys
-         {:flux.web/secure-cookies true}
-         (flub/read-env env-keys)))
+         {:biff.web/secure-cookies true}
+         (bu/read-env env-keys)))
