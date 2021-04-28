@@ -1,6 +1,6 @@
-(ns biff.crux
+(ns biff.crux-tmp
   (:require
-    [biff.util :as bu]
+    [biff.util-tmp :as bu]
     [biff.malli :as bmalli]
     [clojure.java.io :as io]
     [crux.api :as crux]))

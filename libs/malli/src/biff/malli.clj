@@ -1,7 +1,7 @@
 (ns biff.malli
   (:refer-clojure :exclude [assert])
   (:require
-    [biff.util :as bu]
+    [biff.util-tmp :as bu]
     [malli.core :as m]
     [malli.error :as me]
     [malli.registry :as mr]))

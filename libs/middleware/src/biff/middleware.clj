@@ -1,7 +1,7 @@
 (ns biff.middleware
   (:require
     [clojure.stacktrace :as st]
-    [biff.util :as bu]
+    [biff.util-tmp :as bu]
     [muuntaja.middleware :as muuntaja]
     [ring.middleware.defaults :as rd]))
 

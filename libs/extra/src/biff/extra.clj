@@ -3,7 +3,7 @@
     [buddy.sign.nonce :as nonce]
     [buddy.sign.jwt :as jwt]
     [clj-http.client :as http]
-    [biff.util :as bu]
+    [biff.util-tmp :as bu]
     [lambdaisland.uri :as uri]))
 
 (defn jwt-encrypt [claims secret]
