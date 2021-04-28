@@ -18,6 +18,9 @@
   middleware {:deps [metosin/muuntaja
                      ring/ring-defaults]
               :projects [util]}
+  tasks      {:deps [buddy/buddy-sign
+                     selmer]
+              :projects [util]}
   views      {:deps [rum/rum]}
   main       {:projects [util
                          components
@@ -39,4 +42,5 @@
   nrepl/nrepl                    {:mvn/version "0.6.0"}
   org.clojure/tools.namespace    {:mvn/version "0.2.11"}
   ring/ring-defaults             {:mvn/version "0.3.2"}
-  rum/rum                        {:mvn/version "0.11.4"}}}
+  rum/rum                        {:mvn/version "0.11.4"}
+  selmer/selmer                  {:mvn/version "1.12.23"}}}

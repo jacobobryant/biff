@@ -1,6 +1,4 @@
-{:paths ["src" "resources"]
- :deps {buddy/buddy-sign {:mvn/version "3.3.0"}
-        flub/core        {:git/url "https://github.com/jacobobryant/flub"
-                          :deps/root "core"
-                          :sha "4fda7386ec2e1d08ce7c695df593c18b5732d420"}
-        selmer/selmer    {:mvn/version "1.12.23"}}}
+{:paths ["src" "resources"],
+ :deps
+ {buddy/buddy-sign {:mvn/version "3.3.0"},
+  biff/util {:local/root "../libs/util"}}}
