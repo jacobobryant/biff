@@ -3,10 +3,10 @@
     [biff.auth :as auth]
     [biff.components :as c]
     [biff.core :as biff]
-    [flub.core :as flub]
-    [flub.components :as fc]
-    [flub.crux :as flux]
-    [flub.middleware :as fmid]
+    [biff.util-tmp :as bu]
+    [biff.components-tmp :as bcomp]
+    [biff.crux-tmp :as bcrux]
+    [biff.middleware :as bmid]
     [reitit.ring :as reitit]
     [ring.middleware.session.cookie :as cookie]
     [{{parent-ns}}.config :refer [merge-config]]
@@ -41,27 +41,27 @@
       (println (:status resp) (:request-method req) (:uri req))
       resp)))
 
-(defn wrap-flub-biff [handler]
+(defn wrap-biff-crux [handler]
   (fn [req]
-    (handler (assoc req :biff/db @(:flub.crux/db req)))))
+    (handler (assoc req :biff/db @(:biff.crux/db req)))))
 
-(defn wrap-middleware [{:keys [flub.crux/node
-                               flub.web/cookie-secret
-                               flub.web/secure-cookies
-                               flub.web/handler
-                               flub.web/on-error]
+(defn wrap-middleware [{:keys [biff.crux/node
+                               biff.web/cookie-secret
+                               biff.web/secure-cookies
+                               biff.web/handler
+                               biff.web/on-error]
                         :or {on-error (constantly
                                         {:status 500
                                          :headers {"Content-Type" "text/plain"}
                                          :body "Internal error."})}
                         :as sys}]
   (let [store (cookie/cookie-store
-                {:key (flub/base64-decode cookie-secret)})]
-    (assoc sys :flub.web/handler
+                {:key (bu/base64-decode cookie-secret)})]
+    (assoc sys :biff.web/handler
            (-> handler
-               wrap-flub-biff
-               (flux/wrap-db {:node node})
-               (fmid/wrap-defaults {:session-store store
+               wrap-biff-crux
+               (bcrux/wrap-db {:node node})
+               (bmid/wrap-defaults {:session-store store
                                     :secure secure-cookies
                                     :env sys
                                     :on-error on-error})
@@ -74,22 +74,18 @@
    c/start-crux
    (fn [sys]
      (merge sys
-            (flub/select-ns-as sys 'biff.web 'flub.web)
-            (flub/select-ns-as sys 'biff.crux 'flub.crux)
-            {:flub.crux/node (:biff/node sys)}))
-   fc/reitit
+            {:biff.crux/node (:biff/node sys)}))
+   bcomp/reitit
    (fn [sys]
-     (update sys :flub.reitit/routes conj (auth/route sys)))
+     (update sys :biff.reitit/routes conj (auth/route sys)))
    wrap-middleware
-   fc/jetty
-   c/start-jobs
-   (fn [{:keys [flub/stop] :as sys}]
-     (update sys :biff/stop into stop))])
+   bcomp/jetty
+   c/start-jobs])
 
 (defn -main []
-  (biff/start-system
-    {:flub.reitit/routes routes
-     :flub.reitit/default-handlers (default-handlers {:error error})
+  (bu/start-system
+    {:biff.reitit/routes routes
+     :biff.reitit/default-handlers (default-handlers {:error error})
      :biff/static-pages pages
      :biff/rules #'rules
      :biff/jobs jobs
