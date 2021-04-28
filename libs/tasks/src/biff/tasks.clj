@@ -4,7 +4,7 @@
     [clojure.java.io :as io]
     [clojure.java.shell :as shell]
     [clojure.string :as str]
-    [biff.util :as bu]
+    [biff.util-tmp :as bu]
     [selmer.parser :as selmer]))
 
 (defn prompt [{:keys [msg default] :as opts}]

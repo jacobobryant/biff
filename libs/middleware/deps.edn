@@ -2,4 +2,4 @@
  :deps
  {metosin/muuntaja {:mvn/version "0.6.7"},
   ring/ring-defaults {:mvn/version "0.3.2"},
-  biff/util {:local/root "../libs/util"}}}
+  biff/util {:local/root "../util"}}}

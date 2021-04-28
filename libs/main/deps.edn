@@ -1,9 +1,9 @@
 {:paths ["src"],
  :deps
- {biff/views {:local/root "../libs/views"},
-  biff/crux {:local/root "../libs/crux"},
-  biff/util {:local/root "../libs/util"},
-  biff/extra {:local/root "../libs/extra"},
-  biff/middleware {:local/root "../libs/middleware"},
-  biff/components {:local/root "../libs/components"},
-  biff/malli {:local/root "../libs/malli"}}}
+ {biff/views {:local/root "../views"},
+  biff/crux {:local/root "../crux"},
+  biff/util {:local/root "../util"},
+  biff/extra {:local/root "../extra"},
+  biff/middleware {:local/root "../middleware"},
+  biff/components {:local/root "../components"},
+  biff/malli {:local/root "../malli"}}}

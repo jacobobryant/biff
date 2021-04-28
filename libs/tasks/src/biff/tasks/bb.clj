@@ -53,7 +53,7 @@
                                      (for [p proj-ancestors]
                                        [(symbol group-id (str p))
                                         (if dev
-                                          {:local/root (str "../libs/" p)}
+                                          {:local/root (str "../" p)}
                                           {:git/url git-url
                                            :deps/root (str "libs/" p)
                                            :sha sha})]))}]]

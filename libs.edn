@@ -19,7 +19,7 @@
                      ring/ring-defaults]
               :projects [util]}
   tasks      {:deps [buddy/buddy-sign
-                     selmer]
+                     selmer/selmer]
               :projects [util]}
   views      {:deps [rum/rum]}
   main       {:projects [util
