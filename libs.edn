@@ -2,19 +2,17 @@
  :group-id "biff"
  :projects
  {util       {:deps [org.clojure/tools.namespace]}
-  components {:deps [nrepl/nrepl
+  crux       {:projects [util]
+              :deps [juxt/crux-core
+                     juxt/crux-rocksdb]}
+  misc       {:projects [util]
+              :deps [nrepl/nrepl
                      info.sunng/ring-jetty9-adapter
-                     metosin/reitit-ring]}
-  crux       {:deps [juxt/crux-core
-                     juxt/crux-rocksdb
-                     metosin/malli]
-              :projects [util
-                         malli]}
-  extra      {:deps [buddy/buddy-sign
+                     metosin/reitit-ring
+                     buddy/buddy-sign
                      clj-http/clj-http
-                     lambdaisland/uri]
-              :projects [util]}
-  malli      {:deps [metosin/malli]}
+                     lambdaisland/uri
+                     metosin/malli]}
   middleware {:deps [metosin/muuntaja
                      ring/ring-defaults]
               :projects [util]}
@@ -23,12 +21,9 @@
               :projects [util]}
   views      {:deps [rum/rum]}
   main       {:projects [util
-                         components
                          crux
-                         extra
-                         malli
-                         middleware
-                         views]}}
+                         misc
+                         middleware]}}
  :deps
  {buddy/buddy-sign               {:mvn/version "3.3.0"}
   clj-http/clj-http              {:mvn/version "3.10.0"}

@@ -1,7 +1,6 @@
 (ns biff.crux-tmp
   (:require
     [biff.util-tmp :as bu]
-    [biff.malli :as bmalli]
     [clojure.java.io :as io]
     [crux.api :as crux]))
 
@@ -57,7 +56,7 @@
        :where (vec (for [kv kvs]
                      (into ['doc] kv)))})))
 
-(defn normalize-tx [malli-opts biff-tx]
+(defn normalize-tx [{:keys [biff/assert-schema]} biff-tx]
   (for [args biff-tx]
     (if (keyword? (first args))
       args
@@ -66,12 +65,11 @@
             doc (cond-> doc
                   true (assoc :crux.db/id id)
                   (map? id) (merge id))]
-        (bmalli/assert schema doc malli-opts)
+        (assert-schema schema doc)
         (into [:crux.tx/put doc] args)))))
 
 (defn submit-tx [{:keys [biff.crux/node] :as opts} biff-tx]
-  (crux/submit-tx node
-    (normalize-tx (bu/select-ns-as opts 'biff.malli nil) biff-tx)))
+  (crux/submit-tx node (normalize-tx opts biff-tx)))
 
 (defn submit-await-tx [{:keys [biff.crux/node] :as opts} biff-tx]
   (crux/await-tx node (submit-tx opts biff-tx)))

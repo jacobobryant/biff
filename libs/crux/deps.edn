@@ -2,6 +2,4 @@
  :deps
  {juxt/crux-core {:mvn/version "21.04-1.16.0-beta"},
   juxt/crux-rocksdb {:mvn/version "21.04-1.16.0-beta"},
-  metosin/malli {:mvn/version "0.4.0"},
-  biff/util {:local/root "../util"},
-  biff/malli {:local/root "../malli"}}}
+  biff/util {:local/root "../util"}}}

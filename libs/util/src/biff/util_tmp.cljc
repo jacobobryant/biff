@@ -146,7 +146,7 @@
   #?(:clj (java.util.Date/from (.plusSeconds (.toInstant date) seconds))
      :cljs (js/Date. (+ (.getTime date) (* 1000 seconds)))))
 
-(defn concrete [x]
+(defn realize [x]
   (cond
     (var? x) @x
     (fn? x) (x)

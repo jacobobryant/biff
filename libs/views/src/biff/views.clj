@@ -1,6 +1,5 @@
 (ns biff.views
-  (:require
-    [rum.core :as rum :refer [defc]]))
+  (:require [rum.core :as rum]))
 
 (defn render
   ([f opts m]
@@ -22,13 +21,13 @@
 
 (def nbsp [:span (unsafe "&nbsp;")])
 
-(defc g-fonts [families]
+(defn g-fonts [families]
   [:link {:href (apply str "https://fonts.googleapis.com/css2?display=swap"
                   (for [f families]
                     (str "&family=" f)))
           :rel "stylesheet"}])
 
-(defc base [{:base/keys [title
+(defn base [{:base/keys [title
                          description
                          lang
                          image
@@ -71,7 +70,7 @@
              :flex-direction "column"}}
     contents]])
 
-(defc gap [width height]
+(defn gap [width height]
   [:div {:style {:display "inline-block"
                  :width width
                  :height height}}])
