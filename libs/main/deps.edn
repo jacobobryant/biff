@@ -1,6 +1,7 @@
 {:paths ["src"],
  :deps
- {biff/crux {:local/root "../crux"},
+ {biff/views {:local/root "../views"},
+  biff/crux {:local/root "../crux"},
   biff/util {:local/root "../util"},
   biff/middleware {:local/root "../middleware"},
   biff/misc {:local/root "../misc"}}}

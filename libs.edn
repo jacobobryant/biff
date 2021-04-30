@@ -6,13 +6,14 @@
               :deps [juxt/crux-core
                      juxt/crux-rocksdb]}
   misc       {:projects [util]
-              :deps [nrepl/nrepl
-                     info.sunng/ring-jetty9-adapter
-                     metosin/reitit-ring
-                     buddy/buddy-sign
+              :deps [buddy/buddy-sign
                      clj-http/clj-http
+                     info.sunng/ring-jetty9-adapter
+                     jarohen/chime
                      lambdaisland/uri
-                     metosin/malli]}
+                     metosin/malli
+                     metosin/reitit-ring
+                     nrepl/nrepl]}
   middleware {:deps [metosin/muuntaja
                      ring/ring-defaults]
               :projects [util]}
@@ -23,11 +24,13 @@
   main       {:projects [util
                          crux
                          misc
-                         middleware]}}
+                         middleware
+                         views]}}
  :deps
  {buddy/buddy-sign               {:mvn/version "3.3.0"}
   clj-http/clj-http              {:mvn/version "3.10.0"}
   info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"}
+  jarohen/chime                  {:mvn/version "0.3.2"}
   juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
   juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
   lambdaisland/uri               {:mvn/version "1.4.54"}

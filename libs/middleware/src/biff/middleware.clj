@@ -5,6 +5,7 @@
             [biff.util-tmp :as bu]
             [muuntaja.middleware :as muuntaja]
             [ring.middleware.defaults :as rd]
+            [ring.middleware.session.cookie :as cookie]
             [ring.util.codec :as codec]
             [ring.util.io :as rio]
             [ring.util.request :as request]
@@ -35,11 +36,10 @@
 (defn wrap-flat-keys [handler]
   (fn [{:keys [session params] :as req}]
     (some-> req
-      (merge
-        (bu/prepend-keys "session" session)
-        (bu/prepend-keys "params" params))
-      handler
-      (bu/nest-string-keys [:headers :cookies]))))
+            (merge (bu/prepend-keys "session" session)
+                   (bu/prepend-keys "params" params))
+            handler
+            (bu/nest-string-keys [:headers :cookies]))))
 
 (defn wrap-env [handler env]
   (fn [req]
@@ -52,24 +52,27 @@
       (catch Throwable t
         (st/print-stack-trace t)
         (flush)
-        (on-error req t)))))
+        (on-error (assoc req :status 500 :ex t))))))
 
 (defn wrap-log-requests [handler]
   (fn [req]
     (let [resp (handler req)]
-      ; TODO at some point replace this with a logging library or something
-      ; (See https://www.reddit.com/r/Clojure/comments/2pd8yv/why_you_cant_use_println_for_logging/)
-      (println (:status resp) (:request-method req) (:uri req))
+      (bu/safe-println (:status resp) (:request-method req) (:uri req))
       resp)))
 
 (defn wrap-defaults [handler {:keys [session-store
+                                     cookie-session-secret
                                      secure
                                      session-max-age
                                      on-error
                                      env]
                               :or {session-max-age (* 60 60 24 90)}
                               :as opts}]
-  (let [changes {[:session :store]                   session-store
+  (let [session-store (if cookie-session-secret
+                        (cookie/cookie-store
+                          {:key (bu/base64-decode cookie-session-secret)})
+                        session-store)
+        changes {[:session :store]                   session-store
                  [:session :cookie-name]             "ring-session"
                  [:session :cookie-attrs :max-age]   session-max-age
                  [:session :cookie-attrs :same-site] :lax
@@ -91,3 +94,18 @@
       (rd/wrap-defaults ring-defaults)
       (wrap-internal-error {:on-error on-error})
       wrap-log-requests)))
+
+(defn use-default-middleware
+  [{:keys [biff.middleware/cookie-secret
+           biff.middleware/secure-cookies
+           biff/on-error]
+    :or {on-error (constantly
+                    {:status 500
+                     :headers {"Content-Type" "text/plain"}
+                     :body "Internal server error."})}
+    :as sys}]
+  (update sys :biff/handler wrap-defaults
+          {:cookie-session-secret cookie-secret
+           :secure secure-cookies
+           :env sys
+           :on-error on-error}))

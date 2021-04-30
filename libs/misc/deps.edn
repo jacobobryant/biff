@@ -1,10 +1,11 @@
 {:paths ["src"],
  :deps
- {nrepl/nrepl {:mvn/version "0.6.0"},
-  info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"},
-  metosin/reitit-ring {:mvn/version "0.5.13"},
-  buddy/buddy-sign {:mvn/version "3.3.0"},
+ {jarohen/chime {:mvn/version "0.3.2"},
   clj-http/clj-http {:mvn/version "3.10.0"},
-  lambdaisland/uri {:mvn/version "1.4.54"},
+  metosin/reitit-ring {:mvn/version "0.5.13"},
   metosin/malli {:mvn/version "0.4.0"},
-  biff/util {:local/root "../util"}}}
+  biff/util {:local/root "../util"},
+  nrepl/nrepl {:mvn/version "0.6.0"},
+  info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"},
+  buddy/buddy-sign {:mvn/version "3.3.0"},
+  lambdaisland/uri {:mvn/version "1.4.54"}}}

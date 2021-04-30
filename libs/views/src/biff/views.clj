@@ -1,5 +1,7 @@
 (ns biff.views
-  (:require [rum.core :as rum]))
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
+            [rum.core :as rum]))
 
 (defn render
   ([f opts m]
@@ -74,3 +76,12 @@
   [:div {:style {:display "inline-block"
                  :width width
                  :height height}}])
+
+; you could say that rum is one of our main exports
+(defn export-rum [pages dir]
+  (doseq [[path form] pages
+          :let [full-path (cond-> (str dir path)
+                            (str/ends-with? path "/") (str "index.html"))]]
+    (io/make-parents full-path)
+    (spit full-path (cond-> form
+                      (not (string? form)) rum/render-static-markup))))

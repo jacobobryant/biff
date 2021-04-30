@@ -75,8 +75,8 @@
           (update :dir str)
           (update :main-ns symbol)
           add-derived
-          (assoc :jwt-key (generate-key 32)
-                 :cookie-key (generate-key 16)))]
+          (assoc :jwt-secret (generate-key 32)
+                 :cookie-secret (generate-key 16)))]
     (copy-files "biff/tasks/base/" opts)
     (copy-files template-path opts)
     (bu/sh "chmod" "+x" (str dir "/task"))

@@ -26,7 +26,7 @@
 (defn read-env [env-keys]
   (->> env-keys
     (keep (fn [[env-key clj-key coerce]]
-            (when-some [v (System/getenv env-key)]
+            (when-some [v (not-empty (System/getenv env-key))]
               [clj-key ((or coerce identity) v)])))
     (into {})))
 
@@ -56,6 +56,10 @@
 
 (defn ppr-str [x]
   (with-out-str (pprint x)))
+
+(defn safe-println [& args]
+  (.write *out* (str (str/join " " args) "\n"))
+  (flush))
 
 (defn only-keys [& {:keys [req opt req-un opt-un]}]
   (let [all-keys (->> (concat req-un opt-un)
