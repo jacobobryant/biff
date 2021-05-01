@@ -1,0 +1,9 @@
+{:paths ["src"],
+ :deps
+ {girouette/girouette
+  {:git/url "https://github.com/green-coder/girouette",
+   :sha "0fb2782c1467be17fa11daa29e686b2d7d43a2da",
+   :deps/root "lib/girouette"},
+  hawk/hawk {:mvn/version "0.2.11"},
+  org.clojure/clojurescript {:mvn/version "1.10.773"},
+  org.clojure/tools.analyzer {:mvn/version "1.0.0"}}}
