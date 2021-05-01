@@ -1,10 +1,45 @@
 (ns biff.tasks.bb
   (:require [babashka.fs :as fs]
+            [bencode.core :as bencode]
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]))
+
+(defn print-throwable-map
+  [{:keys [trace]
+    [{:keys [type message data]}] :via}]
+  (printf "%s: %s\n" type message)
+  (some-> data prn)
+  (doseq [[i [cls method filename line]] (map-indexed vector trace)]
+    (printf " %s %s.%s (%s:%s)\n"
+            (if (= i 0) "at" "  ")
+            cls method filename line)))
+
+(defn nrepl-eval [port expr]
+  (let [s (java.net.Socket. "localhost" port)
+        out (.getOutputStream s)
+        in (java.io.PushbackInputStream. (.getInputStream s))]
+    (bencode/write-bencode
+      out
+      {"op" "eval"
+       "code" expr
+       "nrepl.middleware.caught/print?" "true"})
+    (loop []
+      (let [{:strs [out
+                    value
+                    status
+                    nrepl.middleware.caught/throwable]
+             :as result} (bencode/read-bencode in)]
+        (some-> out String. print)
+        (some->> throwable
+                 String.
+                 (edn/read-string {:readers {'error identity}})
+                 print-throwable-map)
+        (some-> value String. println)
+        (when-not (or value status)
+          (recur))))))
 
 (defn sh
   "Runs a shell command.
