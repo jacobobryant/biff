@@ -1,0 +1,5 @@
+/* Put extra (i.e. non-girouette) styles here */
+
+p {
+  margin-bottom: 0.75rem;
+}

@@ -1,28 +1,17 @@
 {:paths ["src" "resources" "target/resources"]
- :deps
- {biff/main {:git/url "https://github.com/jacobobryant/biff"
-             :deps/root "libs/main"
-             :sha "{{sha}}"}
-  biff/old {:git/url "https://github.com/jacobobryant/biff"
-            :sha "{{sha}}"}}
- :aliases
- {:dev {:extra-paths ["src-dev"]
-        :extra-deps {girouette/processor
-                     {;:local/root "../girouette/lib/processor"
-                      :git/url "https://github.com/jacobobryant/girouette"
-                      :sha "4d4686c919ba10a5f8cd449f1ebcfef2c3a55ce5"
-                      :deps/root "lib/processor"}
-                     girouette/girouette
-                     {;:local/root "../girouette/lib/girouette"
-                      :git/url "https://github.com/jacobobryant/girouette"
-                      :sha "4d4686c919ba10a5f8cd449f1ebcfef2c3a55ce5"
-                      :deps/root "lib/girouette"}{% if spa %}
-                     thheller/shadow-cljs {:mvn/version "2.11.6"}
-                     metosin/reitit-frontend {:mvn/version "0.5.5"}
-                     cljs-http/cljs-http {:mvn/version "0.1.46"}{% endif %}}}
-  :uberjar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.211"}}
-            :exec-fn hf.depstar/uberjar
-            :exec-args {:aot true
-                        :verbose true
-                        :main-class {{main-ns}}
-                        :jar "target/app.jar"}}}}
+ :deps {biff/main {:git/url "https://github.com/jacobobryant/biff"
+                   :deps/root "libs/main"
+                   :sha "{{sha}}"}}
+ :aliases {:dev {:extra-paths ["dev"]
+                 :extra-deps {biff/dev {:git/url "https://github.com/jacobobryant/biff"
+                                        :deps/root "libs/dev"
+                                        :sha "{{sha}}"}{% if spa %}
+                              thheller/shadow-cljs {:mvn/version "2.11.6"}
+                              metosin/reitit-frontend {:mvn/version "0.5.5"}
+                              cljs-http/cljs-http {:mvn/version "0.1.46"}{% endif %}}}
+           :uberjar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.211"}}
+                     :exec-fn hf.depstar/uberjar
+                     :exec-args {:aot true
+                                 :verbose true
+                                 :main-class {{main-ns}}
+                                 :jar "target/app.jar"}}}}

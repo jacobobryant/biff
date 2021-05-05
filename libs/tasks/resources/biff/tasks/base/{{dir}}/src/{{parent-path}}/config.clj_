@@ -3,22 +3,28 @@
 
 (def env-keys
   ; env key | clj key | coerce fn
-  [["CRUX_TOPOLOGY"      :biff.crux/topology keyword]
+  [["CRUX_DIR"           :biff.crux/dir]
+   ["CRUX_TOPOLOGY"      :biff.crux/topology keyword]
    ["CRUX_JDBC_DBNAME"   :biff.crux.jdbc/dbname]
    ["CRUX_JDBC_USER"     :biff.crux.jdbc/user]
    ["CRUX_JDBC_PASSWORD" :biff.crux.jdbc/password]
    ["CRUX_JDBC_HOST"     :biff.crux.jdbc/host]
    ["CRUX_JDBC_PORT"     :biff.crux.jdbc/port #(Long/parseLong %)]
    ["HOST"               :biff/host]
-   ["BIFF_DEV"           :biff/dev #(= "true" %)]
+   ["PORT"               :biff/port #(Long/parseLong %)]
+   ["BASE_URL"           :biff/base-url]
+   ["NREPL_PORT"         :biff.nrepl/port #(Long/parseLong %)]
    ["MAILGUN_KEY"        :mailgun/api-key]
    ["MAILGUN_ENDPOINT"   :mailgun/endpoint]
    ["MAILGUN_FROM"       :mailgun/from]
-   ["JWT_SECRET"         :biff.web/jwt-secret]
-   ["COOKIE_SECRET"      :biff.web/cookie-secret]
-   ["SECURE_COOKIES"     :biff.web/secure-cookies #(= "true" %)]])
+   ["JWT_SECRET"         :biff.auth/jwt-secret]
+   ["COOKIE_SECRET"      :biff.middleware/cookie-secret]
+   ["SECURE_COOKIES"     :biff.middleware/secure-cookies #(= "true" %)]
+   ["REITIT_MODE"        :biff.reitit/mode keyword]])
 
-(defn merge-config [sys]
+(defn use-config [sys]
   (merge sys
-         {:biff.web/secure-cookies true}
+         {:biff/host "localhost"
+          :biff/port 8080
+          :biff.middleware/secure-cookies true}
          (bu/read-env env-keys)))
