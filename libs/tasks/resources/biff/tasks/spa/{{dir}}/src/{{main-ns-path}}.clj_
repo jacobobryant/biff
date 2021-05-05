@@ -1,44 +1,35 @@
 (ns {{main-ns}}
   (:require
-    [biff.components :as c]
-    [biff.core :as biff]
-    [biff.project :as project]
-    [{{parent-ns}}.config :refer [merge-config]]
-    [{{parent-ns}}.email :refer [send-email]]
-    [{{parent-ns}}.handlers :refer [api]]
+    [biff.misc :as misc]
+    [biff.util-tmp :as bu]
+    [biff.crux-tmp :as bcrux]
+    [biff.middleware :as mid]
+    [{{parent-ns}}.routes.auth :refer [wrap-authenticate]]
+    [{{parent-ns}}.config :refer [use-config]]
     [{{parent-ns}}.jobs :refer [jobs]]
-    [{{parent-ns}}.routes :refer [routes]]
-    [{{parent-ns}}.rules :refer [rules]]
-    [{{parent-ns}}.static :refer [pages]]
-    [{{parent-ns}}.triggers :refer [triggers]])
+    [{{parent-ns}}.routes :refer [routes on-error]]
+    [{{parent-ns}}.rules :refer [schema]])
   (:gen-class))
 
-; todo update this ns
+; todo add use-sente, use-tx-listener, use-event-router
 (def components
-  [merge-config
-   c/set-defaults
-   c/start-crux
-   c/start-sente
-   c/start-tx-listener
-   c/start-event-router
-   c/set-auth-route
-   c/set-http-handler
-   c/start-web-server
-   (fn [{:keys [biff/base-url] :as sys}]
-     (println "Jetty started on" base-url)
-     sys)
-   c/write-static-resources
-   c/start-jobs])
+  [use-config
+   misc/use-nrepl
+   misc/use-reitit
+   bcrux/use-crux
+   #(update % :biff/handler wrap-authenticate)
+   mid/use-default-middleware
+   misc/use-jetty
+   misc/use-jobs])
+
+; todo add event handler
+; also define rules (not just schema)
+(def config {:biff.reitit/routes #'routes
+             :biff/on-error #'on-error
+             :biff/schema #'schema
+             :biff/jobs jobs
+             :biff/after-refresh `-main})
 
 (defn -main []
-  (biff/start-system
-    #:biff{:routes routes
-           :static-pages pages
-           :event-handler #(api % (:?data %))
-           :rules #'rules
-           :triggers #'triggers
-           :jobs jobs
-           :send-email #'send-email
-           :after-refresh `-main}
-    components)
+  (bu/start-system config components)
   (println "System started."))

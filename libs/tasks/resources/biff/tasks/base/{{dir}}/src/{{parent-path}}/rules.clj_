@@ -7,10 +7,12 @@
   {:user/id     :uuid
    :user/email  :string
    :user/foo    :string
+   :user/bar    :string
    :user        [:map {:closed true}
                  [:crux.db/id :user/id]
                  :user/email
-                 [:user/foo {:optional true}]]
+                 [:user/foo {:optional true}]
+                 [:user/bar {:optional true}]]
    :msg/id      :uuid
    :msg/user    :user/id
    :msg/text    :string

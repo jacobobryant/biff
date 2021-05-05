@@ -1,11 +1,10 @@
 (ns {{parent-ns}}.routes
   (:require
-    [biff.http :as bhttp]
     [biff.util :as bu]
     [crux.api :as crux]
-    [ring.middleware.anti-forgery :as anti-forgery]))
+    [{{parent-ns}}.routes.auth :as auth]))
 
-; See https://findka.com/biff/#http-routes
+; See https://biff.findka.com/#http-routes
 
 ; Test it out:
 ; curl http://localhost:8080/echo?foo=bar
@@ -20,28 +19,32 @@
                     (select-keys req [:params :body-params])
                     (bu/select-ns req 'params)))})
 
-; These require authentication, so you'll have to test them from the browser.
-(defn whoami [{:keys [session/uid biff/db]}]
-  (if (some? uid)
-    {:body (:user/email (crux/entity db {:user/id uid}))
-     :headers/Content-Type "text/plain"}
-    {:status 401
-     :headers/Content-Type "text/plain"
-     :body "Not authorized."}))
-
-(defn whoami2 [{:keys [session/uid biff/db]}]
-  {:body (:user/email (crux/entity db {:user/id uid}))
+; This requires authentication, so you'll have to test it from the browser.
+(defn whoami [{:keys [biff/uid biff.crux/db]}]
+  {:body (:user/email (crux/entity @db uid))
    :headers/Content-Type "text/plain"})
+
+(defn on-error [{:keys [status]}]
+  (let [msg (case status
+              401 "Not authorized."
+              404 "Not found."
+              405 "Not allowed."
+              406 "Not acceptable."
+              500 "Internal server error.")]
+    {:status status
+     :headers/Content-Type "text/html"
+     :body (str "<h1>" msg "</h1>")}))
+
+(defn wrap-signed-in [handler]
+  (fn [{:keys [biff/uid] :as req}]
+    (if (some? uid)
+      (handler req)
+      (on-error {:status 401}))))
 
 ; See https://cljdoc.org/d/metosin/reitit/0.5.10/doc/introduction#ring-router
 (def routes
-  [["/echo" {:get echo
-             :post echo
-             :name ::echo}]
-   ["/whoami" {:post whoami
-               :middleware [anti-forgery/wrap-anti-forgery]
-               :name ::whoami}]
-   ; Same as whoami
-   ["/whoami2" {:post whoami2
-                :middleware [bhttp/wrap-authorize]
-                :name ::whoami2}]])
+  [["/echo" {:get #(echo %)
+             :post #(echo %)}]
+   ["/whoami" {:post #(whoami %)
+               :middleware [wrap-signed-in]}]
+   auth/routes])

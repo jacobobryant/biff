@@ -1,7 +1,7 @@
 (ns {{parent-ns}}.dev
-  (:require [{{parent-ns}}.views :refer [static-pages]]
+  (:require [{{main-ns}} :refer [config components]]
+            [{{parent-ns}}.views :refer [static-pages]]
             [{{parent-ns}}.test]
-            [{{parent-ns}}.core :as core]
             [{{parent-ns}}.dev.css :as css]
             [clojure.stacktrace :as st]
             [biff.dev :as dev]
@@ -39,11 +39,11 @@
 
 (defn start []
   (bu/start-system
-    (assoc core/config
+    (assoc config
            :biff/after-refresh `start
            :biff.hawk/callback `on-file-change
            :biff.hawk/paths ["src" "dev"])
-    (into [dev/use-hawk] core/components))
+    (into [dev/use-hawk] components))
   (println "System started."))
 
 (comment
