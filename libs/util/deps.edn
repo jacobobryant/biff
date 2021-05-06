@@ -1,2 +1,4 @@
 {:paths ["src"],
- :deps {org.clojure/tools.namespace {:mvn/version "0.2.11"}}}
+ :deps
+ {org.clojure/tools.namespace {:mvn/version "0.2.11"},
+  org.slf4j/slf4j-nop {:mvn/version "1.7.25"}}}

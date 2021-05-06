@@ -1,0 +1,4 @@
+{:paths ["src"],
+ :deps
+ {com.taoensso/sente {:mvn/version "1.16.0"},
+  biff/util {:local/root "../util"}}}
