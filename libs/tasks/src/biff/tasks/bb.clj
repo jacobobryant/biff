@@ -73,20 +73,20 @@
     (sh "rsync -av --delete build/ ../site/")))
 
 (defn libs:sync* [{:keys [dev]}]
-  (let [{:keys [projects deps git-url group-id]} (edn/read-string (slurp "libs.edn"))
+  (let [{:keys [libs deps git-url group-id]} (edn/read-string (slurp "libs.edn"))
         sha (str/trim (sh "git rev-parse HEAD"))]
-    (doseq [[proj-name config] projects
+    (doseq [[proj-name config] libs
             :let [dir (fs/file "libs" (str proj-name))
                   proj-ancestors (get-ancestors
-                                   #(get-in projects [% :projects])
-                                   (:projects config))
+                                   #(get-in libs [% :libs])
+                                   (:libs config))
                   proj-deps {:paths (if (fs/directory? (fs/file dir "resources"))
                                       ["src" "resources"]
                                       ["src"])
                              :deps (into
                                      (select-keys deps (:deps config))
                                      (for [p proj-ancestors]
-                                       [(symbol group-id (str p))
+                                       [(symbol (str group-id) (str p))
                                         (if dev
                                           {:local/root (str "../" p)}
                                           {:git/url git-url
