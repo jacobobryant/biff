@@ -5,30 +5,34 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as str]
     [clojure.walk :refer [postwalk]]
-    [clojure.tools.namespace.repl :as tn-repl]
-    #?@(:clj [[clojure.java.shell :as shell]])))
+    #?@(:clj [[clojure.java.shell :as shell]
+              [clojure.tools.namespace.repl :as tn-repl]]
+        :cljs [[cljs.core.async.impl.protocols :as async-proto]])))
 
-(defonce system (atom nil))
+#?(:clj
+   (do
+     (defonce system (atom nil))
 
-(defn refresh []
-  (let [{:keys [biff/after-refresh biff/stop]} @system]
-    (doseq [f stop]
-      (f))
-    (tn-repl/refresh :after after-refresh)))
+     (defn refresh []
+       (let [{:keys [biff/after-refresh biff/stop]} @system]
+         (doseq [f stop]
+           (f))
+         (tn-repl/refresh :after after-refresh)))
 
-(defn start-system [config components]
-  (reset! system (merge {:biff/stop '()} config))
-  (reduce (fn [_ f]
-            (reset! system (f @system)))
-    nil
-    components))
+     (defn start-system [config components]
+       (reset! system (merge {:biff/stop '()} config))
+       (reduce (fn [_ f]
+                 (reset! system (f @system)))
+               nil
+               components))
 
-(defn read-env [env-keys]
-  (->> env-keys
-    (keep (fn [[env-key clj-key coerce]]
-            (when-some [v (not-empty (System/getenv env-key))]
-              [clj-key ((or coerce identity) v)])))
-    (into {})))
+     (defn read-env [env-keys]
+       (->> env-keys
+            (keep (fn [[env-key clj-key coerce]]
+                    (when-some [v (not-empty (System/getenv env-key))]
+                      [clj-key ((or coerce identity) v)])))
+            (into {})))
+     ))
 
 (defn map-kv [f m]
   (into {} (map (fn [[k v]] (f k v)) m)))
@@ -181,52 +185,6 @@
 (defn pad [n _val coll]
   (take n (concat coll (repeat _val))))
 
-(defn format-columns
-  "Formats rows of text into columns.
-
-  Example:
-  ```
-  (doseq [row (format-columns [[\"hellooooooooo \" \"there\"]
-                               [\"foo \" \"bar\"]
-                               [\"one column\"]])]
-    (println row))
-  hellooooooooo there
-  foo           bar
-  one column
-  ```"
-  [rows]
-  (let [n-cols (apply max (map count rows))
-        rows (map (partial pad n-cols " ") rows)
-        lens (apply map (fn [& column-parts]
-                          (apply max (map count column-parts)))
-                    rows)
-        fmt (str/join (map #(str "%" (when (not (zero? %)) (str "-" %)) "s") lens))]
-    (->> rows
-         (map #(apply (partial format fmt) %))
-         (map str/trimr))))
-
-(defn print-table
-  "Prints a nicely formatted table.
-
-  Example:
-  ```
-  (print-table
-    [[:foo \"Foo\"] [:bar \"Bar\"]]
-    [{:foo 1 :bar 2} {:foo 3 :bar 4}])
-  => Foo  Bar
-     1    2
-     3    4
-  ```"
-  [header-info table]
-  (let [[ks header] (apply map vector header-info)
-        header (map #(str % "  ") header)
-        body (->> table
-                  (map (apply juxt ks))
-                  (map (fn [row] (map #(str % "  ") row))))
-        rows (concat [header] body)]
-    (doseq [row (format-columns rows)]
-      (println row))))
-
 (defn between-hours? [t h1 h2]
   (let [hours (/ (mod (quot (inst-ms t) (* 1000 60)) (* 60 24)) 60.0)]
     (<= h1 hours h2)))
@@ -254,9 +212,54 @@
 
 #?(:clj
    (do
+     (defn format-columns
+       "Formats rows of text into columns.
+
+       Example:
+       ```
+       (doseq [row (format-columns [[\"hellooooooooo \" \"there\"]
+       [\"foo \" \"bar\"]
+       [\"one column\"]])]
+       (println row))
+       hellooooooooo there
+       foo           bar
+       one column
+       ```"
+       [rows]
+       (let [n-cols (apply max (map count rows))
+             rows (map (partial pad n-cols " ") rows)
+             lens (apply map (fn [& column-parts]
+                               (apply max (map count column-parts)))
+                         rows)
+             fmt (str/join (map #(str "%" (when (not (zero? %)) (str "-" %)) "s") lens))]
+         (->> rows
+              (map #(apply (partial format fmt) %))
+              (map str/trimr))))
+
+     (defn print-table
+       "Prints a nicely formatted table.
+
+       Example:
+       ```
+       (print-table
+       [[:foo \"Foo\"] [:bar \"Bar\"]]
+       [{:foo 1 :bar 2} {:foo 3 :bar 4}])
+       => Foo  Bar
+       1    2
+       3    4
+       ```"
+       [header-info table]
+       (let [[ks header] (apply map vector header-info)
+             header (map #(str % "  ") header)
+             body (->> table
+                       (map (apply juxt ks))
+                       (map (fn [row] (map #(str % "  ") row))))
+             rows (concat [header] body)]
+         (doseq [row (format-columns rows)]
+           (println row))))
+
      (defn base64-encode [bs]
-       (.encodeToString (java.util.Base64/getEncoder)
-         bs))
+       (.encodeToString (java.util.Base64/getEncoder) bs))
 
      (defn base64-decode [s]
        (.decode (java.util.Base64/getDecoder) s))
@@ -310,46 +313,46 @@
           ~@(for [form (partition 2 body)]
               `(s/def ~@form))))
 
-     (defmacro fix-stdout [& body]
-       `(let [ret# (atom nil)
-              s# (with-out-str
-                   (reset! ret# (do ~@body)))]
-          (some->> s#
-                   not-empty
-                   (.print System/out))
-          @ret#))
+(defmacro fix-stdout [& body]
+  `(let [ret# (atom nil)
+         s# (with-out-str
+              (reset! ret# (do ~@body)))]
+     (some->> s#
+              not-empty
+              (.print System/out))
+     @ret#))
 
-     (defn add-deref [form syms]
-       (postwalk
-         #(cond->> %
-            (syms %) (list deref))
-         form))
+(defn add-deref [form syms]
+  (postwalk
+    #(cond->> %
+       (syms %) (list deref))
+    form))
 
-     (defmacro letdelay [bindings & body]
-       (let [[bindings syms] (->> bindings
-                                  (partition 2)
-                                  (reduce (fn [[bindings syms] [sym form]]
-                                            [(into bindings [sym `(delay ~(add-deref form syms))])
-                                             (conj syms sym)])
-                                          [[] #{}]))]
-         `(let ~bindings
-            ~@(add-deref body syms))))
+(defmacro letdelay [bindings & body]
+  (let [[bindings syms] (->> bindings
+                             (partition 2)
+                             (reduce (fn [[bindings syms] [sym form]]
+                                       [(into bindings [sym `(delay ~(add-deref form syms))])
+                                        (conj syms sym)])
+                                     [[] #{}]))]
+    `(let ~bindings
+       ~@(add-deref body syms))))
 
-     (defmacro catchall [& body]
-       `(try ~@body (catch Exception ~'_ nil)))
+(defmacro catchall [& body]
+  `(try ~@body (catch Exception ~'_ nil)))
 
-     (defmacro verbose [& body]
-       `(try ~@body
-          (catch Exception e#
-            (.printStackTrace e#))))
+(defmacro verbose [& body]
+  `(try ~@body
+        (catch Exception e#
+          (.printStackTrace e#))))
 
-     (defmacro pprint-ex [& body]
-       `(try
-          (bu/pprint ~@body)
-          (catch ~'Exception e#
-            (st/print-stack-trace e#)))))
+(defmacro pprint-ex [& body]
+  `(try
+     (bu/pprint ~@body)
+     (catch ~'Exception e#
+       (st/print-stack-trace e#)))))
 
    :cljs
    (do
      (defn chan? [x]
-       (satisfies? (requiring-resolve 'cljs.core.async.impl.protocols/ReadPort) x))))
+       (satisfies? async-proto/ReadPort x))))

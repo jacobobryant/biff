@@ -89,7 +89,7 @@
       (hook-fn (-> ast :val)))
     ast))
 
-(defn- gather-css-classes [state ^java.util.File file]
+(defn- gather-css-classes [state ^java.io.File file]
   (let [css-classes (atom #{})
         passes [(string-hook (fn [s]
                                (let [names (->> (str/split s #" ")
