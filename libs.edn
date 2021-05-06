@@ -8,6 +8,7 @@
         misc       {:libs [util]
                     :deps [buddy/buddy-sign
                            clj-http/clj-http
+                           com.taoensso/sente
                            info.sunng/ring-jetty9-adapter
                            jarohen/chime
                            lambdaisland/uri

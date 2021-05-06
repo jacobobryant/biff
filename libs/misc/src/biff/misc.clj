@@ -5,6 +5,7 @@
             [buddy.sign.jwt :as jwt]
             [chime.core :as chime]
             [clj-http.client :as http]
+            [clojure.core.async :as async]
             [clojure.spec.alpha :as s]
             [lambdaisland.uri :as uri]
             [malli.core :as malc]
@@ -12,7 +13,9 @@
             [malli.registry :as malr]
             [nrepl.server :as nrepl]
             [reitit.ring :as reitit]
-            [ring.adapter.jetty9 :as jetty]))
+            [ring.adapter.jetty9 :as jetty]
+            [taoensso.sente :as sente]
+            [taoensso.sente.server-adapters.jetty9 :as sente-jetty]))
 
 (defn use-nrepl [{:keys [biff.nrepl/port
                          biff.nrepl/quiet]
@@ -143,3 +146,33 @@
     (assert-valid* this doc-type doc))
   (doc-type [this doc]
     (doc-type* this doc doc-types)))
+
+(defn use-sente [{:keys [biff.sente/adapter
+                         biff.sente/route
+                         biff.sente/event-handler
+                         biff/handler]
+                  :or {adapter (sente-jetty/get-sch-adapter)}
+                  :as sys}]
+  (let [result (sente/make-channel-socket!
+                 adapter
+                 {:user-id-fn :client-id
+                  :csrf-token-fn (fn [{:keys [biff/uid] :as req}]
+                                   (if (some? uid)
+                                     (or
+                                       (:anti-forgery-token req)
+                                       (get-in req [:session :csrf-token])
+                                       (get-in req [:session :ring.middleware.anti-forgery/anti-forgery-token])
+                                       (get-in req [:session "__anti-forgery-token"]))
+                                     ; Disable CSRF checks for anonymous users.
+                                     (or
+                                       (get-in req [:params :csrf-token])
+                                       (get-in req [:headers "x-csrf-token"])
+                                       (get-in req [:headers "x-xsrf-token"]))))})
+        sys (merge sys (bu/prepend-ns "biff.sente" result))
+        stop-router (sente/start-server-chsk-router!
+                      (:ch-recv result)
+                      (fn [{:keys [?reply-fn] :as event}]
+                        (let [response (event-handler (merge sys event))]
+                          (when ?reply-fn
+                            (?reply-fn response)))))]
+    (update sys :biff/stop conj #(async/close! (:ch-recv result)))))
