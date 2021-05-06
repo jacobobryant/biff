@@ -9,7 +9,7 @@
     [sablono.util]
     [taoensso.sente :as sente]))
 
-(defn wrap-api-send [api-send ready-pr]
+(defn- wrap-api-send [api-send ready-pr]
   (fn [event]
     (let [ch (chan)]
       (.then ready-pr
@@ -21,7 +21,7 @@
               (put! ch (if response response ::no-response))))))
       ch)))
 
-(defn wrap-handler [handler {:keys [subscriptions api-send ready]}]
+(defn- wrap-handler [handler {:keys [subscriptions api-send ready]}]
   (fn [{:keys [id ?data] :as event}]
     (when (= id :chsk/state)
       (let [[old-state new-state] ?data]
@@ -37,7 +37,7 @@
 (defn csrf []
   (js/decodeURIComponent (.get (new goog.net.Cookies js/document) "csrf")))
 
-(defn start-socket [{:keys [url]}]
+(defn- start-socket [{:keys [url]}]
   (let [; todo use promise-chan
         ready-ch (chan)
         ready-pr (js/Promise.
@@ -48,14 +48,14 @@
       (update :api-send wrap-api-send ready-pr)
       (assoc :ready ready-ch))))
 
-(defn start-router [{:keys [ch-recv handler ready] :as opts}]
+(defn- start-router [{:keys [ch-recv handler ready] :as opts}]
   (sente/start-client-chsk-router! ch-recv
     (wrap-handler handler opts)))
 
-(defn init-sente [opts]
+(defn- init-sente [opts]
   (doto (merge opts (start-socket opts)) start-router))
 
-(defn wrap-sub [handler sub-channels]
+(defn- wrap-sub [handler sub-channels]
   (fn [{:keys [id ?data] :as event}]
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
@@ -66,7 +66,7 @@
           (put! ch (:changeset ?data))
           (handler event ?data))))))
 
-(defn merge-changeset [db changeset]
+(defn- merge-changeset [db changeset]
   (reduce (fn [db [[table id] ent]]
             (if ent
               (assoc-in db [table id] ent)
@@ -74,7 +74,7 @@
     db
     changeset))
 
-(defn maintain-subscriptions
+(defn- maintain-subscriptions
   [sub-atom sub-fn]
   (let [sub->unsub-fn (atom {})
         c (chan)
@@ -97,7 +97,7 @@
     (add-watch sub-atom ::maintain-subscriptions watch)
     (watch nil nil #{} @sub-atom)))
 
-(defn merge-subscription-results!
+(defn- merge-subscription-results!
   "Continually merge results from subscription into sub-results-atom. Returns a channel
   that delivers sub-channel after the first result has been merged."
   [{:keys [sub-results-atom merge-result sub-key sub-channel]}]

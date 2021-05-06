@@ -2,7 +2,7 @@
   (:require
     [biff.crux-tmp :as bcrux]
     [biff.http :as bhttp]
-    [biff.views :as bv]
+    [biff.rum :as br]
     [biff.util :as bu]
     [clojure.stacktrace :as st]
     [crux.api :as crux]
@@ -65,13 +65,13 @@
   (if (some? uid)
     {:status 302
      :headers/Location "/app"}
-    (bv/render views/home req)))
+    (br/render views/home req)))
 
 (defn app [{:keys [biff/uid] :as req}]
   (if (nil? uid)
     {:status 302
      :headers/Location "/"}
-    (bv/render views/app req)))
+    (br/render views/app req)))
 
 (defn on-error [{:keys [status]}]
   (let [msg (case status

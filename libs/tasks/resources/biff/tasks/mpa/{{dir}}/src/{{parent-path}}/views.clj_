@@ -1,6 +1,6 @@
 (ns {{parent-ns}}.views
   (:require [biff.util-tmp :as bu]
-            [biff.views :as bv]
+            [biff.rum :as br]
             [crux.api :as crux]
             [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]))
 
@@ -14,7 +14,7 @@
    [:link {:rel "stylesheet" :href "/css/custom.css"}]])
 
 (defn base [{:keys [base/head] :as opts} & contents]
-  (bv/base
+  (br/base
     (merge
       default-opts
       opts
