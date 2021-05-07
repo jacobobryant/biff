@@ -71,7 +71,7 @@
                            email))
           new-uid (java.util.UUID/randomUUID)]
       (when-not existing-uid
-        (bcrux/submit-await-tx
+        (bcrux/submit-tx
           sys
           {[:user new-uid] {:user/email email}}))
       {:status 302

@@ -39,20 +39,20 @@
                         (crux/entity @db)
                         :msg/user)))
       (throw (ex-info "Unauthorized transaction" {:params params :biff/uid uid})))
-    (bcrux/submit-await-tx
+    (bcrux/submit-tx
       sys
       (case event
         "write-foo"
-        {[:user uid] (assoc (crux/entity @db uid)
-                            :user/foo (:foo params))}
+        {[:user uid] {:db/update true
+                      :user/foo (:foo params)}}
 
         "write-message"
         {[:msg] {:msg/user uid
-                 :msg/sent-at (java.util.Date.)
+                 :msg/sent-at :db/server-timestamp
                  :msg/text (:text params)}}
 
         "delete-message"
-        [[:crux.tx/delete (java.util.UUID/fromString (:message-id params))]]))
+        {[:msg (java.util.UUID/fromString (:message-id params))] nil}))
     (catch Exception e
       ; An exception would be thrown if the transaction doesn't meet the specs
       ; in {{parent-ns}}.rules, which would happen if the client e.g. set :msg/text
