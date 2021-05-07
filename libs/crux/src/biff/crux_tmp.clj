@@ -86,14 +86,19 @@
                                     x)))
                  (keep (fn [[k v]]
                          (when (not= v :db/remove)
-                           [k (if (and (coll? v) (#{:db/union :db/disj} (first v)))
+                           [k (if (and (coll? v)
+                                       (<= 2 (count v))
+                                       (#{:db/union
+                                          :db/remove
+                                          :db/increment} (first v)))
                                 (let [[op & xs] v
-                                      xs-before (get before k)]
-                                  (reduce (case op
-                                            :db/union conj
-                                            :db/disj disj)
-                                          (set xs-before)
-                                          xs))
+                                      v-before (get before k)]
+                                  (apply (case op
+                                           :db/union #(conj (set %1) %2)
+                                           :db/remove #(disj (set %1) %2)
+                                           :db/increment (fnil + 0))
+                                         v-before
+                                         xs))
                                 v)])))
                  (into {}))]
     doc))
@@ -177,8 +182,8 @@
     (when-not (some (fn [op]
                       (let [docs (case op
                                    :create [after]
-                                   :update [before after]
-                                   :delete [before])]
+                                   :delete [before]
+                                   [before after])]
                         (apply proto/authorize authorize-opts docs)))
                     [op :write :rw])
       (throw
