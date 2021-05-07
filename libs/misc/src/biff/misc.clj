@@ -147,32 +147,47 @@
   (doc-type [this doc]
     (doc-type* this doc doc-types)))
 
+(defn- sente-csrf-token-fn [{:keys [biff/uid] :as req}]
+  (if (some? uid)
+    (or
+      (:anti-forgery-token req)
+      (get-in req [:session :csrf-token])
+      (get-in req [:session :ring.middleware.anti-forgery/anti-forgery-token])
+      (get-in req [:session "__anti-forgery-token"]))
+    ; Disable CSRF checks for anonymous users.
+    (or
+      (get-in req [:params :csrf-token])
+      (get-in req [:headers "x-csrf-token"])
+      (get-in req [:headers "x-xsrf-token"]))))
+
 (defn use-sente [{:keys [biff.sente/adapter
-                         biff.sente/route
-                         biff.sente/event-handler
-                         biff/handler]
+                         biff.sente/event-handler]
                   :or {adapter (sente-jetty/get-sch-adapter)}
                   :as sys}]
   (let [result (sente/make-channel-socket!
                  adapter
                  {:user-id-fn :client-id
-                  :csrf-token-fn (fn [{:keys [biff/uid] :as req}]
-                                   (if (some? uid)
-                                     (or
-                                       (:anti-forgery-token req)
-                                       (get-in req [:session :csrf-token])
-                                       (get-in req [:session :ring.middleware.anti-forgery/anti-forgery-token])
-                                       (get-in req [:session "__anti-forgery-token"]))
-                                     ; Disable CSRF checks for anonymous users.
-                                     (or
-                                       (get-in req [:params :csrf-token])
-                                       (get-in req [:headers "x-csrf-token"])
-                                       (get-in req [:headers "x-xsrf-token"]))))})
+                  :csrf-token-fn sente-csrf-token-fn})
         sys (merge sys (bu/prepend-ns "biff.sente" result))
         stop-router (sente/start-server-chsk-router!
                       (:ch-recv result)
-                      (fn [{:keys [?reply-fn] :as event}]
-                        (let [response (event-handler (merge sys event))]
+                      (fn [{:keys [?reply-fn ring-req] :as event}]
+                        (let [response (event-handler (merge sys ring-req event))]
                           (when ?reply-fn
-                            (?reply-fn response)))))]
-    (update sys :biff/stop conj #(async/close! (:ch-recv result)))))
+                            (?reply-fn response))))
+                      (merge {:simple-auto-threading? true}
+                             (bu/select-ns-as sys 'biff.sente.router nil)))]
+    (update sys :biff/stop into [#(async/close! (:ch-recv result))
+                                 stop-router])))
+
+(defn use-sente-reitit [{:keys [biff.sente/ajax-get-or-ws-handshake-fn
+                                biff.sente/ajax-post-fn
+                                biff.sente/route
+                                biff.reitit/routes]
+                         :or {route "/api/chsk"}
+                         :as sys}]
+  (assoc sys :biff.reitit/routes
+         (fn []
+           (conj (bu/realize routes)
+                 [route {:get ajax-get-or-ws-handshake-fn
+                         :post ajax-post-fn}]))))
