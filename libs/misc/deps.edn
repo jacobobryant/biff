@@ -1,12 +1,11 @@
 {:paths ["src"],
  :deps
- {jarohen/chime {:mvn/version "0.3.2"},
-  clj-http/clj-http {:mvn/version "3.10.0"},
+ {clj-http/clj-http {:mvn/version "3.12.1"},
   metosin/reitit-ring {:mvn/version "0.5.13"},
-  com.taoensso/sente {:mvn/version "1.16.0"},
-  metosin/malli {:mvn/version "0.4.0"},
+  com.taoensso/sente {:mvn/version "1.16.2"},
+  metosin/malli {:mvn/version "0.5.1"},
   biff/util {:local/root "../util"},
-  nrepl/nrepl {:mvn/version "0.6.0"},
-  info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"},
-  buddy/buddy-sign {:mvn/version "3.3.0"},
+  nrepl/nrepl {:mvn/version "0.8.3"},
+  info.sunng/ring-jetty9-adapter {:mvn/version "0.15.1"},
+  buddy/buddy-sign {:mvn/version "3.4.1"},
   lambdaisland/uri {:mvn/version "1.4.54"}}}

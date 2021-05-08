@@ -3,7 +3,6 @@
             [biff.util.protocols :as proto]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
-            [chime.core :as chime]
             [clj-http.client :as http]
             [clojure.core.async :as async]
             [clojure.spec.alpha :as s]
@@ -67,16 +66,6 @@
     (when-not quiet
       (println "Jetty running on" (str "http://" host ":" port)))
     (update sys :biff/stop conj #(jetty/stop-server server))))
-
-(defn use-jobs [{:keys [biff/jobs] :as sys}]
-  (update sys :biff/stop into
-    (for [{:keys [offset-minutes period-minutes job-fn]} jobs]
-      (let [closeable (chime/chime-at
-                        (->> (bu/add-seconds (java.util.Date.) (* 60 offset-minutes))
-                          (iterate #(bu/add-seconds % (* period-minutes 60)))
-                          (map #(.toInstant %)))
-                        (fn [_] (job-fn sys)))]
-        #(.close closeable)))))
 
 (defn jwt-encrypt [claims secret]
   (jwt/encrypt
@@ -168,7 +157,7 @@
                  adapter
                  {:user-id-fn :client-id
                   :csrf-token-fn sente-csrf-token-fn})
-        sys (merge sys (bu/prepend-ns "biff.sente" result))
+        sys (merge sys (bu/prepend-keys "biff.sente" result))
         stop-router (sente/start-server-chsk-router!
                       (:ch-recv result)
                       (fn [{:keys [?reply-fn ring-req] :as event}]

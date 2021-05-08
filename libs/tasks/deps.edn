@@ -1,5 +1,5 @@
 {:paths ["src" "resources"],
  :deps
- {buddy/buddy-sign {:mvn/version "3.3.0"},
-  selmer/selmer {:mvn/version "1.12.23"},
+ {buddy/buddy-sign {:mvn/version "3.4.1"},
+  selmer/selmer {:mvn/version "1.12.40"},
   biff/util {:local/root "../util"}}}

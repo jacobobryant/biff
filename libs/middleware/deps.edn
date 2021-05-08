@@ -1,5 +1,5 @@
 {:paths ["src"],
  :deps
- {metosin/muuntaja {:mvn/version "0.6.7"},
+ {metosin/muuntaja {:mvn/version "0.6.8"},
   ring/ring-defaults {:mvn/version "0.3.2"},
   biff/util {:local/root "../util"}}}

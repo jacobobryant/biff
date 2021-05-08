@@ -54,15 +54,13 @@
 (defn map-to [f xs]
   (map-from-to identity f xs))
 
-(defn pprint [x]
-  (binding [*print-namespace-maps* false]
-    (pp/pprint x)))
-
 (defn ppr-str [x]
-  (with-out-str (pprint x)))
+  (with-out-str
+    (binding [*print-namespace-maps* false]
+      (pp/pprint x))))
 
-(defn safe-println [& args]
-  (.write *out* (str (str/join " " args) "\n"))
+(defn pprint [x]
+  (print (str (ppr-str x) "\n"))
   (flush))
 
 (defn only-keys [& {:keys [req opt req-un opt-un]}]
@@ -337,6 +335,14 @@
                                      [[] #{}]))]
     `(let ~bindings
        ~@(add-deref body syms))))
+
+(defn bind-out-err* [f]
+  (binding [*out* (alter-var-root #'*out* identity)
+            *err* (alter-var-root #'*err* identity)]
+    (f)))
+
+(defmacro bind-out-err [& body]
+  `(bind-out-err* (fn [] ~@body)))
 
 (defmacro catchall [& body]
   `(try ~@body (catch Exception ~'_ nil)))

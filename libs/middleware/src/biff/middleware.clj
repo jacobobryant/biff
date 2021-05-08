@@ -57,7 +57,10 @@
 (defn wrap-log-requests [handler]
   (fn [req]
     (let [resp (handler req)]
-      (bu/safe-println (:status resp) (:request-method req) (:uri req))
+      (printf "%s %s %s\n"
+              (:status req "nil")
+              (:request-method req)
+              (:uri req))
       resp)))
 
 (defn wrap-defaults [handler {:keys [session-store

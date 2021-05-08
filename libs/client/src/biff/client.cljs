@@ -1,6 +1,6 @@
 (ns biff.client
   (:require-macros
-   [cljs.core.async.macros :refer [go go-loop]])
+    [cljs.core.async.macros :refer [go go-loop]])
   (:require
     [biff.util-tmp :as bu]
     [cljs.core.async :as async :refer [close! <! take! put! chan]]
@@ -13,12 +13,13 @@
   (fn [event]
     (let [ch (chan)]
       (.then ready-pr
-        (fn []
-          (api-send event 5000
-            (fn [response]
-              (when (bu/anomaly? response)
-                (bu/pprint response))
-              (put! ch (if response response ::no-response))))))
+             (fn []
+               (api-send
+                 event 5000
+                 (fn [response]
+                   (when (bu/anomaly? response)
+                     (bu/pprint response))
+                   (put! ch (if response response ::no-response))))))
       ch)))
 
 (defn- wrap-handler [handler {:keys [subscriptions api-send ready]}]
@@ -28,9 +29,9 @@
         (when (:first-open? new-state)
           (put! ready true))
         (when (= (mapv (juxt :first-open? :open?) [old-state new-state])
-                [[false false] [false true]])
+                 [[false false] [false true]])
           (doseq [[provider query] @subscriptions]
-            (api-send [provider {:action :resubscribe
+            (api-send [provider {:action :reconnect
                                  :query query}])))))
     (handler event)))
 
@@ -44,13 +45,13 @@
                    (fn [done]
                      (take! ready-ch done)))]
     (-> (sente/make-channel-socket-client! url (csrf) {:type :auto})
-      (set/rename-keys {:send-fn :api-send})
-      (update :api-send wrap-api-send ready-pr)
-      (assoc :ready ready-ch))))
+        (set/rename-keys {:send-fn :api-send})
+        (update :api-send wrap-api-send ready-pr)
+        (assoc :ready ready-ch))))
 
 (defn- start-router [{:keys [ch-recv handler ready] :as opts}]
-  (sente/start-client-chsk-router! ch-recv
-    (wrap-handler handler opts)))
+  (sente/start-client-chsk-router!
+    ch-recv (wrap-handler handler opts)))
 
 (defn- init-sente [opts]
   (doto (merge opts (start-socket opts)) start-router))
@@ -60,19 +61,20 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
+        (bu/pprint [:wrap-sub id ?data])
         (if-some [ch (some-> sub-channels
-                       (get id)
-                       (get (:query ?data)))]
-          (put! ch (:changeset ?data))
+                             (get id)
+                             (get (:query ?data)))]
+          (put! ch (:ident->doc ?data))
           (handler event ?data))))))
 
-(defn- merge-changeset [db changeset]
+(defn- merge-ident->doc [db ident->doc]
   (reduce (fn [db [[table id] ent]]
             (if ent
               (assoc-in db [table id] ent)
               (update db table dissoc id)))
-    db
-    changeset))
+          db
+          ident->doc))
 
 (defn- maintain-subscriptions
   [sub-atom sub-fn]
@@ -105,11 +107,11 @@
     (let [merge! #(swap! sub-results-atom update sub-key merge-result %)]
       (merge! (<! sub-channel))
       (go-loop []
-        (if-some [result (<! sub-channel)]
-          (do
-            (merge! result)
-            (recur))
-          (swap! sub-results-atom dissoc sub-key)))
+               (if-some [result (<! sub-channel)]
+                 (do
+                   (merge! result)
+                   (recur))
+                 (swap! sub-results-atom dissoc sub-key)))
       sub-channel)))
 
 (defn init-sub [{:keys [verbose sub-results subscriptions handler url]
@@ -120,14 +122,15 @@
         {:keys [api-send] :as env} (init-sente {:handler handler
                                                 :subscriptions subscriptions
                                                 :url url})]
-    (maintain-subscriptions subscriptions
+    (maintain-subscriptions
+      subscriptions
       (fn [[provider query]]
         (let [ch (chan)
-              merge-changeset' (if verbose
-                                 (fn [db changeset]
-                                   (bu/pprint [:got-query-results [provider query] changeset])
-                                   (merge-changeset db changeset))
-                                 merge-changeset)]
+              merge-ident->doc' (if verbose
+                                  (fn [db ident->doc]
+                                    (bu/pprint [:got-query-results [provider query] ident->doc])
+                                    (merge-ident->doc db ident->doc))
+                                  merge-ident->doc)]
           (when verbose
             (bu/pprint [:subscribed-to [provider query]]))
           (swap! sub-channels assoc-in [provider query] ch)
@@ -136,7 +139,7 @@
           (go
             (<! (merge-subscription-results!
                   {:sub-results-atom sub-results
-                   :merge-result merge-changeset'
+                   :merge-result merge-ident->doc'
                    :sub-key [provider query]
                    :sub-channel ch}))
             (fn []

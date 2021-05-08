@@ -5,13 +5,13 @@
         crux       {:libs [util]
                     :deps [juxt/crux-core
                            juxt/crux-rocksdb
+                           juxt/crux-jdbc
                            metosin/malli]}
         misc       {:libs [util]
                     :deps [buddy/buddy-sign
                            clj-http/clj-http
                            com.taoensso/sente
                            info.sunng/ring-jetty9-adapter
-                           jarohen/chime
                            lambdaisland/uri
                            metosin/malli
                            metosin/reitit-ring
@@ -34,26 +34,26 @@
                            misc
                            middleware
                            rum]}}
- :deps {buddy/buddy-sign               {:mvn/version "3.3.0"}
-        clj-http/clj-http              {:mvn/version "3.10.0"}
+ :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}
+        clj-http/clj-http              {:mvn/version "3.12.1"}
         girouette/girouette            {:git/url "https://github.com/green-coder/girouette"
-                                        :sha "0fb2782c1467be17fa11daa29e686b2d7d43a2da"
+                                        :sha "11be51a6830648278ccbd6589525645af38d23a5"
                                         :deps/root "lib/girouette"}
         hawk/hawk                      {:mvn/version "0.2.11"}
-        info.sunng/ring-jetty9-adapter {:mvn/version "0.14.0"}
-        jarohen/chime                  {:mvn/version "0.3.2"}
+        info.sunng/ring-jetty9-adapter {:mvn/version "0.15.1"}
         juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
         juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
+        juxt/crux-jdbc                 {:mvn/version "21.04-1.16.0-beta"}
         lambdaisland/uri               {:mvn/version "1.4.54"}
-        metosin/malli                  {:mvn/version "0.4.0"}
-        metosin/muuntaja               {:mvn/version "0.6.7"}
+        metosin/malli                  {:mvn/version "0.5.1"}
+        metosin/muuntaja               {:mvn/version "0.6.8"}
         metosin/reitit-ring            {:mvn/version "0.5.13"}
-        nrepl/nrepl                    {:mvn/version "0.6.0"}
-        org.clojure/clojurescript      {:mvn/version "1.10.773"}
+        nrepl/nrepl                    {:mvn/version "0.8.3"}
+        org.clojure/clojurescript      {:mvn/version "1.10.844"}
         org.clojure/tools.analyzer     {:mvn/version "1.0.0"}
-        org.clojure/tools.namespace    {:mvn/version "0.2.11"}
-        org.slf4j/slf4j-nop            {:mvn/version "1.7.25"}
+        org.clojure/tools.namespace    {:mvn/version "1.1.0"}
+        org.slf4j/slf4j-nop            {:mvn/version "1.7.30"}
         ring/ring-defaults             {:mvn/version "0.3.2"}
         rum/rum                        {:mvn/version "0.11.4"}
-        selmer/selmer                  {:mvn/version "1.12.23"}
-        com.taoensso/sente             {:mvn/version "1.16.0"}}}
+        selmer/selmer                  {:mvn/version "1.12.40"}
+        com.taoensso/sente             {:mvn/version "1.16.2"}}}
