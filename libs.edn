@@ -4,8 +4,8 @@
                            org.slf4j/slf4j-nop]}
         crux       {:libs [util]
                     :deps [juxt/crux-core
-                           juxt/crux-rocksdb
                            juxt/crux-jdbc
+                           juxt/crux-rocksdb
                            metosin/malli]}
         misc       {:libs [util]
                     :deps [buddy/buddy-sign
@@ -34,17 +34,19 @@
                            misc
                            middleware
                            rum]}
-        tests      {:libs [crux]}}
+        tests      {:libs [crux
+                           misc]}}
  :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}
         clj-http/clj-http              {:mvn/version "3.12.1"}
+        com.taoensso/sente             {:mvn/version "1.16.2"}
         girouette/girouette            {:git/url "https://github.com/green-coder/girouette"
                                         :sha "11be51a6830648278ccbd6589525645af38d23a5"
                                         :deps/root "lib/girouette"}
         hawk/hawk                      {:mvn/version "0.2.11"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.15.1"}
         juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
-        juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
         juxt/crux-jdbc                 {:mvn/version "21.04-1.16.0-beta"}
+        juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
         lambdaisland/uri               {:mvn/version "1.4.54"}
         metosin/malli                  {:mvn/version "0.5.1"}
         metosin/muuntaja               {:mvn/version "0.6.8"}
@@ -56,5 +58,4 @@
         org.slf4j/slf4j-nop            {:mvn/version "1.7.30"}
         ring/ring-defaults             {:mvn/version "0.3.2"}
         rum/rum                        {:mvn/version "0.11.4"}
-        selmer/selmer                  {:mvn/version "1.12.40"}
-        com.taoensso/sente             {:mvn/version "1.16.2"}}}
+        selmer/selmer                  {:mvn/version "1.12.40"}}}

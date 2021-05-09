@@ -182,7 +182,6 @@
 ; === biff tx ===
 
 (defn normalize-tx-doc [{:keys [server-timestamp
-                                db
                                 doc-id
                                 tx-doc
                                 before]}]
@@ -202,16 +201,17 @@
                            [k (if (and (coll? v)
                                        (<= 2 (count v))
                                        (#{:db/union
-                                          :db/remove
-                                          :db/increment} (first v)))
+                                          :db/difference
+                                          :db/add} (first v)))
                                 (let [[op & xs] v
                                       v-before (get before k)]
-                                  (apply (case op
-                                           :db/union #(conj (set %1) %2)
-                                           :db/remove #(disj (set %1) %2)
-                                           :db/increment (fnil + 0))
-                                         v-before
-                                         xs))
+                                  ((case op
+                                     :db/union #(set/union (set %1) (set %2))
+                                     :db/difference #(set/difference (set %1) (set %2))
+                                     :db/add (fn [x xs]
+                                               (apply + (or x 0) xs)))
+                                   v-before
+                                   xs))
                                 v)])))
                  (into {}))]
     doc))
@@ -223,8 +223,7 @@
               before (crux/entity db doc-id)
               after (when (some? tx-doc)
                       (normalize-tx-doc
-                        {:db db
-                         :doc-id doc-id
+                        {:doc-id doc-id
                          :before before
                          :tx-doc tx-doc
                          :server-timestamp server-timestamp}))]]

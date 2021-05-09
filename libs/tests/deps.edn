@@ -1,3 +1,5 @@
 {:paths ["src"],
  :deps
- {biff/crux {:local/root "../crux"}, biff/util {:local/root "../util"}}}
+ {biff/crux {:local/root "../crux"},
+  biff/util {:local/root "../util"},
+  biff/misc {:local/root "../misc"}}}
