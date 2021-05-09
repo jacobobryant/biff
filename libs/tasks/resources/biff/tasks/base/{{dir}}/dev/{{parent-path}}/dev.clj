@@ -5,7 +5,7 @@
             [{{parent-ns}}.dev.css :as css]
             [clojure.stacktrace :as st]
             [biff.dev :as dev]
-            [biff.util-tmp :as bu]
+            [biff.util :as bu]
             [biff.views :as views]
             [clojure.string :as str]
             [clojure.test :as t]))

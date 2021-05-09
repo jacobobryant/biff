@@ -1,4 +1,4 @@
-(ns biff.util-tmp
+(ns biff.util
   (:require
     [clojure.pprint :as pp]
     [clojure.set :as set]

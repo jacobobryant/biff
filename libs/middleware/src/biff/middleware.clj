@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
-            [biff.util-tmp :as bu]
+            [biff.util :as bu]
             [muuntaja.middleware :as muuntaja]
             [ring.middleware.defaults :as rd]
             [ring.middleware.session.cookie :as cookie]
@@ -11,27 +11,46 @@
             [ring.util.request :as request]
             [ring.util.time :as rtime]))
 
-(defn wrap-static [handler {:keys [root path->file]
+(defn static-response [{:keys [path path->file]}]
+  (let [file (path->file path)
+        file (if (some-> file (.isDirectory))
+               (path->file (str/replace-first path #"/?$" "/index.html"))
+               file)]
+    (when (some-> file (.isFile))
+      (bu/nest-string-keys
+        (merge {:status 200
+                :headers/Content-Length (str (.length file))
+                :headers/Last-Modified (rtime/format-date (rio/last-modified-date file))}
+               (when (not= :head request-method)
+                 {:body file})
+               (when (str/ends-with? (.getPath file) ".html")
+                 {:headers/Content-Type "text/html"}))
+        [:headers]))))
+
+(defn wrap-static [handler {:keys [root
+                                   path->file
+                                   spa-path
+                                   spa-exclude-paths
+                                   spa-client-paths]
                             :or {root "public"
-                                 path->file (comp io/file io/resource)}}]
+                                 path->file (comp io/file io/resource)
+                                 spa-exclude-paths ["/js/"
+                                                    "/css/"
+                                                    "/cljs/"
+                                                    "/img/"
+                                                    "/assets/"]}}]
   (fn [{:keys [request-method] :as req}]
     (or (when (#{:get :head} request-method)
-          (let [path (str root (codec/url-decode (request/path-info req)))
-                file (path->file path)
-                file (if (some-> file (.isDirectory))
-                       (path->file (str/replace-first path #"/?$" "/index.html"))
-                       file)]
-            (when (some-> file (.isFile))
-              (bu/nest-string-keys
-                (merge {:status 200
-                        :headers/Content-Length (str (.length file))
-                        :headers/Last-Modified (rtime/format-date (rio/last-modified-date file))}
-                       (when (not= :head request-method)
-                         {:body file})
-                       (when (str/ends-with? (.getPath file) ".html")
-                         {:headers/Content-Type "text/html"}))
-                [:headers]))))
-        (handler req))))
+          (static-response {:path (str root (codec/url-decode (request/path-info req)))
+                            :path->file path->file}))
+        (handler req)
+        (when (and spa-path
+                   (if spa-client-paths
+                     (contains? spa-client-paths (:uri req))
+                     (not (some #(str/starts-with? (:uri req) %)
+                                spa-exclude-paths))))
+          (static-response {:path (str root spa-path)
+                            :path->file path->file})))))
 
 (defn wrap-flat-keys [handler]
   (fn [{:keys [session params] :as req}]
@@ -93,7 +112,11 @@
       wrap-flat-keys
       muuntaja/wrap-params
       muuntaja/wrap-format
-      (wrap-static (select-keys opts [:root :path->file]))
+      (wrap-static (select-keys opts [:root
+                                      :path->file
+                                      :spa-path
+                                      :spa-client-paths
+                                      :spa-exclude-paths]))
       (rd/wrap-defaults ring-defaults)
       (wrap-internal-error {:on-error on-error})
       wrap-log-requests)))
@@ -101,6 +124,7 @@
 (defn use-default-middleware
   [{:keys [biff.middleware/cookie-secret
            biff.middleware/secure-cookies
+           biff.middleware/spa-path
            biff/on-error]
     :or {on-error (constantly
                     {:status 500
@@ -111,4 +135,5 @@
           {:cookie-session-secret cookie-secret
            :secure secure-cookies
            :env sys
-           :on-error on-error}))
+           :on-error on-error
+           :spa-path spa-path}))

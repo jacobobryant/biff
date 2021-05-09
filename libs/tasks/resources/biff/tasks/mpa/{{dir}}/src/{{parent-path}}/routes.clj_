@@ -1,6 +1,6 @@
 (ns {{parent-ns}}.routes
   (:require
-    [biff.crux-tmp :as bcrux]
+    [biff.crux :as bcrux]
     [biff.http :as bhttp]
     [biff.rum :as br]
     [biff.util :as bu]

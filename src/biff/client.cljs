@@ -2,7 +2,7 @@
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]])
   (:require
-    [biff.util-tmp :as bu]
+    [biff.util :as bu]
     [cljs.core.async :as async :refer [close! <! take! put! chan]]
     [clojure.set :as set]
     [goog.net.Cookies]

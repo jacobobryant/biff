@@ -1,5 +1,5 @@
 (ns biff.misc
-  (:require [biff.util-tmp :as bu]
+  (:require [biff.util :as bu]
             [biff.util.protocols :as proto]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
@@ -150,13 +150,18 @@
       (get-in req [:headers "x-xsrf-token"]))))
 
 (defn use-sente [{:keys [biff.sente/adapter
-                         biff.sente/event-handler]
-                  :or {adapter (sente-jetty/get-sch-adapter)}
+                         biff.sente/event-handler
+                         biff.sente/route
+                         biff.reitit/routes]
+                  :or {adapter (sente-jetty/get-sch-adapter)
+                       route "/api/chsk"}
                   :as sys}]
-  (let [result (sente/make-channel-socket!
-                 adapter
-                 {:user-id-fn :client-id
-                  :csrf-token-fn sente-csrf-token-fn})
+  (let [{:keys [ajax-get-or-ws-handshake-fn
+                ajax-post-fn]
+         :as result} (sente/make-channel-socket!
+                       adapter
+                       {:user-id-fn :client-id
+                        :csrf-token-fn sente-csrf-token-fn})
         sys (merge sys (bu/prepend-keys "biff.sente" result))
         stop-router (sente/start-server-chsk-router!
                       (:ch-recv result)
@@ -166,17 +171,11 @@
                             (?reply-fn response))))
                       (merge {:simple-auto-threading? true}
                              (bu/select-ns-as sys 'biff.sente.router nil)))]
-    (update sys :biff/stop into [#(async/close! (:ch-recv result))
-                                 stop-router])))
-
-(defn use-sente-reitit [{:keys [biff.sente/ajax-get-or-ws-handshake-fn
-                                biff.sente/ajax-post-fn
-                                biff.sente/route
-                                biff.reitit/routes]
-                         :or {route "/api/chsk"}
-                         :as sys}]
-  (assoc sys :biff.reitit/routes
-         (fn []
-           (conj (bu/realize routes)
-                 [route {:get ajax-get-or-ws-handshake-fn
-                         :post ajax-post-fn}]))))
+    (-> sys
+        (assoc :biff.reitit/routes
+               (fn []
+                 (conj (bu/realize routes)
+                       [route {:get ajax-get-or-ws-handshake-fn
+                               :post ajax-post-fn}])))
+        (update :biff/stop into [#(async/close! (:ch-recv result))
+                                 stop-router]))))

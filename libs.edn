@@ -33,7 +33,8 @@
                            crux
                            misc
                            middleware
-                           rum]}}
+                           rum]}
+        tests      {:libs [crux]}}
  :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}
         clj-http/clj-http              {:mvn/version "3.12.1"}
         girouette/girouette            {:git/url "https://github.com/green-coder/girouette"

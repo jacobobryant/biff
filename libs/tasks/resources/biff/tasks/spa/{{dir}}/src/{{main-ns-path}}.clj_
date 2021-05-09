@@ -1,8 +1,8 @@
 (ns {{main-ns}}
   (:require
     [biff.misc :as misc]
-    [biff.util-tmp :as bu]
-    [biff.crux-tmp :as bcrux]
+    [biff.util :as bu]
+    [biff.crux :as bcrux]
     [biff.middleware :as mid]
     [{{parent-ns}}.routes.auth :refer [wrap-authenticate]]
     [{{parent-ns}}.config :refer [use-config]]

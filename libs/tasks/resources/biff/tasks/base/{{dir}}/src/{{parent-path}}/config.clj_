@@ -1,5 +1,5 @@
 (ns {{parent-ns}}.config
-  (:require [biff.util-tmp :as bu]))
+  (:require [biff.util :as bu]))
 
 (def env-keys
   ; env key | clj key | coerce fn

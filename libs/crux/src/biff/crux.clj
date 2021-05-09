@@ -1,6 +1,6 @@
-(ns biff.crux-tmp
+(ns biff.crux
   (:require
-    [biff.util-tmp :as bu]
+    [biff.util :as bu]
     [biff.util.protocols :as proto]
     [clojure.java.io :as io]
     [clojure.set :as set]
@@ -98,6 +98,7 @@
                                   dir
                                   opts
                                   use-open-db]
+                 :or {use-open-db true}
                  :as sys}]
   (let [node (start-node
                {:topology topology
@@ -109,6 +110,8 @@
         (assoc :biff.crux/node node)
         (update :biff/stop conj #(.close node))
         (update :biff/handler wrap-db
+                {:node node :use-open-db use-open-db})
+        (update :biff.sente/event-handler wrap-db
                 {:node node :use-open-db use-open-db}))))
 
 (defn lazy-q [db query f]

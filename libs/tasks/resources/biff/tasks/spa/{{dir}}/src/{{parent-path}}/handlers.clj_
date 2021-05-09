@@ -1,7 +1,7 @@
 (ns {{parent-ns}}.handlers
   (:require
-    [biff.util-tmp :as bu]
-    [biff.crux-tmp :as bcrux]
+    [biff.util :as bu]
+    [biff.crux :as bcrux]
     [crux.api :as crux]))
 
 ; See https://findka.com/biff/#web-sockets

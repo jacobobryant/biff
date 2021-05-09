@@ -1,6 +1,6 @@
 (ns {{parent-ns}}.routes.auth
   (:require [{{parent-ns}}.templates :as templates]
-            [biff.crux-tmp :as bcrux]
+            [biff.crux :as bcrux]
             [biff.misc :as misc]
             [clj-http.client :as http]
             [clojure.string :as str]
