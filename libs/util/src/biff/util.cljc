@@ -23,9 +23,11 @@
      (defn start-system [config components]
        (reset! system (merge {:biff/stop '()} config))
        (reduce (fn [_ f]
+                 (println "starting:" (pr-str f))
                  (reset! system (f @system)))
                nil
-               components))
+               components)
+       (println "System started."))
 
      (defn read-env [env-keys]
        (->> env-keys

@@ -40,19 +40,26 @@
                                                     "/img/"
                                                     "/assets/"]}}]
   (fn [{:keys [request-method] :as req}]
-    (or (when (#{:get :head} request-method)
-          (static-response {:path (str root (codec/url-decode (request/path-info req)))
-                            :path->file path->file
-                            :request-method request-method}))
-        (handler req)
-        (when (and spa-path
-                   (if spa-client-paths
-                     (contains? spa-client-paths (:uri req))
-                     (not (some #(str/starts-with? (:uri req) %)
-                                spa-exclude-paths))))
-          (static-response {:path (str root spa-path)
-                            :path->file path->file
-                            :request-method request-method})))))
+    (let [static-resp (delay
+                        (when (#{:get :head} request-method)
+                          (static-response
+                            {:path (str root (codec/url-decode (request/path-info req)))
+                             :path->file path->file
+                             :request-method request-method})))
+          handler-resp (delay (handler req))
+          spa-resp (delay
+                     (when (and spa-path
+                                (if spa-client-paths
+                                  (contains? spa-client-paths (:uri req))
+                                  (not (some #(str/starts-with? (:uri req) %)
+                                             spa-exclude-paths))))
+                       (static-response {:path (str root spa-path)
+                                         :path->file path->file
+                                         :request-method request-method})))]
+      (cond
+        @static-resp @static-resp
+        (and (= 404 (:status @handler-resp)) @spa-resp) @spa-resp
+        :default @handler-resp))))
 
 (defn wrap-flat-keys [handler]
   (fn [{:keys [session params] :as req}]
@@ -111,18 +118,18 @@
                                 rd/site-defaults)
                               changes)]
     (-> handler
-      (wrap-env env)
-      wrap-flat-keys
-      muuntaja/wrap-params
-      muuntaja/wrap-format
-      (wrap-static (select-keys opts [:root
-                                      :path->file
-                                      :spa-path
-                                      :spa-client-paths
-                                      :spa-exclude-paths]))
-      (rd/wrap-defaults ring-defaults)
-      (wrap-internal-error {:on-error on-error})
-      wrap-log-requests)))
+        (wrap-env env)
+        wrap-flat-keys
+        muuntaja/wrap-params
+        muuntaja/wrap-format
+        (wrap-static (select-keys opts [:root
+                                        :path->file
+                                        :spa-path
+                                        :spa-client-paths
+                                        :spa-exclude-paths]))
+        (rd/wrap-defaults ring-defaults)
+        (wrap-internal-error {:on-error on-error})
+        wrap-log-requests)))
 
 (defn use-default-middleware
   [{:keys [biff.middleware/cookie-secret

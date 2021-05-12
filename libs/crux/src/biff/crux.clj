@@ -85,15 +85,6 @@
               opts))
       crux/sync)))
 
-(defn wrap-db [handler {:keys [node use-open-db]}]
-  (fn [req]
-    (let [db (delay ((if use-open-db crux/open-db crux/db) node))]
-      (try
-        (handler (assoc req :biff.crux/db db))
-        (finally
-          (when (and use-open-db (realized? db))
-            (.close @db)))))))
-
 (defn use-crux [{:biff.crux/keys [topology
                                   dir
                                   opts
@@ -108,11 +99,16 @@
                 :pool-opts (bu/select-ns-as sys 'biff.crux.jdbc-pool nil)})]
     (-> sys
         (assoc :biff.crux/node node)
-        (update :biff/stop conj #(.close node))
-        (update :biff/handler wrap-db
-                {:node node :use-open-db use-open-db})
-        (update :biff.sente/event-handler wrap-db
-                {:node node :use-open-db use-open-db}))))
+        (update :biff/stop conj #(.close node)))))
+
+(defn wrap-db [handler]
+  (fn [{:biff.crux/keys [node use-open-db] :as req}]
+    (let [db (delay ((if use-open-db crux/open-db crux/db) node))]
+      (try
+        (handler (assoc req :biff.crux/db db))
+        (finally
+          (when (and use-open-db (realized? db))
+            (.close @db)))))))
 
 (defn lazy-q [db query f]
   (with-open [results (crux/open-q db query)]
@@ -304,11 +300,9 @@
                               seconds)
                       (flush)
                       (Thread/sleep (* 1000 seconds))
-                      (with-open [db (crux/open-db node)]
-                        (submit-tx (-> sys
-                                       (update :biff.crux/n-tried (fnil inc 0))
-                                       (assoc :biff.crux/db (delay db)))
-                                   biff-tx)))
+                      ((wrap-db (fn [sys]
+                                  (submit-tx sys biff-tx)))
+                       (update sys :biff.crux/n-tried (fnil inc 0))))
       :default (throw
                  (ex-info "TX failed, too much contention."
                           {:biff-tx biff-tx})))))
