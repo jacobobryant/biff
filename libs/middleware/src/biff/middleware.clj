@@ -11,7 +11,7 @@
             [ring.util.request :as request]
             [ring.util.time :as rtime]))
 
-(defn static-response [{:keys [path path->file]}]
+(defn static-response [{:keys [request-method path path->file]}]
   (let [file (path->file path)
         file (if (some-> file (.isDirectory))
                (path->file (str/replace-first path #"/?$" "/index.html"))
@@ -42,7 +42,8 @@
   (fn [{:keys [request-method] :as req}]
     (or (when (#{:get :head} request-method)
           (static-response {:path (str root (codec/url-decode (request/path-info req)))
-                            :path->file path->file}))
+                            :path->file path->file
+                            :request-method request-method}))
         (handler req)
         (when (and spa-path
                    (if spa-client-paths
@@ -50,7 +51,8 @@
                      (not (some #(str/starts-with? (:uri req) %)
                                 spa-exclude-paths))))
           (static-response {:path (str root spa-path)
-                            :path->file path->file})))))
+                            :path->file path->file
+                            :request-method request-method})))))
 
 (defn wrap-flat-keys [handler]
   (fn [{:keys [session params] :as req}]
@@ -77,9 +79,10 @@
   (fn [req]
     (let [resp (handler req)]
       (printf "%s %s %s\n"
-              (:status req "nil")
+              (:status resp "nil")
               (:request-method req)
               (:uri req))
+      (flush)
       resp)))
 
 (defn wrap-defaults [handler {:keys [session-store

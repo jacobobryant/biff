@@ -6,6 +6,7 @@
             [clj-http.client :as http]
             [clojure.core.async :as async]
             [clojure.spec.alpha :as s]
+            [clojure.stacktrace :as st]
             [lambdaisland.uri :as uri]
             [malli.core :as malc]
             [malli.error :as male]
@@ -165,10 +166,18 @@
         sys (merge sys (bu/prepend-keys "biff.sente" result))
         stop-router (sente/start-server-chsk-router!
                       (:ch-recv result)
-                      (fn [{:keys [?reply-fn ring-req] :as event}]
-                        (let [response (event-handler (merge sys ring-req event))]
-                          (when ?reply-fn
-                            (?reply-fn response))))
+                      (fn [{:keys [?reply-fn ring-req client-id id ?data] :as event}]
+                        (try
+                          (let [response (event-handler (merge sys ring-req event))]
+                            (when ?reply-fn
+                              (?reply-fn response)))
+                          (catch Throwable t
+                            (st/print-stack-trace t)
+                            (flush)
+                            ((:send-fn result) client-id
+                             [:biff/error (bu/anom :fault "Internal server error."
+                                                   :event-id id
+                                                   :data ?data)]))))
                       (merge {:simple-auto-threading? true}
                              (bu/select-ns-as sys 'biff.sente.router nil)))]
     (-> sys

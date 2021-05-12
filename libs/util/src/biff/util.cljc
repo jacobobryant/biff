@@ -16,6 +16,7 @@
      (defn refresh []
        (let [{:keys [biff/after-refresh biff/stop]} @system]
          (doseq [f stop]
+           (println "stopping:" (pr-str f))
            (f))
          (tn-repl/refresh :after after-refresh)))
 
@@ -336,13 +337,11 @@
     `(let ~bindings
        ~@(add-deref body syms))))
 
-(defn bind-out-err* [f]
-  (binding [*out* (alter-var-root #'*out* identity)
-            *err* (alter-var-root #'*err* identity)]
-    (f)))
-
-(defmacro bind-out-err [& body]
-  `(bind-out-err* (fn [] ~@body)))
+(defmacro fix-print [& body]
+  `(binding [*out* (alter-var-root #'*out* identity)
+             *err* (alter-var-root #'*err* identity)
+             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
+     ~@body))
 
 (defmacro catchall [& body]
   `(try ~@body (catch Exception ~'_ nil)))

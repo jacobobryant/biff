@@ -261,8 +261,10 @@
                   (mapv (fn [{:keys [doc-id before]}]
                           [:crux.tx/match doc-id before])
                         changes)
-                  (mapv (fn [{:keys [after]}]
-                          [:crux.tx/put after])
+                  (mapv (fn [{:keys [after doc-id]}]
+                          (if after
+                            [:crux.tx/put after]
+                            [:crux.tx/delete doc-id]))
                         changes))]
     (doseq [{:keys [before doc-type]
              [_ tx-doc :as tx-item] :tx-item
@@ -285,25 +287,31 @@
      :db-after (crux/with-tx @db crux-tx)
      :crux-tx crux-tx}))
 
-(defn submit-tx [{:biff.crux/keys [node authorize] :as sys} biff-tx]
-  (loop [n-tried 0]
-    (let [{:keys [crux-tx] :as tx-info} (get-tx-info sys biff-tx)
-          _ (when-let [bad-change (and authorize (check-write sys tx-info))]
-              (throw
-                (ex-info "TX not authorized." bad-change)))
-          submitted-tx (crux/submit-tx node crux-tx)]
-      (crux/await-tx node submitted-tx)
-      (cond
-        (crux/tx-committed? node submitted-tx) submitted-tx
-        (< n-tried 4) (let [seconds (int (Math/pow 2 n-tried))]
-                        (printf "TX failed due to contention, trying again in %d seconds...\n"
-                                seconds)
-                        (flush)
-                        (Thread/sleep (* 1000 seconds))
-                        (recur (inc n-tried)))
-        :default (throw
-                   (ex-info "TX failed, too much contention."
-                            {:biff-tx biff-tx}))))))
+(defn submit-tx [{:biff.crux/keys [node authorize n-tried]
+                 :or {n-tried 0}
+                 :as sys}
+                 biff-tx]
+  (let [{:keys [crux-tx] :as tx-info} (get-tx-info sys biff-tx)
+        _ (when-let [bad-change (and authorize (check-write sys tx-info))]
+            (throw
+              (ex-info "TX not authorized." bad-change)))
+        submitted-tx (crux/submit-tx node crux-tx)]
+    (crux/await-tx node submitted-tx)
+    (cond
+      (crux/tx-committed? node submitted-tx) submitted-tx
+      (< n-tried 4) (let [seconds (int (Math/pow 2 n-tried))]
+                      (printf "TX failed due to contention, trying again in %d seconds...\n"
+                              seconds)
+                      (flush)
+                      (Thread/sleep (* 1000 seconds))
+                      (with-open [db (crux/open-db node)]
+                        (submit-tx (-> sys
+                                       (update :biff.crux/n-tried (fnil inc 0))
+                                       (assoc :biff.crux/db (delay db)))
+                                   biff-tx)))
+      :default (throw
+                 (ex-info "TX failed, too much contention."
+                          {:biff-tx biff-tx})))))
 
 ; === subscribe ===
 
@@ -391,7 +399,6 @@
         (with-open [db-after (crux/open-db node (last txes))]
           (reset! latest-tx (last txes))
           (doseq [[subscription ident->doc] (subscription+updates
-                                              sys
                                               {:txes txes
                                                :db-before db-before
                                                :db-after db-after
@@ -407,7 +414,12 @@
                   (ex-info "Read not authorized."
                            {:query query
                             :doc bad-doc}))
-                (swap! subscriptions disj subscription))
+                (flush)
+                (swap! subscriptions disj subscription)
+                (send-fn (:client-id subscription)
+                         [:biff/error {:msg "Read not authorized."
+                                       :event-id event-id
+                                       :query query}]))
               (send-fn client-id [event-id {:query query
                                             :ident->doc ident->doc}]))))))))
 
@@ -438,7 +450,11 @@
                    {:crux/event-type :crux/indexed-tx}
                    (fn [_]
                      (locking lock
-                       (notify-subscribers sys))))]
+                       (try
+                         (notify-subscribers sys)
+                         (catch Throwable t
+                           (st/print-stack-trace t)
+                           (flush))))))]
     (update sys :biff/stop conj #(.close listener))))
 
 (defn biff-q [{:keys [biff.crux/db

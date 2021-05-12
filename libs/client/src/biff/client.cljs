@@ -61,7 +61,6 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
-        (bu/pprint [:wrap-sub id ?data])
         (if-some [ch (some-> sub-channels
                              (get id)
                              (get (:query ?data)))]
