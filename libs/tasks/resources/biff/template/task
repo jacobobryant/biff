@@ -27,9 +27,9 @@ dev () {
 }
 
 build () {
+  rm -rf target
+  init
   clj -A:dev -X {{parent-ns}}.dev/build
-  npx shadow-cljs release app
-  clj -X:uberjar
 }
 
 deploy () {

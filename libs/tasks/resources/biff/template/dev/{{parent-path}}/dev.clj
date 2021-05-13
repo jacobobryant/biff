@@ -3,14 +3,16 @@
             [{{parent-ns}}.views :refer [static-pages]]
             [{{parent-ns}}.test]
             [{{parent-ns}}.dev.css :as css]
-            [clojure.stacktrace :as st]
             [biff.dev :as dev]
-            [biff.util :as bu]
             [biff.rum :as br]
+            [biff.util :as bu]
+            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [clojure.test :as t]
+            [hf.depstar.uberjar :as uber]
             [nrepl.cmdline :as nrepl-cmd]
-            [shadow.cljs.devtools.server :as shadow]))
+            [shadow.cljs.devtools.api :as shadow-api]
+            [shadow.cljs.devtools.server :as shadow-server]))
 
 (defn tests []
   (t/run-all-tests #"{{parent-ns}}.test.*"))
@@ -37,11 +39,19 @@
       (System/exit 1)
       (do
         (html)
-        (css)))))
+        (css)
+        (shadow-api/release :app)
+        (if (:success (uber/build-jar
+                        {:aot true
+                         :main-class 'example.core
+                         :jar "target/app.jar"}))
+          (System/exit 0)
+          (System/exit 1))))))
 
 (defn use-shadow-cljs [sys]
-  (shadow/start!)
-  (update sys :biff/stop conj #(shadow/stop!)))
+  (shadow-server/start!)
+  (shadow-api/watch :app)
+  (update sys :biff/stop conj #(shadow-server/stop!)))
 
 (defn start []
   (bu/start-system
