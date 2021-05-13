@@ -18,15 +18,7 @@
    [:.h-6]
    [:div "db/subscriptions:"]
    [:.h-1]
-   [:pre.text-sm (bu/ppr-str (react db/subscriptions))]
-   [:hr.my-6]
-   [:p "When you've had enough fun here, start reading through the code. Here are some good "
-    "starting points:"]
-   [:ul.list-disc.pl-8.font-mono
-    [:li "src/{{parent-path}}/client/app.cljs"]
-    [:li "src/{{parent-path}}/core.clj"]
-    [:li "all-tasks/10-biff"]
-    [:li "config/"]]])
+   [:pre.text-sm (bu/ppr-str (react db/subscriptions))]])
 
 (defcs set-value < reactive (local "" ::tmp-value)
   [{::keys [tmp-value]} {:keys [label model mutate description]}]

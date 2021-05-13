@@ -64,7 +64,7 @@
                              (get id)
                              (get (:query ?data)))]
           (put! ch (:ident->doc ?data))
-          (handler event ?data))))))
+          (handler event))))))
 
 (defn- merge-ident->doc [db ident->doc]
   (reduce (fn [db [[table id] ent]]

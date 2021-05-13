@@ -66,8 +66,6 @@
                                  :href "/app/ssr"
                                  :label "SSR"}]})
        [:.h-3]
-       (when submitted
-         [:.font-bold.mb-3 "Transaction submitted successfully."])
        [:div "This tab uses server-side rendering instead of React."]
        [:.h-6]
        (br/form
@@ -88,7 +86,9 @@
           [:input.input-text.w-full {:name "foo"
                                      :value foo}]
           [:.w-3]
-          [:button.btn {:type "submit"} "Update"]])])))
+          [:button.btn {:type "submit"} "Update"]]
+         (when submitted
+           [:.font-bold.my-3 "Transaction submitted successfully."]))])))
 
 (defn form-tx [req]
   (glue/handle-form-tx req {:coercions {:text identity}}))

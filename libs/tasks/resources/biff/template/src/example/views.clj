@@ -57,10 +57,12 @@
      [:p "Loading..."]
      [:p "If you see this for more than a second, the ClojureScript build might not have finished. "
       "Go to " [:a.text-blue-500.hover:text-blue-800.hover:underline
-                {:href "http://localhost:9630/builds" :target "_blank"}
-                "http://localhost:9630/builds"]
-      " -> \"start watch\" -> \"Dashboard.\" After the build finishes, refresh this page."]
-     [:p "If the build fails, you may have forgotten to run `./task init`."]
+                {:href "http://localhost:9630/build/app" :target "_blank"}
+                "http://localhost:9630/build/app"]
+      " and click on \"Watch\"."
+      " After the build finishes, refresh this page."]
+     [:p "If the build fails, you may have forgotten to run "
+      [:code "./task init"] "."]
      [:script {:src "/js/ensure-signed-in.js"}]
      [:script {:src "/cljs/app/main.js"}]]))
 

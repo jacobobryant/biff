@@ -7,12 +7,12 @@
 
 ; See https://findka.com/biff/#web-sockets
 
-(defmulti api (comp first :?data))
-(defmethod api :default
+(defmulti handler (comp first :?data))
+(defmethod handler :default
   [{[event-id] :?data} data]
   (println "unhandled event:" event-id))
 
-(defmethod api :biff/error
+(defmethod handler :biff/error
   [_ anom]
   (pp/pprint anom))
 
