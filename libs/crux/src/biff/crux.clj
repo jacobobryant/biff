@@ -242,9 +242,8 @@
     ; Ideally we'd include Malli's explain + humanize output, but it had some
     ; weird results (including an exception) when I tested it on a few
     ; examples.
-    (throw
-      (ex-info "TX doesn't match schema."
-               {:tx biff-tx})))
+    (bu/throw-anom :incorrect "TX doesn't match schema."
+                   {:tx biff-tx}))
   (let [schema (bu/realize schema)
         server-timestamp (java.util.Date.)
         changes (get-changes {:db @db
@@ -266,17 +265,15 @@
              [_ tx-doc :as tx-item] :tx-item
              :as change-item} changes]
       (when (and (nil? before) (:db/update tx-doc))
-        (throw
-          (ex-info "Attempted to update on a new doc."
-                   {:tx-item tx-item})))
+        (bu/throw-anom :incorrect "Attempted to update on a new doc."
+                       {:tx-item tx-item}))
       (doseq [k [:before :after]
               :let [doc (k change-item)]]
         (when (and (some? doc) (not (proto/valid? schema doc-type doc)))
-          (throw
-            (ex-info "Doc doesn't match doc-type."
-                     {:tx-item tx-item
-                      k doc
-                      :explain (proto/explain-human schema doc-type doc)})))))
+          (bu/throw-anom :incorrect "Doc doesn't match doc-type."
+                         {:tx-item tx-item
+                          k doc
+                          :explain (proto/explain-human schema doc-type doc)}))))
     {:changes changes
      :server-timestamp server-timestamp
      :db-before @db
@@ -289,8 +286,8 @@
                  biff-tx]
   (let [{:keys [crux-tx] :as tx-info} (get-tx-info sys biff-tx)
         _ (when-let [bad-change (and authorize (check-write sys tx-info))]
-            (throw
-              (ex-info "TX not authorized." bad-change)))
+            (bu/throw-anom :forbidden "TX not authorized."
+                           bad-change))
         submitted-tx (crux/submit-tx node crux-tx)]
     (crux/await-tx node submitted-tx)
     (cond
@@ -303,9 +300,8 @@
                       ((wrap-db (fn [sys]
                                   (submit-tx sys biff-tx)))
                        (update sys :biff.crux/n-tried (fnil inc 0))))
-      :default (throw
-                 (ex-info "TX failed, too much contention."
-                          {:biff-tx biff-tx})))))
+      :default (bu/throw-anom :conflict "TX failed, too much contention."
+                              {:biff-tx biff-tx}))))
 
 ; === subscribe ===
 

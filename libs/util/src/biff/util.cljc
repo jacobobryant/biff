@@ -5,6 +5,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as str]
     [clojure.walk :refer [postwalk]]
+    [biff.util.http :as http]
     #?@(:clj [[clojure.java.shell :as shell]
               [clojure.tools.namespace.repl :as tn-repl]]
         :cljs [[cljs.core.async.impl.protocols :as async-proto]])))
@@ -63,7 +64,8 @@
       (pp/pprint x))))
 
 (defn pprint [x]
-  (print (str (ppr-str x) "\n"))
+  (binding [*print-namespace-maps* false]
+    (pp/pprint x))
   (flush))
 
 (defn only-keys [& {:keys [req opt req-un opt-un]}]
@@ -89,14 +91,38 @@
 (defn assoc-some [m & kvs]
   (apply assoc-pred m some? kvs))
 
-(defn anomaly? [x]
-  (s/valid? (s/keys :req [:cognitect.anomalies/category] :opt [:cognitect.anomalies/message]) x))
+(defn anom-category [{:keys [cognitect.anomalies/category]}]
+  (some-> category name keyword))
 
-(defn anom [category & [message & kvs]]
-  (apply assoc-some
+(defn anom->http-status [anomaly]
+  (case (anom-category anomaly)
+    :unavailable 503
+    :interrupted 500
+    :incorrect 400
+    :forbidden 403
+    :unsupported 400
+    :not-found 404
+    :conflict 409
+    :fault 500
+    :busy 503
+    nil))
+
+(defn anomaly? [x]
+  (s/valid? (s/keys :req [:cognitect.anomalies/category]
+                    :opt [:cognitect.anomalies/message])
+            x))
+
+(defn anom [category & [message & [opts]]]
+  (merge opts
          {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
-         :cognitect.anomalies/message message
-         kvs))
+         (when message
+           {:cognitect.anomalies/message message})))
+
+(defn throw-anom [& args]
+  (let [anomaly (apply anom args)]
+    (throw
+      (ex-info (:cognitect.anomalies/message anomaly)
+               anomaly))))
 
 (defn ns-contains? [nspace sym]
   (and (namespace sym)
@@ -363,3 +389,5 @@
    (do
      (defn chan? [x]
        (satisfies? async-proto/ReadPort x))))
+
+(def http-status->msg http/http-status->msg)

@@ -48,7 +48,8 @@
                              :request-method request-method})))
           handler-resp (delay (handler req))
           spa-resp (delay
-                     (when (and spa-path
+                     (when (and (#{:get :head} request-method)
+                                spa-path
                                 (if spa-client-paths
                                   (contains? spa-client-paths (:uri req))
                                   (not (some #(str/starts-with? (:uri req) %)
@@ -78,16 +79,21 @@
     (try
       (handler req)
       (catch Throwable t
-        (st/print-stack-trace t)
-        (flush)
-        (on-error (assoc req :status 500 :ex t))))))
+        (let [status (or (bu/anom->http-status (ex-data t)) 500)]
+          (if (= status 500)
+            (st/print-stack-trace t)
+            (do
+              (printf "%s\n" (.getMessage t))
+              (some-> (ex-data t) bu/pprint)))
+          (flush)
+          (on-error (assoc req :status status :ex t)))))))
 
 (defn wrap-log-requests [handler]
   (fn [req]
     (let [resp (handler req)]
-      (printf "%s %s %s\n"
+      (printf "%s %-4s %s\n"
               (:status resp "nil")
-              (:request-method req)
+              (name (:request-method req))
               (:uri req))
       (flush)
       resp)))

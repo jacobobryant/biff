@@ -73,6 +73,16 @@
              :flex-direction "column"}}
     contents]])
 
+(defn form [opts & body]
+  [:form (merge
+           {:method "post"}
+           (dissoc opts :hidden))
+   (for [[k v] (:hidden opts)]
+     [:input {:type "hidden"
+              :name k
+              :value v}])
+   body])
+
 (defn gap [width height]
   [:div {:style {:display "inline-block"
                  :width width

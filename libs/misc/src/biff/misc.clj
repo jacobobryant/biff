@@ -176,8 +176,8 @@
                             (flush)
                             ((:send-fn result) client-id
                              [:biff/error (bu/anom :fault "Internal server error."
-                                                   :event-id id
-                                                   :data ?data)]))))
+                                                   {:event-id id
+                                                    :data ?data})]))))
                       (merge {:simple-auto-threading? true}
                              (bu/select-ns-as sys 'biff.sente.router nil)))]
     (-> sys
