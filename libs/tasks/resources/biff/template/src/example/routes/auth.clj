@@ -79,16 +79,9 @@
        ; On server-rendered pages, the csrf token will be embedded in the html.
        ; But this is handy for static pages (retrieve the token with JS and
        ; include it in the request headers).
-       :cookies/csrf {:path "/"
-                      :max-age (* 60 60 24 90)
+       :cookies/csrf {:max-age (* 60 60 24 90)
                       :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
-       ; TODO is this necessary?
-       :session-cookie-attrs {:path "/"
-                              :http-only true
-                              :same-site :lax
-                              :secure (boolean secure-cookies)
-                              :max-age (* 60 60 24 90)}
        :session (assoc session :uid (or existing-uid new-uid))})
     {:status 302
      :headers/Location "/signin-fail/"}))
