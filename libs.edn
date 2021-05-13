@@ -16,21 +16,25 @@
                            metosin/malli
                            metosin/reitit-ring
                            nrepl/nrepl]}
-        middleware {:deps [metosin/muuntaja
-                           ring/ring-defaults]
-                    :libs [util]}
-        tasks      {:deps [buddy/buddy-sign
-                           selmer/selmer]
-                    :libs [util]}
+        middleware {:libs [util]
+                    :deps [metosin/muuntaja
+                           ring/ring-defaults]}
+        glue       {:libs [crux
+                           util]
+                    :deps [metosin/reitit]}
+        tasks      {:libs [util]
+                    :deps [buddy/buddy-sign
+                           selmer/selmer]}
         rum        {:deps [rum/rum]}
-        client     {:deps [com.taoensso/sente]
-                    :libs [util]}
+        client     {:libs [util]
+                    :deps [com.taoensso/sente]}
         dev        {:deps [girouette/girouette
                            hawk/hawk
                            org.clojure/clojurescript
                            org.clojure/tools.analyzer]}
         main       {:libs [util
                            crux
+                           glue
                            misc
                            middleware
                            rum]}

@@ -9,12 +9,12 @@
     [sablono.util]
     [taoensso.sente :as sente]))
 
-(defn- wrap-api-send [api-send ready-pr]
+(defn- wrap-send-fn [send-fn ready-pr]
   (fn [event]
     (let [ch (chan)]
       (.then ready-pr
              (fn []
-               (api-send
+               (send-fn
                  event 5000
                  (fn [response]
                    (when (bu/anomaly? response)
@@ -22,7 +22,7 @@
                    (put! ch (if response response ::no-response))))))
       ch)))
 
-(defn- wrap-handler [handler {:keys [subscriptions api-send ready]}]
+(defn- wrap-handler [handler {:keys [subscriptions send-fn ready]}]
   (fn [{:keys [id ?data] :as event}]
     (when (= id :chsk/state)
       (let [[old-state new-state] ?data]
@@ -31,8 +31,8 @@
         (when (= (mapv (juxt :first-open? :open?) [old-state new-state])
                  [[false false] [false true]])
           (doseq [[provider query] @subscriptions]
-            (api-send [provider {:action :reconnect
-                                 :query query}])))))
+            (send-fn [provider {:action :reconnect
+                                :query query}])))))
     (handler event)))
 
 (defn csrf []
@@ -45,8 +45,7 @@
                    (fn [done]
                      (take! ready-ch done)))]
     (-> (sente/make-channel-socket-client! url (csrf) {:type :auto})
-        (set/rename-keys {:send-fn :api-send})
-        (update :api-send wrap-api-send ready-pr)
+        (update :send-fn wrap-send-fn ready-pr)
         (assoc :ready ready-ch))))
 
 (defn- start-router [{:keys [ch-recv handler ready] :as opts}]
@@ -106,11 +105,11 @@
     (let [merge! #(swap! sub-results-atom update sub-key merge-result %)]
       (merge! (<! sub-channel))
       (go-loop []
-               (if-some [result (<! sub-channel)]
-                 (do
-                   (merge! result)
-                   (recur))
-                 (swap! sub-results-atom dissoc sub-key)))
+        (if-some [result (<! sub-channel)]
+          (do
+            (merge! result)
+            (recur))
+          (swap! sub-results-atom dissoc sub-key)))
       sub-channel)))
 
 (defn init-sub [{:keys [verbose sub-results subscriptions handler url]
@@ -118,9 +117,9 @@
                       handler (constantly nil)}}]
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
-        {:keys [api-send] :as env} (init-sente {:handler handler
-                                                :subscriptions subscriptions
-                                                :url url})]
+        {:keys [send-fn] :as env} (init-sente {:handler handler
+                                               :subscriptions subscriptions
+                                               :url url})]
     (maintain-subscriptions
       subscriptions
       (fn [[provider query]]
@@ -133,8 +132,8 @@
           (when verbose
             (bu/pprint [:subscribed-to [provider query]]))
           (swap! sub-channels assoc-in [provider query] ch)
-          (api-send [provider {:action :subscribe
-                               :query query}])
+          (send-fn [provider {:action :subscribe
+                              :query query}])
           (go
             (<! (merge-subscription-results!
                   {:sub-results-atom sub-results
@@ -146,6 +145,6 @@
                 (bu/pprint [:unsubscribed-to [provider query]]))
               (swap! sub-channels update provider dissoc query)
               (close! ch)
-              (api-send [provider {:action :unsubscribe
-                                   :query query}]))))))
+              (send-fn [provider {:action :unsubscribe
+                                  :query query}]))))))
     env))
