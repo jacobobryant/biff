@@ -39,29 +39,27 @@
       :parent-path parent-path
       :main-ns-path main-ns-path)))
 
-(defn copy-files [root {:keys [files] :as opts}]
-  (let [src-file-prefix (str (.getPath (io/file (io/resource root))) "/")]
+(defn copy-files [{:keys [template-root dir] :as opts}]
+  (let [src-file-prefix (str (.getPath (io/file (io/resource template-root))) "/")]
     (doseq [src-file (filter #(.isFile %)
-                       (file-seq (io/file (io/resource root))))
+                       (file-seq (io/file (io/resource template-root))))
             :let [src-file-postfix (-> src-file
                                      .getPath
                                      (str/replace-first src-file-prefix ""))
-                  dest-path (-> src-file-postfix
-                              (selmer/render opts)
-                              ; We add _ to clojure template file paths so that they don't
-                              ; get eval'd by biff.core/refresh.
-                              (str/replace #"_$" ""))]
-            :when (or (nil? files) (contains? files src-file-postfix))]
+                  dest-path (str dir "/"
+                                 (-> src-file-postfix
+                                     (selmer/render opts)
+                                     ; We add _ to clojure template file paths so that they don't
+                                     ; get eval'd by biff.util/refresh.
+                                     (str/replace #"_$" "")))]]
       (io/make-parents dest-path)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
 (defn generate-key [length]
   (bu/base64-encode (nonce/random-bytes length)))
 
-(defn init [{:keys [template-path spa] :as opts}]
-  (if spa
-    (println "Creating a SPA project.")
-    (println "Creating an MPA project."))
+(defn new-project []
+  (println "Creating a new Biff project.")
   (let [{:keys [dir] :as opts}
         (-> opts
           (get-opts [{:k :sha
@@ -76,9 +74,9 @@
           (update :main-ns symbol)
           add-derived
           (assoc :jwt-secret (generate-key 32)
-                 :cookie-secret (generate-key 16)))]
-    (copy-files "biff/tasks/base/" opts)
-    (copy-files template-path opts)
+                 :cookie-secret (generate-key 16)
+                 :template-root "biff/template/"))]
+    (copy-files opts)
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
       (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
@@ -87,25 +85,6 @@
     (println)
     (println "  cd" dir)
     (println "  git init")
-    (when spa
-      (println "  ./task init"))
-    (println "  ./task dev")))
-
-(defn new-project [_]
-  (println "Creating a new Biff project. Available project types:")
-  (println)
-  (println "  1. MPA (multi-page application). Uses server-side rendering instead of")
-  (println "     React etc. Good default choice.")
-  (println)
-  (println "  2. SPA (single-page application). Includes ClojureScript, React, and")
-  (println "     Biff's subscribable queries. Good for highly interactive applications.")
-  (println)
-  (print "Choose a project type ([mpa]/spa): ")
-  (flush)
-  (init
-    (if (str/starts-with? (str/lower-case (read-line)) "s")
-      {:spa true
-       :template-path "biff/tasks/spa/"}
-      {:mpa true
-       :template-path "biff/tasks/mpa/"}))
-  (System/exit 0))
+    (println "  ./task init")
+    (println "  ./task dev")
+    (System/exit 0)))

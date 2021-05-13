@@ -4,5 +4,6 @@
   biff/crux {:local/root "../crux"},
   biff/glue {:local/root "../glue"},
   biff/util {:local/root "../util"},
+  biff/client {:local/root "../client"},
   biff/middleware {:local/root "../middleware"},
   biff/misc {:local/root "../misc"}}}

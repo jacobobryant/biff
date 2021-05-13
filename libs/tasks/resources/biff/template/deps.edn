@@ -1,0 +1,18 @@
+{:paths ["src" "resources" "target/resources"]
+ :deps {biff/main {:git/url "https://github.com/jacobobryant/biff"
+                   :deps/root "libs/main"
+                   :sha "{{sha}}"}}
+ :aliases {:dev {:extra-paths ["dev"]
+                 :extra-deps {biff/dev {:git/url "https://github.com/jacobobryant/biff"
+                                        :deps/root "libs/dev"
+                                        :sha "{{sha}}"}
+                              cider/cider-nrepl {:mvn/version "0.26.0"}
+                              thheller/shadow-cljs {:mvn/version "2.11.6"}
+                              metosin/reitit-frontend {:mvn/version "0.5.5"}
+                              cljs-http/cljs-http {:mvn/version "0.1.46"}}}
+           :uberjar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.211"}}
+                     :exec-fn hf.depstar/uberjar
+                     :exec-args {:aot true
+                                 :verbose true
+                                 :main-class {{main-ns}}
+                                 :jar "target/app.jar"}}}}

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -e
+
+if [ -f config/task.env ]; then
+  source config/task.env
+fi
+
+init () {
+  if [ -f package.json ]; then
+    npm install
+  else
+    npm init -y
+    npm install --save react react-dom
+    npm install --save-dev shadow-cljs
+  fi
+}
+
+dev () {
+  source config/dev.env
+  clj "$@" -A:dev -M -m example.dev --port 7888 \
+    --middleware '[shadow.cljs.devtools.server.nrepl/middleware
+                   cider.nrepl/cider-middleware]'
+}
+
+build () {
+  clj -A:dev -X {{parent-ns}}.dev/build
+  npx shadow-cljs release app
+  clj -X:uberjar
+}
+
+deploy () {
+  scp config/prod.env app@$TASK_HOST:config.env
+  time git push prod master
+}
+
+logs () {
+  ssh root@$TASK_HOST journalctl -u app -f -n 300
+}
+
+prod-repl () {
+  echo Connect to nrepl port 7888
+  ssh -NL 7888:localhost:7888 root@$TASK_HOST
+}
+
+"$@"

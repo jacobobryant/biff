@@ -1,0 +1,9 @@
+{:deps {:aliases [:dev]}
+ :nrepl false
+ :builds {:app {:target :browser
+                :output-dir "target/resources/public/cljs/app"
+                :asset-path "/cljs/app"
+                :compiler-options {:infer-externs :auto}
+                :modules {:main {:init-fn {{parent-path}}.client.app/init
+                                 :entries [{{parent-path}}.client.app]}}
+                :devtools {:after-load {{parent-path}}.client.app/mount}}}}
