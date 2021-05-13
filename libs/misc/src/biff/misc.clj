@@ -55,7 +55,7 @@
 
 (defn use-jetty [{:biff/keys [host port handler]
                   :biff.jetty/keys [quiet websockets]
-                  :or {host "0.0.0.0"
+                  :or {host "localhost"
                        port 8080}
                   :as sys}]
   (let [server (jetty/run-jetty handler

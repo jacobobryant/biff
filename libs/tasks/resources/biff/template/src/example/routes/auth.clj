@@ -18,8 +18,8 @@
 
 ; You should take care of this before publicizing your site, especially if your
 ; sign-in form is not rendered with JS. Otherwise your deliverability will go
-; down. If you want to use recaptcha v3, set the RECAPTCHA_SECRET environment
-; variable. To add recaptcha on the front-end, see
+; down. If you want to use recaptcha v3, set RECAPTCHA_SECRET in
+; config/prod.env. To add recaptcha on the front-end, see
 ; https://developers.google.com/recaptcha/docs/v3.
 (defn human? [{:keys [recaptcha/secret-key params]}]
   (if-not secret-key
@@ -32,8 +32,8 @@
                         :as :json}))]
       (and success (<= 0.5 score)))))
 
-; To send login links via email, set the MAILGUN_KEY environment variable.
-; Otherwise login links will only be printed to the console.
+; To send login links via email, set MAILGUN_* in config/prod.env. Otherwise
+; login links will only be printed to the console.
 (defn send-token [{:keys [params/email
                           biff/base-url
                           mailgun/api-key

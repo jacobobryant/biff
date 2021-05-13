@@ -24,8 +24,4 @@
    ["REITIT_MODE"        :biff.reitit/mode keyword]])
 
 (defn use-config [sys]
-  (merge sys
-         {:biff/host "localhost"
-          :biff/port 8080
-          :biff.middleware/secure-cookies true}
-         (bu/read-env env-keys)))
+  (merge sys (bu/read-env env-keys)))
