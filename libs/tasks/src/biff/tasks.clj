@@ -14,7 +14,7 @@
     default
     (recur opts)))
 
-(defn get-opts [opts key-infos]
+(defn get-opts [key-infos]
   (reduce (fn [opts {:keys [k msg f] :as key-info}]
             (cond
               (contains? opts k) opts
@@ -22,8 +22,8 @@
                   (println msg)
                   (assoc opts k (f)))
               :default (assoc opts k (prompt key-info))))
-    opts
-    key-infos))
+          {}
+          key-infos))
 
 (defn latest-biff-sha []
   (-> (bu/sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "HEAD")
@@ -47,35 +47,30 @@
                                      .getPath
                                      (str/replace-first src-file-prefix ""))
                   dest-path (str dir "/"
-                                 (-> src-file-postfix
-                                     (selmer/render opts)
-                                     ; We add _ to clojure template file paths so that they don't
-                                     ; get eval'd by biff.util/refresh.
-                                     (str/replace #"_$" "")))]]
+                                 (selmer/render src-file-postfix opts))]]
       (io/make-parents dest-path)
       (spit dest-path (selmer/render (slurp src-file) opts)))))
 
 (defn generate-key [length]
   (bu/base64-encode (nonce/random-bytes length)))
 
-(defn new-project []
+(defn new-project [_]
   (println "Creating a new Biff project.")
   (let [{:keys [dir] :as opts}
-        (-> opts
-          (get-opts [{:k :sha
-                      :msg "Fetching latest Biff version..."
-                      :f latest-biff-sha}
-                     {:k :dir
-                      :msg "Enter name for project directory: "}
-                     {:k :main-ns
-                      :msg "Enter main namespace (e.g. example.core): "}])
-          (update :sha str)
-          (update :dir str)
-          (update :main-ns symbol)
-          add-derived
-          (assoc :jwt-secret (generate-key 32)
-                 :cookie-secret (generate-key 16)
-                 :template-root "biff/template/"))]
+        (-> (get-opts [{:k :sha
+                        :msg "Fetching latest Biff version..."
+                        :f latest-biff-sha}
+                       {:k :dir
+                        :msg "Enter name for project directory: "}
+                       {:k :main-ns
+                        :msg "Enter main namespace (e.g. example.core): "}])
+            (update :sha str)
+            (update :dir str)
+            (update :main-ns symbol)
+            add-derived
+            (assoc :jwt-secret (generate-key 32)
+                   :cookie-secret (generate-key 16)
+                   :template-root "biff/template/"))]
     (copy-files opts)
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
@@ -85,6 +80,5 @@
     (println)
     (println "  cd" dir)
     (println "  git init")
-    (println "  ./task init")
     (println "  ./task dev")
     (System/exit 0)))

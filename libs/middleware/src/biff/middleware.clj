@@ -91,7 +91,7 @@
 (defn wrap-log-requests [handler]
   (fn [req]
     (let [resp (handler req)]
-      (printf "%s %-4s %s\n"
+      (printf "%s  %-4s %s\n"
               (:status resp "nil")
               (name (:request-method req))
               (:uri req))

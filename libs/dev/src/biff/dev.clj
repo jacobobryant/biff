@@ -6,6 +6,7 @@
                  :or {exts [".clj" ".cljs" ".cljc"]
                       paths ["src"]}
                  :as sys}]
+  ((requiring-resolve callback))
   (let [watch (hawk/watch!
                 [(merge {:paths paths
                          :handler (fn [{:keys [last-ran]

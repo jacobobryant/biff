@@ -6,16 +6,20 @@ if [ -f config/task.env ]; then
 fi
 
 init () {
-  if [ -f package.json ]; then
-    npm install
-  else
-    npm init -y
-    npm install --save react react-dom
-    npm install --save-dev shadow-cljs
+  mkdir -p target/resources
+  if ! [ -d node_modules ]; then
+    if [ -f package.json ]; then
+      npm install
+    else
+      npm init -y
+      npm install --save react react-dom
+      npm install --save-dev shadow-cljs
+    fi
   fi
 }
 
 dev () {
+  init
   source config/dev.env
   clj "$@" -A:dev -M -m example.dev --port 7888 \
     --middleware '[shadow.cljs.devtools.server.nrepl/middleware
