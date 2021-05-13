@@ -17,6 +17,7 @@
    ["MAILGUN_KEY"        :mailgun/api-key]
    ["MAILGUN_ENDPOINT"   :mailgun/endpoint]
    ["MAILGUN_FROM"       :mailgun/from]
+   ["RECAPTCHA_SECRET"   :recaptcha/secret-key]
    ["JWT_SECRET"         :biff.auth/jwt-secret]
    ["COOKIE_SECRET"      :biff.middleware/cookie-secret]
    ["SECURE_COOKIES"     :biff.middleware/secure-cookies #(= "true" %)]
