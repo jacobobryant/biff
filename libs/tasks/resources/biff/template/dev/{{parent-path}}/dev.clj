@@ -16,7 +16,7 @@
             [shadow.cljs.devtools.server :as shadow-server]))
 
 (defn tests []
-  (t/run-all-tests #"{{parent-ns}}.*test.clj"))
+  (t/run-all-tests #"{{parent-ns}}.*test"))
 
 (defn html []
   (br/export-rum static-pages "target/resources/public"))
