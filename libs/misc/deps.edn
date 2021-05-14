@@ -4,7 +4,10 @@
   metosin/reitit-ring {:mvn/version "0.5.13"},
   com.taoensso/sente {:mvn/version "1.16.2"},
   metosin/malli {:mvn/version "0.5.1"},
-  biff/util {:local/root "../util"},
+  biff/util
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/util",
+   :sha "7946f141eae9f748823110e491d87889b22cdac1"},
   nrepl/nrepl {:mvn/version "0.8.3"},
   info.sunng/ring-jetty9-adapter {:mvn/version "0.15.1"},
   buddy/buddy-sign {:mvn/version "3.4.1"},

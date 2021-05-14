@@ -1,4 +1,7 @@
 {:paths ["src"],
  :deps
  {com.taoensso/sente {:mvn/version "1.16.2"},
-  biff/util {:local/root "../util"}}}
+  biff/util
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/util",
+   :sha "7946f141eae9f748823110e491d87889b22cdac1"}}}

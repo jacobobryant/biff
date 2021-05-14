@@ -2,4 +2,7 @@
  :deps
  {buddy/buddy-sign {:mvn/version "3.4.1"},
   selmer/selmer {:mvn/version "1.12.40"},
-  biff/util {:local/root "../util"}}}
+  biff/util
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/util",
+   :sha "7946f141eae9f748823110e491d87889b22cdac1"}}}
