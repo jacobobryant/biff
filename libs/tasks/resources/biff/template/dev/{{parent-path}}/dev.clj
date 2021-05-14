@@ -63,6 +63,7 @@
     (into [dev/use-hawk use-shadow-cljs] core/components)))
 
 (defn -main [& args]
+  (on-file-change)
   (start)
   (apply nrepl-cmd/-main args))
 

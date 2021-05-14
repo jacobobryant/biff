@@ -21,7 +21,7 @@ done by then. Since the code is working and I have the Getting Started section
 updated, I thought I might as well merge to master. In the mean time, I've
 commented out all the old documentation.
 
-By the way: application code will stay mostly the same; but there have been
+By the way: application code will stay mostly the same, but there have been
 breaking changes in the framework structure. I expect few breaking changes
 after this release. If anyone has any Biff apps already, I'd be happy to help
 migrate them.
@@ -37,14 +37,14 @@ Clojure web dev with Biff. I'm also available for consulting if you'd like to
 use Biff in your business. In either case, fill out [this quick
 survey](https://airtable.com/shrKqm1iT3UWySuxe).
 
-Core features:
+Distinctive features:
 
-- **Query subscriptions**. Specify what data the frontend needs declaratively, and
-  Biff will keep it up-to-date.
+- **Query subscriptions**. Specify what data the front end needs declaratively,
+  and Biff will keep it synced with the back end.
 - **Authorization rules**. No need to set up a bunch of CRUD endpoints. Queries
-  and transactions can be submitted from the frontend as long as they pass the
+  and transactions can be submitted from the front end as long as they pass the
   rules you define.
-- Built on **Crux**, an immutable document database with Datalog queries (see
+- Built on **Crux**, the world's best database (see
   [opencrux.com](https://opencrux.com)).
 - **Biff transactions**, a layer over Crux transactions that provides schema
   enforcement and other conveniences. Patterned after Firebase transactions.
@@ -59,6 +59,8 @@ Websites built with Biff (all mine so far):
 - [The Sample](https://sample.findka.com), a newsletter recommender system.
 - [Findka Essays](https://essays.findka.com), an essay recommender system.
 - [Hallway](https://discuss.findka.com), a discussion aggregator.
+
+Let me know if you ship something with Biff and I'll add it here.
 
 ## Resources
 
@@ -90,9 +92,9 @@ bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-pr
 The template project is a minimal CRUD app which demonstrates most of Biff's
 features.
 
-NOTE: in this documentation, we'll assume you chose `example.core` for your
-project's main namespace. So instead of writing `src/<your
-project>/some-file.clj`, we'll just write `src/example/some-file.clj`.
+NOTE: This page assumes you chose `example.core` for your project's main
+namespace. So instead of writing `src/<your project>/some-file.clj`, we'll just
+write `src/example/some-file.clj`.
 
 ### Develop
 

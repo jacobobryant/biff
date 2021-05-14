@@ -114,4 +114,5 @@
                                    :source-uri source-uri
                                    :output-path "site/codox"}))
                     {:out :inherit
-                     :err :inherit}))))
+                     :err :inherit}))
+    nil))

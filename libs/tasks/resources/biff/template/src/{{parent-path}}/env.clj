@@ -20,7 +20,7 @@
    ["RECAPTCHA_SECRET"   :recaptcha/secret-key]
    ["JWT_SECRET"         :biff.auth/jwt-secret]
    ["COOKIE_SECRET"      :biff.middleware/cookie-secret]
-   ["SECURE_COOKIES"     :biff.middleware/secure-cookies #(= "true" %)]
+   ["SECURE_COOKIES"     :biff.middleware/secure #(= "true" %)]
    ["REITIT_MODE"        :biff.reitit/mode keyword]])
 
 (defn use-env [sys]

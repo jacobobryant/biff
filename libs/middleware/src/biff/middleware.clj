@@ -104,7 +104,7 @@
                                      session-max-age
                                      on-error
                                      env]
-                              :or {session-max-age (* 60 60 24 90)
+                              :or {session-max-age (* 60 60 24 30)
                                    secure true}
                               :as opts}]
   (let [session-store (if cookie-session-secret
@@ -140,18 +140,18 @@
 
 (defn use-default-middleware
   [{:keys [biff.middleware/cookie-secret
-           biff.middleware/secure-cookies
+           biff.middleware/secure
            biff.middleware/spa-path
            biff/on-error]
     :or {on-error (constantly
                     {:status 500
                      :headers {"Content-Type" "text/plain"}
                      :body "Internal server error."})
-         secure-cookies true}
+         secure true}
     :as sys}]
   (update sys :biff/handler wrap-defaults
           {:cookie-session-secret cookie-secret
-           :secure secure-cookies
+           :secure secure
            :env sys
            :on-error on-error
            :spa-path spa-path}))

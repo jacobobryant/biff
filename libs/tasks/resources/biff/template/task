@@ -21,6 +21,7 @@ init () {
 dev () {
   init
   source config/dev.env
+  echo 7888 > .nrepl-port
   clj "$@" -A:dev -M -m {{parent-ns}}.dev --port 7888 \
     --middleware '[shadow.cljs.devtools.server.nrepl/middleware
                    cider.nrepl/cider-middleware]'
