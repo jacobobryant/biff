@@ -19,7 +19,7 @@
 ; You should take care of this before publicizing your site, especially if your
 ; sign-in form is not rendered with JS. Otherwise your deliverability will go
 ; down. If you want to use recaptcha v3, set RECAPTCHA_SECRET in
-; config/prod.env. To add recaptcha on the front-end, see
+; config/prod.env. To add recaptcha on the front end, see
 ; https://developers.google.com/recaptcha/docs/v3.
 (defn human? [{:keys [recaptcha/secret-key params]}]
   (if-not secret-key
@@ -99,7 +99,7 @@
   {:status 200
    :body {:signed-in (some? uid)}})
 
-(defn routes []
+(def routes
   [["/api/send-token"   {:post send-token}]
    ["/api/verify-token" {:get verify-token}]
    ["/api/signout"      {:get signout}]

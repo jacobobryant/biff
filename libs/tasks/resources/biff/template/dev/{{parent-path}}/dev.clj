@@ -1,5 +1,6 @@
 (ns {{parent-ns}}.dev
-  (:require [{{main-ns}} :refer [config components]]
+  (:require [{{main-ns}} :as core]
+            [{{parent-ns}}.env :refer [use-env]]
             [{{parent-ns}}.views :refer [static-pages]]
             [{{parent-ns}}.test]
             [{{parent-ns}}.dev.css :as css]
@@ -15,7 +16,7 @@
             [shadow.cljs.devtools.server :as shadow-server]))
 
 (defn tests []
-  (t/run-all-tests #"{{parent-ns}}.test.*"))
+  (t/run-all-tests #"{{parent-ns}}.*test.clj"))
 
 (defn html []
   (br/export-rum static-pages "target/resources/public"))
@@ -43,10 +44,10 @@
         (shadow-api/release :app)
         (if (:success (uber/build-jar
                         {:aot true
-                         :main-class 'example.core
+                         :main-class '{{main-ns}}
                          :jar "target/app.jar"}))
           (System/exit 0)
-          (System/exit 1))))))
+          (System/exit 2))))))
 
 (defn use-shadow-cljs [sys]
   (shadow-server/start!)
@@ -55,11 +56,11 @@
 
 (defn start []
   (bu/start-system
-    (assoc config
+    (assoc core/config
            :biff/after-refresh `start
            :biff.hawk/callback `on-file-change
            :biff.hawk/paths ["src" "dev"])
-    (into [dev/use-hawk use-shadow-cljs] components)))
+    (into [dev/use-hawk use-shadow-cljs] core/components)))
 
 (defn -main [& args]
   (start)

@@ -6,13 +6,13 @@
     [biff.middleware :as mid]
     [{{parent-ns}}.handlers :refer [api]]
     [{{parent-ns}}.routes.auth :refer [wrap-authentication]]
-    [{{parent-ns}}.config :refer [use-config]]
+    [{{parent-ns}}.env :refer [use-env]]
     [{{parent-ns}}.routes :refer [routes on-error]]
     [{{parent-ns}}.rules :refer [schema]])
   (:gen-class))
 
 (def components
-  [use-config
+  [use-env
    misc/use-nrepl
    bcrux/use-crux
    (fn [sys]

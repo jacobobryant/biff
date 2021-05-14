@@ -104,4 +104,4 @@
                 :name ::ssr
                 :biff/redirect true}]
    ["/api/form-tx" {:post form-tx}]
-   (auth/routes)])
+   auth/routes])

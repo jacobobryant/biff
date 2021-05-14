@@ -1,4 +1,4 @@
-(ns {{parent-ns}}.config
+(ns {{parent-ns}}.env
   (:require [biff.util :as bu]))
 
 (def env-keys
@@ -23,5 +23,5 @@
    ["SECURE_COOKIES"     :biff.middleware/secure-cookies #(= "true" %)]
    ["REITIT_MODE"        :biff.reitit/mode keyword]])
 
-(defn use-config [sys]
+(defn use-env [sys]
   (merge sys (bu/read-env env-keys)))
