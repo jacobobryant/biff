@@ -1,6 +1,6 @@
 (ns biff.util.http)
 
-(def http-status->msg
+(def ^:no-doc http-status->msg
   {100 "Continue"
    101 "Switching Protocols"
    102 "Processing"

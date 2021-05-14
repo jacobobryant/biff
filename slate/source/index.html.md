@@ -11,64 +11,74 @@ includes:
 search: true
 ---
 
+# Work-in-progress notice (14 May 2021)
+
+I am just about to finish a big release which has ended up being almost a
+complete rewrite. Biff is now much simpler and easier. The code is done as far
+as I'm aware; I'm just working on updating the documentation now. I'm going to
+announce the release in a few days. Hopefully most of the documentation will be
+done by then. Since the code is working and I have the Getting Started section
+updated, I thought I might as well merge to master. In the mean time, I've
+commented out all the old documentation.
+
+(By the way: application code will stay mostly the same; but there have been
+breaking changes in the framework structure. I expect few breaking changes
+after this release).
+
 # Introduction
 
-Biff is designed to make web development with Clojure as easy as possible
-without compromising on simplicity. The main target audience is early stage
-startups and hobbyists, where speed in the beginning really matters. Biff is
-also made to be easy to take apart: as your project grows and your requirements
-become more complex, you can peel back Biff's layers until you have the level
-of flexibility you need.
+Biff is designed to make web development with Clojure fast and easy without
+compromising on simplicity. It prioritizes small-to-medium sized projects.
 
-Biff is still fairly young, and there may be breaking changes. I've been using
-it in production for [Findka](https://findka.com) since May 2020. To help Biff
-grow and to help me discover what needs improvement, I'm giving free one-on-one
-mentoring (pair programming, code review, design help, etc) to anyone who wants
-to learn Clojure web dev with Biff (as my schedule allows). If you're
-interested, fill out [this quick survey](https://airtable.com/shrKqm1iT3UWySuxe).
+As my schedule allows, I'm happy to provide free mentoring (answering
+questions, reviewing code, pair programming, etc) to anyone who wants to learn
+Clojure web dev with Biff. I'm also available for consulting if you'd like to
+use Biff in your business. In either case, fill out [this quick
+survey](https://airtable.com/shrKqm1iT3UWySuxe).
 
-Core features (a few of these were inspired by Firebase):
+Core features:
 
 - **Query subscriptions**. Specify what data the frontend needs declaratively, and
-  Biff will keep it up-to-date. Same level of query power as with Firebase.
+  Biff will keep it up-to-date.
+- **Authorization rules**. No need to set up a bunch of CRUD endpoints. Queries
+  and transactions can be submitted from the frontend as long as they pass the
+  rules you define.
+- Built on **Crux**, an immutable document database with Datalog queries (see
+  [opencrux.com](https://opencrux.com)).
+- **Biff transactions**, a layer over Crux transactions that provides schema
+  enforcement and other conveniences. Patterned after Firebase transactions.
 - **Authentication**. Email link for now; password and SSO coming later.
-- **Read/write authorization rules**. No need to set up a bunch of endpoints
-  for CRUD operations. Queries and transactions can be submitted from the
-  frontend as long as they pass the rules you define.
-- **Database triggers**. Run code when documents of certain types are created,
-  updated or deleted.
-- **Crux**, an immutable document database with Datalog queries
-  (see [opencrux.com](https://opencrux.com)).
-- **No-hassle deployment** using Terraform and DigitalOcean (you can add config for other
-  cloud providers if needed). Biff can run on a single $5/month server. Later
-  I'll add config for high availability, CI/CD, etc.
-- Project templates for **SPAs and MPAs**. If you don't need high interactivity,
-  you can use server-side rendering instead of React and ClojureScript.
+- **Push-to-deploy**. The project template comes with a script for provisioning
+  an Ubuntu server. Biff is 12-factor compliant, so you can easily deploy it
+  wherever else you choose, too.
 - **Great documentation!**
 
-<p><iframe width="560" height="315" src="https://www.youtube.com/embed/mKqjJH3WiqI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
+Websites built with Biff (all mine so far):
+
+- [The Sample](https://sample.findka.com), a newsletter recommender system.
+- [Findka Essays](https://essays.findka.com), an essay recommender system.
+- [Hallway](https://discuss.findka.com), a discussion aggregator.
 
 ## Resources
 
  - Discussion: `#biff` on [Clojurians Slack](http://clojurians.net).
- - Issues and source code: [Github](https://github.com/jacobobryant/biff).
- - [An interview](https://console.substack.com/p/console-49) on The Console.
+ - [Issues](https://github.com/jacobobryant/biff/issues) and [source code](https://github.com/jacobobryant/biff) on Github.
  - [An interview](https://soundcloud.com/user-959992602/s4-e27-biff-with-jacob-obryant/s-fpVxrTrP9ZJ) on the ClojureScript Podcast.
+ - [An interview](https://console.substack.com/p/console-49) on The Console.
  - [A presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020 ([slides](https://jacobobryant.com/misc/reclojure-2020-jacobobryant.pdf)).
- - [A workshop](https://youtu.be/tDp1l81fYSM) I gave at re:Clojure 2020
-   ([code](https://github.com/jacobobryant/biff-workshop)).
  - [A presentation](https://www.youtube.com/watch?v=oYwhrq8hDFo) I gave at the Clojure Mid-Cities meetup.
+
+<br>
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/mKqjJH3WiqI" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
 # Getting started
 
 Requirements:
 
- - Linux, Mac or Windows Subsystem for Linux
- - [clj](https://clojure.org/guides/getting_started)
- - rlwrap (try `which rlwrap`)
- - npm
- - node v12.0.0+
- - Note: I've had mixed reports about using JDK 15. If it doesn't work, try 8 or 11.
+ - [clj](https://clojure.org/guides/getting_started), including rlwrap (try `which rlwrap`)
+ - [node.js](https://nodejs.org/)
+ - See also: [Crux quickstart](https://opencrux.com/howto/quickstart.html#_install_dependencies) > Install Dependencies > All System Requirements.
 
 Run this command to create a new Biff project:
 
@@ -76,14 +86,98 @@ Run this command to create a new Biff project:
 bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)
 ```
 
-That script will create a minimal, working CRUD app which demonstrates most of
-Biff's features. You'll be guided through the process of starting the app,
-trying it out, and exploring the code. You can refer back to the documentation
-here as needed. When you're ready to deploy, check out
-[Deployment](#deployment).
+The template project is a minimal CRUD app which demonstrates most of Biff's
+features.
 
-<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=96" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
+NOTE: in this documentation, we'll assume you chose `example.core` for your
+project's main namespace. So instead of writing `src/<your
+project>/some-file.clj`, we'll just write `src/example/some-file.clj`.
 
+### Develop
+
+Run `./task dev` to start an nREPL server and run the app (on `localhost:8080`
+by default). See `dev/example/dev.clj` for reloaded workflow instructions.
+
+If you prefer to start an nREPL server via your editor, you can navigate to
+`dev/example/dev.clj` and eval `(start)`. You'll need to ensure that the `:dev`
+alias is activated and that the environment variables in `config/dev.env` have
+been sourced.
+
+Assets (HTML, CSS, CLJS) will be regenerated whenever you save a file. CLJS is
+handled with Shadow CLJS (you can view compilation output at
+`localhost:9630/build/app`). HTML and CSS are handled with a separate file
+watcher which requires that you eval your changes before saving. For example,
+after running `./task dev`, go to `src/example/views.clj`, change `"Email
+address:"` to `"Your email address:"`, eval the file, then save it. If you go
+to `localhost:8080` (and log out if needed), the change should be visible.
+
+Tests will also run whenever you save a file.
+
+### Build
+
+Stop the app if it's running, then run `./task build` to generate assets (HTML,
+CSS, CLJS) and build an uberjar at `target/app.jar`.
+
+If you use the server setup script below, you won't need to run this. It be will
+done on the server after git push.
+
+### Production
+
+Production configuration is stored in `config/prod.env`. You can deploy your
+uberjar anywhere as long as you set those environment variables somehow. It's
+assumed that you handle SSL elsewhere (e.g. with Nginx) and then proxy requests
+to the app on localhost.
+
+Deploying to [Render](https://render.com) would be interesting, though probably
+not worth the price increase over a plain VPS (3-4x more than a DigitalOcean
+droplet for equivalent RAM last I checked) unless you're planning to scale
+fast. You'll need to make a Dockerfile. I also don't know if they let you
+expose TCP ports, which is necessary for nREPL. (nREPL can work [over
+HTTP](https://blog.jakubholy.net/nrepl-over-http-with-drwabridge-in-2020/), but
+I'm not aware of any editors that support it).
+
+### Server setup
+
+The project template includes a script for provisioning an Ubuntu server,
+including push-to-deploy. I've tested it with DigitalOcean.
+
+If using DigitalOcean: first create a droplet (Ubuntu 20.04 LTS). I usually do
+Regular Intel at $10/month. Add monitoring. Make sure your SSH key is selected.
+(If needed, go to Settings and add your SSH key, then start over). Set the
+hostname to something distinctive. After the droplet is created, go to
+Networking and point your domain to it (create an A record).
+
+Then, update the vars in `config/prod.env` and `config/task.env`. Run the setup
+script on your new server, replacing `example.com` with your domain:
+
+```bash
+scp infra/setup.sh root@example.com:
+ssh root@example.com
+./setup.sh
+reboot
+```
+
+From your local machine, add your server as a remote:
+
+```bash
+git remote add prod ssh://app@example.com/home/app/repo.git
+```
+
+### Deployment
+
+Commit your changes locally, then run `./task deploy`. This will copy
+`config/prod.env` and then do a git push to the server, which will build the
+uberjar, create a release, and restart the app with the new release.
+
+You can edit `infra/post-receive` to change what happens after a push.
+
+### Monitoring
+
+Run `./task logs` to tail the systemd logs. Run `./task prod-repl` to connect
+to the production nREPL server. You can use `src/example/admin.clj` as an nREPL
+admin console.
+
+<!--
 # Overview
 
 ## Project structure
@@ -386,8 +480,6 @@ experiment. You can refer back here when you need more information.
 
 Here's a demonstration of adding a feature to a Biff application
 ([short version](https://github.com/jacobobryant/biff-workshop/commit/76a76d5f774c29785e4d22e1741ec4fb491ae819)):
-
-<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=1808" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
 
 # Configuration
 
@@ -1488,9 +1580,9 @@ Each element of `:biff/jobs` is a map with three keys. For example:
 
 # Deployment
 
-See [Overview > Infrastructure](#infrastructure).
+The Biff project template includes a script
 
-<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tDp1l81fYSM?start=568" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></p>
+See [Overview > Infrastructure](#infrastructure).
 
 **1. Set up DigitalOcean**
 
@@ -1703,3 +1795,5 @@ Off the top of my head, a few more reasons:
    persistence for $5/month, whereas Datomic Cloud starts at $30/month. Doesn't
    matter for a startup of course, but I wouldn't want to be shelling out
    $30/month forever just to keep that budgeting app running.
+
+-->
