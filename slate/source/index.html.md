@@ -62,10 +62,8 @@ Websites built with Biff (all mine so far):
 
 Let me know if you ship something with Biff and I'll add it here.
 
-## Resources
+## Additional resources
 
- - Discussion: `#biff` on [Clojurians Slack](http://clojurians.net).
- - [Issues](https://github.com/jacobobryant/biff/issues) and [source code](https://github.com/jacobobryant/biff) on Github.
  - [An interview](https://soundcloud.com/user-959992602/s4-e27-biff-with-jacob-obryant/s-fpVxrTrP9ZJ) on the ClojureScript Podcast.
  - [An interview](https://console.substack.com/p/console-49) on The Console.
  - [A presentation](https://youtu.be/mKqjJH3WiqI) I gave at re:Clojure 2020 ([slides](https://jacobobryant.com/misc/reclojure-2020-jacobobryant.pdf)).
