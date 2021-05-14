@@ -1,0 +1,11 @@
+{:paths ["src"],
+ :deps
+ {biff/misc {:local/root "../misc"},
+  biff/client {:local/root "../client"},
+  biff/dev {:local/root "../dev"},
+  biff/middleware {:local/root "../middleware"},
+  biff/rum {:local/root "../rum"},
+  biff/glue {:local/root "../glue"},
+  biff/crux {:local/root "../crux"},
+  biff/util {:local/root "../util"},
+  biff/main {:local/root "../main"}}}

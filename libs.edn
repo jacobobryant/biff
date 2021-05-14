@@ -39,6 +39,8 @@
                            misc
                            middleware
                            rum]}
+        docs       {:libs [main
+                           dev]}
         tests      {:libs [crux
                            misc]}}
  :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}

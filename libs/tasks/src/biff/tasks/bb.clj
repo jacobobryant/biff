@@ -1,5 +1,6 @@
 (ns biff.tasks.bb
   (:require [babashka.fs :as fs]
+            [babashka.process :refer [process check]]
             [bencode.core :as bencode]
             [clojure.edn :as edn]
             [clojure.pprint :refer [pprint]]
@@ -63,15 +64,6 @@
       not-empty
       (get-ancestors get-parents))))
 
-(defn docs:dev []
-  (sh "bundle xec middleman server"
-      :dir "slate"))
-
-(defn docs:build []
-  (shell/with-sh-dir "slate"
-    (sh "bundle exec middleman build --clean")
-    (sh "rsync -av --delete build/ ../site/")))
-
 (defn libs:sync* [{:keys [dev]}]
   (let [{:keys [libs deps git-url group-id]} (edn/read-string (slurp "libs.edn"))
         sha (str/trim (sh "git rev-parse HEAD"))]
@@ -96,8 +88,30 @@
         (fs/create-dirs dir))
       (spit (fs/file dir "deps.edn") (with-out-str (pprint proj-deps))))))
 
-(defn libs:sync-dev []
+(defn sync-libs-dev []
   (libs:sync* {:dev true}))
 
-(defn libs:sync []
+(defn sync-libs []
   (libs:sync* {}))
+
+(def ^:private source-uri
+  "https://github.com/jacobobryant/biff/blob/{git-commit}/{filepath}#L{line}")
+
+(defn build-codox []
+  (let [{:keys [libs]} (edn/read-string (slurp "libs.edn"))
+        doc-libs (get-ancestors #(get-in libs [% :libs])
+                                (get-in libs ['docs :libs]))
+        source-paths (map #(str "libs/" % "/src") doc-libs)
+        deps '{:deps {codox/codox {:mvn/version "0.10.7"}
+                      biff/docs {:local/root "libs/docs"}}}]
+    (sh "rm" "-rf" "site/codox")
+    (check (process (into ["clj"
+                           "-Sdeps" (pr-str deps)
+                           "-X" "codox.main/generate-docs"]
+                          (mapcat (fn [[k v]]
+                                    [k (pr-str v)])
+                                  {:source-paths source-paths
+                                   :source-uri source-uri
+                                   :output-path "site/codox"}))
+                    {:out :inherit
+                     :err :inherit}))))

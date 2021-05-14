@@ -1,6 +1,18 @@
 {:deps {biff/tasks {:local/root "libs/tasks"}}
- :tasks {docs:dev      biff.tasks.bb/docs:dev
-         docs:build    biff.tasks.bb/docs:build
-         libs:sync-dev biff.tasks.bb/libs:sync-dev
-         libs:sync     biff.tasks.bb/libs:sync
-         foo           biff.tasks.bb/foo}}
+ :tasks {slate:dev     {:doc "Start a slate dev server."
+                        :task (shell "bash" "-c"
+                                     "cd slate
+                                     bundle exec middleman server")}
+         slate         {:doc "Build the slate docs."
+                        :task (shell "bash" "-c"
+                                     "cd slate
+                                     bundle exec middleman build --clean
+                                     rsync -av --delete build/ ../site/ --exclude codox")}
+         codox         {:doc "Build the API docs."
+                        :task biff.tasks.bb/build-codox}
+         docs:deploy   {:doc "Deploy the docs to Firebase."
+                        :task (shell "firebase deploy")}
+         libs:dev      {:doc "Sync libraries' deps.edn files, with :local/root."
+                        :task biff.tasks.bb/sync-libs-dev}
+         libs          {:doc "Sync libraries' deps.edn files."
+                        :task biff.tasks.bb/sync-libs}}}
