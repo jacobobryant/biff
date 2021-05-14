@@ -1,4 +1,10 @@
 (ns biff.crux
+  "Helper functions for Crux.
+  Also implements \"Biff transactions\" and \"Biff queries\", both of which are
+  patterned after Firebase's. Biff transactions provide a higher level
+  interface over crux.api/start-node. See submit-tx. Biff queries are less
+  powerful than crux.api/q, but they support subscriptions (efficiently). See
+  handle-subscribe-event!."
   (:require
     [biff.util :as bu]
     [biff.util.protocols :as proto]
@@ -10,8 +16,8 @@
     [crux.api :as crux]
     [malli.core :as malc]))
 
-; This is just documentation.
-(def glossary
+; This is just for reference.
+(def ^:no-doc glossary
   {:subscription         [:map
                           :biff/uid
                           :client-id
@@ -60,7 +66,19 @@
 
 ; === vanilla crux ===
 
-(defn start-node [{:keys [topology dir opts jdbc-spec pool-opts]}]
+(defn start-node
+  "A higher-level version of crux.api/start-node.
+  Calls crux.api/sync before returning the node.
+
+  topology   - One of #{:standalone :jdbc}.
+  dir        - A path to store RocksDB instances in.
+  jdbc-spec,
+  pool-opts  - Maps to pass as
+               {:crux.jdbc/connection-pool
+                {:db-spec jdbc-spec :pool-opts pool-opts ...}}.
+               (Used only when topology is :jdbc).
+  opts       - Additional options to pass to crux.api/start-node."
+  [{:keys [topology dir opts jdbc-spec pool-opts]}]
   (let [rocksdb (fn [basename]
                   {:kv-store {:crux/module 'crux.rocksdb/->kv-store
                               :db-dir (io/file dir basename)}})]
@@ -85,12 +103,17 @@
               opts))
       crux/sync)))
 
-(defn use-crux [{:biff.crux/keys [topology
-                                  dir
-                                  opts
-                                  use-open-db]
-                 :or {use-open-db true}
-                 :as sys}]
+(defn use-crux
+  "A Biff component for Crux.
+  Sets :biff.crux/node to the crux node.
+
+  topology,
+  dir,
+  opts                  - passed to start-node.
+  biff.crux.jdbc/*      - passed to start-node as jdbc-spec, without the namespace.
+  biff.crux.jdbc-pool/* - passed to start-node as pool-opts, without the namespace."
+  [{:biff.crux/keys [topology dir opts]
+    :as sys}]
   (let [node (start-node
                {:topology topology
                 :dir dir
@@ -101,7 +124,8 @@
         (assoc :biff.crux/node node)
         (update :biff/stop conj #(.close node)))))
 
-(defn wrap-db [handler]
+(defn wrap-db
+  [handler]
   (fn [{:biff.crux/keys [node use-open-db] :as req}]
     (let [db (delay ((if use-open-db crux/open-db crux/db) node))]
       (try
