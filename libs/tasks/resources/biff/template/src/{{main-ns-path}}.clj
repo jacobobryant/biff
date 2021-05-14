@@ -1,4 +1,4 @@
-(ns {{parent-ns}}.core
+(ns {{main-ns}}
   (:require
     [biff.misc :as misc]
     [biff.util :as bu]
