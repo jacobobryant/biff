@@ -21,9 +21,10 @@ done by then. Since the code is working and I have the Getting Started section
 updated, I thought I might as well merge to master. In the mean time, I've
 commented out all the old documentation.
 
-(By the way: application code will stay mostly the same; but there have been
+By the way: application code will stay mostly the same; but there have been
 breaking changes in the framework structure. I expect few breaking changes
-after this release).
+after this release. If anyone has any Biff apps already, I'd be happy to help
+migrate them.
 
 # Introduction
 
