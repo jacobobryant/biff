@@ -3,28 +3,28 @@
  {biff/rum
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/rum",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/crux
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/crux",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/glue
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/glue",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/client
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/client",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/middleware
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/middleware",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"},
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"},
   biff/misc
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/misc",
-   :sha "c629852d89431dd4d78f85d2da224c43233383b6"}}}
+   :sha "8c3eb2e5e0289ee00746c332f875dbf83c42ae16"}}}
