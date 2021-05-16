@@ -479,9 +479,9 @@ Similarly, you can increment numbers with `:db/add`:
                              :store/oranges [:db/add -92]}}
 ```
 
-Using maps as document IDs lets you specify composite IDs. In addition, all
-keys in the document ID will be duplicated in the document itself. This
-allows you to use document ID keys in your queries.
+You can use maps as composite IDs. In this case, all keys in the document ID
+will be duplicated in the document itself. This allows you to use document ID
+keys in your queries.
 
 ```clojure
 {[:rating {:rating/user #uuid "some-user-id"
@@ -498,7 +498,7 @@ allows you to use document ID keys in your queries.
 
 ### Receiving transactions
 
-Receiving transactions from the front end is trivial with a websockets:
+Receiving transactions from the front end is trivial with websockets:
 
 ```clojure
 ; front end
@@ -770,7 +770,7 @@ There are several ways you can help out:
    [#88](https://github.com/jacobobryant/biff/issues/88).
 
 The easiest way to hack on Biff is to start a new project (see [Getting
-Started](#getting-started)) and then change the `biff/main` and `biff/dev`
+started](#getting-started)) and then change the `biff/main` and `biff/dev`
 dependencies in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo/..."}`.
 You can also include the `biff/tests` library.
 
