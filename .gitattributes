@@ -1,2 +1,4 @@
-slate/* linguist-vendored
-site/* linguist-vendored
+* linguist-vendored
+libs/* linguist-vendored=false
+bb.edn linguist-vendored=false
+new-project.sh linguist-vendored=false
