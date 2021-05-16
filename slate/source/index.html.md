@@ -79,7 +79,8 @@ Requirements:
 
  - [clj](https://clojure.org/guides/getting_started), including rlwrap (try `which rlwrap`)
  - [node.js](https://nodejs.org/)
- - See also: [Crux quickstart](https://opencrux.com/howto/quickstart.html#_install_dependencies) > Install Dependencies > All System Requirements.
+
+If you're on MacOS, you might need to use AdoptOpenJDK (see [crux#894](https://github.com/juxt/crux/issues/894)).
 
 Run this command to create a new Biff project:
 
@@ -760,18 +761,17 @@ replacement for `biff.rum/defderivations`.
 
 # Contributing
 
-There are many ways you can help out:
+There are several ways you can help out:
 
  - Use Biff and let me know what problems you run into.
  - Blog about using Biff (I'll list articles under [Additional
    resources](#additional-resources)).
  - Submit PRs. Especially if you know how to fix
    [#88](https://github.com/jacobobryant/biff/issues/88).
- - Help me find some clients, as mentioned [above](#status).
 
 The easiest way to hack on Biff is to start a new project (see [Getting
 Started](#getting-started)) and then change the `biff/main` and `biff/dev`
-dependencies in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo/..." ...}`.
+dependencies in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo/..."}`.
 You can also include the `biff/tests` library.
 
 ## Documentation
