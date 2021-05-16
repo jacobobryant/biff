@@ -1,10 +1,14 @@
 (ns biff.rum
+  "Convenience functions for Rum (https://github.com/tonsky/rum)."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.walk :refer [postwalk]]
             [rum.core :as rum]))
 
 (defn render
+  "Given a Rum component f, returns a 200 response.
+
+  - m: If provided, merges this into the response."
   ([f opts m]
    (merge
      {:status 200
@@ -14,6 +18,7 @@
   ([f opts] (render f opts nil)))
 
 (defn unsafe
+  "Return a map with :dangerouslySetInnerHTML, optionally merged into m."
   ([m html]
    (merge m {:dangerouslySetInnerHTML {:__html html}}))
   ([html] (unsafe {} html)))
@@ -24,22 +29,29 @@
 
 (def nbsp [:span (unsafe "&nbsp;")])
 
-(defn g-fonts [families]
+(defn g-fonts
+  "Returns a link element for requesting families from Google fonts."
+  [families]
   [:link {:href (apply str "https://fonts.googleapis.com/css2?display=swap"
                   (for [f families]
                     (str "&family=" f)))
           :rel "stylesheet"}])
 
-(defn base [{:base/keys [title
-                         description
-                         lang
-                         image
-                         icon
-                         url
-                         canonical
-                         font-families
-                         head]}
-            & contents]
+(defn base
+  "Wraps contents in an :html and :body element with various metadata set.
+
+  font-families: A collection of families to request from Google fonts.
+  head:          Additional Rum elements to include inside the head."
+  [{:base/keys [title
+                description
+                lang
+                image
+                icon
+                url
+                canonical
+                font-families
+                head]}
+   & contents]
   [:html
    {:lang lang
     :style {:min-height "100%"
@@ -73,7 +85,13 @@
              :flex-direction "column"}}
     contents]])
 
-(defn form [opts & body]
+(defn form
+  "Returns a form.
+
+  hidden: A map from names to values, which will be converted to hidden input
+          fields.
+  opts:   Options for the :form element (with hidden removed)"
+  [{:keys [hidden] :as opts} & body]
   [:form (merge
            {:method "post"}
            (dissoc opts :hidden))
@@ -83,22 +101,34 @@
               :value v}])
    body])
 
-(defn gap [width height]
-  [:div {:style {:display "inline-block"
-                 :width width
-                 :height height}}])
-
 ; you could say that rum is one of our main exports
-(defn export-rum [pages dir]
-  (doseq [[path form] pages
+(defn export-rum
+  "Generate HTML files and write them to a directory.
+
+  pages: A map from paths to Rum data structures, e.g.
+         {\"/\" [:div \"hello\"]}. Paths that end in / will have index.html
+         appended to them.
+  dir:   A path to the root directory where the files should be saved."
+  [pages dir]
+  (doseq [[path rum] pages
           :let [full-path (cond-> (str dir path)
                             (str/ends-with? path "/") (str "index.html"))]]
     (io/make-parents full-path)
-    (spit full-path (cond-> form
-                      (not (string? form)) rum/render-static-markup))))
+    (spit full-path (rum/render-static-markup rum))))
 
 
-(defmacro defatoms [& kvs]
+(defmacro defatoms
+  "Convenience macro for defining multiple atoms.
+
+  For example:
+
+  (defatoms
+    foo 1
+    bar 2)
+
+  => (def foo (atom 1))
+     (def bar (atom 2))"
+  [& kvs]
   `(do
      ~@(for [[k v] (partition 2 kvs)]
          `(defonce ~k (atom ~v)))))
@@ -128,7 +158,28 @@
 (defn- pred-> [x f g]
   (if (f x) (g x) x))
 
-(defmacro defderivations [& kvs]
+(defmacro defderivations
+  "A convenience macro for rum.core/derived-atom.
+
+  Like [[defatoms]], but anything preceded by @ is watched for changes, and the
+  defined atoms will be kept up-to-date. Atoms are defined with defonce, so if
+  you change one of the definitions, you'll need to refresh the browser window
+  for it to take effect.
+
+  For example:
+
+  (def foo (atom 3))
+
+  (defderivations
+    bar (+ @foo 2)
+    baz (* @foo @bar))
+
+  @bar => 5
+  @baz => 15
+  (reset! foo 4)
+  @bar => 6
+  @baz => 24"
+  [& kvs]
   `(do ~@(for [[sym form] (partition 2 kvs)
                :let [deps (->> form
                             (postwalk-reduce

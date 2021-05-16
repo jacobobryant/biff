@@ -1,9 +1,9 @@
 (ns {{main-ns}}
   (:require
-    [biff.misc :as misc]
-    [biff.util :as bu]
     [biff.crux :as bcrux]
     [biff.middleware :as mid]
+    [biff.misc :as misc]
+    [biff.util :as bu]
     [{{parent-ns}}.handlers :refer [api]]
     [{{parent-ns}}.routes.auth :refer [wrap-authentication]]
     [{{parent-ns}}.env :refer [use-env]]
@@ -11,30 +11,34 @@
     [{{parent-ns}}.rules :refer [schema]])
   (:gen-class))
 
+; See also:
+; - https://biff.findka.com/#system-composition
+; - https://biff.findka.com/codox/biff.util.html#var-start-system
+
 (def components
   [use-env
    misc/use-nrepl
    bcrux/use-crux
-   (fn [sys]
-     (update sys :biff.sente/event-handler bcrux/wrap-db))
+   #(update % :biff.sente/event-handler bcrux/wrap-db)
    misc/use-sente
-   bcrux/use-crux-sub
+   bcrux/use-crux-sub-notifier
    misc/use-reitit
-   (fn [sys]
-     (update sys :biff/handler bcrux/wrap-db))
-   (fn [sys]
-     (update sys :biff/handler wrap-authentication))
+   #(update % :biff/handler bcrux/wrap-db)
+   #(update % :biff/handler wrap-authentication)
    mid/use-default-middleware
-   (fn [{:keys [biff/handler] :as sys}]
-     (assoc sys :biff.jetty/websockets {"/api/chsk" handler}))
+   #(assoc % :biff.jetty/websockets
+           {"/api/chsk" (:biff.handler %)})
    misc/use-jetty])
 
-(def config {:biff/schema              (fn [] schema)
+; routes, on-error and schema are defined as anonymous functions to facilitate
+; late-binding: if you redefine them, you don't have to call biff.util/refresh
+; for the changes to take place.
+(def config {:biff.middleware/spa-path "/app/"
              :biff.reitit/routes       (fn [] (routes))
-             :biff/on-error            (fn [req] (on-error req))
              :biff.sente/event-handler (fn [event] (api event (:?data event)))
-             :biff.middleware/spa-path "/app/"
-             :biff/after-refresh       `-main})
+             :biff/after-refresh       `-main
+             :biff/on-error            (fn [req] (on-error req))
+             :biff/schema              (fn [] schema)})
 
 (defn -main []
   (bu/start-system config components))

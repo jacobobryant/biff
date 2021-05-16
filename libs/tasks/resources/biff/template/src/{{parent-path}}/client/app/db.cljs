@@ -1,21 +1,17 @@
 (ns {{parent-ns}}.client.app.db
   (:require [biff.rum :as br]))
 
-; See https://findka.com/biff/#subscriptions
+; See also:
+; - https://findka.com/biff/#subscriptions
+; - https://biff.findka.com/codox/biff.rum.html#var-defatoms
+; - https://biff.findka.com/codox/biff.rum.html#var-defderivations
 
-; Same as (do
-;           (def sub-results (atom {}))
-;           (def message-cutoff (atom (js/Date.)))
-;           ...)
 (br/defatoms
   ; sub-results contains a map of query->doc-type->id->doc.
   sub-results {}
   message-cutoff (js/Date. (- (js/Date.) (* 1000 60 5)))
   route {})
 
-; defderivations lets you use rum.core/derived-atom without the boilerplate.
-; If you change the code for a derivation, you'll have to refresh window for
-; the change to take effect.
 (br/defderivations
   ; data is an atom that contains a map of doc-type->id->doc. It will be updated
   ; whenever sub-results changes.

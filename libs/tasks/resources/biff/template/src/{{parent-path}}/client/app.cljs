@@ -14,7 +14,8 @@
 
 (defn ^:export init []
   (reset! s/system
-    (bc/init-sub {:handler #(m/handler % (second (:?data %)))
+    (bc/init-sub {:url "/api/chsk"
+                  :handler #(m/handler % (second (:?data %)))
                   :sub-results db/sub-results
                   :subscriptions db/subscriptions}))
   (rfe/start!

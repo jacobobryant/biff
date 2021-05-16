@@ -517,7 +517,7 @@ html, body {
     clear:none;
   }
 
-  pre, blockquote {
+  pre {
     //background-color: $code-bg;
     //color: #fff;
 
@@ -553,13 +553,19 @@ html, body {
   }
 
   blockquote {
-    //margin-left: 28px;
-    //border-left: 3px solid #0f75d4;
+
+    margin-left: 28px;
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 1em;
+    padding-bottom: 0.5em;
+    border-left: 3px solid #0f75d4;
     background-color: #8fbcd4;
 
     &>p {
+      max-width: calc(800px - 28px - 2em - 3px);
       //background-color: $code-annotation-bg;
-      padding: $code-annotation-padding 2em;
+      //padding: $code-annotation-padding 2em;
       //color: #eee;
     }
   }
@@ -662,7 +668,7 @@ html, body {
 }
 
 .content > p, .content > table, .content > ul, .content > ol, .content > dl {
-  max-width: 970px;
+  max-width: 800px;
 }
 
 

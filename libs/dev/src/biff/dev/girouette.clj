@@ -1,4 +1,9 @@
 (ns biff.dev.girouette
+  "Helper functions for Girouette.
+
+  Most of this code has been adapted from
+  https://github.com/green-coder/girouette/blob/master/lib/processor/src/girouette/processor.clj.
+  The main addition is that write-css accepts an applied-classes parameter."
   (:require [cljs.analyzer.api :as ana-api]
             [cljs.closure :as closure]
             [cljs.compiler.api :as compiler]
@@ -119,15 +124,28 @@
     (ana-api/with-state state (compiler/with-core-cljs))
     (swap! state update :js-dependency-index #(merge stubbed-js-deps %))))
 
-(defn write-css [{:keys [output-file
-                         verbose
-                         paths
-                         exts
-                         garden-fn
-                         applied-classes]
-                  :or {verbose true
-                       exts [".clj" ".cljc" ".cljs"]
-                       paths ["src"]}}]
+(defn write-css
+  "Scan your source code for certain classes and generate CSS files for them.
+
+  paths:           The root directories for source code files to scan.
+  exts:            Only files ending with one of these extensions will be
+                   scanned.
+  garden-fn:       A function that takes a class and returns a garden data
+                   structure. See [[garden-fn]].
+  output-file:     The path to write the generated CSS to.
+  applied-classes: A map from classes (aliases) to collections of other
+                   classes. For example, {\"btn\" [\"p-2\" \"bg-blue-200\"]}
+  verbose:         If true, print the classes that have been parsed from your
+                   source code."
+  [{:keys [output-file
+           verbose
+           paths
+           exts
+           garden-fn
+           applied-classes]
+    :or {verbose true
+         exts [".clj" ".cljc" ".cljs"]
+         paths ["src"]}}]
   (io/make-parents output-file)
   (let [state (new-state)
         classes (->> paths
@@ -147,7 +165,10 @@
          garden/css
          (spit output-file))))
 
-(defn garden-fn [{:keys [components color-map font-family-map]}]
+(defn garden-fn
+  "Wrapper around girouette.tw.core/make-api that merges your options with the
+  defaults. Returns the class-name->garden function."
+  [{:keys [components color-map font-family-map]}]
   (:class-name->garden
     (make-api (into components* components)
               {:color-map (merge color/default-color-map color-map)

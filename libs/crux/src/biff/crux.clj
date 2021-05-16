@@ -409,36 +409,37 @@
                           (take 20)
                           doall
                           not-empty)]
-      (with-open [db-before (crux/open-db node @latest-tx)]
-        (with-open [db-after (crux/open-db node (last txes))]
-          (reset! latest-tx (last txes))
-          (doseq [[subscription ident->doc] (subscription+updates
-                                              {:txes txes
-                                               :db-before db-before
-                                               :db-after db-after
-                                               :subscriptions @subscriptions})
-                  :let [{:keys [client-id query event-id]} subscription]]
-            (if-some [bad-doc (check-read
-                                (assoc sys :biff/uid (:biff/uid subscription))
-                                {:docs (filter some? (vals ident->doc))
-                                 :query (:query subscription)
-                                 :db db-after})]
-              (do
-                (st/print-stack-trace
-                  (ex-info "Read not authorized."
-                           {:query query
-                            :doc bad-doc}))
-                (flush)
-                (swap! subscriptions disj subscription)
-                (send-fn (:client-id subscription)
-                         [:biff/error {:msg "Read not authorized."
-                                       :event-id event-id
-                                       :query query}]))
-              (send-fn client-id [event-id {:query query
-                                            :ident->doc ident->doc}]))))))))
+      (with-open [db-before (crux/open-db node @latest-tx)
+                  db-after (crux/open-db node (last txes))]
+        (reset! latest-tx (last txes))
+        (doseq [[subscription ident->doc] (subscription+updates
+                                            {:txes txes
+                                             :db-before db-before
+                                             :db-after db-after
+                                             :subscriptions @subscriptions})
+                :let [{:keys [client-id query event-id]} subscription]]
+          (if-some [bad-doc (check-read
+                              (assoc sys :biff/uid (:biff/uid subscription))
+                              {:docs (filter some? (vals ident->doc))
+                               :query (:query subscription)
+                               :db db-after})]
+            (do
+              (st/print-stack-trace
+                (ex-info "Read not authorized."
+                         {:query query
+                          :doc bad-doc}))
+              (flush)
+              (swap! subscriptions disj subscription)
+              (send-fn (:client-id subscription)
+                       [:biff/error {:msg "Read not authorized."
+                                     :event-id event-id
+                                     :query query}]))
+            (send-fn client-id [event-id {:query query
+                                          :ident->doc ident->doc}])))))))
 
-(defn use-crux-sub [{:keys [biff.sente/connected-uids
-                            biff.crux/node] :as sys}]
+(defn use-crux-sub-notifier
+  [{:keys [biff.sente/connected-uids
+           biff.crux/node] :as sys}]
   (let [subscriptions (atom #{})
         watch (add-watch
                 connected-uids

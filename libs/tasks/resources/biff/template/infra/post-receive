@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# When you push to the server, this file be taken from the commit and executed.
+
 set -e
 set +x
 

@@ -1,4 +1,7 @@
 (ns biff.util
+  "Utility functions with almost no dependencies.
+
+  The only exception is clojure.tools.namespace.repl, which is used by [[refresh]]."
   (:require
     [clojure.pprint :as pp]
     [clojure.set :as set]
@@ -14,14 +17,27 @@
    (do
      (defonce system (atom nil))
 
-     (defn refresh []
+     (defn refresh
+       "Stops the system, refreshes source files, and restarts the system.
+
+       The system is stopped by calling all the functions in (:biff/stop
+       @biff.util/system). (:after-refresh @system) is a fully-qualified symbol which
+       will be resolved and called after refreshing.
+
+       See [[start-system]] and [[system]]."
+       []
        (let [{:keys [biff/after-refresh biff/stop]} @system]
          (doseq [f stop]
            (println "stopping:" (pr-str f))
            (f))
          (tn-repl/refresh :after after-refresh)))
 
-     (defn start-system [config components]
+     (defn start-system
+       "Starts a system from a config map and a collection of Biff components.
+
+       Stores the system in the biff.util/system atom. See
+       See https://biff.findka.com/#system-composition and [[refresh]]."
+       [config components]
        (reset! system (merge {:biff/stop '()} config))
        (reduce (fn [_ f]
                  (println "starting:" (pr-str f))
@@ -30,7 +46,21 @@
                components)
        (println "System started."))
 
-     (defn read-env [env-keys]
+     (defn read-env
+       "Returns a map populated from environment variables.
+
+       Takes a collection of variable descriptors. For example, assuming the
+       environment has FOO=hello and BAR=123:
+
+       (read-env [[\"FOO\" :foo]
+                  [\"BAR\" :bar #(Long/parseLong %)]
+                  [\"NOT_PRESENT\" :not-present]])
+       => {:foo \"hello\"
+           :bar 123}
+
+       The third element of each descriptor, if present, will be used to coerce
+       non-empty values."
+       [env-keys]
        (->> env-keys
             (keep (fn [[env-key clj-key coerce]]
                     (when-some [v (not-empty (System/getenv env-key))]
@@ -38,14 +68,11 @@
             (into {})))
      ))
 
-(defn map-kv [f m]
-  (into {} (map (fn [[k v]] (f k v)) m)))
-
 (defn map-keys [f m]
-  (map-kv (fn [k v] [(f k) v]) m))
+  (into {} (map (fn [[k v]] [(f k) v]) m)))
 
 (defn map-vals [f m]
-  (map-kv (fn [k v] [k (f v)]) m))
+  (into {} (map (fn [[k v]] [k (f v)]) m)))
 
 (defn map-from-to [f g xs]
   (->> xs
@@ -68,7 +95,9 @@
     (pp/pprint x))
   (flush))
 
-(defn only-keys [& {:keys [req opt req-un opt-un]}]
+(defn only-keys
+  "Like clojure.spec.alpha/keys, but closed."
+  [& {:keys [req opt req-un opt-un]}]
   (let [all-keys (->> (concat req-un opt-un)
                       (map (comp keyword name))
                       (concat req opt))]
@@ -76,20 +105,6 @@
       map?
       #(= % (select-keys % all-keys))
       (eval `(s/keys :req ~req :opt ~opt :req-un ~req-un :opt-un ~opt-un)))))
-
-(defn assoc-pred
-  "Like assoc, but skip kv pairs where (f v) is false."
-  [m f & kvs]
-  (if-some [kvs (some->> kvs
-                         (partition 2)
-                         (filter (comp f second))
-                         (apply concat)
-                         not-empty)]
-    (apply assoc m kvs)
-    m))
-
-(defn assoc-some [m & kvs]
-  (apply assoc-pred m some? kvs))
 
 (defn anom-category [{:keys [cognitect.anomalies/category]}]
   (some-> category name keyword))
@@ -340,50 +355,41 @@
           ~@(for [form (partition 2 body)]
               `(s/def ~@form))))
 
-(defmacro fix-stdout [& body]
-  `(let [ret# (atom nil)
-         s# (with-out-str
-              (reset! ret# (do ~@body)))]
-     (some->> s#
-              not-empty
-              (.print System/out))
-     @ret#))
+     (defn add-deref [form syms]
+       (postwalk
+         #(cond->> %
+            (syms %) (list deref))
+         form))
 
-(defn add-deref [form syms]
-  (postwalk
-    #(cond->> %
-       (syms %) (list deref))
-    form))
+     (defmacro letdelay [bindings & body]
+       (let [[bindings syms] (->> bindings
+                                  (partition 2)
+                                  (reduce (fn [[bindings syms] [sym form]]
+                                            [(into bindings [sym `(delay ~(add-deref form syms))])
+                                             (conj syms sym)])
+                                          [[] #{}]))]
+         `(let ~bindings
+            ~@(add-deref body syms))))
 
-(defmacro letdelay [bindings & body]
-  (let [[bindings syms] (->> bindings
-                             (partition 2)
-                             (reduce (fn [[bindings syms] [sym form]]
-                                       [(into bindings [sym `(delay ~(add-deref form syms))])
-                                        (conj syms sym)])
-                                     [[] #{}]))]
-    `(let ~bindings
-       ~@(add-deref body syms))))
+     (defmacro fix-print [& body]
+       `(binding [*out* (alter-var-root #'*out* identity)
+                  *err* (alter-var-root #'*err* identity)
+                  *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
+          ~@body))
 
-(defmacro fix-print [& body]
-  `(binding [*out* (alter-var-root #'*out* identity)
-             *err* (alter-var-root #'*err* identity)
-             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
-     ~@body))
+     (defmacro catchall [& body]
+       `(try ~@body (catch Exception ~'_ nil)))
 
-(defmacro catchall [& body]
-  `(try ~@body (catch Exception ~'_ nil)))
+     (defmacro verbose [& body]
+       `(try ~@body
+             (catch Exception e#
+               (.printStackTrace e#))))
 
-(defmacro verbose [& body]
-  `(try ~@body
-        (catch Exception e#
-          (.printStackTrace e#))))
-
-(defmacro pprint-ex [& body]
-  `(try
-     (bu/pprint ~@body)
-     (catch ~'Exception e#
-       (st/print-stack-trace e#)))))
+     (defmacro pprint-ex [& body]
+       `(try
+          (bu/pprint ~@body)
+          (catch ~'Exception e#
+            (st/print-stack-trace e#)))))
 
    :cljs
    (do

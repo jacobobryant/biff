@@ -1,10 +1,5 @@
 (ns {{parent-ns}}.dev
-  (:require [{{main-ns}} :as core]
-            [{{parent-ns}}.env :refer [use-env]]
-            [{{parent-ns}}.views :refer [static-pages]]
-            [{{parent-ns}}.test]
-            [{{parent-ns}}.dev.css :as css]
-            [biff.dev :as dev]
+  (:require [biff.dev :as dev]
             [biff.rum :as br]
             [biff.util :as bu]
             [clojure.stacktrace :as st]
@@ -13,7 +8,12 @@
             [hf.depstar.uberjar :as uber]
             [nrepl.cmdline :as nrepl-cmd]
             [shadow.cljs.devtools.api :as shadow-api]
-            [shadow.cljs.devtools.server :as shadow-server]))
+            [shadow.cljs.devtools.server :as shadow-server]
+            [{{main-ns}} :as core]
+            [{{main-ns}}-test]
+            [{{parent-ns}}.dev.css :as css]
+            [{{parent-ns}}.env :refer [use-env]]
+            [{{parent-ns}}.views :refer [static-pages]]))
 
 (defn tests []
   (t/run-all-tests #"{{parent-ns}}.*test"))
@@ -75,7 +75,8 @@
   ; Inspect app state:
   (->> @bu/system keys sort (run! prn))
 
-  ; Stop the app, reload files, restart the app:
+  ; Stop the app, reload files, restart the app (you may want to bind a
+  ; keyboard shortcut to this):
   (bu/refresh)
   ; If you have problems with your editor capturing stdout/stderr, you can use
   ; this instead (I've needed this with Conjure):

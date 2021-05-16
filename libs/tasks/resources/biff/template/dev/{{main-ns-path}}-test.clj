@@ -1,4 +1,4 @@
-(ns {{parent-ns}}.test
+(ns {{main-ns}}-test
   (:require [clojure.test :refer [deftest is]]))
 
 (deftest foo-test

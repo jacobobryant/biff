@@ -28,8 +28,9 @@ migrate them.
 
 # Introduction
 
-Biff is designed to make web development with Clojure fast and easy without
-compromising on simplicity. It prioritizes small-to-medium sized projects.
+Biff is designed to make web development with Clojure fast and easy [without
+compromising](#design-philosophy) on simplicity. It prioritizes small-to-medium
+sized projects.
 
 As my schedule allows, I'm happy to provide free mentoring (answering
 questions, reviewing code, pair programming, etc) to anyone who wants to learn
@@ -54,13 +55,26 @@ Distinctive features:
   wherever else you choose, too.
 - **Great documentation!**
 
+## Status
+
+I've been using Biff in my own projects since May 2020. I now consider it
+stable/production ready, with the caveat that it hasn't yet been used seriously
+by anyone other than myself as far as I'm aware (hopefully that will change
+soon!). See also the [high priority
+issues](https://github.com/jacobobryant/biff/issues?q=is%3Aissue+is%3Aopen+label%3A%22high+priority%22).
+
+I've recently decided to switch from entrepreneurship to freelancing and
+consulting, and I'm looking for opportunities to build things with Biff (and
+train others how to). If you want to support Biff, [let me
+know](mailto:contact@jacobobryant.com) if you have any leads.
+
 Websites built with Biff (all mine so far):
 
 - [The Sample](https://sample.findka.com), a newsletter recommender system.
 - [Findka Essays](https://essays.findka.com), an essay recommender system.
 - [Hallway](https://discuss.findka.com), a discussion aggregator.
 
-Let me know if you ship something with Biff and I'll add it here.
+If you ship something with Biff, I'll add it to the list.
 
 ## Additional resources
 
@@ -112,7 +126,8 @@ after running `./task dev`, go to `src/example/views.clj`, change `"Email
 address:"` to `"Your email address:"`, eval the file, then save it. If you go
 to `localhost:8080` (and log out if needed), the change should be visible.
 
-Tests will also run whenever you save a file.
+Tests will also run whenever you save a file. Similarly, they must be eval'd
+first.
 
 ### Build
 
@@ -178,309 +193,529 @@ Run `./task logs` to tail the systemd logs. Run `./task prod-repl` to connect
 to the production nREPL server. You can use `src/example/admin.clj` as an nREPL
 admin console.
 
-<!--
-# Overview
+## Using the documentation
 
-## Project structure
+Biff's documentation is divided between this page, the [API
+docs](https://biff.findka.com/codox/), and the template documentation (the
+in-code comments included when you create a new project). This page is good
+for getting an overview of Biff's features and as a reference for certain things
+(like the Biff transaction format). You can get the nitty-gritty details from
+exploring the template project, which also contains links to relevant sections of the
+API docs.
 
-Here's an example of running the `new-project.sh` script above:
+# Design Philosophy
 
-<div class="highlight">
-<pre class="highlight">
-<code>$ <span style="color:cyan">bash <(curl -s https://raw.githubusercontent.com/jacobobryant/biff/master/new-project.sh)</span>
-Creating a new Biff project. Available project types:
+Libraries are simple. Frameworks are easy. Frameworks can be good if they're
+both simple and easy. Biff attempts to be simple by focusing on
+decomposability: it addresses not only "how should these pieces be put
+together" but also "how can they be taken apart?" Your project might even
+gradually reach the point where it's no longer a "Biff" project at all.
 
-  1. SPA (single-page application). Includes ClojureScript, React, and
-     Biff's subscribable queries. Good for highly interactive applications.
+The following describes how Biff currently tries to reach that ideal, subject
+to refinement.
 
-  2. MPA (multi-page application). Uses server-side rendering instead of
-     React etc. Good for simpler applications.
+### Code organization
 
-Choose a project type ([spa]/mpa): <span style="color:cyan">spa</span>
-Creating a SPA project.
-Fetching latest Biff version...
-Enter name for project directory: <span style="color:cyan">example</span>
-Enter main namespace (e.g. example.core): <span style="color:cyan">example.core</span>
-Enter the domain you plan to use in production (e.g. example.com),
-or leave blank to choose later: <span style="color:cyan">example.com</span>
+Biff consists of two parts:
 
-Your project is ready. Run the following commands to get started:
+1. A collection of libraries. For example, biff.crux has helper functions and
+   additional features for Crux, and biff.middleware has some Ring middleware.
+   Each of these libraries can be used independently.
 
-  cd example
-  git init
-  ./task init
-  ./task dev
+2. A project template, which is used by the [new project
+   script](#getting-started) above. This is where the framework code lives. The
+   project template composes the various libraries together for you.
 
-Run `./task help` for more info.
-$ <span style="color:cyan">cd example/</span>
-$ <span style="color:cyan">tree</span>
-.
-├── all-tasks
-│   ├── 10-biff
-│   └── 20-example
-├── config
-│   ├── deploy-key
-│   ├── main.edn
-│   ├── ssh-public-key
-│   └── task.env
-├── deps.edn
-├── infra
-│   ├── provisioners
-│   │   ├── 00-config
-│   │   ├── 10-wait
-│   │   ├── 20-dependencies
-│   │   ├── 30-users
-│   │   ├── 40-app
-│   │   ├── 50-systemd
-│   │   ├── 60-nginx
-│   │   └── 70-firewall
-│   ├── run-provisioners.sh
-│   ├── system.tf.json
-│   └── webserver.json
-├── resources
-│   └── www
-│       └── js
-│           ├── ensure-signed-in.js
-│           └── ensure-signed-out.js
-├── shadow-cljs.edn
-├── src
-│   └── example
-│       ├── client
-│       │   ├── app
-│       │   │   ├── components.cljs
-│       │   │   ├── db.cljs
-│       │   │   ├── mutations.cljs
-│       │   │   └── system.cljs
-│       │   └── app.cljs
-│       ├── core.clj
-│       ├── handlers.clj
-│       ├── jobs.clj
-│       ├── routes.clj
-│       ├── rules.clj
-│       ├── static.clj
-│       └── triggers.clj
-├── tailwind.config.js
-├── tailwind.css
-└── task
-</code>
-</pre>
-</div>
+By keeping the framework code in the project template, it is easy for you to
+change (you don't have to copy the source from somewhere) and easy for Biff to
+change (the project template doesn't need to be backwards compatible).
 
-### Tasks
+The project template also acts as a testing ground. New code can go there
+first. With time, the correct abstractions will become clearer, and then the
+code can be moved to one of Biff's libraries. For example, authentication is
+currently handled entirely within the project template.
 
-`all-tasks/` contains Bash scripts which define project tasks as functions. For example:
+### System composition
 
-<div class="file-heading">all-tasks/10-biff</div>
-```shell
-init () {
-  if [ -f package.json ]; then
-    npm install
-  else
-  ...
-}
-```
+Biff uses a minimalist implementation of Stuart Sierra's [component design
+pattern](https://github.com/stuartsierra/component#component). The system is
+represented by a single map with flat, namespaced keys. Each component is a
+function that modifies the system map, kind of like Ring middleware modifying
+an incoming request. For example, here's a Biff component for the web server:
 
-You can run these functions with `./task <name of function>`.
-`all-tasks/10-biff` contains tasks provided by Biff. You can define new tasks
-in other files, such as `all-tasks/20-example`.
-
-### Static resources
-
-`./task dev` starts your app on `localhost:8080`. Your app will serve files
-from `www/` and `www-dev/`, which are populated from several sources:
-
- - The contents of `resources/www/` are copied to `www/`.
- - HTML files are generated from `src/example/static.clj` and placed in `www/`.
- - Your CLJS code (under `src/example/client/`) is compiled to `www-dev/cljs/app/main.js`.
- - `tailwind.css` is compiled to `www-dev/css/main.css`.
-
-In production, only the first two points apply. Before deploying, you'll use `./task build-assets`
-to add your production CLJS and CSS to `resources/www/` so it can be checked into your git repository
-and deployed from there. (Alternatively, you can download assets from a CI server. I'll make Biff do this
-by default later.)
-
-### Configuration
-
-`config/main.edn` is read when your app starts. It contains configuration and
-secrets. The contents of `config/` are git-ignored, but Terraform will copy
-`config/main.edn` to production when you deploy. (Later Biff will use Hashicorp
-Vault.)
-
-<div class="file-heading">config/main.edn</div>
 ```clojure
-{:prod {; Standalone topology is only recommended for development.
-        :biff.crux/topology :standalone
-        ; Uncomment to use jdbc in production:
-        ;:biff.crux/topology :jdbc
-        ;:biff.crux.jdbc/dbname "..."
-        ;:biff.crux.jdbc/user "..."
-        ;:biff.crux.jdbc/password "..."
-        ;:biff.crux.jdbc/host "..."
-        ;:biff.crux.jdbc/port ...
-        :biff/host "example.com"}
- :dev {:inherit [:prod]
-       :biff/dev true}}
-```
-
-`config/task.env` contains configuration needed by `./task`.
-`config/deploy-key` and `config/ssh-public-key` are needed for deployment.
-You'll need to update all of these files before deploying.
-
-### Infrastructure
-
-Before deploying, you'll create a VM image (via Packer) with `./task
-build-image`. That task will read from `infra/webserver.json`, and it will run
-the scripts under `infra/provisioners/`. If you need to customize the image,
-you can add more scripts and re-run `./task build-image`.
-
-After that, you can create a server and deploy your app (via Terraform) with
-`./task tf apply`. You'll need to commit and push first. When the server
-starts, it will fetch the latest commit from your git repository and run your
-app from that.
-
-You can use `./task deploy` instead of `./task tf apply` for subsequent
-deploys, as long as you haven't made any infrastructure changes. `./task
-deploy` will simply restart the app process on the server, causing it to fetch
-the latest commit again.
-
-## App entrypoint
-
-Your app is started by running the `-main` function from your app's main namespace, e.g.
-`example.core/-main`.
-
-<div class="file-heading">src/example/core.clj</div>
-```clojure
-(defn start [first-start]
-  (let [sys (biff.core/start-system
-              {:biff/first-start first-start
-               ...}
-              biff.core/default-spa-components)]
-    (when (:biff/dev sys)
-      (biff.project/update-spa-files sys))
-    (println "System started.")))
-
-(defn -main []
-  (start true))
-```
-
-Some of the files discussed in the previous section are managed by Biff
-(specifically, `all-tasks/10-biff` and everything under `infra/`). When your
-app starts, the `biff.project/update-spa-files` will write to those files. This
-means that when you update Biff (by changing the `:sha` value in `deps.edn`),
-those non-Clojure files will also get updated. You shouldn't change any of
-those files by hand, because your changes will get overwritten.
-
-`biff.core/start-system` takes a system map and passes it through a number of
-component functions. It's kind of like passing a Ring request through
-middleware functions. The system map includes all the configuration values,
-using flat, namespaced keys. It also includes any resources or values that
-components choose to pass on.
-
-Biff's default components do the following:
-
-- Read `config/main.edn`.
-- Start an nrepl server.
-- (In dev) start Shadow CLJS.
-- Start a Crux node.
-- Start a Crux transaction listener, which notifies clients when data they've
-  subscribed to has changed. It also runs database triggers.
-- Listen for web socket connections (via sente).
-- Set up web socket event handlers, including front-end query and transaction handlers.
-- Set up HTTP routes (via Reitit), including routes for authentication.
-- Start a web server (Jetty).
-- Populate `www/` with static resources.
-- Schedule recurring jobs.
-
-Each component function receives the system map and then returns a modified version. For example,
-here's the component which starts Jetty:
-
-<div class="file-heading">biff.components</div>
-```clojure
-(defn start-web-server [{:biff.web/keys [handler host port] :as sys}]
+; As a convention, components are named use-*
+(defn use-jetty [{:biff/keys [host port handler]
+                  :biff.jetty/keys [quiet websockets]
+                  :or {host "localhost"
+                       port 8080}
+                  :as sys}]
   (let [server (jetty/run-jetty handler
-                 {:host host
-                  :port port
-                  :join? false
-                  :websockets {"/api/chsk" handler}
-                  :allow-null-path-info true})]
+                                {:host host
+                                 :port port
+                                 :join? false
+                                 :websockets websockets
+                                 :allow-null-path-info true})]
+    (when-not quiet
+      (println "Jetty running on" (str "http://" host ":" port)))
+    ; :biff/stop is a collection of zero-argument functions.
     (update sys :biff/stop conj #(jetty/stop-server server))))
 ```
 
-When all components have finished, the result is stored in `biff.core/system`
-(an atom). During development, you can reload the system by calling
-`(biff.core/refresh)` (I recommend binding an editor shortcut to that).
-That will call all the functions in `:biff/stop`, reload Clojure files with
-tools.deps.namespace.repl, and then restart your app with
-`biff.core/start-system`.
+Biff components are "principled" (see Systems of Modules from [Elements of
+Clojure](https://elementsofclojure.com/): "We want a collection of principled
+components, built to be discarded, separated by interfaces that are built to
+last"). They provide a few configuration options, and if you want deeper
+customization, you can just copy the source and create a new component that
+does what you need.
 
-## Decomposing
-
-To a degree, you can modify the behavior of Biff by passing in certain
-configuration values. When you need more flexibility, you can decompose Biff.
-For example, you can replace `default-spa-components` like so:
-
-<div class="file-heading">src/example/core.clj</div>
-```clojure
-(require '[biff.components :as c])
-
-(defn start [first-start]
-  (let [sys (biff.core/start-system {...}
-              ; Add or remove components as needed.
-              [c/init
-               c/set-defaults
-               c/start-crux
-               c/start-sente
-               c/start-tx-listener
-               c/start-event-router
-               c/set-auth-route
-               c/set-http-handler
-               c/start-web-server
-               c/write-static-resources
-               c/start-jobs
-               c/print-spa-help])]
-    ...))
-```
-
-And you can replace `biff.project/update-spa-files` with its body:
+Components don't explicitly define dependencies on other components; they just
+document which keys they need and which keys they provide or modify (via the
+function signature and the doc string). You define the start order manually:
 
 ```clojure
-(require '[biff.project.infra :as infra])
-
-(defn start [first-start]
-  (let [sys (biff.core/start-system {...}
-              ...)]
-    (when (:biff/dev sys)
-      (let [opts (assoc sys ...)]
-          (biff.project/copy-files "biff/project/base/{{dir}}/"
-            (assoc opts
-              :files #{"all-tasks/10-biff"
-                       "infra/provisioners/10-wait"
-                       "infra/provisioners/20-dependencies"
-                       "infra/provisioners/30-users"
-                       "infra/provisioners/40-app"
-                       "infra/provisioners/50-systemd"
-                       "infra/provisioners/60-nginx"
-                       "infra/provisioners/70-firewall"
-                       "infra/run-provisioners.sh"}))
-          (spit "infra/webserver.json"
-            (cheshire/generate-string
-              infra/default-packer-config {:pretty true}))
-          (spit "infra/system.tf.json"
-            (cheshire/generate-string
-              (infra/default-terraform-config opts) {:pretty true}))))
-    (println "System started.")))
+(defn -main []
+  ; start-system is essentially the same as (reduce (fn [m f] (f m)) ...).
+  (biff.util/start-system
+    ; Initial config
+    {:biff.reitit/routes [...]
+     ...}
+    ; Components
+    [use-env
+     use-nrepl
+     use-crux
+     ...]))
 ```
 
-This should give you the flexibility you need.
+Since Biff components are just functions, you can easily create wrappers for use
+with Stuart Sierra Component, Mount, etc. if you so desire.
 
-<hr>
+Fun fact: you can even make anonymous components, like
+`#(update % :biff/handler wrap-foo)`.
 
-The rest of this documentation covers Biff's individual features in-depth. The
-fastest way to learn Biff is probably to create a new project and then
-experiment. You can refer back here when you need more information.
+# Authorization rules
 
-Here's a demonstration of adding a feature to a Biff application
-([short version](https://github.com/jacobobryant/biff-workshop/commit/76a76d5f774c29785e4d22e1741ec4fb491ae819)):
+When using [Biff transactions](#transactions) or [subscriptions](#subscriptions), you'll
+need to specify relevant "doc types." These can be defined with either Spec or Malli:
+
+```clojure
+(def registry
+  {:user/id     :uuid
+   :user/email  :string
+   :user/foo    :string
+   :user/bar    :string
+   :user        [:map {:closed true}
+                 [:crux.db/id :user/id]
+                 :user/email
+                 [:user/foo {:optional true}]
+                 [:user/bar {:optional true}]]
+   :msg/id      :uuid
+   :msg/user    :user/id
+   :msg/text    :string
+   :msg/sent-at inst?
+   :msg         [:map {:closed true}
+                 [:crux.db/id :msg/id]
+                 :msg/user
+                 :msg/text
+                 :msg/sent-at]})
+
+(def schema (biff.misc/map->MalliSchema
+              {:doc-types [:user :msg]
+               :malli-opts {:registry (biff.misc/malli-registry registry)}}))
+
+; For Spec: (biff.misc/map->SpecSchema {:doc-types [::user ::msg]})
+
+(biff.util/start-system
+  {:biff/schema schema
+   ...
+```
+
+Queries and transactions will be rejected if the documents they affect don't
+conform to the specified doc types.
+
+Once you've defined a doc type, you can create authorization rules for it
+by extending a multimethod:
+
+```clojure
+(defmethod biff.crux/authorize [:user :get]
+  [{:keys [biff/uid]} {:keys [crux.db/id]}]
+  (= uid id))
+```
+
+There are five operations: `#{:get :query :create :update :delete}`. There are
+also three aliases: `:read` (which covers `:get` and `:query`), `:write` (which
+covers `:create`, `:update`, and `:delete`) and `:rw` (which covers
+everything). The `biff.crux/authorize` multimethod is dispatched on the doc
+type and the operation. For example, if you try to create a new user, then Biff
+will dispatch on `[:user :create]`, then `[:user :write]`, then `[:user :rw]`.
+If at least one of those methods returns truthy, then the transaction will be
+permitted.
+
+The first argument to `authorize` is the system map, with some additional keys
+merged in depending on the operation:
+
+Key | Operations | Description
+----|------------|------------
+`:biff/uid` | All | The ID of the user who submitted the query/transaction. `nil` if they're unauthenticated.
+`:doc-type` | All | e.g. `:user`
+`:operation` | All | e.g. `:get`
+`:doc-id` | All | The relevant document's ID.
+`:doc` | Read | The document being read.
+`:db` | Read | A Crux DB from the time the document is being read.
+`:before` | Write | The document before the transaction took place (nil if the document is being created).
+`:after` | Write | The document after the transaction took place (nil if the document is being deleted).
+`:db-before` | Write | A Crux DB from before the transaction takes place.
+`:db-after` | Write | A speculative Crux DB from after the transaction would take place (created with `crux.api/with-tx`).
+`:server-timestamp` | Write | The value used to replace occurrences of `:db/server-timestamp` in the transaction.
+
+As a convenience, the second argument passed to `authorize` is the relevant
+document: `doc` for read operations, and either `before` or `after` for
+write operations. An `:update` rule will receive two additional arguments:
+
+```clojure
+(defmethod authorize [:user :update]
+  [sys before after]
+  ...)
+```
+
+# Transactions
+
+Biff has its own transaction format, patterned after Firebase write operations.
+Transactions are a map from "idents" (a tuple of the doc type and the doc ID)
+to "TX docs" (maps that are used to infer what the new documents should be).
+For example, here's a transaction for creating a new user:
+
+```clojure
+(biff.crux/submit-tx
+  sys
+  {[:user #uuid "some-uuid"] {:user/email "username@example.com"}})
+```
+
+If a document with that ID doesn't exist yet, then this will
+be normalized to the following Crux transaction:
+
+```clojure
+[[:crux.tx/match #uuid "some-uuid" nil]
+ [:crux.tx/put {:crux.db/id #uuid "some-uuid"
+                :user/email "username@example.com"}]]
+```
+
+`biff.crux/submit-tx` adds match operations for each document in the
+transaction. If there's contention, `submit-tx` will retry up to three more
+times (first it'll wait 1 second, then 2, then 4).
+
+By default, doc types are enforced, but authorization rules are not. This is
+suitable for transactions created by trusted code. If you're receiving a
+transaction from the front end, you should enable authorization rules:
+
+```clojure
+(biff.crux/submit-tx
+  (assoc sys :biff.crux/authorize true)
+  tx)
+```
+
+`biff.crux/submit-tx` also calls `crux.api/await-tx` (so it can make sure the
+match operations succeeded).
+
+And of course, you can always use `crux.api/submit-tx` directly if needed (e.g.
+if you need to use a transaction function or set valid time explicitly).
+
+### TX docs
+
+TX docs are converted to Crux documents with
+[`biff.crux/normalize-tx-doc`](https://biff.findka.com/codox/biff.crux.html#var-normalize-tx-doc)
+like so.
+
+If the ident doesn't include a doc ID, then the server will generate a random
+UUID:
+
+```clojure
+{[:msg] {:msg/text "hello"}}
+```
+
+If you want to create multiple documents of the same type with random IDs, use
+nested vectors instead of a map.
+
+```clojure
+[[[:messages] {:text "a"}]
+ [[:messages] {:text "b"}]]
+```
+
+`:db/server-timestamp` is replaced by the server with the current time.
+
+```clojure
+{[:msg] {:msg/sent-at :db/server-timestamp
+         ...}}
+```
+
+If `:db/update` is true, the given document will be merged with an existing
+document, failing if the document doesn't exist. There's also `:db/merge` which
+simply creates the document if it doesn't exist (i.e. upsert).
+
+```clojure
+{[:chatroom #uuid "some-uuid"] {:db/update true
+                                :chatroom/title "Existing chatroom"}
+ [:chatroom #uuid "another-uuid"] {:db/merge true
+                                   :chatroom/title "New or existing chatroom"}}
+```
+
+You can `dissoc` document keys by setting them to `:db/remove`. You can
+delete whole documents by setting them to `nil`.
+
+```clojure
+{[:user #uuid "some-user-id"] {:db/update true
+                               :user/display-name :db/remove}
+ [:order #uuid "some-order-id"] nil}
+```
+
+You can add elements to a set with `:db/union` and remove them with
+`:db/difference`:
+
+```clojure
+{[:game #uuid "old-game-uuid"]
+ {:db/update true
+  :game/players [:db/difference "my-uid" "your-uid"]}
+
+ [:game #uuid "new-game-uuid"]
+ {:db/update true
+  :game/players [:db/union "my-uid" "your-uid"]}}
+```
+
+Similarly, you can increment numbers with `:db/add`:
+
+```clojure
+{[:store #uuid "some-uuid"] {:db/update true
+                             :store/bananas [:db/add 3]
+                             :store/oranges [:db/add -92]}}
+```
+
+Using maps as document IDs lets you specify composite IDs. In addition, all
+keys in the document ID will be duplicated in the document itself. This
+allows you to use document ID keys in your queries.
+
+```clojure
+{[:rating {:rating/user #uuid "some-user-id"
+           :rating/item #uuid "some-item-id"}]
+ {:rating/value :like}}
+
+=> [:crux.tx/put
+    {:crux.db/id {:rating/user #uuid "some-user-id"
+                  :rating/item #uuid "some-item-id"}
+     :rating/user #uuid "some-user-id"
+     :rating/item #uuid "some-item-id"
+     :rating/value :like}]
+```
+
+### Receiving transactions
+
+Receiving transactions from the front end is trivial with a websockets:
+
+```clojure
+; front end
+(let [tx ...]
+  (send-event [:example/tx tx]))
+
+; back end
+(defmethod api :example/tx
+  [sys tx]
+  (biff.crux/submit-tx (assoc sys :biff.crux/authorize true) tx))
+```
+
+If you're doing server-side rendering, you can also submit transactions via an
+HTML form POST, but you'll need an additional helper function:
+
+```clojure
+(defn form-tx [req]
+  (biff.glue/handle-form-tx
+    req
+    ; This lets you coerce input field values to EDN values.
+    {:coercions {:text identity
+                 :checkbox #(= % "on")}}))
+
+(defn ssr [{:keys [biff/uid biff.crux/db params/updated]}]
+  ...
+  (let {{:user/keys [display-name likes-cheese]} (crux.api/entity @db uid)}
+    [:form {:action "/api/form-tx"
+            :method "post"}
+     [:input {:type "hidden"
+              :name "__anti-forgery-token"
+              :value ring.middleware.anti-forgery/*anti-forgery-token*}]
+     [:input {:type "hidden"
+              :name "tx-info"
+              :value (pr-str
+                       {:tx {[:user uid] {:db/update true
+                                          :user/display-name 'display-name
+                                          :user/likes-cheese 'likes-cheese}}
+                        :fields '{display-name :text
+                                  likes-cheese :checkbox}
+                        :redirect ::ssr
+                        :query-params {:updated true}})}]
+     [:div "Display name"]
+     [:input {:name "display-name"
+              :type "text"
+              :value display-name}]
+     [:div "Like cheese?"]
+     [:input {:name "likes-cheese"
+              :type "checkbox"
+              :checked (when likes-cheese "checked")}]
+     [:button {:type "submit"} "Update"]])
+  (when updated
+    [:div "Transaction submitted."])
+  ...)
+
+(def routes
+  [["/app/ssr" {:get #(biff.rum/render ssr %)
+                :name ::ssr
+                ; The client can only specify redirects to routes that set
+                ; this.
+                :biff/redirect true}]
+   ["/api/form-tx" {:post form-tx}]])
+```
+
+# Subscriptions
+
+Use [`biff.client/init-sub`](https://biff.findka.com/codox/biff.client.html#var-init-sub)
+to manage subscriptions on the front end. For example:
+
+```clojure
+(def subscriptions
+  (atom #{[:example/sub {:doc-type :user
+                         :where '[[:user/name name]
+                                  [:user/age age]
+                                  [(<= 18 age)]]}]}))
+
+(def sub-results (atom {}))
+
+(biff.client/init-sub
+  {:url "/api/chsk"
+   :subscriptions subscriptions
+   :sub-results sub-results})
+
+; Wait for it...
+
+@sub-results
+=> {{:doc-type :user
+     :where '[[:user/name name]
+              [:user/age age]
+              [(<= 18 age)]]}
+    {:user {#uuid "some-uuid" {:crux.db/id #uuid "some-uuid"
+                               :user/name "Hoid"
+                               :user/age 43}}}}
+```
+
+If you want to subscribe to a query, `swap!` it into `subscriptions`. If you
+want to unsubscribe, `swap!` it out. Biff will populate `sub-results` with the
+results of your queries and remove old data when you unsubscribe.
+
+You can use
+[`defderivations`](https://biff.findka.com/codox/biff.rum.html#var-defderivations)
+to define your subscriptions as a function of your application state, and to
+derive your application state from the contents of `sub-results`.
+
+### Subscription query format
+
+Each element of `subscriptions` is a websocket (Sente) event. The event ID
+corresponds to one of your back-end event handlers (see
+[biff.crux/handle-subscribe-event!](https://biff.findka.com/codox/biff.crux.html#var-handle-subscribe-event.21)),
+and the event data is a Biff query.
+
+A Biff query is basically a Crux query without joins. Since all clauses apply
+to the same document, we omit the document ID logic variable. We also include a
+doc-type.
+
+```clojure
+{:doc-type :user
+ :where '[[:user/name name]
+          [:user/age age]
+          [(<= 18 age)]]}
+```
+
+By default, the only operators allowed are `#{= not= < > <= >= == !=}`. If you want
+to use other functions, you'll have to whitelist them in your system map.
+
+```clojure
+(biff.util/start-system
+  {:biff.crux/fn-whitelist ['even? 'example.core/likes-cheese?]
+   ...
+```
+
+You can subscribe to a specific document by providing the document ID in your
+query:
+
+```clojure
+{:doc-type :user
+ :id #uuid "some-uuid"}
+```
+
+If you want to load a query but you don't actually care about getting updates
+when the results change, use `:static`:
+
+```clojure
+{:doc-type :user
+ :id #uuid "some-uuid"
+ :static true}
+```
+
+### Subscription interface
+
+`biff.client/init-sub` is not coupled to Crux subscriptions. You can provide
+other kinds of subscriptions as long as you define an appropriate event
+handler. For example, if `subscriptions` is set to `#{[:example/foo :ant-info]}`,
+the back end would receive an event of `[:example/foo {:query :ant-info
+:action :subscribe}]`. Your event handler would need to send back an event of
+the form `[:example/foo {:query :ant-info :ident->doc ...}]` where
+`:ident->doc` looks something like this:
+
+```clojure
+{[:ant :harry] {:ant/id :harry
+                :ant/likes "orange juice"}
+ [:ant :sally] {:ant/id :sally
+                :ant/likes "investing"}}
+```
+
+You'd also need to send another event whenever the query results change, and
+you'd need to clean up any subscription state if the client's websocket
+connection ends. `:action` could also be `:unsubscribe` or `:reconnect`, so
+you'd need to handle those too (`:reconnect` means that the websocket
+connection is being re-established, but the client still has previous query
+results).
+
+<!--
+
+# Todo
+
+Add code for experimenting to admin ns
+ - auth rules
+ - girouette
+ - db (already)
+ - biff-q
+
+
+ - Data lifecycle
+   - debugging
+
+ - Configuration
+ - Crux
+    - talk about wrap-db
+ - Authentication
+ - Transactions
+    - WS and Form
+ - HTTP handlers
+    - go over middleware too
+ - Web sockets
+ - CSS
+ - ClojureScript
+ - nREPL
+ - Static pages
+ - Recipes
+    - cron
+    - spec instead of malli
+    - bb tasks
+    - SSR only
+    - replacing rum
+    - using datomic
+ - Contributing
+
 
 # Configuration
 
@@ -527,7 +762,7 @@ the following sections for a deeper explanation.
 :biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
                         ; {"/hello/" [:html [:body [:p {:style {:color "red"}} "hello"]]]}
 :biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
-                        ; Crux queries sent from the frontend. Functions in clojure.core
+                        ; Crux queries sent from the front end. Functions in clojure.core
                         ; need not be qualified. For example: '[map? example.core/frobulate]
 :biff/routes nil        ; A vector of Reitit routes.
 :biff/event-handler nil ; A Sente event handler function.
@@ -677,7 +912,7 @@ Biff currently provides email link authentication. The user clicks a link
 (which contains a JWT) in an email to sign in, and then Biff stores their user
 ID in an encrypted cookie. Password and SSO authentication are on the roadmap.
 
-After a user is signed in, you can authenticate them on the backend from an
+After a user is signed in, you can authenticate them on the back end from an
 event/request handler like so:
 
 ```clojure
@@ -979,7 +1214,7 @@ Example:
 (def event-handler #(api % (:?data %)))
 ```
 
-Biff provides a helper function for initializing the web socket connection on the frontend:
+Biff provides a helper function for initializing the web socket connection on the front end:
 
 ```clojure
 (defonce system (atom {}))
@@ -1014,670 +1249,6 @@ Biff provides a helper function for initializing the web socket connection on th
     ; => ":example/echo called"
     ))
 ```
-
-# Transactions
-
-You can send arbitrary transactions from the frontend. They will be submitted
-only if they pass certain authorization rules which you define (see
-[Rules](#rules)). Transactions look like this:
-
-```clojure
-(defn set-display-name [display-name]
-  (api-send
-    [:biff/tx
-     {[:users {:user/id @db/uid}]
-      {:db/update true
-       :display-name display-name}}]))
-```
-
-The transaction is a map from idents to documents. The first element of an
-ident is a table, such as `:games`. Tables are defined by your rules, and they
-specify which rules a document write must pass in order to be allowed.
-
-The second element, if present, is a document ID. If omitted, it means we're
-creating a new document and we want the server to set the ID to a random UUID:
-
-```clojure
-{[:messages] {:text "hello"}}
-```
-
-If you want to create multiple documents in the same table with random IDs, use
-nested vectors instead of a map.
-
-```clojure
-[[[:messages] {:text "a"}]
- [[:messages] {:text "b"}]]
-```
-
-`:db/current-time` is replaced by the server with the current time.
-
-```clojure
-{[:events] {:timestamp :db/current-time
-            ...}}
-```
-
-If `:db/update` is true, the given document will be merged with an existing
-document, failing if the document doesn't exist. There's also `:db/merge` which
-simply creates the document if it doesn't exist (i.e. upsert).
-
-```clojure
-{[:chatrooms {:chatroom/id #uuid "some-uuid"}]
- {:db/update true
-  :title "Existing chatroom"}
-
- [:chatrooms {:chatroom/id #uuid "another-uuid"}]
- {:db/merge true
-  :title "New or existing chatroom"}}
-```
-
-You can `dissoc` document keys by setting them to `:db/remove`. You can
-delete whole documents by setting them to `nil`.
-
-```clojure
-{[:users {:user/id #uuid "my-id"}]
- {:db/update true
-  :display-name :db/remove}
-
- [:orders {:order/id #uuid "some-order-id"}]
- nil}
-```
-
-You can add or remove an element to/from a set by using `:db/union` and
-`:db/disj`, respectively:
-
-```clojure
-{[:games {:game/id #uuid "old-game-uuid"}]
- {:db/update true
-  :users [:db/disj "my-uid"]}
-
- [:games {:game/id #uuid "new-game-uuid"}]
- {:db/update true
-  :users [:db/union "my-uid"]}}
-```
-
-Using maps as document IDs lets you specify composite IDs. In addition, all
-keys in the document ID will be duplicated in the document itself. This
-allows you to use document ID keys in your queries.
-
-```clojure
-{[:user-item {:user #uuid "some-user-id"
-              :item #uuid "some-item-id"}]
- {:rating :like}}
-
-; Expands to:
-[:crux.tx/put
- {:crux.db/id {:user #uuid "some-user-id"
-               :item #uuid "some-item-id"}
-  :user #uuid "some-user-id"
-  :item #uuid "some-item-id"
-  :rating :like}]
-```
-
-## Transactions on the back end
-
-On the back end, you can use `biff.crux/submit-tx`:
-
-```clojure
-(biff.crux/submit-tx sys
-  {[:users {:user/id #uuid "some-uuid"}]
-   {:db/update true
-    :display-name "alice"}})
-```
-
-This will bypass the write authorization functions defined in `:biff/rules`,
-but it will throw an exception if any documents don't conform to the specs for
-their respective tables. For example, if the value for `:user/id` above is
-correct, the transaction above would succeed given these rules:
-
-```clojure
-(require '[biff.util :as bu])
-
-(bu/sdefs
-  :user/id uuid?
-  :user/email string?
-  ::display-name string?
-  :ref/user (bu/only-keys :req [:user/id])
-  ::user (bu/only-keys
-           :req [:user/email]
-           :opt-un [::display-name]))
-
-(def rules
-  {:users {:specs [:ref/user ::user]
-           :write (constantly false)}})
-```
-
-But if the `:user/id` value was incorrect (and thus refers to a non-existent
-user), the transaction would fail. It would also fail if you set `:display-name
-123` or `:display-name nil` instead of `:display-name "alice"` in the transaction.
-
-You can also use bypass Biff's transactions and use Crux's API directly:
-
-```clojure
-(let [{:keys [biff/node biff/db]} sys
-      doc-id {:user/id #uuid "some-uuid"}
-      user (crux.api/entity db doc-id)]
-  (crux.api/submit-tx node
-    [[:crux.tx/put (merge user
-                     {:crux.db/id doc-id
-                      :user/id #uuid "some-uuid"
-                      :display-name "alice"})]]))
-```
-
-But if you do this, Biff won't be able to check the transaction against your
-specs.
-
-# Queries
-
-Biff allows you to subscribe to Crux queries from the frontend with one major
-caveat: cross-entity joins are not allowed. Basically, this means all the where
-clauses in the query have to be for the same entity.
-
-```clojure
-; OK
-'{:find [doc]
-  :where [[doc :foo 1]
-          [doc :bar "hey"]]}
-
-; Not OK
-'{:find [doc]
-  :where [[user :name "Tilly"]
-          [doc :user user]]}
-```
-
-So to be clear, Biff's subscribable "queries" are not datalog at all. They're
-just predicates that can take advantage of Crux's indices. Biff makes this
-restriction so that it can provide query updates to clients efficiently without
-having to solve a hard research problem first. However, it turns out that we can
-go quite far even with this restriction.
-
-On the frontend, use `biff.client/init-sub` to initialize a websocket connection
-that handles query subscriptions for you:
-
-```clojure
-(def default-subscriptions
-  #{[:biff/sub {:table :users
-                :args {'name "Ben"}
-                :where '[[:name name]
-                         [:age age]
-                         [(<= 18 age)]
-                         [(yourapp.core/likes-cheese? doc)]]}]})
-
-(def subscriptions (atom default-subscriptions))
-(def sub-results (atom {}))
-
-(biff.client/init-sub
-  {:subscriptions subscriptions
-   :sub-results sub-results
-   ...})
-```
-
-
-If you want to subscribe to a query, `swap!` it into `subscriptions`. If you
-want to unsubscribe, `swap!` it out. Biff will populate `sub-results` with the
-results of your queries and remove old data when you unsubscribe. You can then
-use the contents of that atom to drive your UI. The contents of `sub-results` is a
-map of the form `subscription->table->id->doc`, for example:
-
-```clojure
-{[:biff/sub '{:table :users
-              :where ...}]
- {:users
-  {{:user/id #uuid "some-uuid"} {:name "Sven"
-                                 :age 250
-                                 ...}}}}
-```
-
-Note the subscription format again:
-
-```clojure
-[:biff/sub {:table :users
-            :args {'name "Ben"}
-            :where '[[:name name]
-                     [:age age]
-                     [(<= 18 age)]
-                     [(yourapp.core/likes-cheese? doc)]]}]
-```
-
-The first element is a Sente event ID. The query map (the second element) omits
-the entity variable in the where clauses since it has to be the same for each
-clause anyway. But it will be bound to `doc` in case you want to use it in e.g.
-a predicate function. `:find` is similarly omitted.
-
-The `:table` value is connected to authorization rules which you define on the
-backend (see [Rules](#rules)). When a client subscribes to this query, it will
-be rejected unless you define rules for that table which allow the query. You
-also have to whitelist any predicate function calls (like
-`yourapp.core/likes-cheese?`), though the comparison operators (like `<=`) are
-whitelisted for you.
-
-I haven't yet added support for `or`, `not`, etc. clauses in subscriptions. See
-[#9](https://github.com/jacobobryant/biff/issues/9).
-
-You can also subscribe to individual documents:
-
-```clojure
-[:biff/sub '{:table :users
-             :id {:user/id #uuid "some-uuid"}}]
-```
-
-All this is most powerful when you make the `subscriptions` atom a derivation of
-`sub-results`:
-
-
-```clojure
-(ns example.client.app.db
-  (:require
-    [biff.rum :as br]))
-
-(br/defatoms
-  sub-results {}
-  message-cutoff (js/Date.)
-  route {})
-
-; defderivations lets you use rum.core/derived-atom without the boilerplate.
-(br/defderivations
-  ; data is an atom that contains a map of table->id->doc. It will be updated
-  ; whenever sub-results changes.
-  data (apply merge-with merge (vals @sub-results))
-
-  uid (get-in @data [:uid nil :uid])
-  user (get-in @data [:users {:user/id @uid}])
-  email (:user/email @user)
-  foo (:foo @user)
-  bar (:bar @user)
-  messages (->> @data
-             :messages
-             vals
-             (sort-by :timestamp #(compare %2 %1)))
-
-  tab (get-in @route [:data :name] :crud)
-
-  subscriptions (disj #{[:biff/sub :uid]
-                        [:biff/sub {:table :messages
-                                    :args {'t0 @message-cutoff}
-                                    :where '[[:timestamp t]
-                                             [(< t0 t)]]}]
-                        (when @uid
-                          [:biff/sub {:table :users
-                                      :id {:user/id @uid}}])}
-                  nil))
-```
-
-
-When a user signs into this app, they will subscribe to their user ID
-(`[:biff/sub :uid]`, a special subscription) and any messages that are sent
-after the page loaded. When the user's ID is received from the back end and
-loaded into `sub-results`, it will cause `subscriptions` to update. The client
-will then subscribe to the document for the current user. `subscriptions`
-will also be updated if `message-cutoff` changes.
-
-This is what I meant when I said that we can go pretty far without cross-entity
-joins: using this method, we can declaratively load all the relevant data and
-perform joins on the client. This should be sufficient for many situations.
-
-However, it won't work if you need an aggregation of a set of documents that's
-too large to send to the client (not to mention each client), or if the client
-isn't allowed to see the individual documents. There will also be increased
-latency since you have to wait for a network hop between joins.
-
-To remedy that, I was previously working on a
-[Materialize](https://materialize.io) integration, though it's no longer a
-priority for me at the moment.
-
-## Queries on the back end
-
-You can use Crux's API:
-
-```clojure
-(let [{:keys [biff/db]} sys]
-  (crux.api/q db
-    {:find '[user]
-     :full-results? true
-     :args [{'name "Ben"}]
-     :where '[[user :name name]
-              ...]}))
-```
-
-# Rules
-
-Relevant config:
-
-```clojure
-:biff/rules nil         ; An authorization rules data structure.
-:biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
-                        ; Crux queries sent from the frontend. Functions in clojure.core
-                        ; need not be qualified. For example: '[map? example.core/frobulate]
-```
-
-Your app's rules define what transactions and subscriptions will be accepted
-from the frontend (see [Transactions](#transactions) and
-[Subscriptions](#subscriptions)).
-
-The value of `:biff/rules` is a map of `table->rules`, for example:
-
-```clojure
-(ns example.rules
-  (:require
-    [biff.util :as bu]
-    [clojure.spec.alpha :as s]))
-
-; Same as (do (s/def ...) ...)
-(bu/sdefs
-  :user/id uuid?
-  ; like s/keys, but only allows specified keys.
-  ::user-ref (bu/only-keys :req [:user/id])
-  ::user (bu/only-keys :req [:user/email])
-  ...)
-
-(def rules
-  {:users {:spec [::user-ref ::user]
-           :get (fn [{:keys [session/uid] {:keys [user/id]} :doc}]
-                  (= uid id))}
-   ...})
-```
-
-### Tables
-
-The table is used in transactions and subscriptions to specify which rules should be
-used. The rules above authorize us to subscribe to this:
-
-```clojure
-[:biff/sub {:table :users
-            :id {:user/id #uuid "some-uuid"}}]
-```
-
-And for transactions:
-
-```clojure
-{:games {:spec [::game-ref ::game]
-         :create (fn [env] ...)}}
-; Authorizes:
-[:biff/tx {[:games {:game/id "ABCD"}]
-           {:users #{#uuid "some-uuid"}}}]
-```
-
-### Specs
-
-For each document in the query result or transaction, authorization has two
-steps. First, the document ID and the document are checked with `s/valid?`
-against the two elements in `:specs`, respectively. For example, the specs for
-the `:users` table above would authorize a read or write operation on the
-following document:
-
-```clojure
-{:crux.db/id {:user/id #uuid "some-uuid"}
- :user/id #uuid "some-uuid"
- :user/email "email@example.com"}
-```
-
-Note that during this check, the document will not include the ID or any keys
-in the ID (for map IDs). (Also recall that map ID keys are automatically
-duplicated in the document when using Biff transactions).
-
-For write operations, the document must pass the spec before and/or after the
-transaction, depending on whether the document is being created, updated or
-deleted.
-
-### Operations
-
-If the specs pass, then the document must also pass a predicate specified by
-the operation. There are five operations: `:create`, `:update`, `:delete`,
-`:query`, `:get`.
-
-```clojure
-{:messages {:specs ...
-            :create (fn [env] ...)
-            :get (fn [env] ...)}}
-```
-
-You can use the same predicate for multiple operations like so:
-
-```clojure
-{:messages {:specs ...
-            [:create :update] (fn [env] ...)}}
-```
-
-There are several aliases:
-
-Alias | Expands to
-------|-----------
-`:read` | `[:query :get]`
-`:write` | `[:create :update :delete]`
-`:rw` | `[:query :get :create :update :delete]`
-
-For example:
-
-```clojure
-{:messages {:specs ...
-            :write (fn [env] ...)}}
-```
-
-`:get` refers to subscriptions for individual documents while `:query` is for
-multiple documents:
-
-```clojure
-; get
-[:biff/sub {:table :users
-            :id {:user/id #uuid "some-uuid"}}]
-; query
-[:biff/sub {:table :games
-            :where [[:users #uuid "some-uuid"]]}]
-```
-
-### Predicates
-
-Predicates receive the system map merged with some additional keys, depending
-on the operation:
-
-Key | Operations | Description
-----|------------|------------
-`:session/uid` | `:rw` | The ID of the user who submitted the query/transaction. `nil` if they're unauthenticated.
-`:biff/db` | `:rw` | The Crux DB value before this operation occurred.
-`:doc` | `:rw` | The document being operated on.
-`:doc-before` | `:write` | The previous value of the document being operated on.
-`:current-time` | `:write` | The inst used to replace any occurrences of `:db/current-time` (see [Transactions](#transactions)).
-`:generated-id` | `:create` | `true` iff a random UUID was generated for this document's ID.
-
-Some examples:
-
-```clojure
-(def rules
-  {:public-users {:spec [::user-public-ref ::user-public]
-                  ; Returns false iff :session/uid is nil.
-                  :get biff.rules/authenticated?
-                  :write (fn [{:keys [session/uid] {:keys [user.public/id]} :doc}]
-                           (= uid id))}
-   :users {:spec [::user-ref ::user]
-           :get (fn [{:keys [session/uid] {:keys [user/id]} :doc}]
-                  (= uid id))}
-   :games {:spec [::game-ref ::game]
-           :query (fn [{:keys [session/uid] {:keys [users]} :doc}]
-                    (contains? users uid))
-           [:create :update] (fn [{:keys [session/uid doc doc-before]
-                                   {:keys [users]} :doc}]
-                               (and
-                                 (some #(contains? (:users %) uid) [doc doc-before])
-                                 ; Checks that no keys other than :users have changed
-                                 ; (supports varargs).
-                                 (biff.rules/only-changed-keys? doc doc-before :users)
-                                 ; Checks that the value of :users (a set) hasn't changed except
-                                 ; for the addition/removal of uid (supports varargs).
-                                 (biff.rules/only-changed-elements? doc doc-before :users uid)))}})
-```
-
-```clojure
-(def rules
-  {:events {:spec [uuid? ::event]
-            :create (fn [{:keys [session/uid current-time generated-id]
-                          {:keys [timestamp user]} :doc}]
-                      (and
-                        (= uid (:user/id user))
-                        ; Make sure that :timestamp was set by the server, not the client.
-                        (= current-time timestamp)
-                        ; Make sure that the ID was set by the server, not the client.
-                        generated-id))}}
-```
-
-# Triggers
-
-Relevant config:
-
-```clojure
-:biff/triggers nil ; A database triggers data structure.
-```
-
-Triggers let you run code in response to document writes. You must define a map of
-`table->operation->fn`, for example:
-
-```clojure
-(defn assign-players [{:keys [biff/node doc]
-                       {:keys [users x o]} :doc :as env}]
-  ; When a user joins or leaves a game, re-assign users to X and O as needed.
-  ; Delete the game document if everyone has left.
-  (let [new-doc ... ; Same as doc but maybe with different :x and :o values
-        op (cond
-             (empty? users) [:crux.tx/delete (:crux.db/id doc)]
-             (not= doc new-doc) [:crux.tx/put new-doc])]
-    (when op
-      (crux/submit-tx node
-        [[:crux.tx/match (some :crux.db/id [doc new-doc]) doc]
-         op]))))
-
-(def triggers
-  {:games {[:create :update] assign-players}})
-```
-
-See [Tables](#tables) and [Operations](#operations). The function will receive the system
-map merged with the following keys:
-
-Key | Description
-----|------------
-`:doc` | The document that was written.
-`:doc-before` | The document's value before being written.
-`:db` | The Crux DB value after this operation occurred.
-`:db-before` | The Crux DB value before this operation occurred.
-`:op` | One of `#{:create :update :delete}`.
-
-# Jobs
-
-Relevant config:
-
-```clojure
-:biff/jobs []
-```
-
-Each element of `:biff/jobs` is a map with three keys. For example:
-
-```clojure
-(defn some-job [sys]
-  (println "This function will run every 2 minutes,")
-  (println "beginning 1 minute after your app starts."))
-
-(def jobs
-  [{:offset-minutes 1
-    :period-minutes 2
-    :job-fn #'some-job}])
-```
-
-# Deployment
-
-The Biff project template includes a script
-
-See [Overview > Infrastructure](#infrastructure).
-
-**1. Set up DigitalOcean**
-
-Biff comes with Terraform config for DigitalOcean. You can write your own
-config if you want to use a different provider (see [Overview >
-Decomposing](#decomposing)), but for now I'll assume you're using DigitalOcean.
-If you don't already have an account, you can sign up with [my referral
-link](https://m.do.co/c/141610534c91) which will give you $100 of credit for 60
-days (and $25 for me if you stick with them).
-
-You'll also need a domain that [points to DigitalOcean's
-nameservers](https://www.digitalocean.com/community/tutorials/how-to-point-to-digitalocean-nameservers-from-common-domain-registrars).
-
-**2. Update config**
-
-In `config/main.edn`, make sure `:biff/host` is set to the domain you want to
-use for your production app (e.g. `myapp.example.com`). If you've changed
-this since creating your Biff project, run `./task dev` (or
-`(biff.core/refresh)`) to make sure the Terraform config file
-(`infra/system.tf.json`) is up-to-date.
-
-In `config/task.env`, update the following environment variables:
-
- - `DIGITALOCEAN_API_KEY`
- - `HOST` (should be the same as `:biff/host`)
- - `LETSENCRYPT_EMAIL`
- - `GIT_URL`
-
-Put your personal SSH public key in `config/ssh-public-key`. For example:
-`cp ~/.ssh/id_rsa.pub config/ssh-public-key`. This will let Terraform (and you)
-run commands on the server after it's provisioned.
-
-Run `./task generate-deploy-key`. This will write a new SSH private key to
-`config/deploy-key`, which will let the server download your code from git
-(assuming you're using a private repo. If not, you can ignore this step). The
-public key will be in `config/deploy-key.pub`. You'll need to give that key
-read access to your git repo. If you're using Github, you can do this at
-`https://github.com/your_username/your_repo/settings/keys` -> `Add deploy key`.
-
-**3. Create an image**
-
-Run `./task build-image`. It'll take 3-5 minutes. Some of the output will be
-red; this is (probably) OK. If successful, the command will write the new image
-ID to `config/task.env`, for example:
-
-```shell
-$ grep IMAGE_ID config/task.env
-export IMAGE_ID=12345 # Managed by Biff.
-```
-
-**4. Update repo**
-
-Build your CSS and ClojureScript for production with `./task build-assets`.
-They'll be written to `resources/www/css/main.css` and
-`resources/www/cljs/app/main.js`. Commit those files (and all other changes) to
-your repo and push. Whenever your app starts on the server, it will fetch the
-latest commit from your repo and run that.
-
-**5. Deploy with Terraform**
-
-If you've already added your domain to DigitalOcean (i.e. it shows up under
-[Networking > Domains](https://cloud.digitalocean.com/networking/domains)),
-you'll need to import it into Terraform. For example, if your app's domain is
-`foo.example.com`, then you'll need to run `./task tf import
-digitalocean_domain.default example.com`.
-
-You might also need to do the following before proceeding:
-
- - Run `eval $(ssh-agent); ssh-add`.
- - Add your personal SSH public key to the DigitalOcean console. Go to
- [Settings > Security](https://cloud.digitalocean.com/account/security),
- click "Add SSH Key", then paste in the contents of `config/ssh-public-key`.
-
-Run `./task tf apply`. Terraform will show you the changes to
-be made, and it'll ask for confirmation before it does anything. After the
-command finishes, watch the logs with `./task logs`. You should eventually see
-`System started.` Once you do, your app is live!
-
-**6. Future deploys**
-
-For future deploys, simply push the changes to your repo and then run `./task
-deploy`. This will restart your app's process on the server, which will cause
-it to re-fetch the latest commit.
-
-If you make any infrastructure changes, you can re-run `./task tf apply`.
-If you made image changes, re-run `./task build-image` first.
-
-**7. Cleanup**
-
-You can remove the resources provisioned by Terraform with `./task tf destroy`.
-However, that will also remove the domain from DigitalOcean which you may not
-want. Instead, you can delete resources manually from the DigitalOcean web
-console. While you're there, you can delete the image(s) you created (these
-won't be deleted by `./task tf destroy`).
 
 # Contributing
 
@@ -1715,10 +1286,10 @@ README](https://github.com/jacobobryant/biff/tree/master/slate).
 
 ## Comparison to Firebase
 
-Basically, if you like Firebase and you like Clojure backend dev, you might
+Basically, if you like Firebase and you like Clojure back end dev, you might
 enjoy using Biff for your next side project. Same if you like the idea of
 Firebase but in practice you have issues with it. If you want something mature
-or you like having a Node/ClojureScript backend, Firebase is a great choice. [Here's a non-trivial
+or you like having a Node/ClojureScript back end, Firebase is a great choice. [Here's a non-trivial
 example](https://github.com/jacobobryant/mystery-cows) of using Firebase with ClojureScript.
 
 Some shared features:
@@ -1732,8 +1303,8 @@ Some shared features:
 
 Some differences:
 
- - Biff has a long-running JVM/Clojure backend instead of an ephemeral
-   Node/ClojureScript backend => better library ecosystem IMO and lower response
+ - Biff has a long-running JVM/Clojure back end instead of an ephemeral
+   Node/ClojureScript back end => better library ecosystem IMO and lower response
    times/no cold start.
  - Firebase has way more features and is vastly more mature.
  - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
@@ -1745,12 +1316,12 @@ Some differences:
 
 Similarities:
 
- - Both contain some code for moving data between frontend and backend, hence
+ - Both contain some code for moving data between front end and back end, hence
    they can both be described as "full-stack frameworks."
 
 Differences:
 
- - Fulcro is primarily a front-end framework while Biff is primarily backend.
+ - Fulcro is primarily a front-end framework while Biff is primarily back end.
  - Biff prioritizes the low end of the "market" (early-stage startups and hobby
    projects, as mentioned).
  - Biff is much smaller and younger.

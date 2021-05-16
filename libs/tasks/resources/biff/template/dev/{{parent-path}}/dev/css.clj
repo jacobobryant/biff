@@ -1,6 +1,10 @@
 (ns {{parent-ns}}.dev.css
   (:require [biff.dev.girouette :as gir]))
 
+; See also:
+; - https://github.com/green-coder/girouette
+; - https://biff.findka.com/codox/biff.dev.girouette.html
+
 (def applied-classes
   '{btn        ["bg-blue-500"
                 "disabled:opacity-50"
@@ -37,6 +41,3 @@
     (merge opts
            {:garden-fn class-name->garden
             :applied-classes applied-classes})))
-
-(comment
-  (class-name->garden ""))

@@ -7,8 +7,6 @@
             [{{parent-ns}}.client.app.db :as db]
             [{{parent-ns}}.client.app.mutations :as m]))
 
-; See https://github.com/tonsky/rum
-
 (defc db-contents < reactive
   []
   [:div
