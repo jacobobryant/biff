@@ -8,6 +8,14 @@
 
 (comment
 
+  ; # Todo
+  ;
+  ; Add code for experimenting to admin ns
+  ;  - auth rules
+  ;  - girouette
+  ;  - db (already)
+  ;  - biff-q
+
   (let [{:keys [biff.crux/db
                 biff.crux/node
                 biff.crux/subscriptions] :as sys} (sys)]

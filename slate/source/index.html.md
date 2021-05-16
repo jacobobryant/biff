@@ -11,21 +11,6 @@ includes:
 search: true
 ---
 
-# Work-in-progress notice (14 May 2021)
-
-I am just about to finish a big release which has ended up being almost a
-complete rewrite. Biff is now much simpler and easier. The code is done as far
-as I'm aware; I'm just working on updating the documentation now. I'm going to
-announce the release in a few days. Hopefully most of the documentation will be
-done by then. Since the code is working and I have the Getting Started section
-updated, I thought I might as well merge to master. In the mean time, I've
-commented out all the old documentation.
-
-By the way: application code will stay mostly the same, but there have been
-breaking changes in the framework structure. I expect few breaking changes
-after this release. If anyone has any Biff apps already, I'd be happy to help
-migrate them.
-
 # Introduction
 
 Biff is designed to make web development with Clojure fast and easy [without
@@ -63,9 +48,10 @@ by anyone other than myself as far as I'm aware (hopefully that will change
 soon!). See also the [high priority
 issues](https://github.com/jacobobryant/biff/issues?q=is%3Aissue+is%3Aopen+label%3A%22high+priority%22).
 
-I've recently decided to switch from entrepreneurship to freelancing and
-consulting, and I'm looking for opportunities to build things with Biff (and
-train others how to). If you want to support Biff, [let me
+I've recently decided to [switch from
+entrepreneurship](https://news.findka.com/p/roots-and-branches-centralization)
+to freelancing and consulting, and I'm looking for opportunities to build
+things with Biff (and train others to as well). [Let me
 know](mailto:contact@jacobobryant.com) if you have any leads.
 
 Websites built with Biff (all mine so far):
@@ -108,7 +94,7 @@ NOTE: This page assumes you chose `example.core` for your project's main
 namespace. So instead of writing `src/<your project>/some-file.clj`, we'll just
 write `src/example/some-file.clj`.
 
-### Develop
+### Development
 
 Run `./task dev` to start an nREPL server and run the app (on `localhost:8080`
 by default). See `dev/example/dev.clj` for reloaded workflow instructions.
@@ -129,7 +115,7 @@ to `localhost:8080` (and log out if needed), the change should be visible.
 Tests will also run whenever you save a file. Similarly, they must be eval'd
 first.
 
-### Build
+### Building
 
 Stop the app if it's running, then run `./task build` to generate assets (HTML,
 CSS, CLJS) and build an uberjar at `target/app.jar`.
@@ -193,7 +179,7 @@ Run `./task logs` to tail the systemd logs. Run `./task prod-repl` to connect
 to the production nREPL server. You can use `src/example/admin.clj` as an nREPL
 admin console.
 
-## Using the documentation
+# Using this documentation
 
 Biff's documentation is divided between this page, the [API
 docs](https://biff.findka.com/codox/), and the template documentation (the
@@ -202,6 +188,9 @@ for getting an overview of Biff's features and as a reference for certain things
 (like the Biff transaction format). You can get the nitty-gritty details from
 exploring the template project, which also contains links to relevant sections of the
 API docs.
+
+NOTE, 15 May 2021: I just finished this page; still need to finish Codox and the
+project template :).
 
 # Design Philosophy
 
@@ -680,596 +669,114 @@ you'd need to handle those too (`:reconnect` means that the websocket
 connection is being re-established, but the client still has previous query
 results).
 
-<!--
-
-# Todo
-
-Add code for experimenting to admin ns
- - auth rules
- - girouette
- - db (already)
- - biff-q
-
-
- - Data lifecycle
-   - debugging
-
- - Configuration
- - Crux
-    - talk about wrap-db
- - Authentication
- - Transactions
-    - WS and Form
- - HTTP handlers
-    - go over middleware too
- - Web sockets
- - CSS
- - ClojureScript
- - nREPL
- - Static pages
- - Recipes
-    - cron
-    - spec instead of malli
-    - bb tasks
-    - SSR only
-    - replacing rum
-    - using datomic
- - Contributing
-
-
-# Configuration
-
-Configuration can be set in code (by passing it in to `biff.core/start-system`) and
-in `config/main.edn`. When Biff reads in `config/main.edn`, it will merge the
-nested maps according to the current environment and the value of `:inherit`.
-The result is merged into the system map.
-
-The default environment is `:prod`. This can be overridden by setting the
-`BIFF_ENV` environment variable:
-
-```shell
-BIFF_ENV=dev clj -M -m example.core
-```
-
-So this:
-
-```clojure
-{:prod {:foo 1
-        :bar 2}
- :dev {:inherit [:prod]
-       :foo 3}}
-```
-
-would become this:
-
-```clojure
-{:foo 3
- :bar 2}
-```
-
-Here is a complete list of configuration options and their default values. See
-the following sections for a deeper explanation.
-
-```clojure
-:biff/host "localhost"  ; The hostname this app will be served on, e.g. "example.com" for prod or
-                        ; "localhost" for dev.
-:biff/rules nil         ; An authorization rules data structure. To allow late binding, this can
-                        ; optionally be a var or a 0-arg function.
-:biff/triggers nil      ; A database triggers data structure. As with :biff/rules, this can
-                        ; optionally be a var or a function.
-:biff/send-email nil    ; A function which receives the system map merged with the following
-                        ; keys: :to, :template, :data. Used for sending sign-in emails.
-:biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
-                        ; {"/hello/" [:html [:body [:p {:style {:color "red"}} "hello"]]]}
-:biff/fn-whitelist nil  ; Collection of fully-qualified function symbols to allow in
-                        ; Crux queries sent from the front end. Functions in clojure.core
-                        ; need not be qualified. For example: '[map? example.core/frobulate]
-:biff/routes nil        ; A vector of Reitit routes.
-:biff/event-handler nil ; A Sente event handler function.
-:biff/jobs nil          ; A vector of job data structures to schedule.
-:biff/after-refresh     ; A fully-qualified symbol that specifies a function for biff.core/refresh
-                        ; to call.
-
-:biff.init/start-nrepl true
-:biff.init/start-shadow false
-
-:biff.auth/on-signup "/signin-sent" ; A redirect route.
-:biff.auth/on-signin-request "/signin-sent"
-:biff.auth/on-signin-fail "/signin-fail"
-:biff.auth/on-signin "/app"
-:biff.auth/on-signout "/"
-
-:biff.crux/topology :standalone ; One of #{:jdbc :standalone}
-; Ignored if :biff.crux/topology isn't :jdbc.
-:biff.crux.jdbc/dbname nil
-:biff.crux.jdbc/user nil
-:biff.crux.jdbc/password nil
-:biff.crux.jdbc/host nil
-:biff.crux.jdbc/port nil
-
-:biff.http/not-found-path "/404.html"
-:biff.http/spa-path "/app/index.html" ; If set, takes precedence over :biff.http/not-found-path and
-                                      ; sets http status to 200 instead of 404, unless the
-                                      ; requested file path is prefixed by one of
-                                      ; :biff.http/asset-paths.
-:biff.http/asset-paths #{"/cljs/" "/js/" "/css/"} ; See :biff.http/spa-path.
-:biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
-                                ; or just site-defaults.
-
-:biff.web/host "localhost" ; Host that the web server will listen on. localhost is used in
-                           ; production because requests are reverse-proxied through nginx.
-:biff.web/port 8080        ; Port that the web server will listen on.
-
-:biff/dev false ; When true, changes the defaults for the following keys:
-                :biff.init/start-shadow true
-                :biff.init/start-nrepl false ; shadow-cljs has its own nrepl server.
-                ; Also overrides values for these keys:
-                :biff/host "localhost"
-                :biff.crux/topology :standalone
-                :biff.http/secure-defaults false
-                :biff.web/host "0.0.0.0"
-```
-
-The following keys are added to the system map:
-
- - `:biff/base-url`: e.g. `"https://example.com"` or `"http://localhost:8080"`
- - `:biff/node`: the Crux node.
- - `:biff/send-event`: the value of `:send-fn` returned by `taoensso.sente/make-channel-socket!`.
- - `:biff.sente/connected-uids`: Ditto but for `:connected-uids`.
- - `:biff.crux/subscriptions`: An atom used to keep track of which clients have subscribed
-   to which queries.
-
-Biff merges the system map into incoming Ring requests and Sente events. It
-also adds `:biff/db` (a Crux DB value) on each new request/event.
-
-# Static resources
-
-See [Overview > Static resources](#static-resources).
-
-Relevant config:
-
-```clojure
-:biff/static-pages nil  ; A map from paths to Rum data structures, e.g.
-                        ; {"/hello/" [:html [:body [:p "hello"]]]}
-```
-
-As mentioned, Biff serves your static resources from `www/`. In production,
-`www/` is a symlink to `/var/www/` and is served directly by Nginx (so static
-files will be served even if your JVM process goes down, e.g. during
-deployment).
-
-Here's a larger example for `:biff/static-pages`:
-
-```clojure
-(ns example.static
-  (:require
-    [rum.core :as rum]))
-
-(def signin-form
-  (rum/fragment
-    [:p "Email address:"]
-    [:form {:action "/api/signin-request" :method "post"}
-     [:input {:name "email" :type "email" :placeholder "Email"}]
-     [:button {:type "submit"} "Sign up/Sign in"]]))
-
-(def home
-  [:html
-   [:head
-    [:meta {:charset "utf-8"}]
-    [:script {:src "/js/ensure-signed-out.js"}]]
-   [:body
-    signin-form]])
-
-(def signin-sent
-  [:html [:head [:meta {:charset "utf-8"}]]
-   [:body
-    [:p "Sign-in link sent, please check your inbox."]
-    [:p "(Just kidding: click on the sign-in link that was printed to the console.)"]]])
-
-(def signin-fail
-  [:html [:head [:meta {:charset "utf-8"}]]
-   [:body
-    [:p "Invalid sign-in token."]
-    signin-form]])
-
-(def app
-  [:html
-   [:head
-    [:meta {:charset "utf-8"}]
-    [:script {:src "/js/ensure-signed-in.js"}]]
-   [:body
-    [:#app {:style {:font-weight "bold"}} "Loading..."]
-    [:script {:src "/cljs/app/main.js"}]]])
-
-(def not-found
-  [:html [:head [:meta {:charset "utf-8"}]]
-   [:body
-    [:p "Not found."]]])
-
-(def pages
-  {"/" home
-   "/signin/sent/" signin-sent
-   "/signin/fail/" signin-fail
-   "/app/" app
-   "/404.html" not-found})
-```
-
 # Authentication
 
-Relevant config:
+The project template comes with some routes for email link authentication. When
+a user signs in/signs up, Biff will email them a link containing a JWT. If they
+click the link, Biff stores their user ID (the Crux doc ID of their user
+document, a UUID) in an [encrypted session
+cookie](https://ring-clojure.github.io/ring/ring.middleware.session.cookie.html). You
+must provide a Mailgun API key (or define your own function for sending emails),
+otherwise the login links will only be printed to the console.
+
+A nice thing about this setup is that the implementation is extremely simple
+and it gets the job done. You also don't have to model unconfirmed email
+addresses since user documents aren't created until they've clicked the link
+you sent. However, implementing more authentication methods (especially
+password) is a priority. See
+[#18](https://github.com/jacobobryant/biff/issues/18).
+
+Other notes:
+
+ - The CSRF token is provided in another (non-http-only) cookie so that SPA pages
+can include it with request headers.
+ - Ring requests will include the authenticated user ID under the `:biff/uid` key.
+ - The project template will use reCAPTCHA v3 for bot detection if you provide
+   a secret key.
+
+# System map
+
+The [system map](#system-composition) is merged with incoming Ring requests and
+Sente events. It's also passed to authorization methods. Thus, your application code
+can access all configuration and resources via the system map. Some notable keys:
+
+ - `:biff.crux/node`: The Crux node.
+ - `:biff.crux/db`: A `delay`ed Crux DB, set by middleware. It's created with
+   `biff.crux/open-db`. If you don't deref the DB, it won't be created.
+ - `:biff/handler`: The Ring handler, created from your Reitit routes.
+ - `:biff.reitit/router`: You can use this to look up routes by name.
+ - `:biff.sente/*`: All keys returned by `sente/make-channel-socket!` are prefixed
+    with `biff.sente` and merged into the system map.
+
+# Recipes
+
+## Scheduled tasks
+
+See [#87](https://github.com/jacobobryant/biff/issues/87). In the mean time,
+you can use [chime](https://github.com/jarohen/chime), as long as you don't
+need to coordinate multiple servers:
 
 ```clojure
-:biff/send-email nil ; A function which receives the system map merged with the following keys:
-                     ; :to, :template, :data. Used for sending sign-in emails.
-:biff.auth/on-signup "/signin-sent" ; A redirect route.
-:biff.auth/on-signin-request "/signin-sent"
-:biff.auth/on-signin-fail "/signin-fail"
-:biff.auth/on-signin "/app"
-:biff.auth/on-signout "/"
+(defn my-task [sys]
+  (println "This task will run every hour,"
+           "starting 5 minutes after system start.")
+
+(def recurring-tasks
+  [{:offset-minutes 5
+    :period-minutes 60
+    :task-fn #'my-task}])
+
+(defn use-chime [{:keys [biff/jobs] :as sys}]
+  (update sys :biff/stop into
+    (for [{:keys [offset-minutes period-minutes task-fn]} jobs]
+      (let [closeable (chime.core/chime-at
+                        (->> (biff.util/add-seconds (java.util.Date.) (* 60 offset-minutes))
+                             (iterate #(biff.util/add-seconds % (* period-minutes 60)))
+                             (map #(.toInstant %)))
+                        (fn [_] (task-fn sys)))]
+        #(.close closeable)))))
 ```
 
-Biff currently provides email link authentication. The user clicks a link
-(which contains a JWT) in an email to sign in, and then Biff stores their user
-ID in an encrypted cookie. Password and SSO authentication are on the roadmap.
+## Babashka tasks
 
-After a user is signed in, you can authenticate them on the back end from an
-event/request handler like so:
+If you need to add more complicated tasks, you may want to start using [bb
+tasks](https://book.babashka.org/#tasks) instead of the `task` shell script.
+See Biff's own [bb.edn file](https://github.com/jacobobryant/biff/blob/master/bb.edn)
+for an example.
 
-```clojure
-(require '[ring.middleware.anti-forgery :refer [wrap-anti-forgery]])
+## Server-side rendering
 
-(defn handler [{:keys [session/uid biff/db]}]
-  (if (some? uid)
-    (do
-      (prn (crux.api/entity db {:user/id uid}))
-      ; => {:crux.db/id {:user/id #uuid "..."}
-      ;     :user/id #uuid "..." ; duplicated for query convenience
-      ;     :user/email "alice@example.com"}
-      {:body "Hello, authenticated user."
-       :headers/Content-Type "text/plain"})
-    (do
-      (println "User not authenticated.")
-      ; Redirect the user to the login page
-      {:status 302
-       :headers/Location "/login"}
-      ; If this is an API endpoint, you can just return a 403:
-      ; {:status 403
-      ;  :body "Forbidden."
-      ;  :headers/Content-Type "text/plain"}
-      )))
+If you're making a simple site, a SPA might be overkill. If so, you can omit
+the `use-sente`, `use-crux-sub-notifier`, and `use-shadow-cljs` components, as
+well as all the ClojureScript code and the websocket event handlers.
 
-(def routes
-  [["/foo" {:post handler
-            :name ::foo
-            ; You must include this for any endpoint which uses :session/uid.
-            :middleware [wrap-anti-forgery]}]
-   ...])
+[As mentioned](#receiving-transactions), you can still use Biff's handy dandy,
+auto-authorized transactions via HTML forms.
 
-```
+## Replacing Rum
 
-Biff provides a set of HTTP endpoints for authentication:
-
-## Sign up
-
-Sends the user an email with a sign-in link. The token included in the link
-will expire after 24 hours. Redirects to the value of `:biff.auth/on-signup`.
-
-### HTTP Request
-
-`POST /api/signup`
-
-### Form Parameters
-
-Parameter | Description
-----------|------------
-email | The user's email address.
-
-### Example Usage
-
-```clojure
-[:p "Email address:"]
-[:form {:action "/api/signup" :method "post"}
- [:input {:name "email" :type "email" :placeholder "Email"}]
- [:button {:type "submit"} "Sign up"]]
-```
-
-The `:biff.auth/send-email` function will be called with the following options:
-
-```clojure
-(send-email (merge
-              ring-request
-              {:to "alice@example.com"
-               :template :biff.auth/signup
-               :data {:biff.auth/link "https://example.com/api/signin?token=..."}}))
-```
-
-You will have to provide a `send-email` function which generates an email from
-the template data and sends it. (The example app just prints the template data
-to the console). If you use Mailgun, you can do something like this:
-
-```clojure
-(def templates
-  {:biff.auth/signup
-   (fn [{:keys [biff.auth/link to]}]
-     {:subject "Thanks for signing up"
-      :html (rum.core/render-static-markup
-              [:div
-               [:p "We received a request to sign up with Findka using this email address."]
-               [:p [:a {:href link} "Click here to sign up."]]
-               [:p "If you did not request this link, you can ignore this email."]])})
-   :biff.auth/signin ...})
-
-(defn send-email* [api-key opts]
-  (http/post (str "https://api.mailgun.net/v3/mail.example.com/messages")
-    {:basic-auth ["api" api-key]
-     :form-params (assoc opts :from "Example <contact@mail.example.com>")}))
-
-(defn send-email [{:keys [to text template data mailgun/api-key] :as sys}]
-  (if (some? template)
-    (if-some [template-fn (get templates template)]
-      (send-email* api-key
-        (assoc (template-fn (assoc data :to to)) :to to))
-      (println "Email template not found:" template))
-    (send-email* api-key (select-keys sys [:to :subject :text :html]))))
-```
-
-### Dealing with bots
-
-The above example is susceptible to abuse from bots. An account isn't created
-until the user clicks the confirmation link, but it's better not to send emails
-to bots/spam victims in the first place. You'll need to use your own method for
-deciding if signups come from bots (I use recaptcha v3). The map passed to
-`send-email` includes the Ring request specifically so you can check the form
-parameters and make that decision.
-
-If you render the login form with JS, you may not need to deal with this for a
-while. If you render it statically (like in the example app), you'll have to
-deal with it sooner.
-
-## Request sign-in
-
-Sends the user an email with a sign-in link. This is the same as [Sign up](#sign-up),
-except:
-
- - The endpoint is `/api/signin-request`
- - The template key will be set to `:biff.auth/signin`
- - The user will be redirected to the value of `:biff.auth/on-signin-request`
-
-## Sign in
-
-Verifies the given JWT and adds a `:uid` key to the user's session (expires in
-90 days). Also sets a `:csrf` cookie, the value of which
-must be included in the `X-CSRF-Token` header for any HTTP requests that
-require authentication.
-
-If this is the first sign in, creates a user document in Crux with the email
-and a random user ID (a UUID). For example:
-
-```clojure
-{:crux.db/id {:user/id #uuid "some-uuid"}
- :user/id #uuid "some-uuid" ; duplicated for query convenience.
- :user/email "abc@example.com"}
-```
-
-Redirects to the value of `:biff.auth/on-signin` (or
-`:biff.auth/on-signin-fail` if the token is incorrect or expired).
-
-This endpoint is used by the link generated by [Sign up](#sign-up) and [Request
-sign-in](#request-sign-in), so you typically won't need to generate a link for
-this endpoint yourself.
-
-### HTTP Request
-
-`GET /api/signin`
-
-### URL Parameters
-
-Parameter | Description
-----------|------------
-token | A JWT
-
-
-## Sign out
-
-Clears the user's session and `:csrf` cookie. Redirects to the value of
-`:biff.auth/on-signout`.
-
-### HTTP Request
-
-`GET /api/signout`
-
-### Example Usage
-
-```clojure
-[:a {:href "/api/signout"} "sign out"]
-```
-
-## Check if signed in
-
-Returns status 200 if the user is authenticated, else 403.
-
-### HTTP Request
-
-`GET /api/signed-in`
-
-### Example Usage
-
-Include this on your landing page:
-
-```javascript
-fetch("/api/signed-in").then(response => {
-  if (response.status == 200) {
-    document.location = "/app";
-  }
-});
-```
-
-Include this on your app page:
-
-```javascript
-fetch("/api/signed-in").then(response => {
-  if (response.status != 200) {
-    document.location = "/";
-  }
-});
-```
-
-# HTTP routes
-
-Relevant config:
-
-```clojure
-:biff/routes nil ; A vector of Reitit routes.
-:biff.http/not-found-path "/404.html"
-:biff.http/spa-path "/app/index.html" ; If set, takes precedence over :biff.http/not-found-path and
-                                      ; sets http status to 200 instead of 404, unless the
-                                      ; requested file path is prefixed by one of
-                                      ; :biff.http/asset-paths.
-:biff.http/asset-paths #{"/cljs/" "/js/" "/css/"} ; See :biff.http/spa-path.
-:biff.http/secure-defaults true ; Whether to use ring.middleware.defaults/secure-site-defaults
-                                ; or just site-defaults.
-:biff/dev false ; When true, overrides values for these keys:
-                :biff.http/secure-defaults false
-                ...
-```
-
-The value of `:biff/routes` will be wrapped with some default middleware which, among other things:
-
- - Applies a modified version of `ring.middleware.defaults/secure-site-defaults` (or `site-defaults`).
- - Does format negotiation with [Muuntaja](https://github.com/metosin/muuntaja).
- - Merges the system map into the request (so you can access configuration and other things).
- - Sets `:biff/db` to a current Crux db value.
- - Flattens the `:session` and `:params` maps (so you can do e.g. `(:session/uid request)` instead
-   of `(:uid (:session request))`).
- - Sets default values of `{:body "" :status 200}` for responses.
- - Nests any `:headers/*` or `:cookies/*` keys (so `:headers/Content-Type "text/plain"` expands
-   to `:headers {"Content-Type" "text/plain"}`).
-
-```clojure
-(ns example.routes
-  (:require
-    [biff.util :as bu]
-    ...))
-
-(defn echo [req]
-  {:headers/Content-Type "application/edn"
-   :body (prn-str
-           (merge
-             (select-keys req [:params :body-params])
-             (u/select-ns req 'params)))})
-
-(def routes
-  [["/echo" {:get echo
-             :post echo
-             :name ::echo}]
-   ...])
-```
-
-```shell
-$ curl -XPOST localhost:8080/echo?foo=1 -F bar=2
-{:params {:foo "1", :bar "2"}, :params/bar "2", :params/foo "1"}
-$ curl -XPOST localhost:8080/echo -d '{:foo 1}' -H "Content-Type: application/edn"
-{:params {:foo "1"}, :params/foo "1", :body-params {:foo "1"}}
-```
-
-Endpoints that require authentication must be wrapped in anti-forgery
-middleware. See [Authentication](#authentication). When POSTing to such
-endpoints, you must include the value of the `csrf` cookie in the
-`X-CSRF-Token` header:
-
-```clojure
-(cljs-http.client/post "/foo" {:headers {"X-CSRF-Token" (biff.client/csrf)}})
-```
-
-For SPA apps, you can usually communicate over web sockets instead.
-
-# Web sockets
-
-Relevant config:
-
-```clojure
-:biff/event-handler nil ; A Sente event handler function.
-```
-
-Example:
-
-```clojure
-(defmulti api :id)
-
-(defmethod api :default
-  [{:keys [id]} _]
-  (biff.util/anom :not-found (str "No method for " id)))
-
-(defmethod api :example/do-something
-  [{:keys [biff/db session/uid] :as sys} {:keys [foo bar]}]
-  ...)
-
-(defmethod api :example/echo
-  [{:keys [client-id biff/send-event]} arg]
-  (send-event client-id [:example/print ":example/echo called"])
-  ; arg will be sent to the client. If you don't want to return anything,
-  ; return nil explicitly.
-  arg)
-
-(def event-handler #(api % (:?data %)))
-```
-
-Biff provides a helper function for initializing the web socket connection on the front end:
-
-```clojure
-(defonce system (atom {}))
-
-(defmulti api (comp first :?data))
-
-(defmethod api :default
-  [{[event-id] :?data} data]
-  (println "unhandled event:" event-id))
-
-(defmethod api :biff/error
-  [_ anom]
-  (pprint anom))
-
-(defmethod api :example/print
-  [_ arg]
-  (prn arg))
-
-(defn api-send [& args]
-  (apply (:api-send @system) args))
-
-(defn ^:export init []
-  (reset! system
-    (biff.client/init-sub {:handler api
-                           ...}))
-  ...)
-
-(comment
-  (go
-    (<! (api-send [:example/echo {:foo "bar"}]))
-    ; => {:foo "bar"}
-    ; => ":example/echo called"
-    ))
-```
+You can use Reagent/Re-frame/etc instead if you like. Mainly you'll just need a
+replacement for `biff.rum/defderivations`.
 
 # Contributing
 
-The most helpful way to contribute is to use Biff and let me know what problems
-you run into. You can also write tutorials or blog about your experience. I'd
-be happy to list your articles under [Resources](#resources) and promote them
-myself, not that I have a large following.
+There are many ways you can help out:
 
-PRs are welcome too, especially if you want to tackle some of the [current
-issues](https://github.com/jacobobryant/biff/issues). If you're planning
-something significant, you might want to bring it up in `#biff` on Clojurians
-Slack.
+ - Use Biff and let me know what problems you run into.
+ - Blog about using Biff (I'll list articles under [Additional
+   resources](#additional-resources)).
+ - Submit PRs. Especially if you know how to fix
+   [#88](https://github.com/jacobobryant/biff/issues/88).
+ - Help me find some clients, as mentioned [above](#status).
 
 The easiest way to hack on Biff is to start a new project (see [Getting
-Started](#getting-started)) and then change the Biff dependency in `deps.edn` to
-`{:local/root "/path/to/cloned/biff/repo" ...}`. Then just run `./task init;
-./task dev`. Eval `(biff.core/refresh)` as needed.
+Started](#getting-started)) and then change the `biff/main` and `biff/dev`
+dependencies in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo/..." ...}`.
+You can also include the `biff/tests` library.
 
 ## Documentation
 
-You'll need Ruby; then run:
+You'll need Babashka and Ruby; then run:
 
 ```shell
 cd slate
@@ -1278,94 +785,6 @@ bundle install
 cd ..
 ```
 
-After that, you can run `./task docs-dev` and edit `slate/source/index.html.md`
+After that, you can run `bb slate:dev` and edit `slate/source/index.html.md`
 to work on the documentation. See the [Slate
 README](https://github.com/jacobobryant/biff/tree/master/slate).
-
-# FAQ
-
-## Comparison to Firebase
-
-Basically, if you like Firebase and you like Clojure back end dev, you might
-enjoy using Biff for your next side project. Same if you like the idea of
-Firebase but in practice you have issues with it. If you want something mature
-or you like having a Node/ClojureScript back end, Firebase is a great choice. [Here's a non-trivial
-example](https://github.com/jacobobryant/mystery-cows) of using Firebase with ClojureScript.
-
-Some shared features:
-
- - Flexible data modeling
- - Basic query subscriptions (no joins)
- - Client-side transactions
- - Authorization rules
- - Triggers
- - Authentication built-in
-
-Some differences:
-
- - Biff has a long-running JVM/Clojure back end instead of an ephemeral
-   Node/ClojureScript back end => better library ecosystem IMO and lower response
-   times/no cold start.
- - Firebase has way more features and is vastly more mature.
- - Biff is open-source + self-hosted => you have total control. If there's anything you don't like, you can fix it.
- - [Crux](https://opencrux.com/) (the database Biff uses) is immutable and has Datalog queries.
- - Authorization rules in Firebase are IMO error-prone and hard to debug.
- - Firebase supports password and SSO authentication.
-
-## Comparison to Fulcro
-
-Similarities:
-
- - Both contain some code for moving data between front end and back end, hence
-   they can both be described as "full-stack frameworks."
-
-Differences:
-
- - Fulcro is primarily a front-end framework while Biff is primarily back end.
- - Biff prioritizes the low end of the "market" (early-stage startups and hobby
-   projects, as mentioned).
- - Biff is much smaller and younger.
- - Biff's scope includes devops.
-
-
-## Why Crux and not Datomic?
-
-Short answer: Like Vim, Arch Linux, and Clojure itself, Crux is one of those
-pieces of software that sparks joy.
-
-I used Datomic pretty heavily in my own projects for about a year prior to
-switching to Firestore and then Crux. My opinion on Datomic vs. Crux is that
-Datomic is more powerful and maybe can scale better, but Crux is  easier to get
-started with and has a lot less operational overhead for small projects (in
-terms of developer time). I've had many headaches from my time using Datomic
-([and AWS](https://jacobobryant.com/post/2019/aws-battles-ep-1/), which Datomic
-Cloud is coupled to). On the other hand, using Crux has been smooth&mdash;and
-you can use DigitalOcean instead of AWS (yay). Since Biff prioritizes the
-solo-developer / early-stage / rapid-prototyping use-case, I think Crux is a
-much better fit. Whereas if I was in a situation with many
-developers/delivering an application that I knew would have scale once
-released, Datomic Cloud Ions would be worth considering (but even then, I
-personally would probably stick with Crux&mdash;I just love Crux).
-
-Off the top of my head, a few more reasons:
-
- - The document model is easier to reason about than the datom model. Building
-   Biff on Datomic would have been more complex.
-
- - I like that Crux doesn't enforce schema, which made it easy for Biff to use
-   it's own schema (i.e. rules). I also think it's better for rapid-prototyping,
-   when you're still figuring out the schema and it changes often.
-
- - Crux is open-source. I'm a pragmatist and I don't mind using a closed source
-   DB like Datomic in an app. But for Biff, a web framework intended for other
-   people to build their apps on too, I'd rather not have a hard dependency on
-   something closed-source. It'd suck if a feature broke in Datomic that was
-   critical for Biff but low-priority for Cognitect. (I had a small budgeting
-   app on Datomic that was down for several months because of that).
-
- - For hobby projects, you can run Crux on DigitalOcean with filesystem
-   persistence for $5/month, whereas Datomic Cloud starts at $30/month. Doesn't
-   matter for a startup of course, but I wouldn't want to be shelling out
-   $30/month forever just to keep that budgeting app running.
-
--->
