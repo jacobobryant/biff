@@ -397,3 +397,7 @@
        (satisfies? async-proto/ReadPort x))))
 
 (def http-status->msg http/http-status->msg)
+
+(defn wrap-wtf [handler]
+  (fn [req]
+    (doto (handler (doto req pprint)) pprint)))

@@ -27,7 +27,7 @@
    #(update % :biff/handler wrap-authentication)
    mid/use-default-middleware
    #(assoc % :biff.jetty/websockets
-           {"/api/chsk" (:biff.handler %)})
+           {"/api/chsk" (:biff/handler %)})
    misc/use-jetty])
 
 ; routes, on-error and schema are defined as anonymous functions to facilitate
