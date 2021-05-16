@@ -82,7 +82,7 @@
        ; But this is handy for static pages (retrieve the token with JS and
        ; include it in the request headers).
        :cookies/csrf {:path "/"
-                      :max-age (* 60 60 24 90)
+                      :max-age (* 60 60 24 30)
                       :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
        :session (assoc session :uid (or existing-uid new-uid))})
