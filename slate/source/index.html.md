@@ -190,9 +190,6 @@ for getting an overview of Biff's features and as a reference for certain things
 exploring the template project, which also contains links to relevant sections of the
 API docs.
 
-NOTE, 15 May 2021: I just finished this page; still need to finish Codox and the
-project template :).
-
 # Design Philosophy
 
 Libraries are simple. Frameworks are easy. Frameworks can be good if they're
