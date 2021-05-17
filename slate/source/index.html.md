@@ -766,8 +766,7 @@ There are several ways you can help out:
  - Use Biff and let me know what problems you run into.
  - Blog about using Biff (I'll list articles under [Additional
    resources](#additional-resources)).
- - Submit PRs. Especially if you know how to fix
-   [#88](https://github.com/jacobobryant/biff/issues/88).
+ - Submit PRs. See the [issues](https://github.com/jacobobryant/biff/issues).
 
 The easiest way to hack on Biff is to start a new project (see [Getting
 started](#getting-started)) and then change the `biff/main` and `biff/dev`
