@@ -1,5 +1,8 @@
 (ns {{parent-ns}}.views
-  (:require [biff.rum :as br]))
+  (:require [biff.rum :as br]
+            [crux.api :as crux]
+            [ring.middleware.anti-forgery :as anti-forgery]
+            [{{parent-ns}}.views.shared :as shared]))
 
 (def default-opts
   #:base{:title "Example app"
@@ -77,3 +80,46 @@
    "/signin-fail/" signin-fail
    "/app/" app
    "/404.html" not-found})
+
+; See https://biff.findka.com/#receiving-transactions
+(defn ssr [{:keys [biff/uid biff.crux/db params/submitted]}]
+  (let [{:user/keys [email foo]} (crux/pull @db [:user/email :user/foo] uid)]
+    (base
+      {}
+      [:div
+       (shared/header {:email (delay email)})
+       [:.h-6]
+       (shared/tabs {:active-id (delay :ssr)
+                     :tab-data [{:id :crud
+                                 :href "/app"
+                                 :label "CRUD"}
+                                {:id :db
+                                 :href "/app/db"
+                                 :label "DB Contents"}
+                                {:id :ssr
+                                 :href "/app/ssr"
+                                 :label "SSR"}]})
+       [:.h-3]
+       [:div "This tab uses server-side rendering instead of React."]
+       [:.h-6]
+       (br/form
+         {:action "/api/form-tx"
+          :hidden {"__anti-forgery-token" anti-forgery/*anti-forgery-token*
+                   "tx-info"
+                   (pr-str
+                     {:tx {[:user uid] {:db/update true
+                                        :user/foo 'foo}}
+                      :fields {'foo :text}
+                      :redirect :ssr
+                      :query-params {:submitted true}})}}
+         [:.text-lg "Foo: " [:span.font-mono (pr-str foo)]]
+         [:.text-sm.text-gray-600
+          "This demonstrates submitting a Biff transaction via an HTML form."]
+         [:.h-1]
+         [:.flex
+          [:input.input-text.w-full {:name "foo"
+                                     :value foo}]
+          [:.w-3]
+          [:button.btn {:type "submit"} "Update"]]
+         (when submitted
+           [:.font-bold.my-3 "Transaction submitted successfully."]))])))

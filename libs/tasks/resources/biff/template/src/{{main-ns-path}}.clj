@@ -28,11 +28,14 @@
    mid/use-default-middleware
    #(assoc % :biff.jetty/websockets
            {"/api/chsk" (:biff/handler %)})
-   misc/use-jetty])
+   misc/use-jetty
+   (fn [{:keys [biff/base-url] :as sys}]
+     (println "Go to" base-url)
+     sys)])
 
 ; routes, on-error and schema are defined as anonymous functions to facilitate
 ; late-binding: if you redefine them, you don't have to call biff.util/refresh
-; for the changes to take place.
+; for the changes to take place. (For routes, that only applies in dev).
 (def config {:biff.middleware/spa-path "/app/"
              :biff.reitit/routes       (fn [] (routes))
              :biff.sente/event-handler (fn [event] (api event (:?data event)))

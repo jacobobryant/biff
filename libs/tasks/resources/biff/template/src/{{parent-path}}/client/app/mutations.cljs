@@ -1,28 +1,16 @@
 (ns {{parent-ns}}.client.app.mutations
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :refer [<!]]
-            [clojure.pprint :as pp]
             [{{parent-ns}}.client.app.db :as db]
             [{{parent-ns}}.client.app.system :as s]))
 
-; See https://findka.com/biff/#web-sockets
+; See https://biff.findka.com/#transactions
 
-(defmulti handler (comp first :?data))
-(defmethod handler :default
-  [{[event-id] :?data} data]
-  (println "unhandled event:" event-id))
-
-(defmethod handler :biff/error
-  [_ anom]
-  (pp/pprint anom))
-
-(defn api [& args]
+(defn send-event [& args]
   (apply (:send-fn @s/system) args))
 
-; See https://findka.com/biff/#transactions
-
 (defn send-tx [tx]
-  (api [:{{parent-ns}}/tx tx]))
+  (send-event [:{{parent-ns}}/tx tx]))
 
 (defn send-message [text]
   (send-tx {[:msg] {:msg/user @db/uid
@@ -37,6 +25,5 @@
                              :user/foo x}}))
 
 (defn set-bar [x]
-  ; See the console
   (println "Return value from :{{parent-ns}}/set-bar back end event handler:")
-  (go (prn (<! (api [:{{parent-ns}}/set-bar {:value x}])))))
+  (go (prn (<! (send-event [:{{parent-ns}}/set-bar {:value x}])))))

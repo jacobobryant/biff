@@ -31,8 +31,7 @@
   (println "\n=== html ===")
   (time (html))
   (println "\n=== css ===")
-  (time (css))
-  (println "\n=== done ==="))
+  (time (css)))
 
 (defn build [_]
   (let [{:keys [fail error]} (tests)]

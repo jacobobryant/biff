@@ -1,11 +1,13 @@
 (ns {{parent-ns}}.routes.auth
-  (:require [{{parent-ns}}.templates :as templates]
-            [biff.crux :as bcrux]
+  (:require [biff.crux :as bcrux]
             [biff.misc :as misc]
             [clj-http.client :as http]
             [clojure.string :as str]
             [crux.api :as crux]
-            [ring.middleware.anti-forgery :as anti-forgery]))
+            [ring.middleware.anti-forgery :as anti-forgery]
+            [{{parent-ns}}.templates :as templates]))
+
+; See https://biff.findka.com/#authentication
 
 (defn wrap-authentication [handler]
   (anti-forgery/wrap-anti-forgery
@@ -13,7 +15,8 @@
       (handler (assoc req :biff/uid uid)))
     ; If there isn't a CSRF token, still call the handler, but don't set
     ; :biff/uid. Then you can do unauthenticated POSTs from static pages (e.g.
-    ; a sign-in form).
+    ; a sign-in form). Thus, you should NOT check :session/uid for
+    ; authentication. Check only :biff/uid.
     {:error-handler handler}))
 
 ; You should take care of this before publicizing your site, especially if your
@@ -33,7 +36,7 @@
       (and success (<= 0.5 score)))))
 
 ; To send login links via email, set MAILGUN_* in config/prod.env. Otherwise
-; login links will only be printed to the console.
+; the links will only be printed to the console.
 (defn send-token [{:keys [params/email
                           biff/base-url
                           mailgun/api-key
@@ -60,11 +63,11 @@
 
 (defn verify-token [{:keys [biff.crux/node
                             biff.crux/db
-                            biff.middleware/secure-cookies
                             params/token
                             session
                             biff.auth/jwt-secret] :as sys}]
   (if-some [{:keys [email]} (misc/jwt-decrypt token jwt-secret)]
+    ; See https://github.com/jacobobryant/biff/issues/89
     (let [existing-uid (ffirst
                          (crux/q @db
                            '{:find [user]
@@ -85,6 +88,7 @@
                       :max-age (* 60 60 24 30)
                       :same-site :lax
                       :value (force anti-forgery/*anti-forgery-token*)}
+       ; See comment above about :biff/uid
        :session (assoc session :uid (or existing-uid new-uid))})
     {:status 302
      :headers/Location "/signin-fail/"}))

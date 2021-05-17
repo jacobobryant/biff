@@ -1,8 +1,9 @@
 (ns {{parent-ns}}.env
   (:require [biff.util :as bu]))
 
+; See https://biff.findka.com/codox/biff.util.html#var-read-env
+
 (def env-keys
-  ; env key | clj key | coerce fn
   [["CRUX_DIR"           :biff.crux/dir]
    ["CRUX_TOPOLOGY"      :biff.crux/topology keyword]
    ["CRUX_JDBC_DBNAME"   :biff.crux.jdbc/dbname]

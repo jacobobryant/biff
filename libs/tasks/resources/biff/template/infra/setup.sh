@@ -1,5 +1,5 @@
 # If you install more packages or make other changes to your server, add the
-# changes to this file as documentation.
+# changes to this file (at least as documentation).
 
 set -e
 set -x

@@ -1,5 +1,6 @@
 (ns {{parent-ns}}.admin
-  (:require [biff.util :as bu]
+  (:require [biff.crux :as bcrux]
+            [biff.util :as bu]
             [crux.api :as crux]))
 
 (defn sys []
@@ -8,19 +9,43 @@
 
 (comment
 
-  ; # Todo
-  ;
-  ; Add code for experimenting to admin ns
-  ;  - auth rules
-  ;  - girouette
-  ;  - db (already)
-  ;  - biff-q
+  ; This namespace isn't required from anywhere. You can use it as a
+  ; repl-driven admin console and for experimenting.
 
-  (let [{:keys [biff.crux/db
-                biff.crux/node
-                biff.crux/subscriptions] :as sys} (sys)]
+  ; Inspect the db
+  (let [{:keys [biff.crux/db]} (sys)]
     (crux/q @db
             '{:find [(pull user [*])]
-              :where [[user :user/email]]})
-    )
+              :where [[user :user/email]]}))
+
+  ; Submit transactions (this will bypass authorization rules since we don't
+  ; set :biff.crux/authorize true. i.e. it's a trusted transaction)
+  (bcrux/submit-tx
+    (sys)
+    {[:user] {:user/email "foo@example.com"}})
+
+  ; Inspect transactions before running them
+  (let [s (sys)
+        uid "some-uuid" ; In actual usage, you would query this from the db first.
+        {:keys [crux-tx]
+         :as tx-info} (bcrux/get-tx-info
+                        (assoc s :biff/uid uid)
+                        {[:user] {:user/email "foo@example.com"}})]
+    (bu/pprint crux-tx)
+    ; See if this transaction would pass authorization rules
+    (when-some [bad-doc (bcrux/check-write s tx-info)]
+      (println "The transaction is unauthorized:")
+      (bu/pprint bad-doc)))
+
+  ; Test out subscribable queries (including authorization)
+  (bcrux/biff-q
+    (sys)
+    {:doc-type :msg
+     :where '[[:msg/sent-at t]
+              [(<= #inst "1970" t)]]})
+
+  ; Test out Girouette classes (only works in dev, not prod)
+  ((requiring-resolve '{{parent-path}}.dev.css/class-name->garden)
+   "bg-blue-200")
+
   )

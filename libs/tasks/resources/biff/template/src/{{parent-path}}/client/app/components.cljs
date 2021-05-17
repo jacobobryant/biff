@@ -3,9 +3,9 @@
             [clojure.pprint :as pp]
             [reitit.frontend.easy :as rfe]
             [rum.core :as rum :refer [react defc defcs reactive local]]
-            [{{parent-ns}}.views.shared :as shared]
             [{{parent-ns}}.client.app.db :as db]
-            [{{parent-ns}}.client.app.mutations :as m]))
+            [{{parent-ns}}.client.app.mutations :as m]
+            [{{parent-ns}}.views.shared :as shared]))
 
 (defc db-contents < reactive
   []
@@ -61,8 +61,8 @@
    (set-value {:label "Bar"
                :model db/bar
                :mutate m/set-bar
-               :description (str "This demonstrates updating a document via a custom "
-                              "websocket event handler. (Also, see the console for a surprise!)")})
+               :description (str "This demonstrates updating a document via a custom websocket "
+                                 "event handler. (Also, see the console for a surprise!)")})
    [:.h-6]
    (write-message)
    [:.h-6]

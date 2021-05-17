@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# See https://biff.findka.com/#babashka-tasks
+# I recommend adding alias t=./task to your .bashrc.
+
 if [ -f config/task.env ]; then
   source config/task.env
 fi

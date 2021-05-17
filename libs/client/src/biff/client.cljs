@@ -1,18 +1,26 @@
 (ns biff.client
-  (:require-macros
-    [cljs.core.async.macros :refer [go go-loop]])
-  (:require
-    [biff.util :as bu]
-    [cljs.core.async :as async :refer [close! <! take! put! chan]]
-    [clojure.set :as set]
-    [goog.net.Cookies]
-    [sablono.util]
-    [taoensso.sente :as sente]))
+  "Front-end utilities."
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
+  (:require [biff.util :as bu]
+            [cljs.core.async :as async :refer [close! <! take! put! chan]]
+            [clojure.set :as set]
+            [taoensso.sente :as sente]))
 
-(defn- wrap-send-fn [send-fn ready-pr]
+; TODO this ns could probably use some cleanup.
+
+(defn wrap-send-fn
+  "Modifies Sente's send-fn.
+
+  Returns a channel that will deliver the event response (or
+  :biff.client/no-response if there was none). If the response is an anomaly
+  (see biff.util/anomaly?), it will be printed.
+
+  ready-promise: A promise that will resolve after the Sente connection has been
+                 established. Events will be queued until after it resolves."
+  [send-fn ready-promise]
   (fn [event]
     (let [ch (chan)]
-      (.then ready-pr
+      (.then ready-promise
              (fn []
                (send-fn
                  event 5000
@@ -35,16 +43,13 @@
                                 :query query}])))))
     (handler event)))
 
-(defn csrf []
-  (js/decodeURIComponent (.get (new goog.net.Cookies js/document) "csrf")))
-
-(defn- start-socket [{:keys [url]}]
+(defn- start-socket [{:keys [url csrf-token]}]
   (let [; todo use promise-chan
         ready-ch (chan)
         ready-pr (js/Promise.
                    (fn [done]
                      (take! ready-ch done)))]
-    (-> (sente/make-channel-socket-client! url (csrf) {:type :auto})
+    (-> (sente/make-channel-socket-client! url csrf-token {:type :auto})
         (update :send-fn wrap-send-fn ready-pr)
         (assoc :ready ready-ch))))
 
@@ -60,16 +65,14 @@
     (when (= id :chsk/recv)
       (let [[id ?data] ?data
             sub-channels @sub-channels]
-        (if-some [ch (some-> sub-channels
-                             (get id)
-                             (get (:query ?data)))]
+        (if-some [ch (get-in sub-channels [id (:query ?data)])]
           (put! ch (:ident->doc ?data))
           (handler event))))))
 
 (defn- merge-ident->doc [db ident->doc]
-  (reduce (fn [db [[table id] ent]]
-            (if ent
-              (assoc-in db [table id] ent)
+  (reduce (fn [db [[table id] doc]]
+            (if doc
+              (assoc-in db [table id] doc)
               (update db table dissoc id)))
           db
           ident->doc))
@@ -112,13 +115,31 @@
           (swap! sub-results-atom dissoc sub-key)))
       sub-channel)))
 
-(defn init-sub [{:keys [verbose sub-results subscriptions handler url]
-                 :or {handler (constantly nil)}}]
+(defn init-sub
+  "Start a Sente websocket connection and manage subscriptions.
+
+  Returns the result of Sente's make-channel-socket-client! with a modified
+  send-fn (see [[wrap-send-fn]]).
+
+  See also:
+   - https://biff.findka.com/#subscriptions
+   - https://biff.findka.com/#subscription-interface
+
+  url:           The Sente URL.
+  csrf-token:    This will be sent to Sente.
+  subscriptions: An atom containing the client's subscriptions.
+  sub-results:   An atom to populate with the subscription results.
+  handler:       A function to call with incoming Sente events (except for
+                 subscription events).
+  verbose:       If true, print debugging info."
+  [{:keys [verbose sub-results subscriptions handler url csrf-token]
+    :or {handler (constantly nil)}}]
   (let [sub-channels (atom {})
         handler (wrap-sub handler sub-channels)
         {:keys [send-fn] :as env} (init-sente {:handler handler
                                                :subscriptions subscriptions
-                                               :url url})]
+                                               :url url
+                                               :csrf-token csrf-token})]
     (maintain-subscriptions
       subscriptions
       (fn [[provider query]]

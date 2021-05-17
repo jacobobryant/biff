@@ -54,7 +54,7 @@
 
        (read-env [[\"FOO\" :foo]
                   [\"BAR\" :bar #(Long/parseLong %)]
-                  [\"NOT_PRESENT\" :not-present]])
+                  [\"NOT_DEFINED\" :not-defined]])
        => {:foo \"hello\"
            :bar 123}
 

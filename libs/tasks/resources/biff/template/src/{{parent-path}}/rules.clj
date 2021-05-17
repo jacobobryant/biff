@@ -2,7 +2,7 @@
   (:require [biff.crux :refer [authorize]]
             [biff.misc :as misc]))
 
-; See https://biff.findka.com/#rules
+; See https://biff.findka.com/#authorization-rules
 
 (def registry
   {:user/id     :uuid

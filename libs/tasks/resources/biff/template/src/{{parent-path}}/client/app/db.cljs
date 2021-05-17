@@ -2,7 +2,7 @@
   (:require [biff.rum :as br]))
 
 ; See also:
-; - https://findka.com/biff/#subscriptions
+; - https://biff.findka.com/#subscriptions
 ; - https://biff.findka.com/codox/biff.rum.html#var-defatoms
 ; - https://biff.findka.com/codox/biff.rum.html#var-defderivations
 
@@ -30,6 +30,7 @@
 
   tab (get-in @route [:data :name] :crud)
 
+  ; :status is a special query that returns data about the currently authenticated user.
   sub-queries [:status
                {:doc-type :msg
                 :where [[:msg/sent-at 't]
