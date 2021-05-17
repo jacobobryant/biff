@@ -72,18 +72,20 @@
                   proj-ancestors (get-ancestors
                                    #(get-in libs [% :libs])
                                    (:libs config))
-                  proj-deps {:paths (if (fs/directory? (fs/file dir "resources"))
-                                      ["src" "resources"]
-                                      ["src"])
-                             :deps (into
-                                     (select-keys deps (:deps config))
-                                     (for [p proj-ancestors]
-                                       [(symbol (str group-id) (str p))
-                                        (if dev
-                                          {:local/root (str "../" p)}
-                                          {:git/url git-url
-                                           :deps/root (str "libs/" p)
-                                           :sha sha})]))}]]
+                  paths (filterv #(fs/directory? (fs/file dir %))
+                                 ["src" "resources"])
+                  proj-deps (merge
+                              (when (not-empty paths)
+                                {:paths paths})
+                              {:deps (into
+                                       (select-keys deps (:deps config))
+                                       (for [p proj-ancestors]
+                                         [(symbol (str group-id) (str p))
+                                          (if dev
+                                            {:local/root (str "../" p)}
+                                            {:git/url git-url
+                                             :deps/root (str "libs/" p)
+                                             :sha sha})]))})]]
       (when-not (fs/directory? dir)
         (fs/create-dirs dir))
       (spit (fs/file dir "deps.edn") (with-out-str (pprint proj-deps))))))
