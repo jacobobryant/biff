@@ -1,8 +1,8 @@
 # If you install more packages or make other changes to your server, add the
 # changes to this file (at least as documentation).
 
-set -e
 set -x
+set -e
 
 CLJ_VERSION=1.10.3.822
 

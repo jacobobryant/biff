@@ -131,14 +131,6 @@ uberjar anywhere as long as you set those environment variables somehow. It's
 assumed that you handle SSL elsewhere (e.g. with Nginx) and then proxy requests
 to the app on localhost.
 
-Deploying to [Render](https://render.com) would be interesting, though probably
-not worth the price increase over a plain VPS (3-4x more than a DigitalOcean
-droplet for equivalent RAM last I checked) unless you're planning to scale
-fast. You'll need to make a Dockerfile. I also don't know if they let you
-expose TCP ports, which is necessary for nREPL. (nREPL can work [over
-HTTP](https://blog.jakubholy.net/nrepl-over-http-with-drwabridge-in-2020/), but
-I'm not aware of any editors that support it).
-
 ### Server setup
 
 The project template includes a script for provisioning an Ubuntu server,
@@ -156,7 +148,7 @@ script on your new server, replacing `example.com` with your domain:
 ```bash
 scp infra/setup.sh root@example.com:
 ssh root@example.com
-./setup.sh
+bash setup.sh
 reboot
 ```
 
@@ -756,6 +748,17 @@ auto-authorized transactions via HTML forms.
 You can use Reagent/Re-frame/etc instead if you like. Mainly you'll just need a
 replacement for `biff.rum/defderivations`.
 
+## Other deployment options
+
+Deploying to [Render](https://render.com) would be interesting, though probably
+not worth the price increase over a plain VPS (3-4x more than a DigitalOcean
+droplet for equivalent RAM last I checked) unless you're planning to scale
+fast. You'll need to make a Dockerfile. I also don't know if they let you
+expose TCP ports, which is necessary for nREPL. (nREPL can work [over
+HTTP](https://blog.jakubholy.net/nrepl-over-http-with-drwabridge-in-2020/), but
+
+I'm not aware of any editors that support it).
+
 # Contributing
 
 There are several ways you can help out:
@@ -765,10 +768,11 @@ There are several ways you can help out:
    resources](#additional-resources)).
  - Submit PRs. See the [issues](https://github.com/jacobobryant/biff/issues).
 
-The easiest way to hack on Biff is to start a new project (see [Getting
-started](#getting-started)) and then change the `biff/main` and `biff/dev`
-dependencies in `deps.edn` to `{:local/root "/path/to/cloned/biff/repo/..."}`.
-You can also include the `biff/tests` library.
+The easiest way to hack on Biff is to run `bb libs:dev`, start a new project
+(see [Getting started](#getting-started)) and then change the `biff/main` and
+`biff/dev` dependencies in `deps.edn` to `{:local/root
+"/path/to/cloned/biff/repo/..."}`. You can also include the `biff/tests`
+library.
 
 ## Documentation
 
