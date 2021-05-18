@@ -26,7 +26,8 @@
                                                       "/css/"
                                                       "/cljs/"
                                                       "/img/"
-                                                      "/assets/"]}}]
+                                                      "/assets/"
+                                                      "/favicon.ico"]}}]
   (fn [req]
     (let [resource-handler (wrap-index-files
                              #(res/resource-request % root)
