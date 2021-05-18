@@ -75,7 +75,7 @@ If you ship something with Biff, I'll add it to the list.
 
 Requirements:
 
- - [clj](https://clojure.org/guides/getting_started), including rlwrap (try `which rlwrap`)
+ - [clj](https://clojure.org/guides/getting_started) >= 1.10.1.697
  - [node.js](https://nodejs.org/)
 
 If you're on MacOS, you might need to use AdoptOpenJDK (see [crux#894](https://github.com/juxt/crux/issues/894)).
