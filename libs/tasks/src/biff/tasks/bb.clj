@@ -1,4 +1,4 @@
-(ns biff.tasks.bb
+(ns ^:no-doc biff.tasks.bb
   (:require [babashka.fs :as fs]
             [babashka.process :refer [process check]]
             [bencode.core :as bencode]

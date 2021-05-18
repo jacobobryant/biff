@@ -1,5 +1,5 @@
 (ns biff.dev.girouette
-  "Helper functions for Girouette.
+  "Helper functions for Girouette (https://github.com/green-coder/girouette).
 
   Most of this code has been adapted from
   https://github.com/green-coder/girouette/blob/master/lib/processor/src/girouette/processor.clj.
@@ -166,8 +166,10 @@
          (spit output-file))))
 
 (defn garden-fn
-  "Wrapper around girouette.tw.core/make-api that merges your options with the
-  defaults. Returns the class-name->garden function."
+  "Wrapper around girouette.tw.core/make-api.
+
+  Merges your options with the defaults. Returns the class-name->garden
+  function."
   [{:keys [components color-map font-family-map]}]
   (:class-name->garden
     (make-api (into components* components)

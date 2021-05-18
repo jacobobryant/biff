@@ -1,7 +1,7 @@
 (ns biff.util
   "Utility functions with almost no dependencies.
 
-  The only exception is clojure.tools.namespace.repl, which is used by [[refresh]]."
+  The only exception is clojure.tools.namespace.repl, which is used by refresh."
   (:require
     [clojure.pprint :as pp]
     [clojure.set :as set]
@@ -24,7 +24,7 @@
        @biff.util/system). (:after-refresh @system) is a fully-qualified symbol which
        will be resolved and called after refreshing.
 
-       See [[start-system]] and [[system]]."
+       See start-system."
        []
        (let [{:keys [biff/after-refresh biff/stop]} @system]
          (doseq [f stop]
@@ -36,7 +36,7 @@
        "Starts a system from a config map and a collection of Biff components.
 
        Stores the system in the biff.util/system atom. See
-       See https://biff.findka.com/#system-composition and [[refresh]]."
+       See https://biff.findka.com/#system-composition and refresh."
        [config components]
        (reset! system (merge {:biff/stop '()} config))
        (reduce (fn [_ f]

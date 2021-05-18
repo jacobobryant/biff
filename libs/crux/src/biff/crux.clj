@@ -1,10 +1,10 @@
 (ns biff.crux
   "Helper functions for Crux.
-  Also implements \"Biff transactions\" and \"Biff queries\", both of which are
+
+  Also includes \"Biff transactions\" and \"Biff queries\", both of which are
   patterned after Firebase's. Biff transactions provide a higher level
-  interface over crux.api/start-node. See submit-tx. Biff queries are less
-  powerful than crux.api/q, but they support subscriptions (efficiently). See
-  handle-subscribe-event!."
+  interface over crux.api/start-node. Biff queries are less
+  powerful than crux.api/q, but they support subscriptions (efficiently)."
   (:require
     [biff.util :as bu]
     [biff.util.protocols :as proto]
@@ -68,6 +68,7 @@
 
 (defn start-node
   "A higher-level version of crux.api/start-node.
+
   Calls crux.api/sync before returning the node.
 
   topology   - One of #{:standalone :jdbc}.
@@ -105,6 +106,7 @@
 
 (defn use-crux
   "A Biff component for Crux.
+
   Sets :biff.crux/node to the crux node.
 
   topology,
@@ -125,20 +127,33 @@
         (update :biff/stop conj #(.close node)))))
 
 (defn wrap-db
-  [handler]
-  (fn [{:biff.crux/keys [node use-open-db] :as req}]
-    (let [db (delay ((if use-open-db crux/open-db crux/db) node))]
+  "Sets :biff.crux/db to a delayed db value on incoming requests."
+  [handler {:keys [node]}]
+  (fn [req]
+    (let [db (delay (crux/open-db node))]
       (try
         (handler (assoc req :biff.crux/db db))
         (finally
-          (when (and use-open-db (realized? db))
+          (when (realized? db)
             (.close @db)))))))
 
-(defn lazy-q [db query f]
+(defn lazy-q
+  "Calls crux.api/open-q and passes a lazy seq of the results to f.
+
+  f must process the results eagerly."
+  [db query f]
   (with-open [results (crux/open-q db query)]
     (f (iterator-seq results))))
 
-(defn q-entity [db kvs]
+(defn q-entity
+  "Retrieve the first document that matches a set of kv pairs.
+
+  Example:
+
+  (q-entity db [[:user/email \"foo@example.com\"]])
+  => {:crux.db/id #uuid \"some-uuid\"
+      :user/email \"foo@example.com\"}"
+  [db kvs]
   (ffirst
     (crux/q db
             {:find '[(pull doc [*])]
@@ -147,14 +162,24 @@
 
 ; === authorize ===
 
-(defmulti authorize (fn [& [{:keys [doc-type operation]}]]
-                      [doc-type operation]))
+(defmulti authorize
+  "Extend this multimethod to provide authorization rules.
+
+  See https://biff.findka.com/#authorization-rules"
+  (fn [& [{:keys [doc-type operation]}]]
+    [doc-type operation]))
 
 (defmethod authorize :default
   [& _]
   false)
 
-(defn check-read [sys {:keys [docs query db]}]
+(defn check-read
+  "Checks if a read operation passes authorization rules.
+
+  Returns nil on success, otherwise returns the first unauthorized document.
+
+  query: See https://biff.findka.com/#subscription-query-format"
+  [sys {:keys [docs query db]}]
   (first
     (remove (fn [doc]
               (some (fn [op]
@@ -172,39 +197,54 @@
             docs)))
 
 (defn check-write
-  [sys {:keys [changes db-before db-after server-timestamp]}]
-  (first
-    (remove (fn [{:keys [before after doc-id doc-type tx-item]}]
-              (some (fn [op]
-                      (let [docs (cond
-                                   (= op :update) [before after]
-                                   (some? after)  [after]
-                                   :default       [before])]
-                        (apply authorize
-                               (assoc sys
-                                      :doc-type doc-type
-                                      :operation op
-                                      :db-before db-before
-                                      :db-after db-after
-                                      :before before
-                                      :after after
-                                      :doc-id doc-id
-                                      :server-timestamp server-timestamp)
-                               docs)))
-                    [(case (mapv some? [before after])
-                       [false true] :create
-                       [true true] :update
-                       :delete)
-                     :write
-                     :rw]))
-            changes)))
+  "Checks if a write operation passes authorization rules.
+
+  Returns nil on success, otherwise returns the first unauthorized change (see
+  get-changes).
+
+  tx-info: See get-tx-info."
+  [sys tx-info]
+  (let [{:keys [changes db-before db-after server-timestamp]} tx-info]
+    (first
+      (remove (fn [{:keys [before after doc-id doc-type tx-item]}]
+                (some (fn [op]
+                        (let [docs (cond
+                                     (= op :update) [before after]
+                                     (some? after)  [after]
+                                     :default       [before])]
+                          (apply authorize
+                                 (assoc sys
+                                        :doc-type doc-type
+                                        :operation op
+                                        :db-before db-before
+                                        :db-after db-after
+                                        :before before
+                                        :after after
+                                        :doc-id doc-id
+                                        :server-timestamp server-timestamp)
+                                 docs)))
+                      [(case (mapv some? [before after])
+                         [false true] :create
+                         [true true] :update
+                         :delete)
+                       :write
+                       :rw]))
+              changes))))
 
 ; === biff tx ===
 
-(defn normalize-tx-doc [{:keys [server-timestamp
-                                doc-id
-                                tx-doc
-                                before]}]
+(defn normalize-tx-doc
+  "Converts a TX doc to a Crux doc.
+
+  server-timestamp: A Date object.
+  doc-id:           The Crux document ID.
+  before:           The Crux document's current value (i.e. before the
+                    transaction). nil if the document is being created.
+  tx-doc:           See https://biff.findka.com/#transactions."
+  [{:keys [server-timestamp
+           doc-id
+           tx-doc
+           before]}]
   (let [doc (cond-> tx-doc
               (map? doc-id) (merge doc-id)
               (some tx-doc [:db/merge :db/update]) (->> (merge before)))
@@ -236,7 +276,23 @@
                  (into {}))]
     doc))
 
-(defn get-changes [{:keys [db server-timestamp biff-tx random-uuids]}]
+(defn get-changes
+  "Return a list of changes that will occur after a transaction.
+
+  See https://biff.findka.com/#tx-docs.
+
+  server-timestamp: A Date object.
+  random-uuids:     A list of UUIDs to use for new documents.
+  biff-tx:          See https://biff.findka.com/#transactions.
+  db:               A Crux DB.
+
+  Each change is a map with the following keys:
+  :before   - The affected document's current value.
+  :after    - The affected document's value after the transaction occurs.
+  :tx-item  - An element of biff-tx.
+  :doc-type
+  :doc-id"
+  [{:keys [db server-timestamp biff-tx random-uuids]}]
   (for [[[[doc-type doc-id] tx-doc :as tx-item]
          random-uuid] (map vector biff-tx random-uuids)
         :let [doc-id (or doc-id random-uuid)
@@ -253,7 +309,7 @@
      :before before
      :after after}))
 
-(def biff-tx-schema
+(def ^:no-doc biff-tx-schema
   [:sequential {:registry {:doc-type keyword?
                            :doc-id any?
                            :ident [:cat :doc-type [:? :doc-id]]
@@ -261,7 +317,20 @@
                            :tx-item [:tuple :ident :doc]}}
    :tx-item])
 
-(defn get-tx-info [{:keys [biff/schema biff.crux/db]} biff-tx]
+(defn get-tx-info
+  "Return a map with information needed to authorize and run a transaction.
+
+  schema:  An implementation of biff.util.protocols/Schema.
+  db:      A delayed Crux DB.
+  biff-tx: See https://biff.findka.com/#transactions.
+
+  Returns the following keys:
+  :crux-tx            - A Crux transaction.
+  :changes            - See get-changes.
+  :server-timestamp   - A Date object.
+  :db-before          - @db.
+  :db-after           - (crux.api/with-tx @db crux-tx)."
+  [{:keys [biff/schema biff.crux/db]} biff-tx]
   (when-not (malc/validate biff-tx-schema (vec biff-tx))
     ; Ideally we'd include Malli's explain + humanize output, but it had some
     ; weird results (including an exception) when I tested it on a few
@@ -304,11 +373,16 @@
      :db-after (crux/with-tx @db crux-tx)
      :crux-tx crux-tx}))
 
-(defn submit-tx [{:biff.crux/keys [node authorize n-tried]
-                 :or {n-tried 0}
-                 :as sys}
-                 biff-tx]
-  (let [{:keys [crux-tx] :as tx-info} (get-tx-info sys biff-tx)
+(defn submit-tx
+  "Submits a Biff transaction.
+
+  node:      A Crux node.
+  authorize: true if the transaction is required to pass authorization rules
+             (default false).
+  biff-tx:   See https://biff.findka.com/#transactions."
+  [{:biff.crux/keys [node authorize] :as sys} biff-tx]
+  (let [n-tried (:biff.crux/n-tried sys 0)
+        {:keys [crux-tx] :as tx-info} (get-tx-info sys biff-tx)
         _ (when-let [bad-change (and authorize (check-write sys tx-info))]
             (bu/throw-anom :forbidden "TX not authorized."
                            bad-change))
@@ -322,7 +396,8 @@
                       (flush)
                       (Thread/sleep (* 1000 seconds))
                       ((wrap-db (fn [sys]
-                                  (submit-tx sys biff-tx)))
+                                  (submit-tx sys biff-tx))
+                                {:node node})
                        (update sys :biff.crux/n-tried (fnil inc 0))))
       :default (bu/throw-anom :conflict "TX failed, too much contention."
                               {:biff-tx biff-tx}))))
@@ -438,6 +513,19 @@
                                           :ident->doc ident->doc}])))))))
 
 (defn use-crux-sub-notifier
+  "Sends new query results to subscribed clients.
+
+  See https://biff.findka.com/#subscription-interface.
+
+  Sets :biff.crux/subscriptions to (atom #{}). To add subscriptions, insert
+  maps with these keys:
+  :biff/uid  - The subscriber's UID.
+  :client-id - The subscriber's Sente client ID.
+  :event-id  - The Sente event ID used to send this transaction.
+  :query     - The Biff query (see https://biff.findka.com/#subscription-query-format)
+
+  Adds a watch to connected-uids and removes subscriptions if their clients
+  disconnect."
   [{:keys [biff.sente/connected-uids
            biff.crux/node] :as sys}]
   (let [subscriptions (atom #{})
@@ -472,10 +560,18 @@
                            (flush))))))]
     (update sys :biff/stop conj #(.close listener))))
 
-(defn biff-q [{:keys [biff.crux/db
-                      biff.crux/fn-whitelist]
-               :as sys}
-              {:keys [id where doc-type] :as query}]
+(defn biff-q
+  "Executes a Biff query.
+
+  db:           A delayed Crux DB.
+  fn-whitelist: A collection of symbols for functions that are allowed to run
+                in the Crux query. Symbols for non-core functions must be
+                fully-qualified.
+  query:        See https://biff.findka.com/#subscription-query-format."
+  [{:keys [biff.crux/db
+           biff.crux/fn-whitelist]
+    :as sys}
+   {:keys [id where doc-type] :as query}]
   (let [fn-whitelist (into #{'= 'not= '< '> '<= '>= '== '!=} fn-whitelist)
         bad-fn (some (fn [clause]
                        (not (or (attr-clause? clause)
@@ -507,6 +603,9 @@
           docs)))
 
 (defn handle-subscribe-event!
+  "Sends query results to the client and subscribes them to future changes.
+
+  See use-crux-sub-notifier and https://biff.findka.com/#subscriptions."
   [{event-id :id
     {:keys [query action]} :?data
     :keys [client-id

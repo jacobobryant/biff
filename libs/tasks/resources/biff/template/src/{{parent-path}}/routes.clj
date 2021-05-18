@@ -1,6 +1,6 @@
 (ns {{parent-ns}}.routes
   (:require [biff.crux :as bcrux]
-            [biff.glue :as glue]
+            [biff.misc :as misc]
             [biff.rum :as br]
             [biff.util :as bu]
             [clojure.edn :as edn]
@@ -48,7 +48,12 @@
 
 ; See https://biff.findka.com/#receiving-transactions
 (defn form-tx [req]
-  (glue/handle-form-tx req {:coercions {:text identity}}))
+  (let [[biff-tx path] (misc/parse-form-tx
+                         req
+                         {:coercions {:text identity}})]
+    (bcrux/submit-tx (assoc req :biff.crux/authorize true) biff-tx)
+    {:status 302
+     :headers/location path}))
 
 ; See https://cljdoc.org/d/metosin/reitit/0.5.10/doc/introduction#ring-router
 (defn routes []

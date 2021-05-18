@@ -8,7 +8,7 @@
 (defn render
   "Given a Rum component f, returns a 200 response.
 
-  - m: If provided, merges this into the response."
+  m: If provided, merges this into the response."
   ([f opts m]
    (merge
      {:status 200

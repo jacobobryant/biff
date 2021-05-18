@@ -19,9 +19,6 @@
         middleware {:libs [util]
                     :deps [metosin/muuntaja
                            ring/ring-defaults]}
-        glue       {:libs [crux
-                           util]
-                    :deps [metosin/reitit]}
         tasks      {:libs [util]
                     :deps [buddy/buddy-sign
                            selmer/selmer]}
@@ -35,7 +32,6 @@
         main       {:libs [util
                            crux
                            client
-                           glue
                            misc
                            middleware
                            rum]}

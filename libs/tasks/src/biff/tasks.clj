@@ -1,4 +1,4 @@
-(ns biff.tasks
+(ns ^:no-doc biff.tasks
   (:require
     [buddy.core.nonce :as nonce]
     [clojure.java.io :as io]

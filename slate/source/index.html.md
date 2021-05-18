@@ -48,10 +48,8 @@ by anyone other than myself as far as I'm aware (hopefully that will change
 soon!). See also the [high priority
 issues](https://github.com/jacobobryant/biff/issues?q=is%3Aissue+is%3Aopen+label%3A%22high+priority%22).
 
-I've recently decided to [switch from
-entrepreneurship](https://news.findka.com/p/roots-and-branches-centralization)
-to freelancing and consulting, and I'm looking for opportunities to build
-things with Biff (and train others to as well). [Let me
+I've recently decided to start doing some freelancing, and I'm looking for
+opportunities to build things with Biff (and train others to as well). [Let me
 know](mailto:contact@jacobobryant.com) if you have any leads.
 
 Websites built with Biff (all mine so far):
@@ -504,11 +502,13 @@ HTML form POST, but you'll need an additional helper function:
 
 ```clojure
 (defn form-tx [req]
-  (biff.glue/handle-form-tx
-    req
-    ; This lets you coerce input field values to EDN values.
-    {:coercions {:text identity
-                 :checkbox #(= % "on")}}))
+  (let [[biff-tx path] (biff.misc/parse-form-tx
+                         req
+                         ; This lets you coerce input field values to EDN values.
+                         {:coercions {:text identity}})]
+    (biff.crux/submit-tx (assoc req :biff.crux/authorize true) biff-tx)
+    {:status 302
+     :headers/location path}))
 
 (defn ssr [{:keys [biff/uid biff.crux/db params/updated]}]
   ...

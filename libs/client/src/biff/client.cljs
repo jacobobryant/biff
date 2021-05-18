@@ -119,7 +119,7 @@
   "Start a Sente websocket connection and manage subscriptions.
 
   Returns the result of Sente's make-channel-socket-client! with a modified
-  send-fn (see [[wrap-send-fn]]).
+  send-fn (see wrap-send-fn).
 
   See also:
    - https://biff.findka.com/#subscriptions

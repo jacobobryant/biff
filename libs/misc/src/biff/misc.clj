@@ -1,25 +1,33 @@
 (ns biff.misc
+  "Functions that don't have enough siblings for their own library."
   (:require [biff.util :as bu]
             [biff.util.protocols :as proto]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
             [clj-http.client :as http]
             [clojure.core.async :as async]
+            [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [clojure.stacktrace :as st]
+            [clojure.walk :refer [postwalk]]
             [lambdaisland.uri :as uri]
             [malli.core :as malc]
             [malli.error :as male]
             [malli.registry :as malr]
             [nrepl.server :as nrepl]
-            [reitit.ring :as reitit]
+            [reitit.core :as reitit]
+            [reitit.ring :as reitit-ring]
             [ring.adapter.jetty9 :as jetty]
             [taoensso.sente :as sente]
             [taoensso.sente.server-adapters.jetty9 :as sente-jetty]))
 
-(defn use-nrepl [{:keys [biff.nrepl/port
-                         biff.nrepl/quiet]
-                  :as sys}]
+(defn use-nrepl
+  "Starts an nREPL server.
+
+  no-op if port is nil/false."
+  [{:keys [biff.nrepl/port
+           biff.nrepl/quiet]
+    :as sys}]
   (when port
     (nrepl/start-server :port port)
     (spit ".nrepl-port" (str port))
@@ -27,25 +35,37 @@
       (println "nrepl running on port" port)))
   sys)
 
-(defn use-reitit [{:biff.reitit/keys [routes default-handlers mode]
-                   :keys [biff/on-error]
-                   :as sys}]
+(defn use-reitit
+  "Sets :biff/handler from Reitit routes.
+
+  Also sets :biff.reitit/get-router to a function that returns the router.
+
+  routes,
+  default-handlers: Passed to Reitit.
+  on-error:         A handler that takes a request with :status set to one of
+                    #{404 405 406}. Added to default-handlers.
+  mode:             If set to :dev, the routes will be re-compiled on each
+                    request. routes is passed to biff.util/realize, so it can
+                    be a var or a zero-arg function."
+  [{:biff.reitit/keys [routes default-handlers mode]
+    :keys [biff/on-error]
+    :as sys}]
   (let [default-handlers (when on-error
                            (concat default-handlers
-                                   [(reitit/create-default-handler
+                                   [(reitit-ring/create-default-handler
                                       (->> [[:not-found 404]
                                             [:method-not-allowed 405]
                                             [:not-acceptable 406]]
                                            (map (fn [[k status]]
                                                   [k #(on-error (assoc % :status status))]))
                                            (into {})))]))
-        get-router (fn [] (reitit/router (bu/realize routes)))
+        get-router (fn [] (reitit-ring/router (bu/realize routes)))
         handler (fn []
                   (if (not-empty default-handlers)
-                    (reitit/ring-handler
+                    (reitit-ring/ring-handler
                       (get-router)
-                      (apply reitit/routes default-handlers))
-                    (reitit/ring-handler (get-router))))
+                      (apply reitit-ring/routes default-handlers))
+                    (reitit-ring/ring-handler (get-router))))
         [get-router handler] (if (= mode :dev)
                                [get-router #((handler) %)]
                                [(constantly (get-router)) (handler)])]
@@ -53,11 +73,15 @@
            :biff.reitit/get-router get-router
            :biff/handler handler)))
 
-(defn use-jetty [{:biff/keys [host port handler]
-                  :biff.jetty/keys [quiet websockets]
-                  :or {host "localhost"
-                       port 8080}
-                  :as sys}]
+(defn use-jetty
+  "Starts a Jetty web server.
+
+  websockets: A map from paths to handlers, e.g. {\"/api/chsk\" ...}."
+  [{:biff/keys [host port handler]
+    :biff.jetty/keys [quiet websockets]
+    :or {host "localhost"
+         port 8080}
+    :as sys}]
   (let [server (jetty/run-jetty handler
                                 {:host host
                                  :port port
@@ -68,28 +92,38 @@
       (println "Jetty running on" (str "http://" host ":" port)))
     (update sys :biff/stop conj #(jetty/stop-server server))))
 
-(defn jwt-encrypt [claims secret]
+(defn jwt-encrypt
+  "TODO add docstring"
+  [claims secret]
   (jwt/encrypt
     (-> claims
-      (assoc :exp (bu/add-seconds (java.util.Date.) (:exp-in claims)))
-      (dissoc :exp-in))
+        (assoc :exp (bu/add-seconds (java.util.Date.) (:exp-in claims)))
+        (dissoc :exp-in))
     (bu/base64-decode secret)
     {:alg :a256kw :enc :a128gcm}))
 
-(defn jwt-decrypt [token secret]
+(defn jwt-decrypt
+  "TODO add docstring"
+  [token secret]
   (bu/catchall
     (jwt/decrypt
       token
       (bu/base64-decode secret)
       {:alg :a256kw :enc :a128gcm})))
 
-(defn generate-secret [length]
-  (bu/base64-encode (nonce/random-bytes length)))
+(defn generate-secret
+  "Generates a base64 string from the given number of random bytes."
+  [n-bytes]
+  (bu/base64-encode (nonce/random-bytes n-bytes)))
 
-(defn assoc-url [url & kvs]
+(defn assoc-url
+  "Adds query parameters to a URL."
+  [url & kvs]
   (str (apply uri/assoc-query url kvs)))
 
-(defn send-mailgun [{:mailgun/keys [api-key endpoint from]} opts]
+(defn send-mailgun
+  "Sends an email with Mailgun."
+  [{:mailgun/keys [api-key endpoint from]} opts]
   (try
     (http/post endpoint
       {:basic-auth ["api" api-key]
@@ -99,7 +133,9 @@
       (println "send-mailgun failed:" (:body (ex-data e)))
       false)))
 
-(defn malli-registry [registry]
+(defn malli-registry
+  "Returns registry combined with the default registry."
+  [registry]
   (malr/composite-registry
     malc/default-registry
     registry))
@@ -112,7 +148,7 @@
                 :doc doc
                 :explain (proto/explain-human schema doc-type doc)}))))
 
-(defn doc-type* [schema doc doc-types]
+(defn- doc-type* [schema doc doc-types]
   (first (filter #(proto/valid? schema % doc) doc-types)))
 
 (defrecord MalliSchema [doc-types malli-opts]
@@ -150,13 +186,18 @@
       (get-in req [:headers "x-csrf-token"])
       (get-in req [:headers "x-xsrf-token"]))))
 
-(defn use-sente [{:keys [biff.sente/adapter
-                         biff.sente/event-handler
-                         biff.sente/route
-                         biff.reitit/routes]
-                  :or {adapter (sente-jetty/get-sch-adapter)
-                       route "/api/chsk"}
-                  :as sys}]
+(defn use-sente
+  "Starts a Sente channel socket and event router, and adds a Reitit route.
+
+  The keys returned by sente/make-channel-socket! are prefixed with biff.sente
+  and added to the system map."
+  [{:keys [biff.sente/adapter
+           biff.sente/event-handler
+           biff.sente/route
+           biff.reitit/routes]
+    :or {adapter (sente-jetty/get-sch-adapter)
+         route "/api/chsk"}
+    :as sys}]
   (let [{:keys [ajax-get-or-ws-handshake-fn
                 ajax-post-fn]
          :as result} (sente/make-channel-socket!
@@ -188,3 +229,47 @@
                                :post ajax-post-fn}])))
         (update :biff/stop into [#(async/close! (:ch-recv result))
                                  stop-router]))))
+
+(defn parse-form-tx
+  "Gets a Biff transaction from a form POST.
+
+  Returns a tuple of Biff transaction, redirect path. See
+  https://biff.findka.com/#receiving-transactions.
+
+  get-router: A function returning a Reitit router.
+  tx-info:    A map serialized as EDN.
+  coercions:  A map from keywords (field types) to coercion functions, e.g.
+              {:text identity, :checkbox #(= % \"on\")}.
+
+  tx-info has the following keys:
+  :tx           - A Biff transaction, with symbols (corresponding to field
+                  names) marking where field values should be inserted, e.g.
+                  {[:foo \"abc\"] {:foo/text 'text-field}}
+  :fields       - A map from symbols to field types, e.g. {'text-field :text}
+  :redirect     - The name of a Reitit route (a keyword). The route must have
+                  :biff/redirect true for redirects to be authorized.
+  :path-params,
+  :query-params - Maps used by Reitit to resolve the redirect path."
+  [{:keys [biff.reitit/get-router]
+    {:keys [tx-info] :as params} :params
+    :as req}
+   {:keys [coercions]}]
+  (let [{:keys [tx
+                fields
+                redirect
+                path-params
+                query-params]
+         :as tx-info} (edn/read-string tx-info)
+        route (reitit/match-by-name (get-router) redirect path-params)
+        path (reitit/match->path route query-params)
+        redirect-ok (get-in route [:data :biff/redirect])
+        tx (postwalk (fn [x]
+                       (if-some [field-type (get fields x)]
+                         ((get coercions field-type identity)
+                          (get params (keyword x)))
+                         x))
+                     tx)]
+    (if-not redirect-ok
+      (bu/throw-anom :incorrect "Invalid redirect route name."
+                     {:redirect redirect})
+      [tx path])))

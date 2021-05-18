@@ -19,11 +19,13 @@
   [use-env
    misc/use-nrepl
    bcrux/use-crux
-   #(update % :biff.sente/event-handler bcrux/wrap-db)
+   #(update % :biff.sente/event-handler
+            bcrux/wrap-db {:node (:biff.crux/node %)})
    misc/use-sente
    bcrux/use-crux-sub-notifier
    misc/use-reitit
-   #(update % :biff/handler bcrux/wrap-db)
+   #(update % :biff/handler
+            bcrux/wrap-db {:node (:biff.crux/node %)})
    #(update % :biff/handler wrap-authentication)
    mid/use-default-middleware
    #(assoc % :biff.jetty/websockets

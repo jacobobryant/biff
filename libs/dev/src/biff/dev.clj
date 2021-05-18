@@ -4,7 +4,7 @@
             [hawk.core :as hawk]))
 
 (defn use-hawk
-  "A component for Hawk (see https://github.com/wkf/hawk).
+  "A Biff component for Hawk. See https://github.com/wkf/hawk.
 
   callback: A zero-argument function to call whenever a file is saved. The
             function is called no more than once every 500 milliseconds.
