@@ -1,66 +1,51 @@
 (ns biff.middleware
-  (:require [clojure.java.io :as io]
-            [clojure.stacktrace :as st]
+  (:require [clojure.stacktrace :as st]
             [clojure.string :as str]
             [biff.util :as bu]
             [muuntaja.middleware :as muuntaja]
+            [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.defaults :as rd]
-            [ring.middleware.session.cookie :as cookie]
-            [ring.util.codec :as codec]
-            [ring.util.io :as rio]
-            [ring.util.request :as request]
-            [ring.util.time :as rtime]))
+            [ring.middleware.resource :as res]
+            [ring.middleware.session.cookie :as cookie]))
 
-(defn static-response [{:keys [request-method path path->file]}]
-  (let [file (path->file path)
-        file (if (some-> file (.isDirectory))
-               (path->file (str/replace-first path #"/?$" "/index.html"))
-               file)]
-    (when (some-> file (.isFile))
-      (bu/nest-string-keys
-        (merge {:status 200
-                :headers/Content-Length (str (.length file))
-                :headers/Last-Modified (rtime/format-date (rio/last-modified-date file))}
-               (when (not= :head request-method)
-                 {:body file})
-               (when (str/ends-with? (.getPath file) ".html")
-                 {:headers/Content-Type "text/html"}))
-        [:headers]))))
+(defn wrap-index-files [handler {:keys [index-files]}]
+  (fn [req]
+    (->> index-files
+         (map #(update req :uri str/replace-first #"/?$" (str "/" %)))
+         (into [req])
+         (some (wrap-content-type handler)))))
 
-(defn wrap-static [handler {:keys [root
-                                   path->file
-                                   spa-path
-                                   spa-exclude-paths
-                                   spa-client-paths]
-                            :or {root "public"
-                                 path->file (comp io/file io/resource)
-                                 spa-exclude-paths ["/js/"
-                                                    "/css/"
-                                                    "/cljs/"
-                                                    "/img/"
-                                                    "/assets/"]}}]
-  (fn [{:keys [request-method] :as req}]
-    (let [static-resp (delay
-                        (when (#{:get :head} request-method)
-                          (static-response
-                            {:path (str root (codec/url-decode (request/path-info req)))
-                             :path->file path->file
-                             :request-method request-method})))
+(defn wrap-resource [handler {:keys [root
+                                     index-files
+                                     spa-path
+                                     spa-exclude-paths
+                                     spa-client-paths]
+                              :or {root "public"
+                                   index-files ["index.html"]
+                                   spa-exclude-paths ["/js/"
+                                                      "/css/"
+                                                      "/cljs/"
+                                                      "/img/"
+                                                      "/assets/"]}}]
+  (fn [req]
+    (let [resource-handler (wrap-index-files
+                             #(res/resource-request % root)
+                             {:index-files index-files})
+          static-resp (resource-handler req)
           handler-resp (delay (handler req))
           spa-resp (delay
-                     (when (and (#{:get :head} request-method)
-                                spa-path
+                     (when (and spa-path
                                 (if spa-client-paths
                                   (contains? spa-client-paths (:uri req))
                                   (not (some #(str/starts-with? (:uri req) %)
                                              spa-exclude-paths))))
-                       (static-response {:path (str root spa-path)
-                                         :path->file path->file
-                                         :request-method request-method})))]
+                       (resource-handler (assoc req :uri spa-path))))]
       (cond
-        @static-resp @static-resp
-        (and (= 404 (:status @handler-resp)) @spa-resp) @spa-resp
-        :default @handler-resp))))
+        static-resp static-resp
+        (and (or (not @handler-resp)
+                 (= 404 (:status @handler-resp)))
+             @spa-resp) @spa-resp
+        :else @handler-resp))))
 
 (defn wrap-flat-keys [handler]
   (fn [{:keys [session params] :as req}]
@@ -129,11 +114,11 @@
         wrap-flat-keys
         muuntaja/wrap-params
         muuntaja/wrap-format
-        (wrap-static (select-keys opts [:root
-                                        :path->file
-                                        :spa-path
-                                        :spa-client-paths
-                                        :spa-exclude-paths]))
+        (wrap-resource (select-keys opts [:root
+                                          :index-files
+                                          :spa-path
+                                          :spa-client-paths
+                                          :spa-exclude-paths]))
         (rd/wrap-defaults ring-defaults)
         (wrap-internal-error {:on-error on-error})
         wrap-log-requests)))
