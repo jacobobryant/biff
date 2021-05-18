@@ -5,6 +5,7 @@ set -e
 set +x
 
 # Build
+echo Building...
 ./task build
 
 # Release

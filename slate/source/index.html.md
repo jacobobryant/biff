@@ -121,22 +121,21 @@ first.
 Stop the app if it's running, then run `./task build` to generate assets (HTML,
 CSS, CLJS) and build an uberjar at `target/app.jar`.
 
-If you use the server setup script below, you won't need to run this. It be will
-done on the server after git push.
-
-### Production
-
 Production configuration is stored in `config/prod.env`. You can deploy your
 uberjar anywhere as long as you set those environment variables somehow. It's
 assumed that you handle SSL elsewhere (e.g. with Nginx) and then proxy requests
 to the app on localhost.
 
+If you use the server setup script below, you won't need to run `./task build`
+locally since it will be done on the server after git push.
+
 ### Server setup
 
 The project template includes a script for provisioning an Ubuntu server,
-including push-to-deploy. I've tested it with DigitalOcean.
+including push-to-deploy. The server should have at least 2 GB of RAM (for
+building). I've tested it with DigitalOcean.
 
-If using DigitalOcean: first create a droplet (Ubuntu 20.04 LTS). I usually do
+If using DigitalOcean: first create a droplet (Ubuntu 20.04 LTS). Switch to
 Regular Intel at $10/month. Add monitoring. Make sure your SSH key is selected.
 (If needed, go to Settings and add your SSH key, then start over). Set the
 hostname to something distinctive. After the droplet is created, go to
@@ -756,7 +755,6 @@ droplet for equivalent RAM last I checked) unless you're planning to scale
 fast. You'll need to make a Dockerfile. I also don't know if they let you
 expose TCP ports, which is necessary for nREPL. (nREPL can work [over
 HTTP](https://blog.jakubholy.net/nrepl-over-http-with-drwabridge-in-2020/), but
-
 I'm not aware of any editors that support it).
 
 # Contributing
