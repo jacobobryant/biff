@@ -75,10 +75,11 @@ If you ship something with Biff, I'll add it to the list.
 
 Requirements:
 
- - [clj](https://clojure.org/guides/getting_started) >= 1.10.1.697
+ - [clj](https://clojure.org/guides/getting_started) (v1.10.1.697+)
  - [node.js](https://nodejs.org/)
 
-If you're on MacOS, you might need to use AdoptOpenJDK (see [crux#894](https://github.com/juxt/crux/issues/894)).
+See [Troubleshooting](#troubleshooting) if you run into any problems.
+
 
 Run this command to create a new Biff project:
 
@@ -786,3 +787,20 @@ cd ..
 After that, you can run `bb slate:dev` and edit `slate/source/index.html.md`
 to work on the documentation. See the [Slate
 README](https://github.com/jacobobryant/biff/tree/master/slate).
+
+# Troubleshooting
+
+### `clojure crashed, killed by SIGABRT.` on Mac
+
+Try using AdoptOpenJDK (see [crux#894](https://github.com/juxt/crux/issues/894)).
+
+### `UnsatisfiedLinkError` on M1 Mac
+
+This is a RocksDB issue, see
+[rocksdb#7720](https://github.com/facebook/rocksdb/issues/7720). In the mean
+time you can run a [different JDK with
+Rosetta](https://itnext.io/how-to-install-x86-and-arm-jdks-on-the-mac-m1-apple-silicon-using-sdkman-872a5adc050d).
+
+Example of full error message:
+
+`Execution error (UnsatisfiedLinkError) at java.lang.ClassLoader$NativeLibrary/load0 (ClassLoader.java:-2). /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: dlopen(/private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib, 1): no suitable image found. Did find: /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: mach-o, but wrong architecture /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: mach-o, but wrong architecture`
