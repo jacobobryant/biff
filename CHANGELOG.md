@@ -5,6 +5,7 @@ if you wanted to see the hash for a particular section in this file, you could
 use git blame.
 
 ## [Unreleased]
+- Don't break subscriptions when an auth rule fails
 
 ## 2021-05-14
 ### Added
