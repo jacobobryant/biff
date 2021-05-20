@@ -624,8 +624,16 @@
                         :event-id event-id
                         :query query}]
       (when (= action :subscribe)
-        (send-fn client-id [event-id {:ident->doc (biff-q sys query)
-                                      :query query}]))
+        (try
+          (send-fn client-id [event-id {:ident->doc (biff-q sys query)
+                                        :query query}])
+          (catch Exception e
+            ; biff.client/maintain-subscriptions waits until initial query
+            ; results have been received before it continues processing
+            ; subscriptions, so we need to send something.
+            (send-fn client-id [event-id {:ident->doc {}
+                                          :query query}])
+            (throw e))))
       (when-not (:static query)
         (case action
           :subscribe   (swap! subscriptions conj subscription)

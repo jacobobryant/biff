@@ -89,6 +89,8 @@
             old-subs (set/difference old-subs new-subs)
             new-subs (vec (set/difference new-subs tmp))
             new-unsub-fns (when (not-empty new-subs)
+                            ; TODO put a timeout on this somehow so that if
+                            ; sub-fn result never delivers, we don't wait forever.
                             (<! (async/map vector (map sub-fn new-subs))))]
         (swap! sub->unsub-fn merge (zipmap new-subs new-unsub-fns))
         (doseq [f (map @sub->unsub-fn old-subs)]
