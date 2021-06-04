@@ -45,7 +45,7 @@
               [(<= #inst "1970" t)]]})
 
   ; Test out Girouette classes (only works in dev, not prod)
-  ((requiring-resolve '{{parent-path}}.dev.css/class-name->garden)
+  ((requiring-resolve '{{parent-ns}}.dev.css/class-name->garden)
    "bg-blue-200")
 
   )

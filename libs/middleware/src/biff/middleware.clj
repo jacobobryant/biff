@@ -110,7 +110,7 @@
               (printf "%s\n" (.getMessage t))
               (some-> (ex-data t) bu/pprint)))
           (flush)
-          (on-error (assoc req :status status :ex t)))))))
+          ((wrap-flat-keys on-error) (assoc req :status status :ex t)))))))
 
 (defn wrap-log-requests
   "Prints status, request method and response status for each request."

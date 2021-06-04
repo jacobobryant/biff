@@ -12,7 +12,6 @@
             [{{main-ns}} :as core]
             [{{main-ns}}-test]
             [{{parent-ns}}.dev.css :as css]
-            [{{parent-ns}}.env :refer [use-env]]
             [{{parent-ns}}.views :refer [static-pages]]))
 
 (defn tests []
