@@ -4,8 +4,10 @@ I am far too lazy to follow semver. The commit hash is the version. I suppose
 if you wanted to see the hash for a particular section in this file, you could
 use git blame.
 
-## [Unreleased]
-- Don't break subscriptions when an auth rule fails
+## 2021-06-04
+### Fixed
+- Don't break subscriptions when an auth rule rejects a transaction
+- JDK8 works now (downgraded to Jetty 9)
 
 ## 2021-05-14
 ### Added
