@@ -46,7 +46,7 @@
                                         :sha "11be51a6830648278ccbd6589525645af38d23a5"
                                         :deps/root "lib/girouette"}
         hawk/hawk                      {:mvn/version "0.2.11"}
-        info.sunng/ring-jetty9-adapter {:mvn/version "0.15.1"}
+        info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"}
         juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
         juxt/crux-jdbc                 {:mvn/version "21.04-1.16.0-beta"}
         juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
