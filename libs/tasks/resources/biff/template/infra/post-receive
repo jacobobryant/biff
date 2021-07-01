@@ -9,14 +9,14 @@ echo Building...
 ./task build
 
 # Release
-dir="$HOME/releases/$(date "+%Y-%m-%d_%T")"
+dir="$HOME/releases/$(date "+%Y-%m-%d_%H-%M-%S")"
 mkdir -p $dir
 cp target/app.jar ~/config.env $dir
 cat > $dir/run.sh << EOD
 #!/usr/bin/env bash
-cd $dir
-source config.env
-java -jar app.jar
+cd $HOME
+source $dir/config.env
+java -jar $dir/app.jar
 EOD
 chmod +x $dir/run.sh
 rm -f ~/releases/current

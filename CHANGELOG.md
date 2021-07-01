@@ -5,6 +5,9 @@ if you wanted to see the hash for a particular section in this file, you could
 use git blame.
 
 ## Unreleased
+### Changed
+- In new projects, run the production jar from the home directory instead of
+  the release directory.
 ### Fixed
 - Make biff.util/prepend-keys ignore non-keyword keys instead of crashing.
 
