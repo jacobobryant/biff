@@ -131,7 +131,7 @@
   [handler {:keys [node]}]
   (fn [req]
     ;; Not sure if delay makes a difference, but we're stuck with it now.
-    (handler (assoc req :biff.crux/db (delay (crux/db node)))))).
+    (handler (assoc req :biff.crux/db (delay (crux/db node))))))
 
 (defn lazy-q
   "Calls crux.api/open-q and passes a lazy seq of the results to f.
