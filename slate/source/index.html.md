@@ -709,22 +709,23 @@ need to coordinate multiple servers:
 ```clojure
 (defn my-task [sys]
   (println "This task will run every hour,"
-           "starting 5 minutes after system start.")
+           "starting 5 minutes after system start."))
 
 (def recurring-tasks
   [{:offset-minutes 5
     :period-minutes 60
     :task-fn #'my-task}])
 
-(defn use-chime [{:keys [biff/jobs] :as sys}]
+(defn use-chime [sys]
   (update sys :biff/stop into
-    (for [{:keys [offset-minutes period-minutes task-fn]} jobs]
-      (let [closeable (chime.core/chime-at
-                        (->> (biff.util/add-seconds (java.util.Date.) (* 60 offset-minutes))
-                             (iterate #(biff.util/add-seconds % (* period-minutes 60)))
-                             (map #(.toInstant %)))
-                        (fn [_] (task-fn sys)))]
-        #(.close closeable)))))
+          (for [{:keys [offset-minutes period-minutes task-fn]} recurring-tasks]
+            (let [closeable (chime.core/chime-at
+                              (->> (biff.util/add-seconds (java.util.Date.)
+                                                          (* 60 offset-minutes))
+                                   (iterate #(biff.util/add-seconds % (* period-minutes 60)))
+                                   (map #(.toInstant %)))
+                              (fn [_] (task-fn sys)))]
+              #(.close closeable)))))
 ```
 
 ## Babashka tasks
