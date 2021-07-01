@@ -7,7 +7,7 @@
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "d1101f0fa31df89973757e732bc80918744509f6"},
+   :sha "bfe8ad1af316f3d6730bcc300c19898b53272f70"},
   nrepl/nrepl {:mvn/version "0.8.3"},
   info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"},
   buddy/buddy-sign {:mvn/version "3.4.1"},
