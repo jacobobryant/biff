@@ -1,10 +1,10 @@
 {:paths ["src"],
  :deps
- {juxt/crux-core {:mvn/version "21.04-1.16.0-beta"},
-  juxt/crux-jdbc {:mvn/version "21.04-1.16.0-beta"},
-  juxt/crux-rocksdb {:mvn/version "21.04-1.16.0-beta"},
+ {pro.juxt.crux/crux-core {:mvn/version "1.17.1"},
+  pro.juxt.crux/crux-jdbc {:mvn/version "1.17.1"},
+  pro.juxt.crux/crux-rocksdb {:mvn/version "1.17.1"},
   metosin/malli {:mvn/version "0.5.1"},
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "eb65e992aa02f8903be1424ffe8baf276ecdac34"}}}
+   :sha "d1101f0fa31df89973757e732bc80918744509f6"}}}
