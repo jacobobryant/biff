@@ -3,9 +3,9 @@
  :libs {util       {:deps [org.clojure/tools.namespace
                            org.slf4j/slf4j-nop]}
         crux       {:libs [util]
-                    :deps [juxt/crux-core
-                           juxt/crux-jdbc
-                           juxt/crux-rocksdb
+                    :deps [pro.juxt.crux/crux-core
+                           pro.juxt.crux/crux-jdbc
+                           pro.juxt.crux/crux-rocksdb
                            metosin/malli]}
         misc       {:libs [util]
                     :deps [buddy/buddy-sign
@@ -47,9 +47,9 @@
                                         :deps/root "lib/girouette"}
         hawk/hawk                      {:mvn/version "0.2.11"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"}
-        juxt/crux-core                 {:mvn/version "21.04-1.16.0-beta"}
-        juxt/crux-jdbc                 {:mvn/version "21.04-1.16.0-beta"}
-        juxt/crux-rocksdb              {:mvn/version "21.04-1.16.0-beta"}
+        pro.juxt.crux/crux-core        {:mvn/version "1.17.1"}
+        pro.juxt.crux/crux-jdbc        {:mvn/version "1.17.1"}
+        pro.juxt.crux/crux-rocksdb     {:mvn/version "1.17.1"}
         lambdaisland/uri               {:mvn/version "1.4.54"}
         metosin/malli                  {:mvn/version "0.5.1"}
         metosin/muuntaja               {:mvn/version "0.6.8"}
