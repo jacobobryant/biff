@@ -178,7 +178,11 @@
     (name k)))
 
 (defn prepend-keys [ns-segment m]
-  (map-keys #(prepend-ns ns-segment %) m))
+  (->> m
+       (keep (fn [[k v]]
+               (when (keyword? k)
+                 [(prepend-ns ns-segment k) v])))
+       (into {})))
 
 (defn nest-string-keys [m ks]
   (let [ks (set ks)]

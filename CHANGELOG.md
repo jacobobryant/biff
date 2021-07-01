@@ -4,6 +4,10 @@ I am far too lazy to follow semver. The commit hash is the version. I suppose
 if you wanted to see the hash for a particular section in this file, you could
 use git blame.
 
+## Unreleased
+### Fixed
+- Make biff.util/prepend-keys ignore non-keyword keys instead of crashing.
+
 ## 2021-06-04
 ### Fixed
 - Don't break subscriptions when an auth rule rejects a transaction
