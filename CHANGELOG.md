@@ -8,6 +8,8 @@ use git blame.
 ### Changed
 - In new projects, run the production jar from the home directory instead of
   the release directory.
+- Use crux.api/db instead of crux.api/open-db when adding db to incoming
+  requests and events.
 ### Fixed
 - Make biff.util/prepend-keys ignore non-keyword keys instead of crashing.
 

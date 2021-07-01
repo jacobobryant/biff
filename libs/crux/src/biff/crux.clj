@@ -130,12 +130,8 @@
   "Sets :biff.crux/db to a delayed db value on incoming requests."
   [handler {:keys [node]}]
   (fn [req]
-    (let [db (delay (crux/open-db node))]
-      (try
-        (handler (assoc req :biff.crux/db db))
-        (finally
-          (when (realized? db)
-            (.close @db)))))))
+    ;; Not sure if delay makes a difference, but we're stuck with it now.
+    (handler (assoc req :biff.crux/db (delay (crux/db node)))))).
 
 (defn lazy-q
   "Calls crux.api/open-q and passes a lazy seq of the results to f.
