@@ -12,6 +12,7 @@
                            clj-http/clj-http
                            com.taoensso/sente
                            info.sunng/ring-jetty9-adapter
+                           jarohen/chime
                            lambdaisland/uri
                            metosin/malli
                            metosin/reitit-ring
@@ -47,9 +48,7 @@
                                         :deps/root "lib/girouette"}
         hawk/hawk                      {:mvn/version "0.2.11"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"}
-        pro.juxt.crux/crux-core        {:mvn/version "1.17.1"}
-        pro.juxt.crux/crux-jdbc        {:mvn/version "1.17.1"}
-        pro.juxt.crux/crux-rocksdb     {:mvn/version "1.17.1"}
+        jarohen/chime                  {:mvn/version "0.3.3"}
         lambdaisland/uri               {:mvn/version "1.4.54"}
         metosin/malli                  {:mvn/version "0.5.1"}
         metosin/muuntaja               {:mvn/version "0.6.8"}
@@ -59,6 +58,9 @@
         org.clojure/tools.analyzer     {:mvn/version "1.0.0"}
         org.clojure/tools.namespace    {:mvn/version "1.1.0"}
         org.slf4j/slf4j-nop            {:mvn/version "1.8.0-beta4"}
+        pro.juxt.crux/crux-core        {:mvn/version "1.17.1"}
+        pro.juxt.crux/crux-jdbc        {:mvn/version "1.17.1"}
+        pro.juxt.crux/crux-rocksdb     {:mvn/version "1.17.1"}
         ring/ring-defaults             {:mvn/version "0.3.2"}
         rum/rum                        {:mvn/version "0.11.4"}
         selmer/selmer                  {:mvn/version "1.12.40"}}}
