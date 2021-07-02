@@ -122,6 +122,9 @@
   [url & kvs]
   (str (apply uri/assoc-query url kvs)))
 
+(defn parse-url [url]
+  (bu/catchall (uri/uri url)))
+
 (defn send-mailgun
   "Sends an email with Mailgun."
   [{:mailgun/keys [api-key endpoint from]} opts]

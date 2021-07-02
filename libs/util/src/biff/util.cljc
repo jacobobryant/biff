@@ -6,6 +6,7 @@
     [clojure.pprint :as pp]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]
+    [clojure.stacktrace :as st]
     [clojure.string :as str]
     [clojure.walk :refer [postwalk]]
     [biff.util.http :as http]
@@ -84,6 +85,15 @@
 
 (defn map-to [f xs]
   (map-from-to identity f xs))
+
+(defn assoc-some [m & kvs]
+  (or (some->> kvs
+               (partition 2)
+               (filter (comp some? second))
+               (apply concat)
+               not-empty
+               (apply assoc m))
+      m))
 
 (defn ppr-str [x]
   (with-out-str
@@ -391,9 +401,12 @@
 
      (defmacro pprint-ex [& body]
        `(try
-          (bu/pprint ~@body)
+          (pprint ~@body)
           (catch ~'Exception e#
-            (st/print-stack-trace e#)))))
+            (st/print-stack-trace e#))))
+
+     (defn parse-uuid [x]
+       (catchall (java.util.UUID/fromString x))))
 
    :cljs
    (do

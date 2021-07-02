@@ -126,6 +126,9 @@
         (assoc :biff.crux/node node)
         (update :biff/stop conj #(.close node)))))
 
+(defn assoc-db [{:keys [biff.crux/node] :as sys}]
+  (assoc sys :biff.crux/db (delay (crux/db node))))
+
 (defn wrap-db
   "Sets :biff.crux/db to a delayed db value on incoming requests."
   [handler {:keys [node]}]
@@ -134,8 +137,11 @@
     (handler (assoc req :biff.crux/db (delay (crux/db node))))))
 
 (defn lazy-q
-  "Calls crux.api/open-q and passes a lazy seq of the results to f.
+  "Deprecated. Hard to pass in additional arguments for open-q without
+  making the call signature weird, and isn't that much shorter than
+  using open-q + with-open directly anyway.
 
+  Calls crux.api/open-q and passes a lazy seq of the results to f.
   f must process the results eagerly."
   [db query f]
   (with-open [results (crux/open-q db query)]
