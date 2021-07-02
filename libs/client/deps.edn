@@ -4,4 +4,4 @@
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "30cac4e57e0bee66dcfdf83b8e91ed1cfd7d2018"}}}
+   :sha "8975c76acdbfdf7b56a896279155ec01980604e0"}}}

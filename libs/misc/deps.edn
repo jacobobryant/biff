@@ -1,13 +1,14 @@
 {:paths ["src"],
  :deps
- {clj-http/clj-http {:mvn/version "3.12.1"},
+ {jarohen/chime {:mvn/version "0.3.3"},
+  clj-http/clj-http {:mvn/version "3.12.1"},
   metosin/reitit-ring {:mvn/version "0.5.13"},
   com.taoensso/sente {:mvn/version "1.16.2"},
   metosin/malli {:mvn/version "0.5.1"},
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "30cac4e57e0bee66dcfdf83b8e91ed1cfd7d2018"},
+   :sha "8975c76acdbfdf7b56a896279155ec01980604e0"},
   nrepl/nrepl {:mvn/version "0.8.3"},
   info.sunng/ring-jetty9-adapter {:mvn/version "0.14.3"},
   buddy/buddy-sign {:mvn/version "3.4.1"},
