@@ -287,7 +287,7 @@
             midnight UTC.
   :offset - How many minutes forward to shift the starting time (default 0)."
   [{:keys [biff.chime/tasks] :as sys}]
-  (let [now (java.util.Date)]
+  (let [now (java.util.Date.)]
     (update sys :biff/stop into
             (for [{:keys [offset period]
                    task-fn :fn
