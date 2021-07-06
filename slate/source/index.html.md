@@ -23,12 +23,6 @@ Biff is designed to make web development with Clojure fast and easy [without
 compromising](#design-philosophy) on simplicity. It prioritizes small-to-medium
 sized projects.
 
-As my schedule allows, I'm happy to provide free mentoring (answering
-questions, reviewing code, pair programming, etc) to anyone who wants to learn
-Clojure web dev with Biff. I'm also available for consulting if you'd like to
-use Biff in your business. In either case, fill out [this quick
-survey](https://airtable.com/shrKqm1iT3UWySuxe).
-
 Distinctive features:
 
 - **Query subscriptions**. Specify what data the front end needs declaratively,
@@ -53,10 +47,6 @@ stable/production ready, with the caveat that it hasn't yet been used seriously
 by anyone other than myself as far as I'm aware (hopefully that will change
 soon!). See also the [high priority
 issues](https://github.com/jacobobryant/biff/issues?q=is%3Aissue+is%3Aopen+label%3A%22high+priority%22).
-
-I've recently decided to start doing some freelancing, and I'm looking for
-opportunities to build things with Biff (and train others to as well). [Let me
-know](mailto:contact@jacobobryant.com) if you have any leads.
 
 Websites built with Biff (all mine so far):
 
