@@ -10,12 +10,12 @@
 
   m: If provided, merges this into the response."
   ([f opts m]
-   (merge
-     {:status 200
-      :headers/Content-Type "text/html; charset=utf-8"
-      :body (rum/render-static-markup (f opts))}
-     m))
-  ([f opts] (render f opts nil)))
+   (merge (render (f opts)) m))
+  ([f opts] (render f opts nil))
+  ([body]
+   {:status 200
+    :headers/Content-Type "text/html; charset=utf-8"
+    :body (rum/render-static-markup body)}))
 
 (defn unsafe
   "Return a map with :dangerouslySetInnerHTML, optionally merged into m."
