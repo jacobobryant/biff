@@ -7,6 +7,11 @@
                            pro.juxt.crux/crux-jdbc
                            pro.juxt.crux/crux-rocksdb
                            metosin/malli]}
+        xtdb       {:libs [util]
+                    :deps [com.xtdb/xtdb-core
+                           com.xtdb/xtdb-jdbc
+                           com.xtdb/xtdb-rocksdb
+                           metosin/malli]}
         misc       {:libs [util]
                     :deps [buddy/buddy-sign
                            clj-http/clj-http
@@ -43,6 +48,9 @@
  :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}
         clj-http/clj-http              {:mvn/version "3.12.1"}
         com.taoensso/sente             {:mvn/version "1.16.2"}
+        com.xtdb/xtdb-core             {:mvn/version "1.19.0"}
+        com.xtdb/xtdb-jdbc             {:mvn/version "1.19.0"}
+        com.xtdb/xtdb-rocksdb          {:mvn/version "1.19.0"}
         girouette/girouette            {:git/url "https://github.com/green-coder/girouette"
                                         :sha "11be51a6830648278ccbd6589525645af38d23a5"
                                         :deps/root "lib/girouette"}

@@ -1,0 +1,10 @@
+{:paths ["src"],
+ :deps
+ {com.xtdb/xtdb-core {:mvn/version "1.19.0"},
+  com.xtdb/xtdb-jdbc {:mvn/version "1.19.0"},
+  com.xtdb/xtdb-rocksdb {:mvn/version "1.19.0"},
+  metosin/malli {:mvn/version "0.5.1"},
+  biff/util
+  {:git/url "https://github.com/jacobobryant/biff",
+   :deps/root "libs/util",
+   :sha "4ddc500101eb3ccbd47357ed75bcb2d4cea52559"}}}
