@@ -75,7 +75,13 @@
               :sizes "16x16"
               :href icon}])
     [:meta {:charset "utf-8"}]
-    (some-> font-families g-fonts)
+    (when (not-empty font-families)
+      (list
+        [:link {:href "https://fonts.googleapis.com", :rel "preconnect"}]
+        [:link {:crossorigin "crossorigin",
+                :href "https://fonts.gstatic.com",
+                :rel "preconnect"}]
+        (some-> font-families g-fonts)))
     head]
    [:body
     {:style {:position "absolute"
