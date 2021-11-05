@@ -36,7 +36,7 @@
                            org.clojure/clojurescript
                            org.clojure/tools.analyzer]}
         main       {:libs [util
-                           crux
+                           xtdb
                            client
                            misc
                            middleware
