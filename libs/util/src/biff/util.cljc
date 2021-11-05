@@ -75,6 +75,11 @@
 (defn map-vals [f m]
   (into {} (map (fn [[k v]] [k (f v)]) m)))
 
+(defn group-by-to [f g xs]
+  (->> xs
+       (group-by f)
+       (map-vals g)))
+
 (defn map-from-to [f g xs]
   (->> xs
        (map (juxt f g))
@@ -337,6 +342,11 @@
        ([date out-format]
         (parse-format-date date nil out-format)))
 
+     (defn crop-date [d fmt]
+       (-> d
+           (format-date fmt)
+           (parse-date fmt)))
+
      (defn last-midnight [t]
        (-> t
            inst-ms
@@ -406,7 +416,25 @@
             (st/print-stack-trace e#))))
 
      (defn parse-uuid [x]
-       (catchall (java.util.UUID/fromString x))))
+       (catchall (java.util.UUID/fromString x)))
+
+     (def http-registry (atom {}))
+
+     (defmacro defhttp
+       [& args]
+       (let [[k & args] (if (string? (first args))
+                          (conj args (ns-name *ns*))
+                          args)
+             [uri method params & body] args]
+         `(swap! http-registry assoc-in ['~k ~uri ~method]
+                 (fn [req#]
+                   ((fn ~params (b/cond ~@body))
+                    req#
+                    (:params req#))))))
+
+     (defmacro http-routes
+       [& [k]]
+       `(vec (get (deref http-registry) '~(or k (ns-name *ns*))))))
 
    :cljs
    (do
@@ -418,3 +446,73 @@
 (defn wrap-wtf [handler]
   (fn [req]
     (doto (handler (doto req pprint)) pprint)))
+
+(defn something [x]
+  (when (or (not (seqable? x)) (seq x))
+    x))
+
+(defn doc-schema [req & [opt]]
+  (vec
+    (concat
+      [:map {:closed true}
+       [:xt/id]]
+      (map vector req)
+      (map #(vector % {:optional true}) opt))))
+
+(defn mean [coll]
+  (let [sum (apply + coll)
+        count (count coll)]
+    (if (pos? count)
+      (/ sum count)
+      0)))
+
+(defn median [coll]
+  (let [sorted (sort coll)
+        cnt (count sorted)
+        halfway (quot cnt 2)]
+    (if (odd? cnt)
+      (nth sorted halfway)
+      (let [bottom (dec halfway)
+            bottom-val (nth sorted bottom)
+            top-val (nth sorted halfway)]
+        (mean [bottom-val top-val])))))
+
+(defn- expand-time [x]
+  (if (= x :now)
+    (java.util.Date.)
+    x))
+
+(defn seconds-between [t1 t2]
+  (quot (- (inst-ms (expand-time t2)) (inst-ms (expand-time t1))) 1000))
+
+(defn duration [x unit]
+  (case unit
+    :seconds x
+    :minutes (* x 60)
+    :hours (* x 60 60)
+    :days (* x 60 60 24)
+    :weeks (* x 60 60 24 7)))
+
+(defn elapsed? [t1 t2 x unit]
+  (< (duration x unit)
+     (seconds-between t1 t2)))
+
+; https://gist.github.com/michiakig/1093917
+(defn wrand [slices]
+  (let [total (reduce + slices)
+        r (rand total)]
+    (loop [i 0 sum 0]
+      (if (< r (+ (slices i) sum))
+        i
+        (recur (inc i) (+ (slices i) sum))))))
+
+(defn sample-by [f xs]
+  (when (not-empty xs)
+    (let [choice (wrand (mapv f xs))
+          ys (concat (take choice xs) (drop (inc choice) xs))]
+      (lazy-seq (cons (nth xs choice) (sample-by f ys))))))
+
+(defn random-by [f xs]
+  (when (not-empty xs)
+    (let [choice (wrand (mapv f xs))]
+      (lazy-seq (cons (nth xs choice) (random-by f xs))))))

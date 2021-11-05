@@ -36,6 +36,16 @@
       (println "nrepl running on port" port)))
   sys)
 
+(defn reitit-handler [{:keys [router on-error]}]
+  (reitit-ring/ring-handler
+    router
+    (reitit-ring/routes
+      (reitit-ring/redirect-trailing-slash-handler)
+      (reitit-ring/create-default-handler
+        {:not-found          #(on-error (assoc % :status 404))
+         :method-not-allowed #(on-error (assoc % :status 405))
+         :not-acceptable     #(on-error (assoc % :status 406))}))))
+
 (defn use-reitit
   "Sets :biff/handler from Reitit routes.
 
