@@ -1,6 +1,7 @@
 {:git-url "https://github.com/jacobobryant/biff"
  :group-id biff
- :libs {util       {:deps [org.clojure/tools.namespace
+ :libs {util       {:deps [better-cond/better-cond
+                           org.clojure/tools.namespace
                            org.slf4j/slf4j-nop]}
         crux       {:libs [util]
                     :deps [pro.juxt.crux/crux-core
@@ -45,7 +46,8 @@
                            dev]}
         tests      {:libs [crux
                            misc]}}
- :deps {buddy/buddy-sign               {:mvn/version "3.4.1"}
+ :deps {better-cond/better-cond        {:mvn/version "2.1.0"}
+        buddy/buddy-sign               {:mvn/version "3.4.1"}
         clj-http/clj-http              {:mvn/version "3.12.1"}
         com.taoensso/sente             {:mvn/version "1.16.2"}
         com.xtdb/xtdb-core             {:mvn/version "1.19.0"}

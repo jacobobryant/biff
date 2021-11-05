@@ -3,6 +3,7 @@
 
   The only exception is clojure.tools.namespace.repl, which is used by refresh."
   (:require
+    [better-cond :as b]
     [clojure.pprint :as pp]
     [clojure.set :as set]
     [clojure.spec.alpha :as s]

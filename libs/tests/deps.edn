@@ -3,12 +3,12 @@
  {biff/crux
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/crux",
-   :sha "c12e65dc01feeaf44642628c38578f8bab5d2fb1"},
+   :sha "19bd2b9ef56ab3f974aff322b144a6ab507a8b79"},
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "c12e65dc01feeaf44642628c38578f8bab5d2fb1"},
+   :sha "19bd2b9ef56ab3f974aff322b144a6ab507a8b79"},
   biff/misc
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/misc",
-   :sha "c12e65dc01feeaf44642628c38578f8bab5d2fb1"}}}
+   :sha "19bd2b9ef56ab3f974aff322b144a6ab507a8b79"}}}
