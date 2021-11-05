@@ -127,40 +127,69 @@
         (update :biff/stop conj #(.close node)))))
 
 (defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
-  (assoc sys :biff.xtdb/db (delay (xt/db node))))
+  (assoc sys :biff/db (xt/db node)))
 
-(defn wrap-db
-  "Sets :biff.xtdb/db to a delayed db value on incoming requests."
-  [handler {:keys [node]}]
-  (fn [req]
-    ;; Not sure if delay makes a difference, but we're stuck with it now.
-    (handler (assoc req :biff.xtdb/db (delay (xt/db node))))))
+(defn q [db query & args]
+  "Convenience wrapper for xtdb.api/q.
+
+  If the :find value is not a vector, results will be passed through
+  (map first ...). Also throws an exception if (count args) doesn't match
+  (count (:in query))."
+  (when-not (= (count (:in query))
+               (count args))
+    (throw (ex-info (str "Incorrect number of query arguments. Expected "
+                         (count (:in query))
+                         " but got "
+                         (count args)
+                         "."))))
+  (let [return-tuples (vector? (:find query))
+        query (cond-> query
+                (not return-tuples) (update :find vector))
+        results (apply xt/q db query args)]
+    (cond->> results
+      (not return-tuples) (map first))))
 
 (defn lazy-q
-  "Deprecated. Hard to pass in additional arguments for open-q without
-  making the call signature weird, and isn't that much shorter than
-  using open-q + with-open directly anyway.
+  "Calls xtdb.api/open-q and passes a lazy seq of the results to a function.
 
-  Calls xtdb.api/open-q and passes a lazy seq of the results to f.
-  f must process the results eagerly."
-  [db query f]
-  (with-open [results (xt/open-q db query)]
-    (f (iterator-seq results))))
+  Accepts the same arguments as xtdb.api/open-q, except the last argument is a
+  function which must process the results eagerly. Also includes the same
+  functionality as biff.xtdb/q."
+  [db query & args]
+  (when-not (= (count (:in query))
+               (count args))
+    (throw (ex-info (str "Incorrect number of query arguments. Expected "
+                         (count (:in query))
+                         " but got "
+                         (count args)
+                         "."))))
+  (let [f (last args)
+        query-args (butlast args)
+        return-tuples (vector? (:find query))
+        query (cond-> query
+                (not return-tuples) (update :find vector))]
+    (with-open [results (apply xt/open-q db query query-args)]
+      (f (cond->> (iterator-seq results)
+           (not return-tuples) (map first))))))
 
 (defn q-entity
-  "Retrieve the first document that matches a set of kv pairs.
+  "Pulls the first document that matches a set of kv pairs.
 
   Example:
 
   (q-entity db [[:user/email \"foo@example.com\"]])
   => {:xt/id #uuid \"some-uuid\"
-      :user/email \"foo@example.com\"}"
-  [db kvs]
+      :user/email \"foo@example.com\"}
+
+  pull-expr defaults to '[*]"
+
+  ; TODO make this more general?
+  [db kvs pull-expr]
   (ffirst
     (xt/q db
-            {:find '[(pull doc [*])]
-             :where (vec (for [kv kvs]
-                           (into ['doc] kv)))})))
+          {:find [(list 'pull 'doc (or pull-expr '[*]))]
+           :where (vec (for [kv kvs]
+                         (into ['doc] kv)))})))
 
 ; === authorize ===
 
@@ -208,7 +237,7 @@
   [sys tx-info]
   (let [{:keys [changes db-before db-after server-timestamp]} tx-info]
     (first
-      (remove (fn [{:keys [before after doc-id doc-type tx-item]}]
+      (remove (fn [{:keys [before after doc-id doc-type]}]
                 (some (fn [op]
                         (let [docs (cond
                                      (= op :update) [before after]
@@ -252,7 +281,7 @@
               (some tx-doc [:db/merge :db/update]) (->> (merge before)))
         doc (-> doc
                 (assoc :xt/id doc-id)
-                (dissoc :db/merge :db/update))
+                (dissoc :db/merge :db/update :db/doc-type :db/delete))
         doc (->> doc
                  (walk/postwalk (fn [x]
                                   (if (= x :db/server-timestamp)
@@ -264,14 +293,19 @@
                                        (<= 2 (count v))
                                        (#{:db/union
                                           :db/difference
-                                          :db/add} (first v)))
+                                          :db/add
+                                          :db/default} (first v)))
                                 (let [[op & xs] v
                                       v-before (get before k)]
                                   ((case op
                                      :db/union #(set/union (set %1) (set %2))
                                      :db/difference #(set/difference (set %1) (set %2))
                                      :db/add (fn [x xs]
-                                               (apply + (or x 0) xs)))
+                                               (apply + (or x 0) xs))
+                                     :db/default (fn [v-before [default-value]]
+                                                   (if (contains? before k)
+                                                     v-before
+                                                     default-value)))
                                    v-before
                                    xs))
                                 v)])))
@@ -291,33 +325,25 @@
   Each change is a map with the following keys:
   :before   - The affected document's current value.
   :after    - The affected document's value after the transaction occurs.
-  :tx-item  - An element of biff-tx.
+  :tx-doc   - An element of biff-tx.
   :doc-type
   :doc-id"
   [{:keys [db server-timestamp biff-tx random-uuids]}]
-  (for [[[[doc-type doc-id] tx-doc :as tx-item]
+  (for [[{:keys [db/doc-type xt/id db/delete] :as tx-doc}
          random-uuid] (map vector biff-tx random-uuids)
-        :let [doc-id (or doc-id random-uuid)
-              before (xt/entity db doc-id)
-              after (when (some? tx-doc)
+        :let [id (or id random-uuid)
+              before (xt/entity db id)
+              after (when (not delete)
                       (normalize-tx-doc
-                        {:doc-id doc-id
+                        {:doc-id id
                          :before before
                          :tx-doc tx-doc
                          :server-timestamp server-timestamp}))]]
-    {:tx-item tx-item
-     :doc-id doc-id
+    {:tx-doc tx-doc
+     :doc-id id
      :doc-type doc-type
      :before before
      :after after}))
-
-(def ^:no-doc biff-tx-schema
-  [:sequential {:registry {:doc-type keyword?
-                           :doc-id any?
-                           :ident [:cat :doc-type [:? :doc-id]]
-                           :doc [:maybe [:map-of keyword? any?]]
-                           :tx-item [:tuple :ident :doc]}}
-   :tx-item])
 
 (defn get-tx-info
   "Return a map with information needed to authorize and run a transaction.
@@ -333,10 +359,11 @@
   :db-before          - @db.
   :db-after           - (xtdb.api/with-tx @db xt-tx)."
   [{:keys [biff/schema biff.xtdb/db]} biff-tx]
-  (when-not (malc/validate biff-tx-schema (vec biff-tx))
+  (when-not (malc/validate [:sequential [:map-of keyword? any?]] (vec biff-tx))
     ; Ideally we'd include Malli's explain + humanize output, but it had some
     ; weird results (including an exception) when I tested it on a few
-    ; examples.
+    ; examples. TODO see if this is still the case. (Though with simplified
+    ; format is it even necessary?))
     (bu/throw-anom :incorrect "TX doesn't match schema."
                    {:tx biff-tx}))
   (let [schema (bu/realize schema)
@@ -356,17 +383,16 @@
                             [::xt/put after]
                             [::xt/delete doc-id]))
                         changes))]
-    (doseq [{:keys [before doc-type]
-             [_ tx-doc :as tx-item] :tx-item
+    (doseq [{:keys [before doc-type tx-doc]
              :as change-item} changes]
       (when (and (nil? before) (:db/update tx-doc))
         (bu/throw-anom :incorrect "Attempted to update on a new doc."
-                       {:tx-item tx-item}))
+                       {:tx-doc tx-doc}))
       (doseq [k [:before :after]
               :let [doc (k change-item)]]
         (when (and (some? doc) (not (proto/valid? schema doc-type doc)))
           (bu/throw-anom :incorrect "Doc doesn't match doc-type."
-                         {:tx-item tx-item
+                         {:tx-doc tx-doc
                           k doc
                           :explain (proto/explain-human schema doc-type doc)}))))
     {:changes changes
@@ -375,6 +401,7 @@
      :db-after (xt/with-tx @db xt-tx)
      :xt-tx xt-tx}))
 
+; TODO update tx format
 (defn submit-tx
   "Submits a Biff transaction.
 
