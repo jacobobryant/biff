@@ -2,32 +2,32 @@
  {biff/main
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/main",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/dev
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/dev",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/rum
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/rum",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/xtdb
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/xtdb",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/util
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/util",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/client
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/client",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/middleware
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/middleware",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"},
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"},
   biff/misc
   {:git/url "https://github.com/jacobobryant/biff",
    :deps/root "libs/misc",
-   :sha "9a2ba793550528edea3e1adf8a3610dc74722072"}}}
+   :sha "96eeeacf37f2ae5fa9edc3ebc45304430a52dd62"}}}
