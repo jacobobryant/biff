@@ -349,15 +349,15 @@
   "Return a map with information needed to authorize and run a transaction.
 
   schema:  An implementation of biff.util.protocols/Schema.
-  db:      A delayed xtdb DB.
+  db:      An XTDB DB.
   biff-tx: See https://biff.findka.com/#transactions.
 
   Returns the following keys:
   :xt-tx            - A xtdb transaction.
   :changes            - See get-changes.
   :server-timestamp   - A Date object.
-  :db-before          - @db.
-  :db-after           - (xtdb.api/with-tx @db xt-tx)."
+  :db-before          - db.
+  :db-after           - (xtdb.api/with-tx db xt-tx)."
   [{:keys [biff/schema biff.xtdb/db]} biff-tx]
   (when-not (malc/validate [:sequential [:map-of keyword? any?]] (vec biff-tx))
     ; Ideally we'd include Malli's explain + humanize output, but it had some
@@ -368,7 +368,7 @@
                    {:tx biff-tx}))
   (let [schema (bu/realize schema)
         server-timestamp (java.util.Date.)
-        changes (get-changes {:db @db
+        changes (get-changes {:db db
                               :server-timestamp server-timestamp
                               :biff-tx biff-tx
                               :random-uuids (repeatedly
@@ -397,8 +397,8 @@
                           :explain (proto/explain-human schema doc-type doc)}))))
     {:changes changes
      :server-timestamp server-timestamp
-     :db-before @db
-     :db-after (xt/with-tx @db xt-tx)
+     :db-before db
+     :db-after (xt/with-tx db xt-tx)
      :xt-tx xt-tx}))
 
 ; TODO update tx format
@@ -424,10 +424,10 @@
                               seconds)
                       (flush)
                       (Thread/sleep (* 1000 seconds))
-                      ((wrap-db (fn [sys]
-                                  (submit-tx sys biff-tx))
-                                {:node node})
-                       (update sys :biff.xtdb/n-tried (fnil inc 0))))
+                      (-> sys
+                          (update :biff.xtdb/n-tried (fnil inc 0))
+                          assoc-db
+                          (submit-tx biff-tx)))
       :default (bu/throw-anom :conflict "TX failed, too much contention."
                               {:biff-tx biff-tx}))))
 
@@ -615,14 +615,14 @@
                                     (attr-clause? %) (into ['doc]))
                                  where)}
         docs (if (some? id)
-               (some-> (xt/entity @db id) vector)
-               (map first (xt/q @db xt-query)))]
+               (some-> (xt/entity db id) vector)
+               (map first (xt/q db xt-query)))]
     (when-some [bad-doc (check-read
                           sys
                           {:docs docs
                            :doc-type doc-type
                            :query query
-                           :db @db})]
+                           :db db})]
       (throw
         (ex-info "Read not authorized."
                  {:query query :doc bad-doc})))
