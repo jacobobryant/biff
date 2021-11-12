@@ -157,12 +157,13 @@
   functionality as biff.xtdb/q."
   [db query & args]
   (when-not (= (count (:in query))
-               (count args))
+               (dec (count args)))
     (throw (ex-info (str "Incorrect number of query arguments. Expected "
                          (count (:in query))
                          " but got "
                          (count args)
-                         "."))))
+                         ".")
+                    {})))
   (let [f (last args)
         query-args (butlast args)
         return-tuples (vector? (:find query))
@@ -182,9 +183,7 @@
       :user/email \"foo@example.com\"}
 
   pull-expr defaults to '[*]"
-
-  ; TODO make this more general?
-  [db kvs pull-expr]
+  [db kvs & [pull-expr]]
   (ffirst
     (xt/q db
           {:find [(list 'pull 'doc (or pull-expr '[*]))]
@@ -358,7 +357,7 @@
   :server-timestamp   - A Date object.
   :db-before          - db.
   :db-after           - (xtdb.api/with-tx db xt-tx)."
-  [{:keys [biff/schema biff.xtdb/db]} biff-tx]
+  [{:keys [biff/schema biff/db]} biff-tx]
   (when-not (malc/validate [:sequential [:map-of keyword? any?]] (vec biff-tx))
     ; Ideally we'd include Malli's explain + humanize output, but it had some
     ; weird results (including an exception) when I tested it on a few
@@ -401,7 +400,6 @@
      :db-after (xt/with-tx db xt-tx)
      :xt-tx xt-tx}))
 
-; TODO update tx format
 (defn submit-tx
   "Submits a Biff transaction.
 
@@ -410,7 +408,8 @@
              (default false).
   biff-tx:   See https://biff.findka.com/#transactions."
   [{:biff.xtdb/keys [node authorize] :as sys} biff-tx]
-  (let [n-tried (:biff.xtdb/n-tried sys 0)
+  (let [sys (assoc-db sys)
+        n-tried (:biff.xtdb/n-tried sys 0)
         {:keys [xt-tx] :as tx-info} (get-tx-info sys biff-tx)
         _ (when-let [bad-change (and authorize (check-write sys tx-info))]
             (bu/throw-anom :forbidden "TX not authorized."
@@ -426,7 +425,6 @@
                       (Thread/sleep (* 1000 seconds))
                       (-> sys
                           (update :biff.xtdb/n-tried (fnil inc 0))
-                          assoc-db
                           (submit-tx biff-tx)))
       :default (bu/throw-anom :conflict "TX failed, too much contention."
                               {:biff-tx biff-tx}))))
@@ -597,7 +595,7 @@
                 in the xtdb query. Symbols for non-core functions must be
                 fully-qualified.
   query:        See https://biff.findka.com/#subscription-query-format."
-  [{:keys [biff.xtdb/db
+  [{:keys [biff/db
            biff.xtdb/fn-whitelist]
     :as sys}
    {:keys [id where doc-type] :as query}]
