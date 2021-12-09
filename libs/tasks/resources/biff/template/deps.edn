@@ -1,12 +1,8 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {biff/main {:git/url "https://github.com/jacobobryant/biff"
                    :deps/root "libs/main"
-                   :sha "{{sha}}"}}
- :aliases {:dev {:extra-paths ["dev"]
-                 :extra-deps {biff/dev {:git/url "https://github.com/jacobobryant/biff"
-                                        :deps/root "libs/dev"
-                                        :sha "{{sha}}"}
-                              cider/cider-nrepl {:mvn/version "0.26.0"}
-                              thheller/shadow-cljs {:mvn/version "2.12.7"}
-                              metosin/reitit-frontend {:mvn/version "0.5.5"}
-                              com.github.seancorfield/depstar {:mvn/version "2.0.211"}}}}}
+                   :sha "{{sha}}"}
+        biff/dev {:git/url "https://github.com/jacobobryant/biff"
+                  :deps/root "libs/dev"
+                  :sha "{{sha}}"}
+        cider/cider-nrepl {:mvn/version "0.26.0"}}}

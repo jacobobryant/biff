@@ -30,7 +30,7 @@
        []
        (let [{:keys [biff/after-refresh biff/stop]} @system]
          (doseq [f stop]
-           (println "stopping:" (pr-str f))
+           (println "stopping:" (str f))
            (f))
          (tn-repl/refresh :after after-refresh)))
 
@@ -42,7 +42,7 @@
        [config components]
        (reset! system (merge {:biff/stop '()} config))
        (reduce (fn [_ f]
-                 (println "starting:" (pr-str f))
+                 (println "starting:" (str f))
                  (reset! system (f @system)))
                nil
                components)

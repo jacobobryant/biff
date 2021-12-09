@@ -1,53 +1,81 @@
 #!/usr/bin/env bash
 set -e
 
-# See https://biff.findka.com/#babashka-tasks
-# I recommend adding alias t=./task to your .bashrc.
+SERVER={{domain}}
 
-if [ -f config/task.env ]; then
-  source config/task.env
-fi
+cmd () {
+  ssh root@$SERVER "$@"
+}
 
-init () {
-  mkdir -p target/resources
-  if ! [ -d node_modules ]; then
-    if [ -f package.json ]; then
-      npm install
-    else
-      npm init -y
-      npm install --save react react-dom
-      npm install --save-dev shadow-cljs
-    fi
-  fi
+trench () {
+  cmd trench -p 7888 -e "$@"
+}
+
+sync-files () {
+  rsync -a --info=name1 --delete deps.edn config.edn task src resources app@$SERVER:
+}
+
+watch-files () {
+  # TODO make it work on mac
+  sync-files
+  ignore_until=$(date +%s.%N)
+  inotifywait --quiet --recursive --monitor --format "%e %w%f" \
+      --event modify --event move --event create --event delete \
+      . ../shared | while read changed
+  do
+      if [ $(echo "$(date +%s.%N) > $ignore_until" | bc) -eq 1 ] ; then
+          ignore_until=$(echo "$(date +%s.%N) + 0.25" | bc)
+          ( sleep 0.25 ; sync-files ) &
+      fi
+  done
+}
+
+run () {
+  # TODO fix weird port stuff with exiting
+  cd "$(dirname "${BASH_SOURCE[0]}")"
+  clj "$@" -M -m {{main-ns}} --port 7888 --middleware '[cider.nrepl/cider-middleware]'
+}
+
+post-receive () {
+  run -P
+  sudo systemctl restart app
 }
 
 dev () {
-  init
-  source config/dev.env
   echo 7888 > .nrepl-port
-  clj "$@" -A:dev -M -m {{parent-ns}}.dev --port 7888 \
-    --middleware '[shadow.cljs.devtools.server.nrepl/middleware
-                   cider.nrepl/cider-middleware]'
-}
-
-build () {
-  rm -rf target
-  init
-  clj -A:dev -X {{parent-ns}}.dev/build
+  BIFF_ENV=dev run "$@"
 }
 
 deploy () {
-  scp config/prod.env app@$TASK_HOST:config.env
-  time git push prod master
+  scp config.edn app@$SERVER:config.edn
+  time git push worker master
 }
 
 logs () {
-  ssh root@$TASK_HOST journalctl -u app -f -n 300
+  ssh root@$SERVER journalctl -u app -f -n ${1:-300}
 }
 
 prod-repl () {
   echo Connect to nrepl port 7888
-  ssh -NL 7888:localhost:7888 root@$TASK_HOST
+  echo 7888 > .nrepl-port
+  ssh -NL 7888:localhost:7888 root@$SERVER
+}
+
+refresh () {
+  trench '"(biff.util/refresh)"'
+}
+
+restart () {
+  cmd systemctl reset-failed app.service
+  cmd systemctl restart app
+}
+
+prod-dev () {
+  prod-repl &
+  watch-files &
+  logs
+  # TODO do something better
+  trap 'killall ssh' INT
 }
 
 "$@"

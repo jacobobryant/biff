@@ -36,9 +36,9 @@
       (println "nrepl running on port" port)))
   sys)
 
-(defn reitit-handler [{:keys [router on-error]}]
+(defn reitit-handler [{:keys [router routes on-error]}]
   (reitit-ring/ring-handler
-    router
+    (or router (reitit-ring/router routes))
     (reitit-ring/routes
       (reitit-ring/redirect-trailing-slash-handler)
       (reitit-ring/create-default-handler
@@ -47,7 +47,9 @@
          :not-acceptable     #(on-error (assoc % :status 406))}))))
 
 (defn use-reitit
-  "Sets :biff/handler from Reitit routes.
+  "Deprecated.
+
+  Sets :biff/handler from Reitit routes.
 
   Also sets :biff.reitit/get-router to a function that returns the router.
 

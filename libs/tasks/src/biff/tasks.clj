@@ -68,7 +68,9 @@
                        {:k :dir
                         :msg "Enter name for project directory: "}
                        {:k :main-ns
-                        :msg "Enter main namespace (e.g. example.core): "}])
+                        :msg "Enter main namespace (e.g. example.core): "}
+                       {:k :domain
+                        :msg "Enter domain where this will be deployed (e.g. myapp.example.com):"}])
             (update :sha str)
             (update :dir str)
             (update :main-ns symbol)

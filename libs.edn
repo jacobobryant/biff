@@ -38,7 +38,6 @@
                            org.clojure/tools.analyzer]}
         main       {:libs [util
                            xtdb
-                           client
                            misc
                            middleware
                            rum]}
