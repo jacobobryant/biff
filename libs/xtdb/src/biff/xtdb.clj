@@ -141,7 +141,8 @@
                          (count (:in query))
                          " but got "
                          (count args)
-                         "."))))
+                         ".")
+                    {})))
   (let [return-tuples (vector? (:find query))
         query (cond-> query
                 (not return-tuples) (update :find vector))

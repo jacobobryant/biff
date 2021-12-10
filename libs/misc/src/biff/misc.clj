@@ -298,17 +298,19 @@
   :period - How often to call the function (in minutes), starting from last
             midnight UTC.
   :offset - How many minutes forward to shift the starting time (default 0)."
-  [{:keys [biff.chime/tasks] :as sys}]
+  [{:biff.chime/keys [tasks disable] :as sys}]
   (let [now (java.util.Date.)]
-    (update sys :biff/stop into
-            (for [{:keys [offset period]
-                   task-fn :fn
-                   :or {offset 0}} tasks]
-              (let [closeable (chime/chime-at
-                                (->> (bu/add-seconds (bu/last-midnight now)
-                                                     (* 60 offset))
-                                     (iterate #(bu/add-seconds % (* period 60)))
-                                     (drop-while #(bu/compare< % now))
-                                     (map #(.toInstant %)))
-                                (fn [_] (task-fn sys)))]
-                #(.close closeable))))))
+    (if disable
+      sys
+      (update sys :biff/stop into
+              (for [{:keys [offset period]
+                     task-fn :fn
+                     :or {offset 0}} tasks]
+                (let [closeable (chime/chime-at
+                                  (->> (bu/add-seconds (bu/last-midnight now)
+                                                       (* 60 offset))
+                                       (iterate #(bu/add-seconds % (* period 60)))
+                                       (drop-while #(bu/compare< % now))
+                                       (map #(.toInstant %)))
+                                  (fn [_] (task-fn sys)))]
+                  #(.close closeable)))))))
