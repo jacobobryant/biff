@@ -2,9 +2,10 @@
 set -e
 
 MAIN_NS=com.example
-ARCH=linux-x64
+ARCH=linux-x64 # Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
 
 install-tailwind () {
+  # todo maybe just infer ARCH?
   curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$ARCH
   chmod +x tailwindcss-$ARCH
   mv tailwindcss-$ARCH tailwindcss
