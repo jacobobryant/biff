@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+MAIN_NS=com.example
+ARCH=linux-x64
+
+install-tailwind () {
+  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$ARCH
+  chmod +x tailwindcss-$ARCH
+  mv tailwindcss-$ARCH tailwindcss
+}
+
+watch-css () {
+  ./tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
+}
+
+minify-css () {
+  ./tailwindcss -i tailwind.css -o target/resources/public/css/main.css --minify
+}
+
+run () {
+  clj "$@" \
+    -J-XX:-OmitStackTraceInFastThrow \
+    -M -m $MAIN_NS --port 7888 --middleware '[cider.nrepl/cider-middleware]'
+}
+
+dev () {
+  echo 7888 > .nrepl-port
+  BIFF_ENV=dev run &
+  # I'd do `watch-css &`, but for some reason I can't get watch-css to work in
+  # the background.
+  watch-css
+}
+
+clean () {
+  rm -rf target
+}
+
+"$@"

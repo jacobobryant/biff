@@ -1,0 +1,2 @@
+{:paths ["src" "resources" "target/resources"]
+ :deps {com.biffweb/biff {:local/root ".."}}}

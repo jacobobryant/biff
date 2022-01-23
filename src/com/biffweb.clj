@@ -1,0 +1,182 @@
+(ns com.biffweb
+  (:require [better-cond.core :as b]
+            [buddy.core.nonce :as nonce]
+            [clojure.edn :as edn]
+            [clojure.string :as str]
+            [clojure.tools.namespace.repl :as tn-repl]
+            [com.biffweb.impl.extra :as extra]
+            [com.biffweb.impl.middleware :as middle]
+            [com.biffweb.impl.rum :as brum]
+            [com.biffweb.impl.util :as util]
+            [com.biffweb.impl.xtdb :as bxt]
+            [hawk.core :as hawk]
+            [muuntaja.middleware :as muuntaja]
+            [reitit.ring :as reitit-ring]
+            [ring.adapter.jetty9 :as jetty]))
+
+(defonce system (atom nil))
+
+(defn start-system
+  "Starts a system from a config map.
+
+  Stores the system in the biff.util/system atom. See
+  See https://biff.findka.com/#system-composition and refresh."
+  [config]
+  (reset! system (merge {:biff/stop '()} config))
+  (loop [{[f & components] :biff/components :as sys} config]
+    (when (some? f)
+      (println "starting:" (str f))
+      (recur (reset! system (f (assoc sys :biff/components components))))))
+  (println "System started."))
+
+(defn refresh
+  "Stops the system, refreshes source files, and restarts the system.
+
+  The system is stopped by calling all the functions in (:biff/stop
+  @biff.util/system). (:after-refresh @system) is a fully-qualified symbol which
+  will be resolved and called after refreshing.
+
+  See start-system."
+  []
+  (let [{:keys [biff/after-refresh biff/stop]} @system]
+    (doseq [f stop]
+      (println "stopping:" (str f))
+      (f))
+    (tn-repl/refresh :after after-refresh)))
+
+(defn eval-files! [{:keys [biff/eval-paths]
+                    :or {eval-paths ["src"]}}]
+  (swap! util/global-tracker util/eval-files* eval-paths)
+  nil)
+
+(b/defnc use-hawk
+  "A Biff component for Hawk. See https://github.com/wkf/hawk.
+
+  on-save:       A single-argument function to call whenever a file is saved.
+                 Receives the system map as a parameter. The function is called
+                 no more than once every 500 milliseconds.
+  call-on-start: If true, triggers a callback immediately.
+  paths:         A collection of root directories to monitor for file changes.
+  exts:          If exts is non-empty, files that don't end in one of the
+                 extensions will be ignored."
+  [{:biff.hawk/keys [on-save exts paths call-on-start disable]
+    :or {exts [".clj" ".cljc"]
+         paths ["src"]
+         call-on-start true}
+    :as sys}]
+  disable sys
+  :do (when call-on-start
+        (on-save sys))
+  :let [watch (hawk/watch!
+                [(merge {:paths paths
+                         ; todo debounce this properly
+                         :handler (fn [{:keys [last-ran]
+                                        :or {last-ran 0}} _]
+                                    (when (< 500 (- (inst-ms (java.util.Date.)) last-ran))
+                                      (on-save sys))
+                                    {:last-ran (inst-ms (java.util.Date.))})}
+                        (when exts
+                          {:filter (fn [_ {:keys [^java.io.File file]}]
+                                     (let [path (.getPath file)]
+                                       (some #(str/ends-with? path %) exts)))}))])]
+  (update sys :biff/stop conj #(hawk/stop! watch)))
+
+(defn reitit-handler [{:keys [router routes on-error]
+                       :or {on-error util/default-on-error}}]
+  (reitit-ring/ring-handler
+    (or router (reitit-ring/router routes))
+    (reitit-ring/routes
+      (reitit-ring/redirect-trailing-slash-handler)
+      (reitit-ring/create-default-handler
+        {:not-found          #(on-error (assoc % :status 404))
+         :method-not-allowed #(on-error (assoc % :status 405))
+         :not-acceptable     #(on-error (assoc % :status 406))}))))
+
+(defn use-jetty
+  "Starts a Jetty web server.
+
+  websockets: A map from paths to handlers, e.g. {\"/api/chsk\" ...}."
+  [{:biff/keys [host port handler]
+    :biff.jetty/keys [quiet websockets]
+    :or {host "localhost"
+         port 8080}
+    :as sys}]
+  (let [server (jetty/run-jetty handler
+                                {:host host
+                                 :port port
+                                 :join? false
+                                 :websockets websockets
+                                 :allow-null-path-info true})]
+    (when-not quiet
+      (println "Jetty running on" (str "http://" host ":" port)))
+    (update sys :biff/stop conj #(jetty/stop-server server))))
+
+(defn wrap-default-middleware [handler opts]
+  (middle/wrap-defaults handler opts))
+
+(defn use-wrap-env [sys]
+  (update sys :biff/handler comp #(merge (bxt/assoc-db sys) %)))
+
+(defn read-config []
+  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
+        env->config (edn/read-string (slurp "config.edn"))
+        config-keys (concat (get-in env->config [env :merge]) [env])
+        config (apply merge (map env->config config-keys))]
+    config))
+
+(defn generate-secret [length]
+  (util/base64-encode (nonce/random-bytes length)))
+
+(defn start-node [opts]
+  (bxt/start-node opts))
+
+(defn use-xt [sys]
+  (bxt/use-xt sys))
+
+(defn assoc-db [sys]
+  (bxt/assoc-db sys))
+
+(defn q [& args]
+  (apply bxt/q args))
+
+(defn lazy-q [& args]
+  (apply bxt/lazy-q args))
+
+(defn lookup [db k v]
+  (bxt/lookup db k v))
+
+(defn submit-tx [sys tx]
+  (bxt/submit-tx sys tx))
+
+(defn render [body]
+  (brum/render body))
+
+(defn unsafe
+  "Return a map with :dangerouslySetInnerHTML, optionally merged into m."
+  ([html] (brum/unsafe html))
+  ([m html]
+   (merge m (unsafe html))))
+
+(def emdash brum/emdash)
+
+(def endash brum/endash)
+
+(def nbsp brum/nbsp)
+
+(defn g-fonts [families]
+  (brum/g-fonts families))
+
+(defn base-html [opts head & body]
+  (apply brum/base opts head body))
+
+(defn form [opts & body]
+  (apply brum/form opts body))
+
+(defn export-rum [pages dir]
+  (brum/export-rum pages dir))
+
+(defn sh [& args]
+  (apply util/sh args))
+
+(defmacro catchall [& body]
+  `(try ~@body (catch Exception ~'_ nil)))

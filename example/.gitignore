@@ -1,0 +1,6 @@
+/.cpcache
+/.nrepl-port
+/config.edn
+/storage/
+/tailwindcss
+/target

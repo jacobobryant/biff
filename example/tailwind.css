@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  p {
+    @apply mb-3;
+  }
+
+  ul {
+    list-style-type: disc;
+  }
+
+  ol {
+    list-style-type: decimal;
+  }
+
+  ul, ol {
+    margin-bottom: 1rem;
+    padding-left: 2.5rem;
+  }
+
+  blockquote {
+    margin: 1.25em 0;
+    padding: 0 1em;
+    color: #6a737d;
+    border-left: .25em solid #dfe2e5;
+  }
+
+  code, kbd, pre, samp {
+    font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace
+  }
+
+  code {
+    word-break: break-word;
+    padding: .2em .4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: #f3f3f3;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply bg-blue-500 hover:bg-blue-700 text-center py-2 px-4 rounded disabled:opacity-50;
+  }
+  .input-text {
+    @apply border border-gray-300 rounded w-full py-2 px-3 leading-tight appearance-none
+           focus:outline-none focus:ring focus:border-blue-300 text-black ring-opacity-30;
+  }
+}
+
+@layer utilities {
+  .link {
+    @apply text-blue-600 hover:underline;
+  }
+}
