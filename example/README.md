@@ -4,9 +4,10 @@ This is (the start of) the example/template project for Biff.
 
 ## Requirements
 
- - Unix environment (for running `task`). I'm possibly open to rewriting `task` in
-Babashka if that makes things easier for anyone (people on Windows not using
-WSL?).
+ - Unix environment (for running `task`). I am reluctantly open to rewriting
+   `task` in Babashka if the cross-platformness makes things easier for anyone
+   (people on Windows not using WSL?). At a minimum I'll try to make sure
+   the bash code works on Macs (I use WSL myself).
  - [clj](https://clojure.org/guides/getting_started)
 
 ## Setup
