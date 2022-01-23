@@ -180,3 +180,12 @@
 
 (defmacro catchall [& body]
   `(try ~@body (catch Exception ~'_ nil)))
+
+(defn safe-merge [& ms]
+  (reduce (fn [m1 m2]
+            (let [dupes (filter #(contains? m1 %) (keys m2))]
+              (when (not-empty dupes)
+                (throw (ex-info (str "Maps contain duplicate keys: " (str/join ", " dupes))
+                                {:keys dupes})))
+              (merge m1 m2)))
+          ms))

@@ -1,18 +1,17 @@
 (ns com.example
   (:require [com.biffweb :as biff]
             [com.example.schema :refer [malli-opts]]
-            [com.example.routes :refer [routes]]
-            [com.example.static :refer [static-pages]]
+            [com.example.feat :as feat]
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def config (biff/read-config))
 
-(def handler (-> (biff/reitit-handler {:routes routes})
+(def handler (-> (biff/reitit-handler {:routes feat/routes})
                  (biff/wrap-default-middleware config)))
 
 (defn on-save [sys]
   (biff/eval-files! sys)
-  (biff/export-rum static-pages "target/resources/public"))
+  (biff/export-rum feat/static-pages "target/resources/public"))
 
 (defn start []
   (biff/start-system
