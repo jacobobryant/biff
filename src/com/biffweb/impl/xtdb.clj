@@ -135,87 +135,68 @@
           :db/add
           :db/default} (first x))))
 
-(defn normalize-tx-doc
-  "Converts a TX doc to a xtdb doc.
+(b/defnc get-ops*
+  [{:keys [::now biff/db biff/malli-opts]}
+   {:keys [xt/id db/doc-type db/delete db/upsert]
+    db-update :db/update db-merge :db/merge
+    :as tx-doc}]
+  delete [[::xt/delete id]]
+  (nil? doc-type) (throw (ex-info "Missing :db/doc-type."
+                                  {:tx-doc tx-doc}))
+  :let [constraint-before (when upsert
+                            (xt/entity db upsert))
+        constraint (when upsert
+                     (or constraint-before
+                         {:xt/id upsert
+                          :biff/owned-by id}))
+        id (:biff/owned-by constraint id)
+        before (delay (xt/entity db id))]
+  (and db-update (nil? @before)) (throw (ex-info "Attempted to update on a new doc."
+                                                 {:tx-doc tx-doc}))
+  :let [after (cond-> tx-doc
+                (map? id) (merge id)
+                (map? upsert) (merge upsert)
+                (some tx-doc [:db/merge :db/update :db/upsert]) (->> (merge @before))
+                true (dissoc :db/merge :db/update :db/doc-type :db/delete :db/upsert)
+                true (assoc :xt/id id))
+        after (->> after
+                   (walk/postwalk (fn [x]
+                                    (if (= x :db/now)
+                                      now
+                                      x)))
+                   (keep (fn [[k v]]
+                           (b/cond
+                             :when (not= v :db/remove)
+                             :let [special (special-op? v)]
+                             (not special) [k v]
+                             :let [[op & xs] v
+                                   v-before (get @before k)]
+                             (= op :db/union) [k (set/union (set v-before) (set xs))]
+                             (= op :db/difference) [k (set/difference (set v-before) (set xs))]
+                             (= op :db/add) [k (apply + (or v-before 0) xs)]
+                             :let [[default-value] xs]
+                             (= op :db/default) (if (contains? @before k)
+                                                  v-before
+                                                  default-value))))
+                   (into {}))]
 
-  now: A Date object.
-  doc-id:           The xtdb document ID.
-  before:           The xtdb document's current value (i.e. before the
-                    transaction). nil if the document is being created.
-  tx-doc:           See https://biff.findka.com/#transactions."
-  [{:keys [now
-           doc-id
-           tx-doc
-           before]}]
-  (let [doc (cond-> tx-doc
-              (map? doc-id) (merge doc-id)
-              (some tx-doc [:db/merge :db/update]) (->> (merge before)))
-        doc (-> doc
-                (assoc :xt/id doc-id)
-                (dissoc :db/merge :db/update :db/doc-type :db/delete))
-        doc (->> doc
-                 (walk/postwalk (fn [x]
-                                  (if (= x :db/now)
-                                    now
-                                    x)))
-                 (keep (fn [[k v]]
-                         (b/cond
-                           :when (not= v :db/remove)
-                           :let [special (special-op? v)]
-                           (not special) [k v]
-                           :let [[op & xs] v
-                                 v-before (get before k)]
-                           (= op :db/union) [k (set/union (set v-before) (set xs))]
-                           (= op :db/difference) [k (set/difference (set v-before) (set xs))]
-                           (= op :db/add) [k (apply + (or v-before 0) xs)]
-                           :let [[default-value] xs]
-                           (= op :db/default) (if (contains? before k)
-                                                v-before
-                                                default-value))))
-                 (into {}))]
-    doc))
+  (not (malc/validate doc-type after @malli-opts))
+  (throw (ex-info (str "Doc wouldn't be a valid " doc-type " after transaction.")
+                  {:tx-doc tx-doc
+                   :explain (male/humanize (malc/explain doc-type after malli-opts))}))
 
-(defn get-changes
-  "Return a list of changes that will occur after a transaction.
-
-  See https://biff.findka.com/#tx-docs.
-
-  now: A Date object.
-  biff-tx:          See https://biff.findka.com/#transactions.
-  db:               A xtdb DB.
-
-  Each change is a map with the following keys:
-  :before   - The affected document's current value.
-  :after    - The affected document's value after the transaction occurs.
-  :tx-doc   - An element of biff-tx.
-  :doc-type
-  :doc-id"
-  [{:keys [db now malli-opts biff-tx]}]
-  (for [{:keys [db/doc-type xt/id db/delete] :as tx-doc} biff-tx
-        :let [before (xt/entity db id)
-              after (when (not delete)
-                      (normalize-tx-doc
-                        {:doc-id id
-                         :before before
-                         :tx-doc tx-doc
-                         :now now}))
-              match (or (some tx-doc [:db/update :db/merge])
-                        (some special-op? (vals tx-doc)))]]
-    {:tx-doc tx-doc
-     :ops (cond
-            delete [[::xt/delete id]]
-            match [[::xt/match id before]
-                   [::xt/put after]]
-            :else [[::xt/put after]])
-     :errors (->> [(when (and (nil? before) (:db/update tx-doc))
-                     {:msg "Attempted to update on a new doc."})
-                   (when (and (some? before) (not (malc/validate doc-type before malli-opts)))
-                     {:msg (str "Doc wasn't a valid " doc-type " before transaction.")
-                      :explain (male/humanize (malc/explain doc-type before malli-opts))})
-                   (when (and (some? after) (not (malc/validate doc-type after malli-opts)))
-                     {:msg (str "Doc won't be a valid " doc-type " after transaction.")
-                      :explain (male/humanize (malc/explain doc-type after malli-opts))})]
-                  (remove nil?))}))
+  :let [match (or db-update
+                  db-merge
+                  upsert
+                  (some special-op? (vals tx-doc)))]
+  (->> [(when match
+          [::xt/match id before])
+        [::xt/put after]
+        (when upsert
+          [::xt/match upsert constraint-before])
+        (when upsert
+          [::xt/put constraint])]
+       (remove nil?)))
 
 (b/defnc submit-tx
   "Submits a Biff transaction.
@@ -225,23 +206,15 @@
   malli-opts: A var for Malli opts."
   [{:keys [biff.xtdb/node
            biff.xtdb/n-tried
-           biff/malli-opts]
-    :or {n-tried 0}
+           biff/malli-opts
+           biff.xtdb/get-ops]
+    :or {n-tried 0
+         get-ops get-ops*}
     :as sys}
    biff-tx]
-  :let [db (xt/db node)
-        now (java.util.Date.)
-        changes (get-changes {:db db
-                              :now now
-                              :biff-tx biff-tx
-                              :malli-opts @malli-opts})
-        xt-tx (mapcat :ops changes)
-        errors (for [{:keys [errors tx-doc]} changes
-                     error errors]
-                 (assoc error :tx-doc tx-doc))]
-  (not-empty errors) (throw (ex-info "Invalid transaction."
-                                     {:errors errors}))
-  :let [submitted-tx (xt/submit-tx node xt-tx)]
+  :let [sys (assoc (assoc-db sys) ::now (java.util.Date.))
+        xt-tx (mapcat #(get-ops sys %) biff-tx)
+        submitted-tx (xt/submit-tx node xt-tx)]
   (xt/tx-committed? node submitted-tx) submitted-tx
   (< n-tried 4) (let [seconds (int (Math/pow 2 n-tried))]
                   (printf "TX failed due to contention, trying again in %d seconds...\n"
@@ -251,5 +224,4 @@
                   (-> sys
                       (update :biff.xtdb/n-tried (fnil inc 0))
                       (submit-tx biff-tx)))
-  :else (throw (ex-info "TX failed, too much contention."
-                        {:tx biff-tx})))
+  :else (throw (ex-info "TX failed, too much contention." {:tx biff-tx})))
