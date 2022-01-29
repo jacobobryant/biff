@@ -127,76 +127,97 @@
   (ffirst (xt/q db {:find '[(pull doc '[*])]
                     :where [['doc k v]]})))
 
-(defn special-op? [x]
-  (and (coll? x)
-       (<= 2 (count x))
-       (#{:db/union
-          :db/difference
-          :db/add
-          :db/default} (first x))))
+(defn special-val? [x]
+  (or (= x :db/dissoc)
+      (and (coll? x)
+           (<= 2 (count x))
+           (#{:db/lookup
+              :db/union
+              :db/difference
+              :db/add
+              :db/default} (first x)))))
+
+(defn apply-special-vals [doc-before doc-after]
+  (->> (merge doc-before doc-after)
+       (keep (fn [[k v]]
+               (b/cond
+                 (not (special-val? v)) [k v]
+                 (= v :db/dissoc) nil
+                 :let [[op & xs] v
+                       v-before (get doc-before k)]
+                 (= op :db/union) [k (set/union (set v-before) (set xs))]
+                 (= op :db/difference) [k (set/difference (set v-before) (set xs))]
+                 (= op :db/add) [k (apply + (or v-before 0) xs)]
+                 :let [[default-value] xs]
+                 (= op :db/default) (if (contains? doc-before k)
+                                      v-before
+                                      default-value))))
+       (into {})))
+
+(b/defnc lookup-info [db doc-id]
+  :let [[lookup-id default-id] (when (and (special-val? doc-id)
+                                          (= :db/lookup (first doc-id)))
+                                 (rest id))]
+  :when lookup-id
+  :let [lookup-doc-before (xt/entity db lookup-id)
+        lookup-doc-after (or lookup-doc
+                             {:xt/id lookup-id
+                              :db/owned-by (or default-id (java.util.UUID/randomUUID))})]
+  [lookup-doc-before lookup-doc-after])
 
 (b/defnc get-ops*
   [{:keys [::now biff/db biff/malli-opts]}
-   {:keys [xt/id db/doc-type db/delete db/upsert]
-    db-update :db/update db-merge :db/merge
-    :as tx-doc}]
-  delete [[::xt/delete id]]
+   {:keys [xt/id db/doc-type db/op] :as tx-doc}]
+  ;; possible ops: delete, put, merge, update
+  :let [valid? (fn [doc] (malc/validate doc-type doc malli-opts))
+        explain (fn [doc] (male/humanize (malc/explain doc-type doc malli-opts)))
+        [lookup-id
+         lookup-doc-before
+         lookup-doc-after] (lookup-info db id)
+        id (if lookup-id
+             (:db/owned-by lookup-doc-after)
+             (or id (java.util.UUID/randomUUID)))]
+  (= op :delete) (concat [[::xt/delete id]]
+                         (when lookup-id
+                           [[::xt/match lookup-id lookup-doc-before]
+                            [::xt/delete lookup-id]]))
+
+  ;; possible ops: put, merge, update
   (nil? doc-type) (throw (ex-info "Missing :db/doc-type."
                                   {:tx-doc tx-doc}))
-  :let [constraint-before (when upsert
-                            (xt/entity db upsert))
-        constraint (when upsert
-                     (or constraint-before
-                         {:xt/id upsert
-                          :biff/owned-by id}))
-        id (:biff/owned-by constraint id)
-        before (delay (xt/entity db id))]
-  (and db-update (nil? @before)) (throw (ex-info "Attempted to update on a new doc."
-                                                 {:tx-doc tx-doc}))
-  :let [after (cond-> tx-doc
-                (map? id) (merge id)
-                (map? upsert) (merge upsert)
-                (some tx-doc [:db/merge :db/update :db/upsert]) (->> (merge @before))
-                true (dissoc :db/merge :db/update :db/doc-type :db/delete :db/upsert)
-                true (assoc :xt/id id))
-        after (->> after
-                   (walk/postwalk (fn [x]
-                                    (if (= x :db/now)
-                                      now
-                                      x)))
-                   (keep (fn [[k v]]
-                           (b/cond
-                             :when (not= v :db/remove)
-                             :let [special (special-op? v)]
-                             (not special) [k v]
-                             :let [[op & xs] v
-                                   v-before (get @before k)]
-                             (= op :db/union) [k (set/union (set v-before) (set xs))]
-                             (= op :db/difference) [k (set/difference (set v-before) (set xs))]
-                             (= op :db/add) [k (apply + (or v-before 0) xs)]
-                             :let [[default-value] xs]
-                             (= op :db/default) (if (contains? @before k)
-                                                  v-before
-                                                  default-value))))
-                   (into {}))]
+  :let [doc-after (cond-> tx-doc
+                    (map? lookup-id) (merge lookup-id)
+                    true (dissoc :db/op :db/doc-type)
+                    true (assoc :xt/id id))
+        doc-after (walk/postwalk #(if (= % :db/now) now %) doc-after)
+        lookup-ops (when lookup-id
+                     [[::xt/match lookup-id lookup-doc-before]
+                      [::xt/put lookup-doc-after]])]
+  :do (cond
+        (not= op :put) nil,
 
-  (not (malc/validate doc-type after @malli-opts))
-  (throw (ex-info (str "Doc wouldn't be a valid " doc-type " after transaction.")
-                  {:tx-doc tx-doc
-                   :explain (male/humanize (malc/explain doc-type after malli-opts))}))
+        (some special-val? (vals doc-after))
+        (throw (ex-info "Attempted to use a special value on a :put operation"
+                        {:tx-doc tx-doc})),
 
-  :let [match (or db-update
-                  db-merge
-                  upsert
-                  (some special-op? (vals tx-doc)))]
-  (->> [(when match
-          [::xt/match id before])
-        [::xt/put after]
-        (when upsert
-          [::xt/match upsert constraint-before])
-        (when upsert
-          [::xt/put constraint])]
-       (remove nil?)))
+        (not (valid? doc-after))
+        (throw (ex-info (str "Doc wouldn't be a valid " doc-type " after transaction.")
+                        {:tx-doc tx-doc
+                         :explain (explain doc-after)})))
+  (= op :put) (concat [[::xt/put doc-after]] lookup-ops)
+
+  ;; possible ops: merge, update
+  :let [doc-before (xt/entity db id)]
+  (and (= op :update)
+       (nil? doc-before)) (throw (ex-info "Attempted to update on a new doc."
+                                          {:tx-doc tx-doc}))
+  :let [doc-after (apply-special-vals doc-before doc-after)]
+  (not (valid? doc-after)) (throw (ex-info (str "Doc wouldn't be a valid " doc-type " after transaction.")
+                                           {:tx-doc tx-doc
+                                            :explain (explain doc-after)}))
+  :else (concat [[::xt/match id doc-before]
+                 [::xt/put doc-after]]
+                lookup-ops))
 
 (b/defnc submit-tx
   "Submits a Biff transaction.
