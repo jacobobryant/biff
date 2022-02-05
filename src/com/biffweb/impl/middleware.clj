@@ -3,10 +3,21 @@
             [clojure.string :as str]
             [com.biffweb.impl.util :as util]
             [muuntaja.middleware :as muuntaja]
+            [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.defaults :as rd]
             [ring.middleware.resource :as res]
             [ring.middleware.session.cookie :as cookie]))
+
+(defn wrap-authentication [handler]
+  (anti-forgery/wrap-anti-forgery
+    (fn [req]
+      (handler (assoc req :biff/uid (-> req :session :uid))))
+    ;; If there isn't a CSRF token, still call the handler, but don't set
+    ;; :biff/uid. Then you can do unauthenticated POSTs from static pages (e.g.
+    ;; a sign-in form). Thus, you should NOT check :session/uid for
+    ;; authentication. Check only :biff/uid.
+    {:error-handler handler}))
 
 (defn wrap-index-files
   "If handler returns nil, try again with each index file appended to the URI."
@@ -104,11 +115,15 @@
   "Prints status, request method and response status for each request."
   [handler]
   (fn [req]
-    (let [resp (handler req)]
-      (printf "%s  %-4s %s\n"
+    (let [start (java.util.Date.)
+          resp (handler req)
+          stop (java.util.Date.)
+          duration (- (inst-ms stop) (inst-ms start))]
+      (printf "%s  %-4s %s %dms\n"
               (:status resp "nil")
               (name (:request-method req))
-              (:uri req))
+              (:uri req)
+              duration)
       (flush)
       resp)))
 
@@ -117,6 +132,7 @@
   (-> handler
       muuntaja/wrap-params
       muuntaja/wrap-format
+      wrap-authentication
       (wrap-resource opts)
       (wrap-ring-defaults opts)
       (wrap-internal-error opts)

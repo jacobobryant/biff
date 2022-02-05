@@ -22,3 +22,13 @@
              [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]]
             head)
     body))
+
+(defn page [opts head & body]
+  (base
+    opts
+    head
+    [:.p-3.mx-auto.max-w-screen-sm.w-full
+     body]))
+
+(defn render-page [& args]
+  (biff/render (apply page args)))

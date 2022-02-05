@@ -1,6 +1,8 @@
 (ns com.biffweb
   (:require [better-cond.core :as b]
             [buddy.core.nonce :as nonce]
+            [buddy.sign.jwt :as jwt]
+            [clj-http.client :as http]
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.tools.namespace.repl :as tn-repl]
@@ -145,6 +147,9 @@
 (defn lookup [db k v]
   (bxt/lookup db k v))
 
+(defn lookup-id [db k v]
+  (bxt/lookup-id db k v))
+
 (defn submit-tx [sys tx]
   (bxt/submit-tx sys tx))
 
@@ -188,4 +193,80 @@
                 (throw (ex-info (str "Maps contain duplicate keys: " (str/join ", " dupes))
                                 {:keys dupes})))
               (merge m1 m2)))
+          {}
           ms))
+
+(defn normalize-email [email]
+  (some-> email str/trim str/lower-case not-empty))
+
+(defn mailersend [{:keys [mailersend/api-key
+                          mailersend/defaults]}
+                  opts]
+  (let [opts (reduce (fn [opts [path x]]
+                       (update-in opts path #(or % x)))
+                     opts
+                     defaults)]
+    (try
+      (get-in
+        (http/post "https://api.mailersend.com/v1/email"
+                   {:content-type :json
+                    :oauth-token api-key
+                    :form-params opts})
+        [:headers "X-Message-Id"])
+      (catch Exception e
+        (println "mailersend failed:" (:body (ex-data e)))
+        false))))
+
+(defn random-uuid []
+  (java.util.UUID/randomUUID))
+
+(defn now []
+  (java.util.Date.))
+
+(defn anomaly? [x]
+  (util/anomaly? x))
+
+(defn anom [category & [message & [opts]]]
+  (util/anom category message opts))
+
+(defn seconds-between [t1 t2]
+  (util/seconds-between t1 t2))
+
+(defn duration [x unit]
+  (util/duration x unit))
+
+(defn elapsed? [t1 t2 x unit]
+  (util/elapsed? t1 t2 x unit))
+
+(defn between-hours? [t h1 h2]
+  (util/between-hours? t h1 h2))
+
+(defn add-seconds [date seconds]
+  (util/add-seconds date seconds))
+
+(defn base64-encode [bs]
+  (util/base64-encode bs))
+
+(defn base64-decode [s]
+  (util/base64-decode s))
+
+(defn jwt-encrypt
+  [claims secret]
+  (jwt/encrypt
+    (-> claims
+        (assoc :exp (add-seconds (now) (:exp-in claims)))
+        (dissoc :exp-in))
+    (base64-decode secret)
+    {:alg :a256kw :enc :a128gcm}))
+
+(defn jwt-decrypt
+  [token secret]
+  (catchall
+    (jwt/decrypt
+      token
+      (base64-decode secret)
+      {:alg :a256kw :enc :a128gcm})))
+
+(defn sha256 [string]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes string "UTF-8"))]
+    (apply str (map (partial format "%02x") digest))))

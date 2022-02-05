@@ -1,12 +1,24 @@
 (ns com.biffweb.impl.util
   (:require [clojure.java.shell :as shell]
+            [clojure.pprint :as pp]
             [clojure.repl :as repl]
             [clojure.set :as set]
+            [clojure.spec.alpha :as spec]
             [clojure.string :as str]
             [clojure.tools.namespace.dir :as dir]
             [clojure.tools.namespace.reload :as reload]
             clojure.tools.namespace.repl
             [clojure.tools.namespace.track :as track]))
+
+(defn ppr-str [x]
+  (with-out-str
+    (binding [*print-namespace-maps* false]
+      (pp/pprint x))))
+
+(defn pprint [x]
+  (binding [*print-namespace-maps* false]
+    (pp/pprint x))
+  (flush))
 
 ; todo break this into different namespaces or something
 
@@ -226,3 +238,20 @@
     (if (= 0 (:exit result))
       (:out result)
       (throw (ex-info (:err result) result)))))
+
+(defn random-uuid []
+  (java.util.UUID/randomUUID))
+
+(defn now []
+  (java.util.Date.))
+
+(defn anomaly? [x]
+  (spec/valid? (spec/keys :req [:cognitect.anomalies/category]
+                          :opt [:cognitect.anomalies/message])
+               x))
+
+(defn anom [category & [message & [opts]]]
+  (merge opts
+         {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
+         (when message
+           {:cognitect.anomalies/message message})))

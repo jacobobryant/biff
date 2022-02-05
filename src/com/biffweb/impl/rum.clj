@@ -9,7 +9,7 @@
   "Given a Rum data structure, returns a 200 HTML response."
   [body]
   {:status 200
-   :headers/Content-Type "text/html; charset=utf-8"
+   :headers {"content-type" "text/html; charset=utf-8"}
    :body (rum/render-static-markup body)})
 
 (defn unsafe [html]

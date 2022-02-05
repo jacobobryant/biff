@@ -127,6 +127,10 @@
   (ffirst (xt/q db {:find '[(pull doc '[*])]
                     :where [['doc k v]]})))
 
+(defn lookup-id [db k v]
+  (ffirst (xt/q db {:find '[doc]
+                    :where [['doc k v]]})))
+
 (defn special-val? [x]
   (or (= x :db/dissoc)
       (and (coll? x)
@@ -157,20 +161,20 @@
 (b/defnc lookup-info [db doc-id]
   :let [[lookup-id default-id] (when (and (special-val? doc-id)
                                           (= :db/lookup (first doc-id)))
-                                 (rest id))]
+                                 (rest doc-id))]
   :when lookup-id
   :let [lookup-doc-before (xt/entity db lookup-id)
-        lookup-doc-after (or lookup-doc
+        lookup-doc-after (or lookup-doc-before
                              {:xt/id lookup-id
                               :db/owned-by (or default-id (java.util.UUID/randomUUID))})]
-  [lookup-doc-before lookup-doc-after])
+  [lookup-id lookup-doc-before lookup-doc-after])
 
-(b/defnc get-ops*
+(b/defnc get-ops
   [{:keys [::now biff/db biff/malli-opts]}
    {:keys [xt/id db/doc-type db/op] :as tx-doc}]
   ;; possible ops: delete, put, merge, update
-  :let [valid? (fn [doc] (malc/validate doc-type doc malli-opts))
-        explain (fn [doc] (male/humanize (malc/explain doc-type doc malli-opts)))
+  :let [valid? (fn [doc] (malc/validate doc-type doc @malli-opts))
+        explain (fn [doc] (male/humanize (malc/explain doc-type doc @malli-opts)))
         [lookup-id
          lookup-doc-before
          lookup-doc-after] (lookup-info db id)
@@ -220,29 +224,20 @@
                 lookup-ops))
 
 (b/defnc submit-tx
-  "Submits a Biff transaction.
-
-  node:       A xtdb node.
-  biff-tx:    See https://biff.findka.com/#transactions.
-  malli-opts: A var for Malli opts."
   [{:keys [biff.xtdb/node
-           biff.xtdb/n-tried
-           biff/malli-opts
-           biff.xtdb/get-ops]
-    :or {n-tried 0
-         get-ops get-ops*}
+           biff.xtdb/n-tried]
+    :or {n-tried 0}
     :as sys}
    biff-tx]
   :let [sys (assoc (assoc-db sys) ::now (java.util.Date.))
         xt-tx (mapcat #(get-ops sys %) biff-tx)
         submitted-tx (xt/submit-tx node xt-tx)]
+  :do (xt/await-tx node submitted-tx)
   (xt/tx-committed? node submitted-tx) submitted-tx
-  (< n-tried 4) (let [seconds (int (Math/pow 2 n-tried))]
-                  (printf "TX failed due to contention, trying again in %d seconds...\n"
-                          seconds)
-                  (flush)
-                  (Thread/sleep (* 1000 seconds))
-                  (-> sys
-                      (update :biff.xtdb/n-tried (fnil inc 0))
-                      (submit-tx biff-tx)))
-  :else (throw (ex-info "TX failed, too much contention." {:tx biff-tx})))
+  (<= 4 n-tried) (throw (ex-info "TX failed, too much contention." {:tx biff-tx}))
+  :let [seconds (int (Math/pow 2 n-tried))]
+  :do (printf "TX failed due to contention, trying again in %d seconds...\n"
+              seconds)
+  :do (flush)
+  :do (Thread/sleep (* 1000 seconds))
+  (recur (update sys :biff.xtdb/n-tried (fnil inc 0)) biff-tx))
