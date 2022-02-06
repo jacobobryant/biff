@@ -5,7 +5,8 @@
             [clj-http.client :as http]
             [rum.core :as rum]
             [xtdb.api :as xt]
-            [ring.adapter.jetty9 :as jetty]))
+            [ring.adapter.jetty9 :as jetty]
+            [cheshire.core :as cheshire]))
 
 (defn set-foo [{:keys [biff/uid params] :as req}]
   (biff/submit-tx req
@@ -38,14 +39,47 @@
       :user/bar (:bar params)}])
   (biff/render (bar-form {:value (:bar params)})))
 
-(defn send-message [{:keys [biff/uid params] :as req}]
-  (biff/submit-tx req
-    [{:db/doc-type :msg
-      :msg/user uid
-      :msg/text (:text params)
-      :msg/sent-at :db/now}])
-  {:status 303
-   :headers {"location" "/app"}})
+(defn message [{:msg/keys [text sent-at]}]
+  [:.mt-3
+   [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy")]
+   [:div text]])
+
+(defn send-message [{:keys [biff/uid params] :as req} {:keys [ws text]}]
+  (let [{:keys [text]} (cheshire/parse-string text true)]
+    (biff/submit-tx req
+      [{:db/doc-type :msg
+        :msg/user uid
+        :msg/text text
+        :msg/sent-at :db/now}])
+    (jetty/send!
+      ws
+      (rum/render-static-markup
+        [:div#messages {:hx-swap-oob "afterbegin"}
+         (message {:msg/text text :msg/sent-at (java.util.Date.)})]))))
+
+(defn chat [{:keys [biff/db]}]
+  (let [messages (q db
+                    '{:find (pull msg [*])
+                      :in [t0]
+                      :where [[msg :msg/sent-at t]
+                              [(<= t0 t)]]}
+                    (biff/add-seconds (java.util.Date.) (* -60 10)))]
+    [:div {:hx-ws "connect:/app/chat"}
+     [:form.mb0 {:hx-ws "send"}
+      [:label.block {:for "message"} "Write a message"]
+      [:.h-1]
+      [:textarea.w-full#message {:name "text"}]
+      [:.h-1]
+      [:.text-sm.text-gray-600
+       "Sign in with an incognito window to have a conversation with yourself."]
+      [:.h-2]
+      [:div [:button.btn {:type "submit"} "Send message"]]]
+     [:.h-6]
+     (if (empty? messages)
+       [:div "No messages yet."]
+       [:div "Messages sent in the past 10 minutes:"])
+     [:div#messages
+      (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
 (b/defnc app [{:keys [biff/uid biff/db] :as req}]
   :let [{:user/keys [email foo bar]} (xt/entity db uid)]
@@ -75,36 +109,7 @@
     [:.h-6]
     (bar-form {:value bar})
     [:.h-6]
-    (biff/form
-      {:action "/app/send-message"}
-      [:label.block {:for "message"} "Write a message"]
-      [:.h-1]
-      [:textarea.w-full#message {:name "text"}]
-      [:.h-1]
-      [:.text-sm.text-gray-600
-       "Sign in with an incognito window to have a conversation with yourself."]
-      [:.h-2]
-      [:div [:button.btn {:type "submit"} "Send message"]])
-    [:.h-6]
-    (let [messages (q db
-                      '{:find (pull msg [*])
-                        :in [t0]
-                        :where [[msg :msg/sent-at t]
-                                [(<= t0 t)]]}
-                      (biff/add-seconds (java.util.Date.) (* -60 10)))]
-      (if (empty? messages)
-        [:div "No messages yet."]
-        (list
-          [:div "Messages sent in the past 10 minutes:"]
-          [:.h-3]
-          (for [{:msg/keys [text sent-at]} (sort-by :msg/sent-at #(compare %2 %1) messages)]
-            [:.mb-3
-             [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy")]
-             [:div text]]))))
-    [:div {:hx-ws "connect:/app/ws"}
-     [:div#ws "hello there"]
-     [:form {:hx-ws "send"}
-      [:input {:type "text" :name "sometext"}]]]))
+    (chat req)))
 
 (defn wrap-signed-in [handler]
   (fn [{:keys [biff/uid session] :as req}]
@@ -114,7 +119,7 @@
        :headers {"location" "/"}})))
 
 (defn handler [{:keys [example/chat-clients biff/base-url headers] :as req}]
-  (if (not= base-url (get headers "origin" ""))
+  (if (not= base-url (get headers "origin" :none))
     {:status 401
      :headers {"content-type" "text/plain"}
      :body "Unauthorized"}
@@ -122,10 +127,9 @@
      :headers {"upgrade" "websocket"
                "connection" "upgrade"}
      :ws {:on-connect (fn [ws]
-                        (swap! chat-clients conj ws)
-                        (jetty/send! ws "<div id=\"ws\">connected!</div>"))
+                        (swap! chat-clients conj ws))
           :on-text (fn [ws text-message]
-                     (jetty/send! ws (str "<div id=\"ws\">" text-message "</div>")))
+                     (send-message req {:ws ws :text text-message}))
           :on-close (fn [ws status-code reason]
                       (swap! chat-clients disj ws))}}))
 
@@ -134,5 +138,4 @@
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
-            ["/send-message" {:post send-message}]
-            ["/ws" {:get handler}]]})
+            ["/chat" {:get handler}]]})
