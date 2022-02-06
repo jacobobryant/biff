@@ -15,7 +15,8 @@
 
 (defn start []
   (biff/start-system
-    {:biff/after-refresh `start
+    {:example/chat-clients (atom #{})
+     :biff/after-refresh `start
      :biff/handler #'handler
      :biff/malli-opts #'malli-opts
      :biff.hawk/on-save #'on-save

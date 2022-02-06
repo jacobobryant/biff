@@ -171,7 +171,7 @@
 
 (b/defnc get-ops
   [{:keys [::now biff/db biff/malli-opts]}
-   {:keys [xt/id db/doc-type db/op] :as tx-doc}]
+   {:keys [xt/id db/doc-type db/op] :or {op :put} :as tx-doc}]
   ;; possible ops: delete, put, merge, update
   :let [valid? (fn [doc] (malc/validate doc-type doc @malli-opts))
         explain (fn [doc] (male/humanize (malc/explain doc-type doc @malli-opts)))

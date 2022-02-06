@@ -12,5 +12,4 @@
    misc/features])
 
 (def routes (map :routes features))
-
 (def static-pages (apply biff/safe-merge (map :static features)))
