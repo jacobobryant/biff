@@ -1,7 +1,7 @@
 (ns com.example.feat.app
   (:require [better-cond.core :as b]
             [com.biffweb :as biff :refer [q]]
-            [com.example.views :as v]
+            [com.example.ui :as ui]
             [clj-http.client :as http]
             [rum.core :as rum]
             [xtdb.api :as xt]
@@ -44,19 +44,24 @@
    [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy HH:mm:ss")]
    [:div text]])
 
-(defn send-message [{:keys [biff/uid params example/chat-clients] :as req}
-                    {:keys [ws text]}]
-  (let [{:keys [text]} (cheshire/parse-string text true)
-        html (rum/render-static-markup
-               [:div#messages {:hx-swap-oob "afterbegin"}
-                (message {:msg/text text :msg/sent-at (java.util.Date.)})])]
+(defn notify-clients [{:keys [example/chat-clients]} tx]
+  (doseq [[op & args] (::xt/tx-ops tx)
+          :when (= op ::xt/put)
+          :let [[doc] args]
+          :when (contains? doc :msg/text)
+          :let [html (rum/render-static-markup
+                       [:div#messages {:hx-swap-oob "afterbegin"}
+                        (message doc)])]
+          ws @chat-clients]
+    (jetty/send! ws html)))
+
+(defn send-message [{:keys [biff/uid ] :as req} {:keys [text]}]
+  (let [{:keys [text]} (cheshire/parse-string text true)]
     (biff/submit-tx req
       [{:db/doc-type :msg
         :msg/user uid
         :msg/text text
-        :msg/sent-at :db/now}])
-    (doseq [ws @chat-clients]
-      (jetty/send! ws html))))
+        :msg/sent-at :db/now}])))
 
 (defn chat [{:keys [biff/db]}]
   (let [messages (q db
@@ -87,7 +92,7 @@
 
 (b/defnc app [{:keys [biff/uid biff/db] :as req}]
   :let [{:user/keys [email foo bar]} (xt/entity db uid)]
-  (v/render-page
+  (ui/render-page
     {}
     nil
     [:div "Signed in as " email ". "
@@ -142,4 +147,5 @@
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
-            ["/chat" {:get handler}]]})
+            ["/chat" {:get handler}]]
+   :on-tx notify-clients})

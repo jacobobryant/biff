@@ -1,6 +1,6 @@
 (ns com.example.feat.home
   (:require [com.biffweb :as biff]
-            [com.example.views :as v]))
+            [com.example.ui :as ui]))
 
 (defn signin-form []
   (biff/form
@@ -27,7 +27,7 @@
 
 (defn home [_]
   (biff/render
-    (v/page
+    (ui/page
       {}
       nil
       (signin-form))))

@@ -1,4 +1,4 @@
-(ns com.example.views
+(ns com.example.ui
   (:require [clojure.java.io :as io]
             [com.biffweb :as biff]))
 

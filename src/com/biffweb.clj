@@ -137,6 +137,9 @@
 (defn use-xt [sys]
   (bxt/use-xt sys))
 
+(defn use-tx-listener [sys]
+  (bxt/use-tx-listener sys))
+
 (defn assoc-db [sys]
   (bxt/assoc-db sys))
 

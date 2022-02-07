@@ -75,6 +75,27 @@
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
 
+(defn use-tx-listener [{:keys [biff.xtdb/on-tx biff.xtdb/node] :as sys}]
+  (if-not on-tx
+    sys
+    (let [lock (Object.)
+          listener (xt/listen
+                     node
+                     {::xt/event-type ::xt/indexed-tx}
+                     (fn [{:keys [::xt/tx-id committed?] :as event}]
+                       (when committed?
+                         (locking lock
+                           (with-open [log (xt/open-tx-log node
+                                                           (dec tx-id)
+                                                           true)]
+                             (let [tx (first (iterator-seq log))]
+                               (try
+                                 (on-tx sys tx)
+                                 (catch Exception e
+                                   (st/print-stack-trace e)
+                                   (flush)))))))))]
+      (update sys :biff/stop conj #(.close listener)))))
+
 (defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
   (assoc sys :biff/db (xt/db node)))
 

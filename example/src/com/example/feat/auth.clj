@@ -1,7 +1,7 @@
 (ns com.example.feat.auth
   (:require [better-cond.core :as b]
             [com.biffweb :as biff]
-            [com.example.views :as v]
+            [com.example.ui :as ui]
             [clj-http.client :as http]
             [rum.core :as rum]
             [xtdb.api :as xt]))
@@ -93,7 +93,7 @@
      :headers {"location" "/"}}))
 
 (def signin-sent
-  (v/page
+  (ui/page
     {}
     nil
     [:div
@@ -101,7 +101,7 @@
      "key for MailerSend, the link will be emailed to you instead."]))
 
 (def signin-fail
-  (v/page
+  (ui/page
     {}
     nil
     [:div
@@ -115,6 +115,6 @@
 (def features
   {:routes [["/auth/send"          {:post send-token}]
             ["/auth/verify/:token" {:get verify-token}]
-            ["/auth/signout"             {:post signout}]]
+            ["/auth/signout"       {:post signout}]]
    :static {"/auth/sent/" signin-sent
             "/auth/fail/" signin-fail}})
