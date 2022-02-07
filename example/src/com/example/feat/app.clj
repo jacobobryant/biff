@@ -40,22 +40,23 @@
   (biff/render (bar-form {:value (:bar params)})))
 
 (defn message [{:msg/keys [text sent-at]}]
-  [:.mt-3
-   [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy")]
+  [:.mt-3 {:_ "init send newMessage to #message-header"}
+   [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy HH:mm:ss")]
    [:div text]])
 
-(defn send-message [{:keys [biff/uid params] :as req} {:keys [ws text]}]
-  (let [{:keys [text]} (cheshire/parse-string text true)]
+(defn send-message [{:keys [biff/uid params example/chat-clients] :as req}
+                    {:keys [ws text]}]
+  (let [{:keys [text]} (cheshire/parse-string text true)
+        html (rum/render-static-markup
+               [:div#messages {:hx-swap-oob "afterbegin"}
+                (message {:msg/text text :msg/sent-at (java.util.Date.)})])]
     (biff/submit-tx req
       [{:db/doc-type :msg
         :msg/user uid
         :msg/text text
         :msg/sent-at :db/now}])
-    (jetty/send!
-      ws
-      (rum/render-static-markup
-        [:div#messages {:hx-swap-oob "afterbegin"}
-         (message {:msg/text text :msg/sent-at (java.util.Date.)})]))))
+    (doseq [ws @chat-clients]
+      (jetty/send! ws html))))
 
 (defn chat [{:keys [biff/db]}]
   (let [messages (q db
@@ -65,7 +66,8 @@
                               [(<= t0 t)]]}
                     (biff/add-seconds (java.util.Date.) (* -60 10)))]
     [:div {:hx-ws "connect:/app/chat"}
-     [:form.mb0 {:hx-ws "send"}
+     [:form.mb0 {:hx-ws "send"
+                 :_ "on submit set value of #message to ''"}
       [:label.block {:for "message"} "Write a message"]
       [:.h-1]
       [:textarea.w-full#message {:name "text"}]
@@ -75,9 +77,11 @@
       [:.h-2]
       [:div [:button.btn {:type "submit"} "Send message"]]]
      [:.h-6]
-     (if (empty? messages)
-       [:div "No messages yet."]
-       [:div "Messages sent in the past 10 minutes:"])
+     [:div#message-header
+      {:_ "on newMessage put 'Messages sent in the past 10 minutes:' into me"}
+      (if (empty? messages)
+        "No messages yet."
+        "Messages sent in the past 10 minutes:")]
      [:div#messages
       (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
