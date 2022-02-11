@@ -8,27 +8,24 @@
 (defn css-path []
   (str "/css/main.css?a=" (hash (biff/catchall (slurp (io/resource "public/css/main.css"))))))
 
-(defn base [opts head & body]
+(defn base [opts & body]
   (apply
     biff/base-html
-    (merge #:base{:title "My Application"
-                  :lang "en-US"
-                  :icon "https://cdn.findka.com/glider.png"
-                  :description "My Application Description"
-                  :image "https://clojure.org/images/clojure-logo-120b.png"}
-           opts)
-    (concat [[:link {:rel "stylesheet" :href (css-path)}]
-             [:script {:src "https://unpkg.com/htmx.org@1.6.1"}]
-             [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]]
-            head)
+    (-> opts
+        (merge #:base{:title "My Application"
+                      :lang "en-US"
+                      :icon "https://cdn.findka.com/glider.png"
+                      :description "My Application Description"
+                      :image "https://clojure.org/images/clojure-logo-120b.png"})
+        (update :base/head (fn [head]
+                             (concat [[:link {:rel "stylesheet" :href (css-path)}]
+                                      [:script {:src "https://unpkg.com/htmx.org@1.6.1"}]
+                                      [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]]
+                                     head))))
     body))
 
-(defn page [opts head & body]
+(defn page [opts & body]
   (base
     opts
-    head
     [:.p-3.mx-auto.max-w-screen-sm.w-full
      body]))
-
-(defn render-page [& args]
-  (biff/render (apply page args)))

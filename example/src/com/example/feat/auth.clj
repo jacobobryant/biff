@@ -39,8 +39,6 @@
                              biff/jwt-secret
                              anti-forgery-token
                              params] :as req}]
-  (nil? anti-forgery-token) {:status 303
-                             :headers {"location" "/auth/fail/"}}
   :let [email (biff/normalize-email (:email params))
         token (biff/jwt-encrypt
                 {:intent "signin"
@@ -75,27 +73,26 @@
   (or (not= intent "signin")
       (not= state (biff/sha256 anti-forgery-token))) {:status 303
                                                       :headers {"location" "/auth/fail/"}}
-  :do (biff/submit-tx req
-        [{:db/op :merge
-          :db/doc-type :user
-          :xt/id [:db/lookup {:user/email email}]}])
-  :let [user-id (biff/lookup-id (xt/db node) :user/email email)]
+  :let [get-user-id #(biff/lookup-id (xt/db node) :user/email email)
+        user-id (get-user-id)]
+  :do (when-not user-id
+        (biff/submit-tx req
+          [{:db/op :merge
+            :db/doc-type :user
+            :xt/id [:db/lookup {:user/email email}]}]))
+  :let [user-id (or user-id (get-user-id))]
   {:status 303
    :headers {"location" "/app"}
    :session (assoc session :uid user-id)})
 
-(defn signout [{:keys [biff/uid]}]
-  (if uid
-    {:status 303
-     :headers {"location" "/"}
-     :session nil}
-    {:status 303
-     :headers {"location" "/"}}))
+(defn signout [{:keys [session]}]
+  {:status 303
+   :headers {"location" "/"}
+   :session (dissoc session :uid)})
 
 (def signin-sent
   (ui/page
     {}
-    nil
     [:div
      "The sign-in link was printed to the console. If you add an API "
      "key for MailerSend, the link will be emailed to you instead."]))
@@ -103,7 +100,6 @@
 (def signin-fail
   (ui/page
     {}
-    nil
     [:div
      "Your sign-in request failed. There are several possible reasons:"]
     [:ul

@@ -8,11 +8,11 @@
             [ring.adapter.jetty9 :as jetty]
             [cheshire.core :as cheshire]))
 
-(defn set-foo [{:keys [biff/uid params] :as req}]
+(defn set-foo [{:keys [session params] :as req}]
   (biff/submit-tx req
     [{:db/op :update
       :db/doc-type :user
-      :xt/id uid
+      :xt/id (:uid session)
       :user/foo (:foo params)}])
   {:status 303
    :headers {"location" "/app"}})
@@ -31,11 +31,11 @@
     [:.text-sm.text-gray-600
      "This demonstrates updating a value with HTMX."]))
 
-(defn set-bar [{:keys [biff/uid params] :as req}]
+(defn set-bar [{:keys [session params] :as req}]
   (biff/submit-tx req
     [{:db/op :update
       :db/doc-type :user
-      :xt/id uid
+      :xt/id (:uid session)
       :user/bar (:bar params)}])
   (biff/render (bar-form {:value (:bar params)})))
 
@@ -55,11 +55,11 @@
           ws @chat-clients]
     (jetty/send! ws html)))
 
-(defn send-message [{:keys [biff/uid ] :as req} {:keys [text]}]
+(defn send-message [{:keys [session] :as req} {:keys [text]}]
   (let [{:keys [text]} (cheshire/parse-string text true)]
     (biff/submit-tx req
       [{:db/doc-type :msg
-        :msg/user uid
+        :msg/user (:uid session)
         :msg/text text
         :msg/sent-at :db/now}])))
 
@@ -90,9 +90,9 @@
      [:div#messages
       (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
-(b/defnc app [{:keys [biff/uid biff/db] :as req}]
-  :let [{:user/keys [email foo bar]} (xt/entity db uid)]
-  (ui/render-page
+(b/defnc app [{:keys [session biff/db] :as req}]
+  :let [{:user/keys [email foo bar]} (xt/entity db (:uid session))]
+  (ui/page
     {}
     nil
     [:div "Signed in as " email ". "
@@ -121,8 +121,8 @@
     (chat req)))
 
 (defn wrap-signed-in [handler]
-  (fn [{:keys [biff/uid session] :as req}]
-    (if (some? uid)
+  (fn [{:keys [session] :as req}]
+    (if (some? (:uid session))
       (handler req)
       {:status 303
        :headers {"location" "/"}})))

@@ -115,11 +115,12 @@
       (println "Jetty running on" (str "http://" host ":" port)))
     (update sys :biff/stop conj #(jetty/stop-server server))))
 
-(defn wrap-default-middleware [handler opts]
-  (middle/wrap-defaults handler opts))
+(def wrap-render-rum middle/wrap-render-rum)
 
-(defn use-wrap-env [sys]
-  (update sys :biff/handler comp #(merge (bxt/assoc-db sys) %)))
+(def wrap-inner-defaults middle/wrap-inner-defaults)
+
+(defn use-outer-default-middleware [sys]
+  (update sys :biff/handler middle/wrap-outer-defaults sys))
 
 (defn read-config []
   (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
@@ -127,6 +128,9 @@
         config-keys (concat (get-in env->config [env :merge]) [env])
         config (apply merge (map env->config config-keys))]
     config))
+
+(defn use-config [sys]
+  (merge (read-config) sys))
 
 (defn generate-secret [length]
   (util/base64-encode (nonce/random-bytes length)))
@@ -176,8 +180,8 @@
 (defn g-fonts [families]
   (brum/g-fonts families))
 
-(defn base-html [opts head & body]
-  (apply brum/base opts head body))
+(defn base-html [opts & body]
+  (apply brum/base-html opts body))
 
 (defn form [opts & body]
   (apply brum/form opts body))

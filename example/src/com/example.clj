@@ -4,6 +4,7 @@
             [com.example.feat.auth :as auth]
             [com.example.feat.home :as home]
             [com.example.schema :refer [malli-opts]]
+            [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def features
@@ -11,7 +12,9 @@
    auth/features
    home/features])
 
-(def routes (map :routes features))
+(def routes [["" {:middleware [anti-forgery/wrap-anti-forgery]}
+              (map :routes features)]
+             (map :api-routes features)])
 
 (def static-pages (apply biff/safe-merge (map :static features)))
 
@@ -20,10 +23,8 @@
           :when on-tx]
     (on-tx sys tx)))
 
-(def config (biff/read-config))
-
 (def handler (-> (biff/reitit-handler {:routes routes})
-                 (biff/wrap-default-middleware config)))
+                 (biff/wrap-inner-defaults {})))
 
 (defn on-save [sys]
   (biff/eval-files! sys)
@@ -37,18 +38,14 @@
      :biff/malli-opts #'malli-opts
      :biff.hawk/on-save #'on-save
      :biff.xtdb/on-tx #'on-tx
-     :biff/components [#(merge config %)
+     :biff/components [biff/use-config
                        biff/use-xt
                        biff/use-tx-listener
-                       biff/use-wrap-env
+                       biff/use-outer-default-middleware
                        biff/use-jetty
                        biff/use-hawk]})
-  (println "Go to" (:biff/base-url config)))
+  (println "Go to" (:biff/base-url @biff/system)))
 
 (defn -main [& args]
   (start)
   (apply nrepl-cmd/-main args))
-
-(comment
-  (biff/refresh)
-  )

@@ -26,11 +26,9 @@
      "link to the console."]))
 
 (defn home [_]
-  (biff/render
-    (ui/page
-      {}
-      nil
-      (signin-form))))
+  (ui/page
+    {}
+    (signin-form)))
 
 (def features
   {:routes [["/" {:get home}]]})

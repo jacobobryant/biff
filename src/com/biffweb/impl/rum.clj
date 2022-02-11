@@ -29,7 +29,7 @@
                          (str "&family=" f)))
           :rel "stylesheet"}])
 
-(defc base
+(defc base-html
   "Wraps contents in an :html and :body element with various metadata set.
 
   font-families: A collection of families to request from Google fonts.
@@ -41,8 +41,9 @@
                 icon
                 url
                 canonical
-                font-families]}
-   head & body]
+                font-families
+                head]}
+   & body]
   [:html
    {:lang lang
     :style {:min-height "100%"
@@ -73,7 +74,7 @@
                 :href "https://fonts.gstatic.com",
                 :rel "preconnect"}]
         (g-fonts font-families)))
-    head]
+    (apply list head)]
    [:body
     {:style {:position "absolute"
              :width "100%"

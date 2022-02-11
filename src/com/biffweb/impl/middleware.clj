@@ -2,22 +2,23 @@
   (:require [clojure.stacktrace :as st]
             [clojure.string :as str]
             [com.biffweb.impl.util :as util]
+            [com.biffweb.impl.xtdb :as bxt]
             [muuntaja.middleware :as muuntaja]
-            [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.defaults :as rd]
             [ring.middleware.resource :as res]
-            [ring.middleware.session.cookie :as cookie]))
+            [ring.middleware.session.cookie :as cookie]
+            [rum.core :as rum]))
 
-(defn wrap-authentication [handler]
-  (anti-forgery/wrap-anti-forgery
-    (fn [req]
-      (handler (assoc req :biff/uid (-> req :session :uid))))
-    ;; If there isn't a CSRF token, still call the handler, but don't set
-    ;; :biff/uid. Then you can do unauthenticated POSTs from static pages (e.g.
-    ;; a sign-in form). Thus, you should NOT check :session/uid for
-    ;; authentication. Check only :biff/uid.
-    {:error-handler handler}))
+(defn wrap-render-rum [handler]
+  (fn [req]
+    (let [response (handler req)]
+      (if (and (vector? response)
+               (str/starts-with? (str (first response)) ":html"))
+        {:status 200
+         :headers {"content-type" "text/html"}
+         :body (rum/render-static-markup response)}
+        response))))
 
 (defn wrap-index-files
   "If handler returns nil, try again with each index file appended to the URI."
@@ -74,6 +75,33 @@
              @spa-resp) @spa-resp
         :else @handler-resp))))
 
+(defn wrap-internal-error
+  [handler {:biff.middleware/keys [on-error]
+            :or {on-error util/default-on-error}}]
+  (fn [req]
+    (try
+      (handler req)
+      (catch Throwable t
+        (st/print-stack-trace t)
+        (flush)
+        (on-error (assoc req :status 500 :ex t))))))
+
+(defn wrap-log-requests
+  "Prints status, request method and response status for each request."
+  [handler]
+  (fn [req]
+    (let [start (java.util.Date.)
+          resp (handler req)
+          stop (java.util.Date.)
+          duration (- (inst-ms stop) (inst-ms start))]
+      (printf "%3sms %s %-4s %s\n"
+              (str duration)
+              (:status resp "nil")
+              (name (:request-method req))
+              (:uri req))
+      (flush)
+      resp)))
+
 (defn wrap-ring-defaults
   [handler {:biff.middleware/keys [session-store
                                    cookie-secret
@@ -100,40 +128,22 @@
                               changes)]
     (rd/wrap-defaults handler ring-defaults)))
 
-(defn wrap-internal-error
-  [handler {:biff.middleware/keys [on-error]
-            :or {on-error util/default-on-error}}]
+(defn wrap-env [handler sys]
   (fn [req]
-    (try
-      (handler req)
-      (catch Throwable t
-        (st/print-stack-trace t)
-        (flush)
-        (on-error (assoc req :status 500 :ex t))))))
+    (handler (merge (bxt/assoc-db sys) req))))
 
-(defn wrap-log-requests
-  "Prints status, request method and response status for each request."
-  [handler]
-  (fn [req]
-    (let [start (java.util.Date.)
-          resp (handler req)
-          stop (java.util.Date.)
-          duration (- (inst-ms stop) (inst-ms start))]
-      (printf "%s  %-4s %s %dms\n"
-              (:status resp "nil")
-              (name (:request-method req))
-              (:uri req)
-              duration)
-      (flush)
-      resp)))
-
-(defn wrap-defaults
+(defn wrap-inner-defaults
   [handler opts]
   (-> handler
+      wrap-render-rum
       muuntaja/wrap-params
       muuntaja/wrap-format
-      wrap-authentication
       (wrap-resource opts)
-      (wrap-ring-defaults opts)
       (wrap-internal-error opts)
       wrap-log-requests))
+
+;; TODO emphasize that this doesn't include wrap-anti-forgery
+(defn wrap-outer-defaults [handler opts]
+  (-> handler
+      (wrap-ring-defaults opts)
+      (wrap-env opts)))
