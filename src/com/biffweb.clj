@@ -2,6 +2,7 @@
   (:require [better-cond.core :as b]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jwt :as jwt]
+            [chime.core :as chime]
             [clj-http.client :as http]
             [clojure.edn :as edn]
             [clojure.string :as str]
@@ -115,8 +116,14 @@
       (println "Jetty running on" (str "http://" host ":" port)))
     (update sys :biff/stop conj #(jetty/stop-server server))))
 
+(def wrap-anti-forgery-websockets middle/wrap-anti-forgery-websockets)
 (def wrap-render-rum middle/wrap-render-rum)
-
+(def wrap-index-files middle/wrap-index-files)
+(def wrap-resource middle/wrap-resource)
+(def wrap-internal-error middle/wrap-internal-error)
+(def wrap-log-requests middle/wrap-log-requests)
+(def wrap-ring-defaults middle/wrap-ring-defaults)
+(def wrap-env middle/wrap-env)
 (def wrap-inner-defaults middle/wrap-inner-defaults)
 
 (defn use-outer-default-middleware [sys]
@@ -130,7 +137,7 @@
     config))
 
 (defn use-config [sys]
-  (merge (read-config) sys))
+  (merge sys (read-config)))
 
 (defn generate-secret [length]
   (util/base64-encode (nonce/random-bytes length)))
@@ -291,3 +298,20 @@
 (defn sha256 [string]
   (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes string "UTF-8"))]
     (apply str (map (partial format "%02x") digest))))
+
+(defn use-chime
+  [{:biff.chime/keys [tasks] :as sys}]
+  (reduce (fn [sys {:keys [schedule task enabled]
+                    :or {enabled (constantly true)}}]
+            (if (enabled sys)
+              (let [scheduler (chime/chime-at (schedule) (fn [_] (task sys)))]
+                (update sys :biff/stop conj #(.close scheduler)))
+              sys))
+          sys
+          tasks))
+
+(defn use-when [f & components]
+  (fn [sys]
+    (if (f sys)
+      (update sys :biff/components #(concat components %))
+      sys)))

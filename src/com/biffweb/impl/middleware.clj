@@ -10,6 +10,16 @@
             [ring.middleware.session.cookie :as cookie]
             [rum.core :as rum]))
 
+(defn wrap-anti-forgery-websockets [handler]
+  (fn [{:keys [biff/base-url] :as req}]
+    (let [response (handler req)]
+      (if (and (= (:status response) 101)
+               (not= base-url (get (:headers req) "origin" :none)))
+        {:status 403
+         :headers {"content-type" "text/plain"}
+         :body "Forbidden"}
+        response))))
+
 (defn wrap-render-rum [handler]
   (fn [req]
     (let [response (handler req)]

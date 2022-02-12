@@ -1,15 +1,22 @@
-{:prod {:biff.xtdb/topology :jdbc
+{:prod {:example/web true
+        :example/worker true
+        :biff.xtdb/topology :jdbc
         :biff.xtdb/dir "storage/xtdb"
         :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
         :biff.xtdb.jdbc-pool/maximumPoolSize 5
         :biff/base-url "https://example.com"
-        ;; Don't reuse these keys in production.
+        :mailersend/api-key nil
+        :mailersend/defaults {[:from :email] "hello@mail.example.com"
+                              [:from :name] "My Application"
+                              [:reply_to :email] "hello@example.com"
+                              [:reply_to :name] "My Application"}
+        ;; Don't reuse these keys.
         :biff.middleware/cookie-secret "f1WY9BRQ6Xf76EOFg+LHMQ=="
-        :biff.middleware/jwt-secret "LYe1AYK6u8XwSqOXBN8/3xtjRB10d6aRehw+e94oGZQ="}
+        :biff/jwt-secret "LYe1AYK6u8XwSqOXBN8/3xtjRB10d6aRehw+e94oGZQ="}
  :dev {:merge [:prod]
+       ;; See com.example.feat.worker
+       ;; :example/worker false
        :biff/host "0.0.0.0"
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone
-       :biff.middleware/secure false
-       :biff.chime/disable true
-       :biff.xtdb/disable-listener true}}
+       :biff.middleware/secure false}}

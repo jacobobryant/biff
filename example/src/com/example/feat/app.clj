@@ -127,25 +127,21 @@
       {:status 303
        :headers {"location" "/"}})))
 
-(defn handler [{:keys [example/chat-clients biff/base-url headers] :as req}]
-  (if (not= base-url (get headers "origin" :none))
-    {:status 401
-     :headers {"content-type" "text/plain"}
-     :body "Unauthorized"}
-    {:status 101
-     :headers {"upgrade" "websocket"
-               "connection" "upgrade"}
-     :ws {:on-connect (fn [ws]
-                        (swap! chat-clients conj ws))
-          :on-text (fn [ws text-message]
-                     (send-message req {:ws ws :text text-message}))
-          :on-close (fn [ws status-code reason]
-                      (swap! chat-clients disj ws))}}))
+(defn ws-handler [{:keys [example/chat-clients biff/base-url headers] :as req}]
+  {:status 101
+   :headers {"upgrade" "websocket"
+             "connection" "upgrade"}
+   :ws {:on-connect (fn [ws]
+                      (swap! chat-clients conj ws))
+        :on-text (fn [ws text-message]
+                   (send-message req {:ws ws :text text-message}))
+        :on-close (fn [ws status-code reason]
+                    (swap! chat-clients disj ws))}})
 
 (def features
   {:routes ["/app" {:middleware [wrap-signed-in]}
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
-            ["/chat" {:get handler}]]
+            ["/chat" {:get ws-handler}]]
    :on-tx notify-clients})
