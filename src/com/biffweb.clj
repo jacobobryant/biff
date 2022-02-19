@@ -54,25 +54,20 @@
   (swap! util/global-tracker util/eval-files* eval-paths)
   nil)
 
-(b/defnc use-hawk
+(defn use-hawk
   "A Biff component for Hawk. See https://github.com/wkf/hawk.
 
   on-save:       A single-argument function to call whenever a file is saved.
                  Receives the system map as a parameter. The function is called
                  no more than once every 500 milliseconds.
-  call-on-start: If true, triggers a callback immediately.
   paths:         A collection of root directories to monitor for file changes.
   exts:          If exts is non-empty, files that don't end in one of the
                  extensions will be ignored."
-  [{:biff.hawk/keys [on-save exts paths call-on-start disable]
+  [{:biff.hawk/keys [on-save exts paths]
     :or {exts [".clj" ".cljc"]
-         paths ["src"]
-         call-on-start true}
+         paths ["src"]}
     :as sys}]
-  disable sys
-  :do (when call-on-start
-        (on-save sys))
-  :let [watch (hawk/watch!
+  (let [watch (hawk/watch!
                 [(merge {:paths paths
                          ; todo debounce this properly
                          :handler (fn [{:keys [last-ran]
@@ -84,7 +79,7 @@
                           {:filter (fn [_ {:keys [^java.io.File file]}]
                                      (let [path (.getPath file)]
                                        (some #(str/ends-with? path %) exts)))}))])]
-  (update sys :biff/stop conj #(hawk/stop! watch)))
+    (update sys :biff/stop conj #(hawk/stop! watch))))
 
 (defn reitit-handler [{:keys [router routes on-error]
                        :or {on-error util/default-on-error}}]
@@ -129,15 +124,15 @@
 (defn use-outer-default-middleware [sys]
   (update sys :biff/handler middle/wrap-outer-defaults sys))
 
-(defn read-config []
+(defn read-config [path]
   (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
-        env->config (edn/read-string (slurp "config.edn"))
+        env->config (edn/read-string (slurp path))
         config-keys (concat (get-in env->config [env :merge]) [env])
         config (apply merge (map env->config config-keys))]
     config))
 
 (defn use-config [sys]
-  (merge sys (read-config)))
+  (merge sys (read-config (:biff/config sys))))
 
 (defn generate-secret [length]
   (util/base64-encode (nonce/random-bytes length)))

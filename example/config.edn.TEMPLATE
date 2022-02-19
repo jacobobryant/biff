@@ -1,5 +1,6 @@
-{:prod {:example/web true
-        :example/worker true
+;; vim: ft=clojure
+{:prod {:example/enable-web true
+        :example/enable-worker true
         :biff.xtdb/topology :jdbc
         :biff.xtdb/dir "storage/xtdb"
         :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
@@ -13,9 +14,14 @@
         ;; Don't reuse these keys.
         :biff.middleware/cookie-secret "f1WY9BRQ6Xf76EOFg+LHMQ=="
         :biff/jwt-secret "LYe1AYK6u8XwSqOXBN8/3xtjRB10d6aRehw+e94oGZQ="}
+ :web {:merge [:prod]
+       :example/enable-worker false}
+ :worker {:merge [:prod]
+          :example/enable-web false}
  :dev {:merge [:prod]
        ;; See com.example.feat.worker
        ;; :example/worker false
+       :example/enable-hawk
        :biff/host "0.0.0.0"
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone

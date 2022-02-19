@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 set -e
 
-MAIN_NS=com.example
-ARCH=linux-x64 # Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
+source config.sh
+
+cmd () {
+  ssh root@$SERVER "$@"
+}
+
+trench () {
+  cmd trench -p 7888 -e "$@"
+}
 
 install-tailwind () {
-  # todo maybe just infer ARCH?
-  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$ARCH
-  chmod +x tailwindcss-$ARCH
-  mv tailwindcss-$ARCH tailwindcss
+  # todo maybe just infer TAILWIND_ARCH?
+  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$TAILWIND_ARCH
+  chmod +x tailwindcss-$TAILWIND_ARCH
+  mkdir -p bin
+  mv tailwindcss-$TAILWIND_ARCH bin/tailwindcss
 }
 
 watch-css () {
-  ./tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
-}
-
-minify-css () {
-  ./tailwindcss -i tailwind.css -o target/resources/public/css/main.css --minify
+  if ! [ -x bin/tailwindcss ]; then
+    install-tailwind
+  fi
+  bin/tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
 }
 
 run () {
@@ -35,6 +42,71 @@ dev () {
 
 clean () {
   rm -rf target
+}
+
+post-receive () {
+  run -P
+  sudo systemctl restart app
+}
+
+deploy () {
+  chmod 600 config.*
+  rsync -a config.* app@$SERVER:
+  time git push $DEPLOY_TO $DEPLOY_FROM
+}
+
+soft-deploy () {
+  chmod 600 config.*
+  rsync -a --info=name1 --delete \
+    config.* \
+    tailwind.* \
+    deps.edn \
+    task \
+    src \
+    resources \
+    app@$SERVER:
+  trench '"('$SOFT_DEPLOY_FN' @com.biffweb/system)"'
+}
+
+refresh () {
+  trench '"(com.biffweb/refresh)"'
+}
+
+restart () {
+  cmd systemctl reset-failed app.service
+  cmd systemctl restart app
+}
+
+auto-soft-deploy-write () {
+  soft-deploy
+  ignore_until=$(date +%s.%N)
+  # TODO make this cross-platform
+  inotifywait --quiet --recursive --monitor --format "%e %w%f" \
+      --event modify --event move --event create --event delete \
+      . | while read changed
+  do
+      if [ $(echo "$(date +%s.%N) > $ignore_until" | bc) -eq 1 ] ; then
+          ignore_until=$(echo "$(date +%s.%N) + 0.25" | bc)
+          ( sleep 0.25 ; soft-deploy ) &
+      fi
+  done
+}
+
+logs () {
+  ssh root@$SERVER journalctl -u app -f -n ${1:-300}
+}
+
+prod-repl () {
+  echo Connect to nrepl port 7888
+  echo 7888 > .nrepl-port
+  ssh -NL 7888:localhost:7888 root@$SERVER
+}
+
+prod-dev () {
+  prod-repl &
+  auto-soft-deploy &
+  logs
+  trap 'killall ssh' INT
 }
 
 "$@"

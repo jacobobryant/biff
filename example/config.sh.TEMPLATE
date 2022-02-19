@@ -1,0 +1,27 @@
+# vim: ft=sh
+
+MAIN_NS=com.example
+TAILWIND_ARCH=linux-x64 # Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
+SOFT_DEPLOY_FN=com.example/on-save
+DEPLOY_FROM=master
+
+prod () {
+  export BIFF_ENV=prod
+  export SERVER=example.com
+  export DEPLOY_TO=prod
+  "$@"
+}
+
+web () {
+  export BIFF_ENV=web
+  export SERVER=example.com
+  export DEPLOY_TO=prod
+  "$@"
+}
+
+worker () {
+  export BIFF_ENV=worker
+  export SERVER=worker.example.com
+  export DEPLOY_TO=worker
+  "$@"
+}

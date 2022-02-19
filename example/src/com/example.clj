@@ -34,10 +34,19 @@
 
 (def static-pages (apply biff/safe-merge (map :static features)))
 
+(defn generate-assets! [sys]
+  (when (:example/enable-web sys)
+    (biff/export-rum static-pages "target/resources/public")
+    (biff/sh "bin/tailwindcss"
+             "-i" "tailwind.css"
+             "-o" "target/resources/public/css/main.css"
+             "--minify")
+    ;; todo delete files older than 10 seconds
+    ))
+
 (defn on-save [sys]
   (biff/eval-files! sys)
-  (when (:example/web sys)
-    (biff/export-rum static-pages "target/resources/public")))
+  (generate-assets! sys))
 
 (defn start []
   (biff/start-system
@@ -48,14 +57,19 @@
      :biff.hawk/on-save #'on-save
      :biff.xtdb/on-tx #'on-tx
      :biff.chime/tasks tasks
+     :biff/config "config.edn"
      :biff/components [biff/use-config
                        biff/use-xt
                        biff/use-tx-listener
-                       (biff/use-when :example/web
-                                      biff/use-outer-default-middleware
-                                      biff/use-jetty)
+                       (biff/use-when
+                         :example/enable-web
+                         biff/use-outer-default-middleware
+                         biff/use-jetty)
                        biff/use-chime
-                       biff/use-hawk]})
+                       (biff/use-when
+                         :example/enable-hawk
+                         biff/use-hawk)]})
+  (generate-assets! @biff/system)
   (println "Go to" (:biff/base-url @biff/system)))
 
 (defn -main [& args]
