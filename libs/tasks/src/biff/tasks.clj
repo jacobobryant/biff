@@ -30,10 +30,15 @@
     (str/split #"\s+")
     first))
 
+(defn ns->path [s]
+  (-> s
+      (str/replace "." "/")
+      (str/replace "-" "_")))
+
 (defn add-derived [{:keys [main-ns] :as opts}]
   (let [parent-ns (str/replace (str main-ns) #"(\.core)$" "")
-        parent-path (str/replace parent-ns "." "/")
-        main-ns-path (str/replace (str main-ns) "." "/")]
+        parent-path (ns->path parent-ns)
+        main-ns-path (ns->path (str main-ns))]
     (assoc opts
       :parent-ns parent-ns
       :parent-path parent-path
@@ -71,7 +76,7 @@
             (assoc :jwt-secret (generate-key 32)
                    :cookie-secret (generate-key 16)
                    :template-root "biff/template/"))]
-    (copy-files opts)
+     (copy-files opts)
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
       (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
