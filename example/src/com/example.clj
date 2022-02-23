@@ -15,7 +15,8 @@
    worker/features])
 
 (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
-                               biff/wrap-anti-forgery-websockets]}
+                               biff/wrap-anti-forgery-websockets
+                               biff/wrap-render-rum]}
               (map :routes features)]
              (map :api-routes features)])
 

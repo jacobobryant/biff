@@ -10,13 +10,18 @@ This is (the start of) the example/template project for Biff.
    the bash code works on Macs (I use WSL myself).
  - [clj](https://clojure.org/guides/getting_started)
 
-## Setup
+## Getting started
 
-1. Copy config.edn.TEMPLATE to config.edn. Update contents if needed.
-2. Copy config.sh.TEMPLATE to config.sh. Update contents if needed.
-3. (Recommended) add `alias t=./task` to your .bashrc
+Run these commands to test out the example project:
 
-## Development
+```bash
+cp config.edn.TEMPLATE config.edn
+cp config.sh.TEMPLATE config.sh
+# Optional: if you're not on linux-x64, edit `config.sh` and update `TAILWIND_ARCH`
+./task dev
+```
+
+## Development (work in progress)
 
 ### `./task dev`
 

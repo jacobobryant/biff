@@ -145,7 +145,6 @@
 (defn wrap-inner-defaults
   [handler opts]
   (-> handler
-      wrap-render-rum
       muuntaja/wrap-params
       muuntaja/wrap-format
       (wrap-resource opts)
