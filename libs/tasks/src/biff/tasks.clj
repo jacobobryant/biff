@@ -76,7 +76,7 @@
             (assoc :jwt-secret (generate-key 32)
                    :cookie-secret (generate-key 16)
                    :template-root "biff/template/"))]
-     (copy-files opts)
+    (copy-files opts)
     (bu/sh "chmod" "+x" (str dir "/task"))
     (doseq [f (file-seq (io/file dir "config"))]
       (bu/sh "chmod" (if (.isFile f) "600" "700") (.getPath f)))
