@@ -11,6 +11,12 @@ includes:
 search: true
 ---
 
+# Notice
+
+I'm currently working on a major update to Biff. I wouldn't recommend starting
+any new projects with it until after that's complete. See
+[the announcement](https://biffweb.com/p/sponsorships/).
+
 # Introduction
 
 Biff is designed to make web development with Clojure fast and easy [without
