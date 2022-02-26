@@ -14,12 +14,8 @@
                               [:from :name] "My Application"
                               [:reply_to :email] "hello@example.com"
                               [:reply_to :name] "My Application"}
-        ;; Don't reuse these keys. These are only here so you can test out the
-        ;; example project easily.
-        ;; TODO don't even include these in the template file; force people to
-        ;; generate their own/do it automatically.
-        :biff.middleware/cookie-secret "f1WY9BRQ6Xf76EOFg+LHMQ=="
-        :biff/jwt-secret "LYe1AYK6u8XwSqOXBN8/3xtjRB10d6aRehw+e94oGZQ="}
+        :biff.middleware/cookie-secret nil
+        :biff/jwt-secret nil}
  :dev {:merge [:prod]
        ;; See com.example.feat.worker
        ;; :example/enable-worker false
