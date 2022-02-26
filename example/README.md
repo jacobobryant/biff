@@ -17,11 +17,10 @@ Run these commands to test out the example project:
 ```bash
 cp config.edn.TEMPLATE config.edn
 cp config.sh.TEMPLATE config.sh
-# Optional: if you're not on linux-x64, edit `config.sh` and update `TAILWIND_ARCH`
 ./task dev
 ```
 
-## Development (work in progress)
+## Commands
 
 ### `./task dev`
 
@@ -32,8 +31,6 @@ save a file. Static HTML and CSS files will also be regenerated on file save.
 ### `./task clean`
 
 Deletes generated files.
-
-## Production
 
 ### `./task deploy`
 
@@ -57,10 +54,14 @@ Restarts the app process via `systemctl restart app` (on the server).
 
 ### `./task logs`
 
+Tail the server's application logs.
+
 ### `./task prod-repl`
 
-## Developing in production
+Open an SSH tunnel so you can connect to the server via nREPL.
 
 ### `./task prod-dev`
 
-TODO stuff for local code + prod db
+Runs `./task logs` and `./task prod-repl`. In addition, whenever you save a
+file, it will be copied to the server (via rsync) and eval'd, after which HTML
+and CSS will be regenerated.

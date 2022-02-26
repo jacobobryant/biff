@@ -120,7 +120,7 @@
           :let [full-path (cond-> (str dir path)
                             (str/ends-with? path "/") (str "index.html"))]]
     (io/make-parents full-path)
-    (spit full-path (rum/render-static-markup rum))))
+    (spit full-path (str "<!DOCTYPE html>\n" (rum/render-static-markup rum)))))
 
 
 (defmacro defatoms

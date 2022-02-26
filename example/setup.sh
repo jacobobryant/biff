@@ -2,15 +2,11 @@
 set -x
 set -e
 
+BIFF_ENV=${1:-prod}
 CLJ_VERSION=1.10.3.822
 TRENCH_VERSION=0.3.0
-BIFF_ENV="$1"
 TAILWIND_VERSION=latest
 TAILWIND_ARCH=linux-x64
-
-if [ "$BIFF_ENV" = "" ]; then
-  BIFF_ENV=prod
-fi
 
 echo waiting for apt to finish
 while (ps aux | grep [a]pt); do
@@ -61,7 +57,7 @@ StartLimitBurst=5
 User=app
 Restart=on-failure
 RestartSec=5s
-ExecStart=/home/app/task $BIFF_ENV run
+ExecStart=BIFF_ENV=$BIFF_ENV /home/app/task run
 
 [Install]
 WantedBy=multi-user.target

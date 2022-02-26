@@ -296,12 +296,9 @@
 
 (defn use-chime
   [{:biff.chime/keys [tasks] :as sys}]
-  (reduce (fn [sys {:keys [schedule task enabled]
-                    :or {enabled (constantly true)}}]
-            (if (enabled sys)
-              (let [scheduler (chime/chime-at (schedule) (fn [_] (task sys)))]
-                (update sys :biff/stop conj #(.close scheduler)))
-              sys))
+  (reduce (fn [sys {:keys [schedule task]}]
+            (let [scheduler (chime/chime-at (schedule) (fn [_] (task sys)))]
+              (update sys :biff/stop conj #(.close scheduler))))
           sys
           tasks))
 

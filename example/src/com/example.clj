@@ -5,6 +5,7 @@
             [com.example.feat.home :as home]
             [com.example.feat.worker :as worker]
             [com.example.schema :refer [malli-opts]]
+            [clojure.java.io :as io]
             [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
@@ -42,8 +43,14 @@
              "-i" "tailwind.css"
              "-o" "target/resources/public/css/main.css"
              "--minify")
-    ;; todo delete files older than 10 seconds
-    ))
+    (->> (file-seq (io/file "target/resources/public"))
+         (filter (fn [file]
+                   (and (.isFile file)
+                        (biff/elapsed? (java.util.Date. (.lastModified file))
+                                       :now
+                                       60
+                                       :seconds))))
+         (run! io/delete-file))))
 
 (defn on-save [sys]
   (biff/eval-files! sys)
@@ -66,7 +73,9 @@
                          :example/enable-web
                          biff/use-outer-default-middleware
                          biff/use-jetty)
-                       biff/use-chime
+                       (biff/use-when
+                         :example/enable-worker
+                         biff/use-chime)
                        (biff/use-when
                          :example/enable-hawk
                          biff/use-hawk)]})

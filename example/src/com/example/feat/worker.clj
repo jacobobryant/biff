@@ -15,23 +15,21 @@
                      0)]
     (println "There are" n-users "users."
              "(This message gets printed every 60 seconds. You can disable it"
-             "by setting `:example/worker false` in config.edn)")))
+             "by setting `:example/enable-worker false` in config.edn)")))
 
-(defn alert-new-user [{:keys [example/worker biff.xtdb/node]} tx]
-  ;; This also could be an email alert.
+(defn alert-new-user [{:keys [example/enable-worker biff.xtdb/node]} tx]
   (doseq [_ [nil]
-          :when worker
+          :when enable-worker
           :let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
           [op & args] (::xt/tx-ops tx)
           :when (= op ::xt/put)
           :let [[doc] args]
           :when (and (contains? doc :user/email)
                      (nil? (xt/entity db-before (:xt/id doc))))]
+    ;; You could send this as an email instead of printing.
     (println "WOAH there's a new user")))
 
 (def features
   {:tasks [{:task #'print-usage
-            :schedule every-minute
-            :enabled (fn [sys]
-                       (:example/worker sys))}]
+            :schedule every-minute}]
    :on-tx alert-new-user})

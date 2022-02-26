@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-source config.sh
+if [ -f config.sh ]; then
+  source config.sh
+fi
 
 cmd () {
   ssh root@$SERVER "$@"
@@ -12,11 +14,10 @@ trench () {
 }
 
 install-tailwind () {
-  # todo maybe just infer TAILWIND_ARCH?
-  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$TAILWIND_ARCH
-  chmod +x tailwindcss-$TAILWIND_ARCH
+  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$TAILWIND_BUILD
   mkdir -p bin
-  mv tailwindcss-$TAILWIND_ARCH bin/tailwindcss
+  mv tailwindcss-$TAILWIND_BUILD bin/tailwindcss
+  chmod +x bin/tailwindcss
 }
 
 watch-css () {
@@ -34,6 +35,7 @@ run () {
 
 dev () {
   echo 7888 > .nrepl-port
+  trap 'kill %1' SIGINT
   BIFF_ENV=dev run &
   # I'd do `watch-css &`, but for some reason I can't get watch-css to work in
   # the background.
@@ -50,15 +52,15 @@ post-receive () {
 }
 
 deploy () {
-  chmod 600 config.*
-  rsync -a config.* app@$SERVER:
+  chmod 600 config.edn
+  rsync -a config.edn app@$SERVER:
   time git push $DEPLOY_TO $DEPLOY_FROM
 }
 
 soft-deploy () {
-  chmod 600 config.*
+  chmod 600 config.edn
   rsync -a --info=name1 --delete \
-    config.* \
+    config.edn \
     tailwind.* \
     deps.edn \
     task \
@@ -77,7 +79,7 @@ restart () {
   cmd systemctl restart app
 }
 
-auto-soft-deploy-write () {
+auto-soft-deploy () {
   soft-deploy
   ignore_until=$(date +%s.%N)
   # TODO make this cross-platform
@@ -103,10 +105,10 @@ prod-repl () {
 }
 
 prod-dev () {
+  trap 'kill %1; kill %2' SIGINT
   prod-repl &
   auto-soft-deploy &
   logs
-  trap 'killall ssh' INT
 }
 
 "$@"

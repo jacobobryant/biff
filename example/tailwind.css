@@ -6,6 +6,18 @@
   p {
     @apply mb-3;
   }
+
+  ul {
+    @apply list-disc;
+  }
+
+  ol {
+    @apply list-decimal;
+  }
+
+  ul, ol {
+    @apply my-3 pl-10;
+  }
 }
 
 @layer components {

@@ -1,10 +1,13 @@
 ;; vim: ft=clojure
 {:prod {:example/enable-web true
         :example/enable-worker true
-        :biff.xtdb/topology :jdbc
         :biff.xtdb/dir "storage/xtdb"
-        :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
-        :biff.xtdb.jdbc-pool/maximumPoolSize 5
+        :biff.xtdb/topology :standalone
+        ;; Standalone topology in production isn't recommended for anything
+        ;; serious. You can uncomment the following to use managed postgres
+        ;; instead.
+        ;; :biff.xtdb/topology :jdbc
+        ;; :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
         :biff/base-url "https://example.com"
         :mailersend/api-key nil
         :mailersend/defaults {[:from :email] "hello@mail.example.com"
@@ -17,13 +20,9 @@
         ;; generate their own/do it automatically.
         :biff.middleware/cookie-secret "f1WY9BRQ6Xf76EOFg+LHMQ=="
         :biff/jwt-secret "LYe1AYK6u8XwSqOXBN8/3xtjRB10d6aRehw+e94oGZQ="}
- :web {:merge [:prod]
-       :example/enable-worker false}
- :worker {:merge [:prod]
-          :example/enable-web false}
  :dev {:merge [:prod]
        ;; See com.example.feat.worker
-       ;; :example/worker false
+       ;; :example/enable-worker false
        :example/enable-hawk true
        :biff/host "0.0.0.0"
        :biff/base-url "http://localhost:8080"
