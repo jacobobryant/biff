@@ -14,6 +14,7 @@ trench () {
 }
 
 install-tailwind () {
+  echo Downloading the latest version of Tailwind CSS...
   curl -LO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$TAILWIND_BUILD
   mkdir -p bin
   mv tailwindcss-$TAILWIND_BUILD bin/tailwindcss

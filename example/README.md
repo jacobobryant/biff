@@ -1,24 +1,11 @@
-# Biff example project (WIP)
+# Biff example project
 
-This is (the start of) the example/template project for Biff.
+This is the example/template project for Biff.
 
 ## Requirements
 
- - Unix environment (for running `task`). I am reluctantly open to rewriting
-   `task` in Babashka if the cross-platformness makes things easier for anyone
-   (people on Windows not using WSL?). At a minimum I'll try to make sure
-   the bash code works on Macs (I use WSL myself).
+ - Unix environment
  - [clj](https://clojure.org/guides/getting_started)
-
-## Getting started
-
-Run these commands to test out the example project:
-
-```bash
-cp config.edn.TEMPLATE config.edn
-cp config.sh.TEMPLATE config.sh
-./task dev
-```
 
 ## Commands
 
@@ -36,6 +23,14 @@ Deletes generated files.
 
 `rsync`s config files to the server, deploys code via `git push`, and restarts
 the app process on the server (via git push hook).
+
+Before running this (and all subsequent commands), you must set up a server and
+set the domain in `config.sh`. For example:
+
+1. Create an Ubuntu VPS in DigitalOcean
+2. Point your domain at it
+3. Run `scp setup.sh root@$YOUR_DOMAIN:`
+4. Run `ssh root@$YOUR_DOMAIN`, then `bash setup.sh`
 
 ### `./task soft-deploy`
 
