@@ -1,7 +1,8 @@
 (ns com.biffweb.new-project
   (:require [clojure.java.shell :as shell]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import java.security.SecureRandom))
 
 (defn sh
   [& args]
@@ -26,17 +27,24 @@
     (run! rmrf (.listFiles file)))
   (io/delete-file file))
 
-(defn new-cookie-secret []
-  "hello")
+(defn new-secret [length]
+  (let [buffer (byte-array length)]
+    (.nextBytes (SecureRandom.) buffer)
+    (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
-(defn new-jwt-secret []
-  "there")
-
-(defn biff-coordinates []
-  (str ":mvn/version \"hehehe\""))
+(defn biff-coordinates [sha]
+  ;; TODO switch to mvn
+  (str ":git/url \"https://github.com/jacobobryant/biff\" :sha \"" sha "\""))
 
 (defn -main []
-  (let [dir (->> (prompt "Enter name for project directory: ")
+  ;; TODO switch dev to HEAD
+  (let [sha (-> (sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "dev")
+                (str/split #"\s+")
+                first)
+        coordinates (biff-coordinates sha)
+        cookie-secret (new-secret 16)
+        jwt-secret (new-secret 32)
+        dir (->> (prompt "Enter name for project directory: ")
                  (str "echo -n ")
                  (sh "bash" "-c")
                  (io/file))
@@ -45,6 +53,7 @@
         example (io/file tmp "biff/example")]
     (io/make-parents (io/file tmp "_"))
     (sh "git" "clone"
+        ;; TODO remove --branch dev
         "--branch" "dev"
         "https://github.com/jacobobryant/biff"
         :dir tmp)
@@ -59,9 +68,9 @@
             (-> src
                 slurp
                 (str/replace "com.example" main-ns)
-                (str/replace #"cookie-secret \".*?\"" (str "cookie-secret " (pr-str (new-cookie-secret))))
-                (str/replace #"jwt-secret \".*?\"" (str "jwt-secret " (pr-str (new-jwt-secret))))
-                (str/replace ":local/root \"..\"" (biff-coordinates)))))
+                (str/replace #"cookie-secret nil" (str "cookie-secret " (pr-str cookie-secret)))
+                (str/replace #"jwt-secret nil" (str "jwt-secret " (pr-str jwt-secret)))
+                (str/replace ":local/root \"..\"" coordinates))))
     (.renameTo (io/file dir "config.edn.TEMPLATE") (io/file dir "config.edn"))
     (.renameTo (io/file dir "config.sh.TEMPLATE") (io/file dir "config.sh"))
     (.setExecutable (io/file dir "task") true)

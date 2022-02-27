@@ -307,3 +307,9 @@
     (if (f sys)
       (update sys :biff/components #(concat components %))
       sys)))
+
+(defmacro fix-print [& body]
+  `(binding [*out* (alter-var-root #'*out* identity)
+             *err* (alter-var-root #'*err* identity)
+             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
+     ~@body))

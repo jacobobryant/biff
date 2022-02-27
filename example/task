@@ -20,13 +20,6 @@ install-tailwind () {
   chmod +x bin/tailwindcss
 }
 
-watch-css () {
-  if ! [ -x bin/tailwindcss ]; then
-    install-tailwind
-  fi
-  bin/tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
-}
-
 run () {
   clj "$@" \
     -J-XX:-OmitStackTraceInFastThrow \
@@ -34,12 +27,14 @@ run () {
 }
 
 dev () {
+  if ! [ -x bin/tailwindcss ]; then
+    install-tailwind
+  fi
   echo 7888 > .nrepl-port
   trap 'kill %1' SIGINT
   BIFF_ENV=dev run &
-  # I'd do `watch-css &`, but for some reason I can't get watch-css to work in
-  # the background.
-  watch-css
+  # For some reason I can't get tailwind to work in the background.
+  bin/tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
 }
 
 clean () {

@@ -9,7 +9,8 @@ if ! clj --help | grep -q -- ' -X'; then
   exit 2
 fi
 
-sha="$(git ls-remote https://github.com/jacobobryant/biff.git HEAD | awk '{ print $1 }')"
+# TODO switch dev to HEAD
+sha="$(git ls-remote https://github.com/jacobobryant/biff.git dev | awk '{ print $1 }')"
 deps="{:deps {github-jacobobryant/biff-new-project
               {:git/url \"https://github.com/jacobobryant/biff\"
                :sha \"$sha\"

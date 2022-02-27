@@ -10,7 +10,7 @@ if [ "$(uname -m)" = x86_64 ]; then
 else
     TAILWIND_ARCH=arm64
 fi
-TAILWIND_BUILD=$TAILWIND_OS-$TAILWDIND_ARCH # Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
+TAILWIND_BUILD=$TAILWIND_OS-$TAILWIND_ARCH # Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
 
 MAIN_NS=com.example
 SOFT_DEPLOY_FN=com.example/on-save
