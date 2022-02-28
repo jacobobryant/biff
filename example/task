@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -e
-
-if [ -f config.sh ]; then
-  source config.sh
-fi
+cd "$(dirname "${BASH_SOURCE[0]}")"
+source config.sh
 
 cmd () {
   ssh root@$SERVER "$@"
@@ -48,15 +46,15 @@ post-receive () {
 }
 
 deploy () {
-  chmod 600 config.edn
-  rsync -a config.edn app@$SERVER:
+  chmod 600 config.*
+  rsync -a config.* app@$SERVER:
   time git push $DEPLOY_TO $DEPLOY_FROM
 }
 
 soft-deploy () {
-  chmod 600 config.edn
+  chmod 600 config.*
   rsync -a --info=name1 --delete \
-    config.edn \
+    config.* \
     tailwind.* \
     deps.edn \
     task \

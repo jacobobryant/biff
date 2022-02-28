@@ -4,7 +4,7 @@
 
 (defn signin-form []
   (biff/form
-    {:action "/auth/send/"}
+    {:action "/auth/send"}
     [:div [:label {:for "email"} "Email address:"]]
     [:.h-1]
     [:.flex

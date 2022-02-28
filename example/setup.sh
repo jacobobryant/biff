@@ -57,7 +57,8 @@ StartLimitBurst=5
 User=app
 Restart=on-failure
 RestartSec=5s
-ExecStart=BIFF_ENV=$BIFF_ENV /home/app/task run
+Environment="BIFF_ENV=$BIFF_ENV"
+ExecStart=/home/app/task run
 
 [Install]
 WantedBy=multi-user.target
@@ -75,34 +76,35 @@ chmod 440 /etc/sudoers.d/restart-app
 ufw allow OpenSSH
 ufw enable
 
-# Web
-if [ "$BIFF_ENV" = web -o "$BIFF_ENV" = prod ]; then
-  # Dependencies
-  apt-get -y install nginx
-  snap install core
-  snap refresh core
-  snap install --classic certbot
-  ln -s /snap/bin/certbot /usr/bin/certbot
+# Web dependencies
+apt-get -y install nginx
+snap install core
+snap refresh core
+snap install --classic certbot
+ln -s /snap/bin/certbot /usr/bin/certbot
 
-  # Tailwind
-  curl -LO https://github.com/tailwindlabs/tailwindcss/releases/$TAILWIND_VERSION/download/tailwindcss-$TAILWIND_ARCH
-  chmod +x tailwindcss-$TAILWIND_ARCH
-  mkdir -p /home/app/bin
-  mv tailwindcss-$TAILWIND_ARCH /home/app/bin/tailwindcss
-  chown -R app:app /home/app/bin
+# Tailwind
+curl -LO https://github.com/tailwindlabs/tailwindcss/releases/$TAILWIND_VERSION/download/tailwindcss-$TAILWIND_ARCH
+chmod +x tailwindcss-$TAILWIND_ARCH
+mkdir -p /home/app/bin
+mv tailwindcss-$TAILWIND_ARCH /home/app/bin/tailwindcss
+chown -R app:app /home/app/bin
 
-  # Nginx
-  rm /etc/nginx/sites-enabled/default
-  cat > /etc/nginx/sites-available/app << EOD
+# Nginx
+rm /etc/nginx/sites-enabled/default
+cat > /etc/nginx/sites-available/app << EOD
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    root /home/app;
-    index index.html;
+    root /home/app/target/resources/public;
     location / {
-      try_files /target/resources/public\$uri /target/resources/public\$uri/ /resources/public\$uri /resources/public\$uri/ @proxy;
+        try_files $uri $uri/index.html @resources;
+    }
+    location @resources {
+        root /home/app/resources/public;
+        try_files $uri $uri/index.html @proxy;
     }
     location @proxy {
         proxy_pass http://localhost:8080;
@@ -114,23 +116,14 @@ server {
     }
 }
 EOD
-  ln -s /etc/nginx/sites-{available,enabled}/app
+ln -s /etc/nginx/sites-{available,enabled}/app
 
-  # Firewall
-  ufw allow "Nginx Full"
+# Firewall
+ufw allow "Nginx Full"
 
-  # Let's encrypt
-  certbot --nginx
+# Let's encrypt
+certbot --nginx
 
-  # App dependencies
-  # apt-get -y install ...
-fi
-
-# Worker
-if [ "$BIFF_ENV" = worker -o "$BIFF_ENV" = prod]; then
-  # App dependencies
-  # apt-get -y install ...
-fi
-
-# If you need to install additional packages for your app, you can do it here
-# or in one of the environment-specific "App dependencies" sections above.
+# App dependencies
+# If you need to install additional packages for your app, you can do it here.
+# apt-get -y install ...

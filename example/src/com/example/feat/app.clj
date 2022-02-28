@@ -97,7 +97,7 @@
     nil
     [:div "Signed in as " email ". "
      (biff/form
-       {:action "/auth/signout/"
+       {:action "/auth/signout"
         :class "inline"}
        [:button.text-blue-500.hover:text-blue-800 {:type "submit"}
         "Sign out"])
