@@ -76,11 +76,7 @@ restart () {
 auto-soft-deploy () {
   soft-deploy
   ignore_until=$(date +%s.%N)
-  # TODO make this cross-platform
-  inotifywait --quiet --recursive --monitor --format "%e %w%f" \
-      --event modify --event move --event create --event delete \
-      . | while read changed
-  do
+  fswatch -o . -l 0.1 | while read changed ; do
       if [ $(echo "$(date +%s.%N) > $ignore_until" | bc) -eq 1 ] ; then
           ignore_until=$(echo "$(date +%s.%N) + 0.25" | bc)
           ( sleep 0.25 ; soft-deploy ) &
