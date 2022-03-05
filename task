@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+slate-dev () {
+  cd slate
+  bundle exec middleman server
+}
+
+slate () {
+  cd slate
+  bundle exec middleman build --clean
+}
+
+codox () {
+  rm -rf site/codox
+  clj -X:codox
+}
+
+"$@"

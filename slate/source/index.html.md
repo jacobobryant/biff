@@ -11,11 +11,10 @@ includes:
 search: true
 ---
 
-# Notice
+# Work-in-progress notice
 
-I'm currently working on a major update to Biff. I wouldn't recommend starting
-any new projects with it until after that's complete. See
-[the announcement](https://biffweb.com/p/sponsorships/).
+I'm in the middle of overhauling this documentation! See the [Biff sponsorship
+announcement](https://biffweb.com/p/sponsorships/).
 
 # Introduction
 
@@ -23,38 +22,47 @@ Biff is designed to make web development with Clojure fast and easy [without
 compromising](#design-philosophy) on simplicity. It prioritizes small-to-medium
 sized projects.
 
-Distinctive features:
+Biff has two parts: a library and a template project. As much code as
+possible is written as library code, exposed under the `com.biffweb` namespace.
+This includes a lot of high-level helper functions for other libraries.
 
-- **Query subscriptions**. Specify what data the front end needs declaratively,
-  and Biff will keep it synced with the back end.
-- **Authorization rules**. No need to set up a bunch of CRUD endpoints. Queries
-  and transactions can be submitted from the front end as long as they pass the
-  rules you define.
-- Built on **Crux**, the world's best database (see
-  [opencrux.com](https://opencrux.com)).
-- **Biff transactions**, a layer over Crux transactions that provides schema
-  enforcement and other conveniences. Patterned after Firebase transactions.
-- **Authentication**. Email link for now; password and SSO coming later.
-- **Push-to-deploy**. The project template comes with a script for provisioning
-  an Ubuntu server. Biff is 12-factor compliant, so you can easily deploy it
-  wherever else you choose, too.
-- **Great documentation!**
+The template project contains the framework code&mdash;the stuff that glues all
+the libraries together. When you start a new Biff project, the template project code is
+copied directly into your project directory, and the library is added as a regular
+dependency.
 
-## Status
+Some of Biff's most distinctive features:
 
-I've been using Biff in my own projects since May 2020. I now consider it
-stable/production ready, with the caveat that it hasn't yet been used seriously
-by anyone other than myself as far as I'm aware (hopefully that will change
-soon!). See also the [high priority
-issues](https://github.com/jacobobryant/biff/issues?q=is%3Aissue+is%3Aopen+label%3A%22high+priority%22).
+- Built on [XTDB](https://xtdb.com/), the world's finest database. It has
+  flexible data modeling, Datalog queries, and immutable history. You can use
+  the filesystem for the storage backend in dev and switch to Postgres for
+  production.
+- Uses [htmx](https://htmx.org/) (and [hyperscript](https://hyperscript.org/))
+  for the frontend. htmx lets you create interactive, real-time applications by
+  sending html snippets from the server instead of using
+  JavaScript/ClojureScript/React.
+- Ready to deploy. The template project comes with a script for provisioning an
+  Ubuntu server, including Git push-to-deploy, HTTPS certificates, and NGINX
+  configuration.
+- Develop in prod. If you choose to enable this, you can develop your entire
+  application without ever starting up a JVM on your local machine. Whenever
+  you hit save, files get rsynced to the server and evaluated.
 
-Websites built with Biff (all mine so far):
+Other things that Biff wraps/includes:
 
-- [The Sample](https://sample.findka.com), a newsletter recommender system.
-- [Findka Essays](https://essays.findka.com), an essay recommender system.
-- [Hallway](https://discuss.findka.com), a discussion aggregator.
+- [Rum](https://github.com/tonsky/rum) and [Tailwind CSS](https://tailwindcss.com/) for rendering.
+- [Jetty](https://github.com/sunng87/ring-jetty9-adapter) for the web server
+  and [Reitit](https://github.com/metosin/reitit) for routing.
+- [Malli](https://github.com/metosin/malli) for enforcing schema when submitting XTDB transactions.
+- [Buddy](https://funcool.github.io/buddy-sign/latest/) for email link authentication (JWTs).
+- [Chime](https://github.com/jarohen/chime) for scheduling tasks.
+- A minimalist, 15-line dependency injection framework, similar in spirit to Component.
 
-If you ship something with Biff, I'll add it to the list.
+We use Biff over at [The Sample](https://thesample.ai/), a relatively young
+business that I work on full-time with my brother. It has about 13k lines of
+code.
+
+<!--
 
 ## Additional resources
 
@@ -801,3 +809,5 @@ Rosetta](https://itnext.io/how-to-install-x86-and-arm-jdks-on-the-mac-m1-apple-s
 Example of full error message:
 
 `Execution error (UnsatisfiedLinkError) at java.lang.ClassLoader$NativeLibrary/load0 (ClassLoader.java:-2). /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: dlopen(/private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib, 1): no suitable image found. Did find: /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: mach-o, but wrong architecture /private/var/folders/ns/8_1zl3n134d5dlkdscjntbh40000gn/T/crux_rocksdb-6.12.7/librocksdbjni-osx.jnilib: mach-o, but wrong architecture`
+
+-->
