@@ -11,16 +11,15 @@ includes:
 search: true
 ---
 
-# Work-in-progress notice
+# Work-in-progress
 
 I'm in the middle of overhauling this documentation! See the [Biff sponsorship
 announcement](https://biffweb.com/p/sponsorships/).
 
 # Introduction
 
-Biff is designed to make web development with Clojure fast and easy [without
-compromising](#design-philosophy) on simplicity. It prioritizes small-to-medium
-sized projects.
+Biff is designed to make web development with Clojure fast and easy without
+compromising on simplicity. It prioritizes small-to-medium sized projects.
 
 Biff has two parts: a library and a template project. As much code as
 possible is written as library code, exposed under the `com.biffweb` namespace.
@@ -59,8 +58,483 @@ Other things that Biff wraps/includes:
 - A minimalist, 15-line dependency injection framework, similar in spirit to Component.
 
 We use Biff over at [The Sample](https://thesample.ai/), a relatively young
-business that I work on full-time with my brother. It has about 13k lines of
-code.
+two-person business. It has about 13k lines of code.
+
+# Getting Started
+
+Requirements:
+
+ - JDK 11 or higher
+ - [clj](https://clojure.org/guides/getting_started)
+
+Run this command to create a new Biff project:
+
+```
+bash <(curl -s https://biffweb.com/new-project.sh)
+```
+
+This will create a minimal CRUD app which demonstrates most of Biff's features.
+Run `./task dev` to start the app on localhost:8080. Clojure files will be
+evaluated whenever you save them, and static HTML and CSS files will also be
+regenerated.
+
+You can connect your editor to nREPL port 7888. There's also a `repl.clj` file
+which you can use as a scratch space.
+
+When you're ready to deploy, see [Production](#production).
+
+# Project Structure
+
+A new Biff project will look like this:
+
+(Throughout these docs, we'll assume you selected `com.example` for the main
+namespace when creating your project.)
+
+```
+├── README.md
+├── config.edn
+├── config.sh
+├── deps.edn
+├── setup.sh
+├── src
+│   └── com
+│       ├── example
+│       │   ├── feat
+│       │   │   ├── app.clj
+│       │   │   ├── auth.clj
+│       │   │   ├── home.clj
+│       │   │   └── worker.clj
+│       │   ├── repl.clj
+│       │   ├── schema.clj
+│       │   └── ui.clj
+│       └── example.clj
+├── tailwind.config.js
+├── tailwind.css
+└── task
+```
+
+`task` is a shell script that contains project commands. For example, `./task
+dev` starts the app locally, and `./task deploy` pushes your most recent commit
+to the server. See `README.md` for a list of all the commands.
+
+`config.sh` contains configuration for `task`, such as the project's main
+namespace (`com.example` in this case) and the domain name of the server to
+deploy to. `config.edn` contains configuration for the application.
+
+`deps.edn` by default defines a single dependency: `com.biffweb/biff`. This
+library is aliased as `biff` in most namespaces.
+
+`setup.sh` is a script for provisioning an Ubuntu server. See [Production](#production).
+
+## Code organization
+
+The example project is separated into three layers.
+
+![code structure](/images/code-structure.svg)
+
+We'll start with the middle layer. A feature namespace contains the routes,
+static pages, scheduled tasks, and/or transaction listeners that pertain to a
+particular feature. Each namespace exposes these things via a `features` map:
+
+```clojure
+(ns com.example.feat.some-feature
+  ...)
+
+(def features
+  {:routes [...]
+   :api-routes [...]
+   :static {...}
+   :tasks [...]
+   :on-tx (fn ...)})
+```
+
+For example, the `com.example.feat.home` namespace defines a single route for
+the landing page:
+
+```clojure
+(ns com.example.feat.home
+  (:require [com.biffweb :as biff]
+            [com.example.ui :as ui]))
+
+(defn signin-form []
+  ...)
+
+(defn home [_]
+  (ui/page
+    {}
+    (signin-form)))
+
+(def features
+  {:routes [["/" {:get home}]]})
+```
+
+The schema namespace defines the types of documents that are allowed to be
+written to the database. Whenever you submit a transaction, it will
+be checked against your schema first.
+
+Here we define a `:user` document type which includes an email field and a
+couple other string fields:
+
+```clojure
+(def schema
+  {:user/id :uuid
+   :user/email :string
+   :user/foo :string
+   :user/bar :string
+   :user [:map {:closed true}
+          [:xt/id :user/id]
+          :user/email
+          [:user/foo {:optional true}]
+          [:user/bar {:optional true}]]
+  ...})
+```
+
+The main namespace is the app's entry point. It bundles your schema and
+features together. For example, here we combine all the routes and apply some
+middleware:
+
+```clojure
+(def features
+  [app/features
+   auth/features
+   home/features
+   worker/features])
+
+(def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
+                               biff/wrap-anti-forgery-websockets
+                               biff/wrap-render-rum]}
+              (map :routes features)]
+             (map :api-routes features)])
+```
+
+Finally, "shared" namespaces contain code that's needed by multiple feature namespaces. The example
+app has a single shared namespace, `com.example.ui`, which contains helper functions for
+rendering HTML.
+
+# Static Pages
+
+You can create static HTML files by supplying a map from paths to
+[Rum](https://github.com/tonsky/rum) data structures. In
+`com.example.feat.auth`, we define two static pages, either of which is shown
+after you request a sign-in link:
+
+
+```clojure
+(def signin-sent
+  (ui/page
+    {}
+    [:div
+     "The sign-in link was printed to the console. If you add an API "
+     "key for MailerSend, the link will be emailed to you instead."]))
+
+(def signin-fail
+  (ui/page
+    {}
+    [:div
+     "Your sign-in request failed. There are several possible reasons:"]
+    [:ul
+     [:li "You opened the sign-in link on a different device or browser than the one you requested it on."]
+     [:li "We're not sure you're a human."]
+     [:li "We think your email address is invalid or high risk."]
+     [:li "We tried to email the link to you, but it didn't work."]]))
+
+(def features
+  {:routes ...
+   :static {"/auth/sent/" signin-sent
+            "/auth/fail/" signin-fail}})
+```
+
+The map values (`signin-sent` and `signin-fail` in this case) are passed to
+`rum.core/render-static-markup` and written to the path you specify. If the
+path ends in a `/`, then `index.html` will be appended to it.
+
+You can use Tailwind CSS to style your HTML:
+
+```clojure
+[:button.bg-blue-500.text-white.text-center.py-2.px-4
+ {:type "submit"}
+ "Sign in"]
+```
+
+See also:
+
+ - [Rum documentation](https://github.com/tonsky/rum)
+ - [Tailwind documentation](https://tailwindcss.com/)
+ - [`export-rum`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb/impl/rum.clj#L105)
+
+# Routing
+
+Biff uses [Ring](https://github.com/ring-clojure/ring) and
+[Reitit](https://github.com/metosin/reitit) for handling HTTP requests. Reitit
+has a lot of features, but you can go far with just a few basics.
+
+Multiple routes:
+
+```clojure
+(defn foo [request]
+  {:status 200
+   :headers {"content-type" "text/html"}
+   :body "foo response"})
+
+(defn bar ...)
+
+(def features
+  {:routes [["/foo" {:get foo}]
+            ["/bar" {:post bar}]]})
+```
+
+Path parameters:
+
+```clojure
+(defn click [{:keys [path-params] :as request}]
+  (println (:token path-params))
+  ...)
+
+(def features
+  {:routes [["/click/:token" {:get click}]]})
+```
+
+Nested routes:
+
+```clojure
+(def features
+  {:routes [["/auth/"
+             ["send" {:post send-token}]
+             ["verify/:token" {:get verify-token}]]]})
+```
+
+With middleware:
+
+```clojure
+(defn wrap-signed-in [handler]
+  (fn [{:keys [session] :as req}]
+    (if (some? (:uid session))
+      (handler req)
+      {:status 303
+       :headers {"location" "/"}})))
+
+(def features
+  {:routes ["/app" {:middleware [wrap-signed-in]}
+            ["" {:get app}]
+            ["/set-foo" {:post set-foo}]]})
+```
+
+If you need to provide a public API, you can use `:api-routes` to disable
+CSRF protection (this is a Biff feature, not a Reitit one):
+
+```clojure
+(defn echo [{:keys [params]}]
+  {:status 200
+   :headers {"content-type" "application/json"}
+   :body params})
+
+(def features
+  {:api-routes [["/echo" {:post echo}]]})
+```
+
+# Transactions
+
+The request map passed to HTTP handlers includes a `:biff.xtdb/node` key which
+can be used to submit transactions:
+
+```clojure
+(require '[xtdb.api :as xt])
+
+(defn send-message [{:keys [biff.xtdb/node session params] :as req}]
+  (xt/submit-tx node
+    [[::xt/put {:xt/id (java.util.UUID/randomUUID)
+                :msg/user (:uid session)
+                :msg/text (:text params)
+                :msg/sent-at (java.util.Date.)}]])
+  ...)
+```
+
+Biff also provides a higher-level wrapper over `xtdb.api/submit-tx`. It lets
+you specify document types from your schema. If the document you're trying to
+write doesn't match its respective schema, the transaction will fail. In
+addition, Biff will call `xt/await-tx` on the result, so you can read your
+writes.
+
+```clojure
+(require '[com.biffweb :as biff])
+
+(defn send-message [{:keys [session params] :as req}]
+  (biff/submit-tx
+    ;; select-keys is for illustration. Normally you would just pass in req.
+    (select-keys req [:biff.xtdb/node :biff/malli-opts])
+    [{:db/doc-type :message
+      :msg/user (:uid session)
+      :msg/text (:text params)
+      :msg/sent-at (java.util.Date.)}])
+  ...)
+```
+
+If you don't set `:xt/id`, Biff will use `(java.util.UUID/randomUUID)` as the default value.
+The default operation is `:xtdb.api/put`.
+
+You can delete a document by setting `:db/op :delete`:
+
+```clojure
+(defn delete-message [{:keys [params] :as req}]
+  (biff/submit-tx req
+    [{:xt/id (java.util.UUID/fromString (:msg-id params))
+      :db/op :delete}])
+  ...)
+```
+
+As a convenience, any occurrences of `:db/now` will be replaced with `(java.util.Date.)`:
+
+```clojure
+(defn send-message [{:keys [session params] :as req}]
+  (biff/submit-tx req
+    [{:db/doc-type :message
+      :msg/user (:uid session)
+      :msg/text (:text params)
+      :msg/sent-at :db/now}])
+  ...)
+```
+
+If you set `:db/op :update` or `:db/op :merge`, the document will be merged
+into an existing document if it exists. The difference is that `:db/op :update` will
+cause the transaction to fail if the document doesn't already exist.
+
+```clojure
+(defn set-foo [{:keys [session params] :as req}]
+  (biff/submit-tx req
+    [{:db/op :update
+      :db/doc-type :user
+      :xt/id (:uid session)
+      :user/foo (:foo params)}])
+  ...)
+```
+
+Biff uses `:xtdb.api/match` operations to ensure that concurrent
+merge/update operations don't get overwritten. If the match fails, the
+transaction will be retried up to three times.
+
+When `:db/op` is set to `:merge` or `:update`, you can use special operations
+on a per-attribute basis. These operations can use the attribute's previous
+value, along with new values you provide, to determine what the final value
+should be.
+
+Use `:db/union` to coerce the previous value to a set and insert new values
+with `clojure.set/union`:
+
+```clojure
+[{:db/op :update
+  :db/doc-type :post
+  :xt/id #uuid "..."
+  :post/tags [:db/union "clojure" "almonds"]}]
+```
+
+Use `:db/difference` to do the opposite:
+
+```clojure
+[{:db/op :update
+  :db/doc-type :post
+  :xt/id #uuid "..."
+  :post/tags [:db/difference "almonds"]}]
+```
+
+Add to or subtract from numbers with `:db/add`:
+
+```clojure
+[{:db/op :update
+  :db/doc-type :account
+  :xt/id #uuid "..."
+  :account/balance [:db/add -50]}]
+```
+
+Use `:db/default` to set a value only if the existing document doesn't
+already contain the attribute:
+
+```clojure
+[{:db/op :update
+  :db/doc-type :user
+  :xt/id #uuid "..."
+  :user/favorite-color [:db/default :yellow]}]
+```
+
+Use `:db/dissoc` to remove an attribute:
+
+```clojure
+[{:db/op :update
+  :db/doc-type :user
+  :xt/id #uuid "..."
+  :user/foo :db/dissoc}]
+```
+
+Finally, you can use `:db/lookup` to enforce uniqueness constraints on attributes
+other than `:xt/id`:
+
+```clojure
+[{:db/doc-type :user
+  :xt/id [:db/lookup {:user/email "hello@example.com"}]}]
+```
+
+This will use a separate "lookup document" that, if the user has been created already, will
+look like this:
+
+```clojure
+{:xt/id {:user/email "hello@example.com"}
+ :db/owned-by ...}
+```
+
+where `...` is a document ID. If the document doesn't exist, the ID will be `(java.util.UUID/randomUUID)`,
+unless you pass in a different default ID with `:db/lookup`:
+
+```clojure
+[{:db/doc-type :user
+  :xt/id [:db/lookup {:user/email "hello@example.com"} #uuid "..."]}]
+```
+
+If the first value passed along with `:db/lookup` is a map, it will get merged
+in to the document. So our entire transaction would end up looking like this, assuming
+the user document doesn't already exist:
+
+```clojure
+[{:db/doc-type :user
+  :xt/id [:db/lookup {:user/email "hello@example.com"}]}]
+;; =>
+[[:xtdb.api/put {:xt/id #uuid "abc123"
+                 :user/email "hello@example.com"}]
+ [:xtdb.api/match {:user/email "hello@example.com"} nil]
+ [:xtdb.api/put {:xt/id {:user/email "hello@example.com"}
+                 :db/owned-by #uuid "abc123"}]]
+```
+
+If you need to do something that `biff/submit-tx` doesn't support (like setting
+a custom valid time or using transaction functions), you can always drop down
+to `xt/submit-tx`.
+
+# Queries
+
+# htmx
+
+# Web Sockets
+
+# Transaction Listeners
+
+# Scheduled Tasks
+
+# Authentication
+
+# System Composition
+
+# Production
+
+<!--
+Before running this (and all subsequent commands), you must set up a server and
+set the domain in `config.sh`. For example:
+
+1. Create an Ubuntu VPS in DigitalOcean
+2. Point your domain at it
+3. Run `scp setup.sh root@$YOUR_DOMAIN:`
+4. Run `ssh root@$YOUR_DOMAIN`, then `bash setup.sh`
+-->
+
+# Troubleshooting
+
 
 <!--
 

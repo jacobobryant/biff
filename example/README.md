@@ -2,11 +2,6 @@
 
 This is the example/template project for Biff.
 
-## Requirements
-
- - Unix environment
- - [clj](https://clojure.org/guides/getting_started)
-
 ## Commands
 
 ### `./task dev`
@@ -22,21 +17,13 @@ Deletes generated files.
 ### `./task deploy`
 
 `rsync`s config files to the server, deploys code via `git push`, and restarts
-the app process on the server (via git push hook).
-
-Before running this (and all subsequent commands), you must set up a server and
-set the domain in `config.sh`. For example:
-
-1. Create an Ubuntu VPS in DigitalOcean
-2. Point your domain at it
-3. Run `scp setup.sh root@$YOUR_DOMAIN:`
-4. Run `ssh root@$YOUR_DOMAIN`, then `bash setup.sh`
+the app process on the server (via git push hook). You must have set up a server
+first. See [Production](https://biffweb.com/docs/#production).
 
 ### `./task soft-deploy`
 
 `rsync`s config and code to the server, then `eval`s any changed files and
-regenerates HTML and CSS files. Does not restart the app process and does not
-restart the system.
+regenerates HTML and CSS files. Does not refresh or restart.
 
 ### `./task refresh`
 
