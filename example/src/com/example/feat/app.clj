@@ -127,7 +127,7 @@
       {:status 303
        :headers {"location" "/"}})))
 
-(defn ws-handler [{:keys [example/chat-clients biff/base-url headers] :as req}]
+(defn ws-handler [{:keys [example/chat-clients] :as req}]
   {:status 101
    :headers {"upgrade" "websocket"
              "connection" "upgrade"}

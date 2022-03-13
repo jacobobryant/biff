@@ -37,8 +37,8 @@ Some of Biff's most distinctive features:
   the filesystem for the storage backend in dev and switch to Postgres for
   production.
 - Uses [htmx](https://htmx.org/) (and [hyperscript](https://hyperscript.org/))
-  for the frontend. htmx lets you create interactive, real-time applications by
-  sending html snippets from the server instead of using
+  for the frontend. Htmx lets you create interactive, real-time applications by
+  sending HTML snippets from the server instead of using
   JavaScript/ClojureScript/React.
 - Ready to deploy. The template project comes with a script for provisioning an
   Ubuntu server, including Git push-to-deploy, HTTPS certificates, and NGINX
@@ -314,9 +314,9 @@ With middleware:
        :headers {"location" "/"}})))
 
 (def features
-  {:routes ["/app" {:middleware [wrap-signed-in]}
-            ["" {:get app}]
-            ["/set-foo" {:post set-foo}]]})
+  {:routes [["/app" {:middleware [wrap-signed-in]}
+             ["" {:get app}]
+             ["/set-foo" {:post set-foo}]]]})
 ```
 
 If you need to provide a public API, you can use `:api-routes` to disable
@@ -332,10 +332,85 @@ CSRF protection (this is a Biff feature, not a Reitit one):
   {:api-routes [["/echo" {:post echo}]]})
 ```
 
+See also:
+
+ - [Reitit documentation](https://cljdoc.org/d/metosin/reitit/CURRENT/doc/introduction)
+ - [`reitit-handler`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb.clj#L84)
+
+# Schema
+
+XTDB (the database Biff uses) does not enforce schema on its own. Biff provides schema enforcement
+with [Malli](https://github.com/metosin/malli). Here's a Malli crash course.
+
+Say we want to save a user document like this:
+
+```clojure
+{:xt/id #uuid "..."
+ :user/email "bob@example.com"
+ :user/favorite-color :blue
+ :user/age 132}
+```
+
+In our Malli schema, we'll first define schemas for each of the user document's attributes:
+
+```clojure
+(def schema
+  {:user/id :uuid
+   :user/email :string
+   :user/favorite-color :keyword
+   :user/age number?
+
+   ...})
+```
+
+For the schema map values, Malli has a handful of [type
+schemas](https://github.com/metosin/malli#mallicoretype-schemas) like `:uuid`
+and `:string` above, and it also supports [predicate
+schemas](https://github.com/metosin/malli#mallicorepredicate-schemas) like
+`number?` above.
+
+Once our attributes have been defined, we can combine them into a schema for
+the user document itself:
+
+```clojure
+(def schema
+  {...
+   :user [:map {:closed true}
+          [:xt/id :user/id]
+          :user/email
+          [:user/favorite-color {:optional true}]
+          [:user/age {:optional true}]]
+   ...})
+```
+
+In English, this means:
+
+ - `:user` is a map (all of our document schemas will be maps).
+ - It's a closed map: it's not allowed to have any keys that we haven't
+   included in the `:user` schema.
+ - `:user/email` is a required attribute.
+ - `:user/favorite-color` and `:user/age` are optional attributes.
+ - `:xt/id` has the same schema as `:user/id` (which happens to be `:uuid`).
+
+A note about `:xt/id`. Every other attribute is defined globally, outside of
+the document schema. e.g. `:user/email` is defined globally to be a string.
+However, every document must have an `:xt/id` attribute, and different types of
+documents may need different schemas for `:xt/id`. So we define the schema for
+`:xt/id` locally, within the document.
+
+See also:
+
+ - [Malli documentation](https://github.com/metosin/malli)
+ - [Malli built-in schemas](https://github.com/metosin/malli#built-in-schemas)
+
 # Transactions
 
-The request map passed to HTTP handlers includes a `:biff.xtdb/node` key which
-can be used to submit transactions:
+*Biff uses [XTDB](https://xtdb.com/) for the database. It's OK if you haven't used XTDB before,
+but you may want to peruse some of the [learning resources](https://xtdb.com/learn/) at least.*
+
+The request map passed to HTTP handlers (and the scheduled tasks and
+transaction listeners) includes a `:biff.xtdb/node` key which can be used to
+submit transactions:
 
 ```clojure
 (require '[xtdb.api :as xt])
@@ -507,17 +582,268 @@ If you need to do something that `biff/submit-tx` doesn't support (like setting
 a custom valid time or using transaction functions), you can always drop down
 to `xt/submit-tx`.
 
+See also:
+
+ - [XTDB learning resources](https://xtdb.com/learn/)
+ - [XTDB transaction reference](https://docs.xtdb.com/language-reference/datalog-transactions/)
+ - [`submit-tx`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb/impl/xtdb.clj#L247)
+
 # Queries
 
-# htmx
+As mentioned last section, Biff uses [XTDB](https://xtdb.com/) for the
+database. See the [XTDB query
+reference](https://docs.xtdb.com/language-reference/datalog-queries/).
 
-# Web Sockets
+Biff provides a couple query convenience functions. `com.biffweb/q` is a *very*
+light wrapper around `xtdb.api/q`. First, it will throw an exception if you
+pass an incorrect number of arguments to `:in`.
+
+```clojure
+(q db
+   '{:find [user]
+     :in [email color]
+     :where [[user :user/email email]
+             [user :user/color color]]}
+   "bob@example.com") ; Oops, we forgot to pass in a color--ask me sometime
+                      ; how often I've made this mistake.
+```
+
+Second, if you omit the vector around
+the `:find` value, the results will be scalars instead of tuples. For example,
+the following queries are equivalent:
+
+```clojure
+(require '[xtdb.api :as xt])
+(require '[com.biffweb :as biff])
+
+(map first
+     (xt/q db
+           '{:find [email]
+             :where [[user :user/email email]]}))
+
+;; Think of all the carpal tunnel cases we're preventing by eliminating the
+;; need for constant map firsts!
+(biff/q db
+        '{:find email
+          :where [[user :user/email email]]})
+```
+
+`com.biffweb/lookup` is a bit like `xtdb.api/entity`, except you pass in an
+arbitrary key-value pair instead of a document ID:
+
+```clojure
+(lookup db :user/email "bob@example.com")
+;; =>
+{:xt/id #uuid "..."
+ :user/email "bob@example.com"
+ :user/favorite-color :chartreuse}
+```
+
+There is also `lookup-id` which returns the document ID instead of the entire document.
+
+See also:
+
+ - [XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/)
+
+# Htmx
+
+[Htmx](https://htmx.org/) allows us to create interactive user interfaces
+without JavaScript (or ClojureScript). It works by returning snippets of HTML
+from the server in response to user actions. For example, the following code will cause
+the button to be replaced with some text after it's clicked:
+
+```clojure
+(defn page [request]
+  [:html
+   [:head
+    [:script {:src "https://unpkg.com/htmx.org@1.6.1"}]]
+   ...
+   [:form {:hx-post "/click" :hx-swap "outerHTML"}
+    [:button {:type "submit"} "Don't click this button"]
+    ...]])
+
+(defn click [request]
+  [:div "What the hell, I told you not to click that!"])
+
+(def features
+  {:routes [["/page" {:get page}]
+            ["/click" {:post click}]]})
+```
+
+(You use htmx by setting `:hx-*` attributes on your HTML elements.)
+
+You can also use htmx to establish websocket connections:
+
+```clojure
+(require '[ring.adapter.jetty9 :as jetty])
+(require '[rum.core :as rum])
+
+(defn chat-page [request]
+  [:html
+   ...
+   [:div {:hx-ws "connect:/chat-ws"}
+    [:div#messages]
+    [:form {:hx-ws "send"}
+     [:textarea.w-full#message {:name "text"}]
+     [:button {:type "submit"} "Send message"]]]])
+
+(defn chat-ws [{:keys [example/chat-clients] :as req}]
+  ;; chat-clients is initialized to (atom #{})
+  {:status 101
+   :headers {"upgrade" "websocket"
+             "connection" "upgrade"}
+   :ws {:on-connect (fn [ws]
+                      (swap! chat-clients conj ws))
+        :on-text (fn [ws text]
+                   (doseq [ws @chat-clients]
+                     (jetty/send! ws (rum/render-static-markup
+                                       [:div#messages {:hx-swap-oob "beforeend"}
+                                        [:p "new message: " text]]))))
+        :on-close (fn [ws status-code reason]
+                    (swap! chat-clients disj ws))}})
+
+(def features
+  {:routes [["/chat-page" {:get chat-page}]
+            ["/chat-ws" {:get chat-ws}]]})
+```
+
+(Note that this chat room will only work if all the participants are connected
+to the same web server. For that reason it's better to call `jetty/send!` from
+a transaction listener&mdash;see the next section.)
+
+You can also use htmx's companion library
+[hyperscript](https://hyperscript.org/) to do lightweight frontend scripting.
+Htmx is good when you need to contact the server anyway; hyperscript is good
+when you don't. Our previous button example could be done with hyperscript
+instead of htmx:
+
+```clojure
+(defn page [request]
+  [:html
+   [:head
+    [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]]
+   ...
+   [:div#message]
+   [:button {:_ "on click put 'tsk tsk' into #message then remove me"}
+    "Don't click this button"]])
+```
+
+See also:
+
+ - [Htmx documentation](https://htmx.org/docs/)
+ - [Hypescript documentation](https://hyperscript.org/docs/)
 
 # Transaction Listeners
 
+XTDB maintains an immutable transaction log. You can register a listener
+function which will get called whenever a new transaction has been appended to
+the log. If you provide a function for the `:on-tx` feature key, Biff will
+register it for you and pass the new transaction to it. For example, here's a
+transaction listener that prints a message whenever there's a new user:
+
+```clojure
+(defn alert-new-user [{:keys [biff.xtdb/node]} tx]
+  (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
+    (doseq [[op & args] (::xt/tx-ops tx)
+            :when (= op ::xt/put)
+            :let [[doc] args]
+            :when (and (contains? doc :user/email)
+                       (nil? (xt/entity db-before (:xt/id doc))))]
+      (println "there's a new user"))))
+
+(def features
+  {:on-tx alert-new-user})
+```
+
+The value of `tx` looks like this:
+
+```clojure
+{:xtdb.api/tx-id 9,
+ :xtdb.api/tx-time #inst "2022-03-13T10:24:45.432-00:00",
+ :xtdb.api/tx-ops ([:xtdb.api/put
+                    {:xt/id #uuid "dc4b4893-d4f1-4876-b4c5-6f87f5abcd7d",
+                     :user/email "hello@example.com"}]
+                   ...)}
+```
+
+See also:
+
+ - [`use-tx-listener`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb/impl/xtdb.clj#L78)
+ - [`xtdb.api/listen`](https://docs.xtdb.com/clients/clojure/#\_listen)
+
 # Scheduled Tasks
 
+Biff uses [chime](https://github.com/jarohen/chime) to execute functions on a
+recurring schedule. For each task, you must provide a function to run and a
+zero-argument schedule function which will return a list of times at which to
+execute the task function. The schedule can be an infinite sequence. For example, here's
+a task that prints out the number of users every 60 seconds:
+
+```clojure
+(require '[com.biffweb :as biff :refer [q]])
+
+(defn print-usage [{:keys [biff/db]}]
+  (let [n-users (first (q db
+                          '{:find (count user)
+                            :where [[user :user/email]]}))]
+    (println "There are" n-users "users.")))
+
+(defn every-minute []
+  (iterate #(biff/add-seconds % 60) (java.util.Date.)))
+
+(def features
+  {:tasks [{:task #'print-usage
+            :schedule every-minute}]})
+```
+
+See also:
+
+ - [chime documentation](https://github.com/jarohen/chime)
+ - [`use-chime`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb.clj#L297)
+
 # Authentication
+
+The authentication code is kept entirely within the template project at
+`com.example.feat.auth`. Biff uses email sign-in links instead of passwords.
+When you create a new project, a secret token is generated and stored in
+`config.edn`, under the `:biff/jwt-secret` key. When a user wants to
+authenticate, they enter their email address, and then your secret token is used
+to sign a JWT which is then embedded in a link and sent to the user's email
+address. When they click on the link, their user ID is added to their session
+cookie. By default the link is valid for one hour and the session lasts for 60
+days.
+
+At first, the sign-in link will be printed to the console. To have it get
+sent by email, you'll need to include an API key for
+[MailerSend](https://www.mailersend.com/) under the `:mailersend/api-key` key
+in `config.edn`. It's also pretty easy to use a different service like
+[Mailgun](https://www.mailgun.com/) if you prefer.
+
+Some applications that use email sign-in links are vulnerable to login CSRF,
+wherein an attacker requests a sign-in link for their own account and then
+sends it to the victim. If the victim clicks the link and doesn't notice
+they've been signed into someone else's account, they might reveal private
+information. Biff prevents login CSRF by checking that the link is clicked on
+the same device it was requested from.
+
+It is likely you will need to protect your sign-in form against bots. The
+template project includes backend code for reCAPTCHA v3, which does invisible
+bot detection (i.e. no need to click on pictures of cars; instead Google just
+analyzes your mouse movements etc). See [this
+page](https://developers.google.com/recaptcha/docs/v3) for instructions on
+adding the necessary code to the frontend. You can enable the backend
+verification code by setting `:recaptcha/secret-key` in `config.edn`.
+
+For added protection (and to help catch incorrect user input), you can also use
+an email verification API like
+[Mailgun's](https://documentation.mailgun.com/en/latest/api-email-validation.html).
+
+See also:
+
+ - [`com.example.feat.auth`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/example/src/com/example/feat/auth.clj)
+ - [`com.biffweb/mailersend`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb.clj#L213)
+ - [Mailersend](https://www.mailersend.com/)
+ - [Mailgun](https://www.mailgun.com/)
 
 # System Composition
 
@@ -532,9 +858,6 @@ set the domain in `config.sh`. For example:
 3. Run `scp setup.sh root@$YOUR_DOMAIN:`
 4. Run `ssh root@$YOUR_DOMAIN`, then `bash setup.sh`
 -->
-
-# Troubleshooting
-
 
 <!--
 
