@@ -211,7 +211,7 @@ Finally, "shared" namespaces contain code that's needed by multiple feature name
 app has a single shared namespace, `com.example.ui`, which contains helper functions for
 rendering HTML.
 
-# Static Pages
+# Static Files
 
 You can create static HTML files by supplying a map from paths to
 [Rum](https://github.com/tonsky/rum) data structures. In
@@ -256,6 +256,9 @@ You can use Tailwind CSS to style your HTML:
  "Sign in"]
 ```
 
+The HTML and Tailwind CSS files will be regenerated whenever you save a file.
+In addition, any files you put in `resources/public/` will be served.
+
 See also:
 
  - [Rum documentation](https://github.com/tonsky/rum)
@@ -273,7 +276,7 @@ Multiple routes:
 ```clojure
 (defn foo [request]
   {:status 200
-   :headers {"content-type" "text/html"}
+   :headers {"content-type" "text/plain"}
    :body "foo response"})
 
 (defn bar ...)
@@ -330,6 +333,26 @@ CSRF protection (this is a Biff feature, not a Reitit one):
 
 (def features
   {:api-routes [["/echo" {:post echo}]]})
+```
+
+Biff includes some middleware (`wrap-render-rum`) which will treat vector responses
+as Rum. The following handlers are equivalent:
+
+```clojure
+(require '[rum.core :as rum])
+
+(defn my-handler [request]
+  {:status 200
+   :headers {"content-type" "text/html"}
+   :body (rum/render-static-markup
+           [:html
+            [:body
+             [:p "I'll gladly pay you Tuesday for a hamburger on Tuesday"]]])})
+
+(defn my-handler [request]
+  [:html
+   [:body
+    [:p "I'll gladly pay you Tuesday for a hamburger on Tuesday"]]])
 ```
 
 See also:
@@ -684,7 +707,7 @@ You can also use htmx to establish websocket connections:
    [:div {:hx-ws "connect:/chat-ws"}
     [:div#messages]
     [:form {:hx-ws "send"}
-     [:textarea.w-full#message {:name "text"}]
+     [:textarea {:name "text"}]
      [:button {:type "submit"} "Send message"]]]])
 
 (defn chat-ws [{:keys [example/chat-clients] :as req}]
@@ -731,7 +754,7 @@ instead of htmx:
 See also:
 
  - [Htmx documentation](https://htmx.org/docs/)
- - [Hypescript documentation](https://hyperscript.org/docs/)
+ - [Hyperscript documentation](https://hyperscript.org/docs/)
 
 # Transaction Listeners
 
@@ -813,8 +836,22 @@ address. When they click on the link, their user ID is added to their session
 cookie. By default the link is valid for one hour and the session lasts for 60
 days.
 
-At first, the sign-in link will be printed to the console. To have it get
-sent by email, you'll need to include an API key for
+You can get the user's ID from the session like so:
+
+```clojure
+(defn whoami [{:keys [session biff/db]}]
+  (let [user (xt/entity db (:uid session))]
+    [:html
+     [:body
+      [:div "Signed in: " (some? user)]
+      [:div "Email: " (:user/email user)]]]))
+
+(def features
+  {:routes [["/whoami" {:get whoami}]]})
+```
+
+In a new Biff project, the sign-in link will be printed to the console. To have
+it get sent by email, you'll need to include an API key for
 [MailerSend](https://www.mailersend.com/) under the `:mailersend/api-key` key
 in `config.edn`. It's also pretty easy to use a different service like
 [Mailgun](https://www.mailgun.com/) if you prefer.

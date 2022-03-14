@@ -23,8 +23,7 @@
 (defn wrap-render-rum [handler]
   (fn [req]
     (let [response (handler req)]
-      (if (and (vector? response)
-               (str/starts-with? (str (first response)) ":html"))
+      (if (vector? response)
         {:status 200
          :headers {"content-type" "text/html"}
          :body (rum/render-static-markup response)}

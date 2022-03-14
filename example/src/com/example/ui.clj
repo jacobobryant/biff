@@ -14,7 +14,7 @@
     (-> opts
         (merge #:base{:title "My Application"
                       :lang "en-US"
-                      :icon "https://cdn.findka.com/glider.png"
+                      :icon "/img/glider.png"
                       :description "My Application Description"
                       :image "https://clojure.org/images/clojure-logo-120b.png"})
         (update :base/head (fn [head]
