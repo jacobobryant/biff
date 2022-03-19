@@ -1,6 +1,8 @@
 ;; vim: ft=clojure
 {:prod {:example/enable-web true
         :example/enable-worker true
+        ;; Uncomment this line if you'd like to develop in prod.
+        ;; :example/enable-hawk true
         :biff.xtdb/dir "storage/xtdb"
         :biff.xtdb/topology :standalone
         ;; Standalone topology in production isn't recommended for anything

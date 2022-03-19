@@ -17,7 +17,7 @@ Deletes generated files.
 ### `./task deploy`
 
 `rsync`s config files to the server, deploys code via `git push`, and restarts
-the app process on the server (via git push hook). You must have set up a server
+the app process on the server (via git push hook). You must set up a server
 first. See [Production](https://biffweb.com/docs/#production).
 
 ### `./task soft-deploy`
@@ -46,4 +46,6 @@ Open an SSH tunnel so you can connect to the server via nREPL.
 
 Runs `./task logs` and `./task prod-repl`. In addition, whenever you save a
 file, it will be copied to the server (via rsync) and eval'd, after which HTML
-and CSS will be regenerated.
+and CSS will be regenerated. Before you use this command, you must set
+`:example/enable-hawk true` in `config.edn` and run `./task deploy` at least
+once.

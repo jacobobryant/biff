@@ -100,11 +100,11 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
     root /home/app/target/resources/public;
     location / {
-        try_files $uri $uri/index.html @resources;
+        try_files \$uri \$uri/index.html @resources;
     }
     location @resources {
         root /home/app/resources/public;
-        try_files $uri $uri/index.html @proxy;
+        try_files \$uri \$uri/index.html @proxy;
     }
     location @proxy {
         proxy_pass http://localhost:8080;

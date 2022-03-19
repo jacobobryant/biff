@@ -22,13 +22,13 @@
 (defonce system (atom nil))
 
 (defn start-system
-  "Starts a system from a config map.
+  "Starts a system from an initial system map.
 
   Stores the system in the biff.util/system atom. See
   See https://biff.findka.com/#system-composition and refresh."
-  [config]
-  (reset! system (merge {:biff/stop '()} config))
-  (loop [{[f & components] :biff/components :as sys} config]
+  [system*]
+  (reset! system (merge {:biff/stop '()} system*))
+  (loop [{[f & components] :biff/components :as sys} system*]
     (when (some? f)
       (println "starting:" (str f))
       (recur (reset! system (f (assoc sys :biff/components components))))))
