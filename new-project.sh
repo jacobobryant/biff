@@ -14,7 +14,7 @@ if ! clj --help | grep -q -- ' -X'; then
   exit 3
 fi
 
-JAVA_MAJOR_VERSION=$(java -version 2>&1 | grep -oP 'version "?(1\.)?\K\d+' || true)
+JAVA_MAJOR_VERSION=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
 if [[ $JAVA_MAJOR_VERSION -lt 11 ]]; then
   echo Please install Java 11 or higher.
   exit 4

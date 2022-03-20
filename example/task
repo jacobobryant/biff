@@ -95,6 +95,12 @@ prod-repl () {
 }
 
 prod-dev () {
+  if ! which fswatch > /dev/null; then
+    echo '`fswatch` command not found. Please install it: https://emcrisostomo.github.io/fswatch/getting.html'
+    echo ' - Ubuntu: sudo apt install fswatch'
+    echo ' - Mac: brew install fswatch'
+    exit 1
+  fi
   trap 'kill %1; kill %2' SIGINT
   prod-repl &
   auto-soft-deploy &
