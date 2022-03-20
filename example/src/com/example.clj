@@ -55,7 +55,8 @@
              "-c" "resources/tailwind.config.js"
              "-i" "resources/tailwind.css"
              "-o" "target/resources/public/css/main.css"
-             "--minify")))
+             "--minify")
+    (println "CSS done")))
 
 (defn on-save [sys]
   (biff/eval-files! sys)

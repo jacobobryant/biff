@@ -45,9 +45,6 @@ Open an SSH tunnel so you can connect to the server via nREPL.
 
 ### `./task prod-dev`
 
-Before you use this command, you must set `:example/enable-hawk true` in the
-`:prod` section of `config.edn` and then run `./task deploy` at least once.
-
 Runs `./task logs` and `./task prod-repl`. In addition, whenever you save a
 file, it will be copied to the server (via rsync) and eval'd, after which HTML
 and CSS will be regenerated.

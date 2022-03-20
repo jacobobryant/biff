@@ -1050,9 +1050,9 @@ follow these steps:
    you use `main` instead of `master` as your default branch.
 4. Edit `config.edn` and update `:biff/base-url`.
 5. Set an A record on `example.com` that points to your Ubuntu server.
-6. Make sure you can ssh into the server, then run `scp setup.sh root@example.com`.
+6. Make sure you can ssh into the server, then run `scp setup.sh root@example.com:`.
 7. Run `ssh root@example.com`, then `bash setup.sh`. After it finishes, run `reboot`.
-8. On your local machine, run `git remote set-url prod ssh://app@example.com/home/app/repo.git`.
+8. On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
 
 Now you can deploy your application anytime by committing your code and then
 running `./task deploy`. This will copy your config files (which aren't checked
