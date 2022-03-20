@@ -90,6 +90,12 @@ namespace when creating your project.)
 ├── config.edn
 ├── config.sh
 ├── deps.edn
+├── resources
+│   ├── public
+│   │   └── img
+│   │       └── glider.png
+│   ├── tailwind.config.js
+│   └── tailwind.css
 ├── setup.sh
 ├── src
 │   └── com
@@ -103,8 +109,6 @@ namespace when creating your project.)
 │       │   ├── schema.clj
 │       │   └── ui.clj
 │       └── example.clj
-├── tailwind.config.js
-├── tailwind.css
 └── task
 ```
 

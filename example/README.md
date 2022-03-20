@@ -7,8 +7,9 @@ This is the example/template project for Biff.
 ### `./task dev`
 
 Starts the app locally. After running, wait for the `System started` message.
-Connect your editor to nrepl port 7888. Files will be auto-eval'd whenever you
-save a file. Static HTML and CSS files will also be regenerated on file save.
+Connect your editor to nrepl port 7888. Clojure files will be evaluated
+whenever you save a file. Static HTML and CSS files will also be regenerated on
+file save.
 
 ### `./task clean`
 
@@ -44,8 +45,9 @@ Open an SSH tunnel so you can connect to the server via nREPL.
 
 ### `./task prod-dev`
 
+Before you use this command, you must set `:example/enable-hawk true` in the
+`:prod` section of `config.edn` and then run `./task deploy` at least once.
+
 Runs `./task logs` and `./task prod-repl`. In addition, whenever you save a
 file, it will be copied to the server (via rsync) and eval'd, after which HTML
-and CSS will be regenerated. Before you use this command, you must set
-`:example/enable-hawk true` in `config.edn` and run `./task deploy` at least
-once.
+and CSS will be regenerated.

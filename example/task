@@ -30,10 +30,7 @@ dev () {
     install-tailwind
   fi
   echo 7888 > .nrepl-port
-  trap 'kill %1' SIGINT
-  BIFF_ENV=dev run &
-  # For some reason I can't get tailwind to work in the background.
-  bin/tailwindcss -i tailwind.css -o target/resources/public/css/main.css --watch
+  BIFF_ENV=dev run
 }
 
 clean () {
@@ -55,7 +52,6 @@ soft-deploy () {
   chmod 600 config.*
   rsync -a --info=name1 --delete \
     config.* \
-    tailwind.* \
     deps.edn \
     task \
     src \

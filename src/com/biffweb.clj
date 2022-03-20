@@ -64,8 +64,7 @@
   exts:          If exts is non-empty, files that don't end in one of the
                  extensions will be ignored."
   [{:biff.hawk/keys [on-save exts paths]
-    :or {exts [".clj" ".cljc"]
-         paths ["src"]}
+    :or {paths ["src" "resources"]}
     :as sys}]
   (let [watch (hawk/watch!
                 [(merge {:paths paths

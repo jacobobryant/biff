@@ -6,6 +6,7 @@
             [com.example.feat.worker :as worker]
             [com.example.schema :refer [malli-opts]]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
@@ -39,18 +40,22 @@
 (defn generate-assets! [sys]
   (when (:example/enable-web sys)
     (biff/export-rum static-pages "target/resources/public")
-    (biff/sh "bin/tailwindcss"
-             "-i" "tailwind.css"
-             "-o" "target/resources/public/css/main.css"
-             "--minify")
     (->> (file-seq (io/file "target/resources/public"))
          (filter (fn [file]
                    (and (.isFile file)
                         (biff/elapsed? (java.util.Date. (.lastModified file))
                                        :now
-                                       60
-                                       :seconds))))
-         (run! io/delete-file))))
+                                       30
+                                       :seconds)
+                        (str/ends-with? (.getPath file) ".html"))))
+         (run! (fn [f]
+                 (println "deleting" f)
+                 (io/delete-file f))))
+    (biff/sh "bin/tailwindcss"
+             "-c" "resources/tailwind.config.js"
+             "-i" "resources/tailwind.css"
+             "-o" "target/resources/public/css/main.css"
+             "--minify")))
 
 (defn on-save [sys]
   (biff/eval-files! sys)
