@@ -1,6 +1,7 @@
 (ns com.biffweb.impl.xtdb
   (:require [better-cond.core :as b]
             [com.biffweb.impl.util :as util]
+            [com.biffweb.impl.util.ns :as ns]
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.stacktrace :as st]
@@ -69,8 +70,8 @@
                {:topology topology
                 :dir dir
                 :opts opts
-                :jdbc-spec (util/select-ns-as sys 'biff.xtdb.jdbc nil)
-                :pool-opts (util/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]
+                :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
+                :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]
     (-> sys
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))

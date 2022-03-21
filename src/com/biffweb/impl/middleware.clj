@@ -150,7 +150,7 @@
       (wrap-internal-error opts)
       wrap-log-requests))
 
-;; TODO emphasize that this doesn't include wrap-anti-forgery
+;; TODO emphasize that this doesn't include wrap-anti-forgery ?
 (defn wrap-outer-defaults [handler opts]
   (-> handler
       (wrap-ring-defaults opts)

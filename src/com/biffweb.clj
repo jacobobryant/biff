@@ -1,21 +1,16 @@
 (ns com.biffweb
-  (:require [better-cond.core :as b]
-            [buddy.core.nonce :as nonce]
-            [buddy.sign.jwt :as jwt]
-            [chime.core :as chime]
-            [clj-http.client :as http]
-            [clojure.edn :as edn]
+  (:require [buddy.core.nonce :as nonce]
             [clojure.string :as str]
-            [clojure.tools.namespace.repl :as tn-repl]
-            [com.biffweb.impl.extra :as extra]
             [com.biffweb.impl.middleware :as middle]
+            [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.rum :as brum]
+            [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
-            [com.biffweb.impl.xtdb :as bxt]
-            [hawk.core :as hawk]
-            [muuntaja.middleware :as muuntaja]
-            [reitit.ring :as reitit-ring]
-            [ring.adapter.jetty9 :as jetty]))
+            [com.biffweb.impl.util.ns :as ns]
+            [com.biffweb.impl.util.reload :as reload]
+            [com.biffweb.impl.xtdb :as bxt]))
+
+;;;; util
 
 (def pprint util/pprint)
 
@@ -26,13 +21,8 @@
 
   Stores the system in the biff.util/system atom. See
   See https://biff.findka.com/#system-composition and refresh."
-  [system*]
-  (reset! system (merge {:biff/stop '()} system*))
-  (loop [{[f & components] :biff/components :as sys} system*]
-    (when (some? f)
-      (println "starting:" (str f))
-      (recur (reset! system (f (assoc sys :biff/components components))))))
-  (println "System started."))
+  [init]
+  (util/start-system system init))
 
 (defn refresh
   "Stops the system, refreshes source files, and restarts the system.
@@ -43,16 +33,66 @@
 
   See start-system."
   []
-  (let [{:keys [biff/after-refresh biff/stop]} @system]
-    (doseq [f stop]
-      (println "stopping:" (str f))
-      (f))
-    (tn-repl/refresh :after after-refresh)))
+  (util/refresh @system))
+
+(defn use-config [sys]
+  (merge sys (util/read-config (:biff/config sys))))
+
+(defn generate-secret [length]
+  (util/base64-encode (nonce/random-bytes length)))
+
+(defn sh
+  "Runs a shell command.
+
+  Returns the output if successful; otherwise, throws an exception."
+  [& args]
+  (apply util/sh args))
+
+(defn safe-merge [& ms]
+  (apply util/safe-merge ms))
+
+(defn normalize-email [email]
+  (some-> email str/trim str/lower-case not-empty))
+
+(defn use-when [f & components]
+  (apply util/use-when f components))
+
+(defn sha256 [string]
+  (util/sha256))
+
+(defn base64-encode [bs]
+  (util/base64-encode bs))
+
+(defn base64-decode [s]
+  (util/base64-decode s))
+
+(defn random-uuid []
+  (java.util.UUID/randomUUID))
+
+(defn anomaly? [x]
+  (util/anomaly? x))
+
+(defn anom [category & [message & [opts]]]
+  (util/anom category message opts))
+
+(defn select-ns-as [m ns-from ns-to]
+  (ns/select-ns-as m ns-from ns-to))
+
+(defmacro catchall [& body]
+  `(try ~@body (catch Exception ~'_ nil)))
+
+(defmacro fix-print [& body]
+  `(binding [*out* (alter-var-root #'*out* identity)
+             *err* (alter-var-root #'*err* identity)
+             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
+     ~@body))
 
 (defn eval-files! [{:keys [biff/eval-paths]
                     :or {eval-paths ["src"]}}]
-  (swap! util/global-tracker util/eval-files* eval-paths)
+  (swap! reload/global-tracker reload/refresh eval-paths)
   nil)
+
+;;;; misc
 
 (defn use-hawk
   "A Biff component for Hawk. See https://github.com/wkf/hawk.
@@ -66,75 +106,54 @@
   [{:biff.hawk/keys [on-save exts paths]
     :or {paths ["src" "resources"]}
     :as sys}]
-  (let [watch (hawk/watch!
-                [(merge {:paths paths
-                         ; todo debounce this properly
-                         :handler (fn [{:keys [last-ran]
-                                        :or {last-ran 0}} _]
-                                    (when (< 500 (- (inst-ms (java.util.Date.)) last-ran))
-                                      (on-save sys))
-                                    {:last-ran (inst-ms (java.util.Date.))})}
-                        (when exts
-                          {:filter (fn [_ {:keys [^java.io.File file]}]
-                                     (let [path (.getPath file)]
-                                       (some #(str/ends-with? path %) exts)))}))])]
-    (update sys :biff/stop conj #(hawk/stop! watch))))
+  (misc/use-hawk sys))
 
-(defn reitit-handler [{:keys [router routes on-error]
-                       :or {on-error util/default-on-error}}]
-  (reitit-ring/ring-handler
-    (or router (reitit-ring/router routes))
-    (reitit-ring/routes
-      (reitit-ring/redirect-trailing-slash-handler)
-      (reitit-ring/create-default-handler
-        {:not-found          #(on-error (assoc % :status 404))
-         :method-not-allowed #(on-error (assoc % :status 405))
-         :not-acceptable     #(on-error (assoc % :status 406))}))))
+(defn reitit-handler [opts]
+  (misc/reitit-handler opts))
 
 (defn use-jetty
   "Starts a Jetty web server.
 
   websockets: A map from paths to handlers, e.g. {\"/api/chsk\" ...}."
-  [{:biff/keys [host port handler]
-    :biff.jetty/keys [quiet websockets]
-    :or {host "localhost"
-         port 8080}
-    :as sys}]
-  (let [server (jetty/run-jetty handler
-                                {:host host
-                                 :port port
-                                 :join? false
-                                 :websockets websockets
-                                 :allow-null-path-info true})]
-    (when-not quiet
-      (println "Jetty running on" (str "http://" host ":" port)))
-    (update sys :biff/stop conj #(jetty/stop-server server))))
+  [sys]
+  (misc/use-jetty sys))
+
+(defn jwt-encrypt
+  [claims secret]
+  (misc/jwt-encrypt claims secret))
+
+(defn jwt-decrypt
+  [token secret]
+  (misc/jwt-decrypt token secret))
+
+(defn use-chime
+  [sys]
+  (misc/use-chime sys))
+
+;;;; middleware
 
 (def wrap-anti-forgery-websockets middle/wrap-anti-forgery-websockets)
+
 (def wrap-render-rum middle/wrap-render-rum)
+
 (def wrap-index-files middle/wrap-index-files)
+
 (def wrap-resource middle/wrap-resource)
+
 (def wrap-internal-error middle/wrap-internal-error)
+
 (def wrap-log-requests middle/wrap-log-requests)
+
 (def wrap-ring-defaults middle/wrap-ring-defaults)
+
 (def wrap-env middle/wrap-env)
+
 (def wrap-inner-defaults middle/wrap-inner-defaults)
 
 (defn use-outer-default-middleware [sys]
   (update sys :biff/handler middle/wrap-outer-defaults sys))
 
-(defn read-config [path]
-  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
-        env->config (edn/read-string (slurp path))
-        config-keys (concat (get-in env->config [env :merge]) [env])
-        config (apply merge (map env->config config-keys))]
-    config))
-
-(defn use-config [sys]
-  (merge sys (read-config (:biff/config sys))))
-
-(defn generate-secret [length]
-  (util/base64-encode (nonce/random-bytes length)))
+;;;; xtdb
 
 (defn start-node [opts]
   (bxt/start-node opts))
@@ -163,6 +182,8 @@
 (defn submit-tx [sys tx]
   (bxt/submit-tx sys tx))
 
+;;;; rum
+
 (defn render [body]
   (brum/render body))
 
@@ -190,125 +211,37 @@
 (defn export-rum [pages dir]
   (brum/export-rum pages dir))
 
-(defn sh [& args]
-  (apply util/sh args))
+(defn mailersend [sys opts]
+  (misc/mailersend sys opts))
 
-(defmacro catchall [& body]
-  `(try ~@body (catch Exception ~'_ nil)))
-
-(defn safe-merge [& ms]
-  (reduce (fn [m1 m2]
-            (let [dupes (filter #(contains? m1 %) (keys m2))]
-              (when (not-empty dupes)
-                (throw (ex-info (str "Maps contain duplicate keys: " (str/join ", " dupes))
-                                {:keys dupes})))
-              (merge m1 m2)))
-          {}
-          ms))
-
-(defn normalize-email [email]
-  (some-> email str/trim str/lower-case not-empty))
-
-(defn mailersend [{:keys [mailersend/api-key
-                          mailersend/defaults]}
-                  opts]
-  (let [opts (reduce (fn [opts [path x]]
-                       (update-in opts path #(or % x)))
-                     opts
-                     defaults)]
-    (try
-      (get-in
-        (http/post "https://api.mailersend.com/v1/email"
-                   {:content-type :json
-                    :oauth-token api-key
-                    :form-params opts})
-        [:headers "X-Message-Id"])
-      (catch Exception e
-        (println "mailersend failed:" (:body (ex-data e)))
-        false))))
-
-(defn random-uuid []
-  (java.util.UUID/randomUUID))
+;;;; time
 
 (defn now []
   (java.util.Date.))
 
-(defn anomaly? [x]
-  (util/anomaly? x))
+(def rfc3339 time/rfc3339)
 
-(defn anom [category & [message & [opts]]]
-  (util/anom category message opts))
+(def parse-format-date time/parse-format-date)
 
-(def rfc3339 util/rfc3339)
+(def parse-date time/parse-date)
 
-(def parse-format-date util/parse-format-date)
+(def format-date time/format-date)
 
-(def parse-date util/parse-date)
+(def crop-date time/crop-date)
 
-(def format-date util/format-date)
-
-(def crop-date util/crop-date)
-
-(def crop-day util/crop-day)
+(def crop-day time/crop-day)
 
 (defn seconds-between [t1 t2]
-  (util/seconds-between t1 t2))
+  (time/seconds-between t1 t2))
 
 (defn duration [x unit]
-  (util/duration x unit))
+  (time/duration x unit))
 
 (defn elapsed? [t1 t2 x unit]
-  (util/elapsed? t1 t2 x unit))
+  (time/elapsed? t1 t2 x unit))
 
 (defn between-hours? [t h1 h2]
-  (util/between-hours? t h1 h2))
+  (time/between-hours? t h1 h2))
 
 (defn add-seconds [date seconds]
-  (util/add-seconds date seconds))
-
-(defn base64-encode [bs]
-  (util/base64-encode bs))
-
-(defn base64-decode [s]
-  (util/base64-decode s))
-
-(defn jwt-encrypt
-  [claims secret]
-  (jwt/encrypt
-    (-> claims
-        (assoc :exp (add-seconds (now) (:exp-in claims)))
-        (dissoc :exp-in))
-    (base64-decode secret)
-    {:alg :a256kw :enc :a128gcm}))
-
-(defn jwt-decrypt
-  [token secret]
-  (catchall
-    (jwt/decrypt
-      token
-      (base64-decode secret)
-      {:alg :a256kw :enc :a128gcm})))
-
-(defn sha256 [string]
-  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes string "UTF-8"))]
-    (apply str (map (partial format "%02x") digest))))
-
-(defn use-chime
-  [{:biff.chime/keys [tasks] :as sys}]
-  (reduce (fn [sys {:keys [schedule task]}]
-            (let [scheduler (chime/chime-at (schedule) (fn [_] (task sys)))]
-              (update sys :biff/stop conj #(.close scheduler))))
-          sys
-          tasks))
-
-(defn use-when [f & components]
-  (fn [sys]
-    (if (f sys)
-      (update sys :biff/components #(concat components %))
-      sys)))
-
-(defmacro fix-print [& body]
-  `(binding [*out* (alter-var-root #'*out* identity)
-             *err* (alter-var-root #'*err* identity)
-             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
-     ~@body))
+  (time/add-seconds date seconds))

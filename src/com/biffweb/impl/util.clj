@@ -1,14 +1,26 @@
 (ns com.biffweb.impl.util
-  (:require [clojure.java.shell :as shell]
+  (:require [clojure.edn :as edn]
+            [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.repl :as repl]
             [clojure.set :as set]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
-            [clojure.tools.namespace.dir :as dir]
-            [clojure.tools.namespace.reload :as reload]
-            clojure.tools.namespace.repl
-            [clojure.tools.namespace.track :as track]))
+            [clojure.tools.namespace.repl :as tn-repl]))
+
+(defn start-system [system-atom init]
+  (reset! system-atom (merge {:biff/stop '()} init))
+  (loop [{[f & components] :biff/components :as sys} init]
+    (when (some? f)
+      (println "starting:" (str f))
+      (recur (reset! system-atom (f (assoc sys :biff/components components))))))
+  (println "System started."))
+
+(defn refresh [{:keys [biff/after-refresh biff/stop]}]
+  (doseq [f stop]
+    (println "stopping:" (str f))
+    (f))
+  (tn-repl/refresh :after after-refresh))
 
 (defn ppr-str [x]
   (with-out-str
@@ -20,99 +32,62 @@
     (pp/pprint x))
   (flush))
 
-; todo break this into different namespaces or something
+(defn base64-encode [bs]
+  (.encodeToString (java.util.Base64/getEncoder) bs))
 
-;;;; eval on write
+(defn base64-decode [s]
+  (.decode (java.util.Base64/getDecoder) s))
 
-;; Taken from https://github.com/jakemcc/reload
-;; TODO is it ok to copy source here since it's EPL? Need to include license?
+(defn sha256 [string]
+  (let [digest (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes string "UTF-8"))]
+    (apply str (map (partial format "%02x") digest))))
 
-(defonce global-tracker (atom (track/tracker)))
+(defn assoc-some [m & kvs]
+  (->> kvs
+       (partition 2)
+       (filter (comp some? second))
+       (map vec)
+       (into m)))
 
-(def ^:private remove-disabled #'clojure.tools.namespace.repl/remove-disabled)
+(defn safe-merge [& ms]
+  (reduce (fn [m1 m2]
+            (let [dupes (filter #(contains? m1 %) (keys m2))]
+              (when (not-empty dupes)
+                (throw (ex-info (str "Maps contain duplicate keys: " (str/join ", " dupes))
+                                {:keys dupes})))
+              (merge m1 m2)))
+          {}
+          ms))
 
-(defn- print-pending-reloads [tracker]
-  (when-let [r (seq (::track/load tracker))]
-    (prn :reloading r)))
+(defn sh [& args]
+  (let [result (apply shell/sh args)]
+    (if (= 0 (:exit result))
+      (:out result)
+      (throw (ex-info (:err result) result)))))
 
-(defn- print-and-return [tracker]
-  (if-let [e (::reload/error tracker)]
-    (do (when (thread-bound? #'*e)
-          (set! *e e))
-        (prn :error-while-loading (::reload/error-ns tracker))
-        (repl/pst e)
-        e)
-    (prn :ok)))
+(defn read-config [path]
+  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
+        env->config (edn/read-string (slurp path))
+        config-keys (concat (get-in env->config [env :merge]) [env])
+        config (apply merge (map env->config config-keys))]
+    config))
 
-(defn eval-files* [tracker directories]
-  (let [new-tracker (apply dir/scan tracker directories)
-        new-tracker (remove-disabled new-tracker)]
-    (print-pending-reloads new-tracker)
-    (let [new-tracker (reload/track-reload (assoc new-tracker ::track/unload []))]
-      (print-and-return new-tracker)
-      new-tracker)))
+(defn use-when [f & components]
+  (fn [sys]
+    (if (f sys)
+      (update sys :biff/components #(concat components %))
+      sys)))
 
-;;;; date fns
+(defn anomaly? [x]
+  (spec/valid? (spec/keys :req [:cognitect.anomalies/category]
+                          :opt [:cognitect.anomalies/message])
+               x))
 
-(def rfc3339 "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-
-(defn parse-format-date [date in-format out-format]
-  (cond->> date
-    in-format (.parse (new java.text.SimpleDateFormat in-format))
-    out-format (.format (new java.text.SimpleDateFormat out-format))))
-
-(defn parse-date
-  ([date]
-   (parse-date date rfc3339))
-  ([date in-format]
-   (parse-format-date date in-format nil)))
-
-(defn format-date
-  ([date]
-   (format-date date rfc3339))
-  ([date out-format]
-   (parse-format-date date nil out-format)))
-
-(defn crop-date [d fmt]
-  (-> d
-      (format-date fmt)
-      (parse-date fmt)))
-
-(defn crop-day [t]
-  ; will this depend on current timezone?
-  (crop-date t "yyyy-MM-dd"))
-
-(defn- expand-time [x]
-  (if (= x :now)
-    (java.util.Date.)
-    x))
-
-(defn seconds-between [t1 t2]
-  (quot (- (inst-ms (expand-time t2)) (inst-ms (expand-time t1))) 1000))
-
-(defn duration [x unit]
-  (case unit
-    :seconds x
-    :minutes (* x 60)
-    :hours (* x 60 60)
-    :days (* x 60 60 24)
-    :weeks (* x 60 60 24 7)))
-
-(defn elapsed? [t1 t2 x unit]
-  (< (duration x unit)
-     (seconds-between t1 t2)))
-
-(defn between-hours? [t h1 h2]
-  (let [hours (/ (mod (quot (inst-ms t) (* 1000 60))
-                      (* 60 24))
-                 60.0)]
-    (if (< h1 h2)
-      (<= h1 hours h2)
-      (or (<= h1 hours)
-          (<= hours h2)))))
-
-(defn add-seconds [date seconds]
-  (java.util.Date/from (.plusSeconds (.toInstant date) seconds)))
+(defn anom [category & [message & [opts]]]
+  (merge opts
+         {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
+         (when message
+           {:cognitect.anomalies/message message})))
 
 (def http-status->msg
   {100 "Continue"
@@ -182,76 +157,3 @@
   {:status status
    :headers {"content-type" "text/html"}
    :body (str "<h1>" (http-status->msg status) "</h1>")})
-
-(defn base64-encode [bs]
-  (.encodeToString (java.util.Base64/getEncoder) bs))
-
-(defn base64-decode [s]
-  (.decode (java.util.Base64/getDecoder) s))
-
-(defn ns-contains? [nspace sym]
-  (and (namespace sym)
-    (let [segments (str/split (name nspace) #"\.")]
-      (= segments (take (count segments) (str/split (namespace sym) #"\."))))))
-
-(defn select-as [m key-map]
-  (-> m
-      (select-keys (keys key-map))
-      (set/rename-keys key-map)))
-
-(defn select-ns [m nspace]
-  (select-keys m (filter #(ns-contains? nspace (symbol %)) (keys m))))
-
-(defn ns-parts [nspace]
-  (if (nil? nspace)
-    []
-    (some-> nspace
-            str
-            not-empty
-            (str/split #"\."))))
-
-(defn select-ns-as [m ns-from ns-to]
-  (->> (select-ns m ns-from)
-       (map (fn [[k v]]
-              (let [new-ns-parts (->> (ns-parts (namespace k))
-                                      (drop (count (ns-parts ns-from)))
-                                      (concat (ns-parts ns-to)))]
-                [(if (empty? new-ns-parts)
-                   (keyword (name k))
-                   (keyword (str/join "." new-ns-parts) (name k)))
-                 v])))
-       (into {})))
-
-(defn assoc-some [m & kvs]
-  (->> kvs
-       (partition 2)
-       (filter (comp some? second))
-       (map vec)
-       (into m)))
-
-(defn sh
-  "Runs a shell command.
-
-  Returns the output if successful; otherwise, throws an exception."
-  [& args]
-  (let [result (apply shell/sh args)]
-    (if (= 0 (:exit result))
-      (:out result)
-      (throw (ex-info (:err result) result)))))
-
-(defn random-uuid []
-  (java.util.UUID/randomUUID))
-
-(defn now []
-  (java.util.Date.))
-
-(defn anomaly? [x]
-  (spec/valid? (spec/keys :req [:cognitect.anomalies/category]
-                          :opt [:cognitect.anomalies/message])
-               x))
-
-(defn anom [category & [message & [opts]]]
-  (merge opts
-         {:cognitect.anomalies/category (keyword "cognitect.anomalies" (name category))}
-         (when message
-           {:cognitect.anomalies/message message})))
