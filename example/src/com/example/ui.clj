@@ -2,11 +2,8 @@
   (:require [clojure.java.io :as io]
             [com.biffweb :as biff]))
 
-;; todo I think something like this helps with cache-busting? If so, maybe use
-;; last-modified-time as a param so we don't have to slurp the whole thing on
-;; every request.
 (defn css-path []
-  (str "/css/main.css?a=" (hash (biff/catchall (slurp (io/resource "public/css/main.css"))))))
+  (str "/css/main.css?t=" (.lastModified (io/file (io/resource "public/css/main.css")))))
 
 (defn base [opts & body]
   (apply
