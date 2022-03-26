@@ -1,5 +1,6 @@
 (ns com.biffweb.impl.misc
-  (:require [buddy.sign.jwt :as jwt]
+  (:require [buddy.core.nonce :as nonce]
+            [buddy.sign.jwt :as jwt]
             [chime.core :as chime]
             [clj-http.client :as http]
             [clojure.string :as str]
@@ -96,3 +97,15 @@
               (update sys :biff/stop conj #(.close scheduler))))
           sys
           tasks))
+
+(defn generate-secret [length]
+  (util/base64-encode (nonce/random-bytes length)))
+
+(defn use-random-default-secrets [sys]
+  (merge sys
+         (when (nil? (:biff.middleware/cookie-secret sys))
+           (println "Warning: :biff.middleware/cookie-secret is empty, using random value")
+           {:biff.middleware/cookie-secret (generate-secret 16)})
+         (when (nil? (:biff/jwt-secret sys))
+           (println "Warning: :biff/jwt-secret is empty, using random value")
+           {:biff/jwt-secret (generate-secret 32)})))

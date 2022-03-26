@@ -73,6 +73,7 @@
      :biff.chime/tasks tasks
      :biff/config "config.edn"
      :biff/components [biff/use-config
+                       biff/use-random-default-secrets
                        biff/use-xt
                        biff/use-tx-listener
                        (biff/use-when

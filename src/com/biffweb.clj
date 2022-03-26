@@ -39,9 +39,6 @@
 (defn use-config [sys]
   (merge sys (util/read-config (:biff/config sys))))
 
-(defn generate-secret [length]
-  (util/base64-encode (nonce/random-bytes length)))
-
 (defn sh
   "Runs a shell command.
 
@@ -130,6 +127,12 @@
 
 (defn mailersend [sys opts]
   (misc/mailersend sys opts))
+
+(defn generate-secret [length]
+  (misc/generate-secret length))
+
+(defn use-random-default-secrets [sys]
+  (misc/use-random-default-secrets sys))
 
 ;;;; middleware
 
