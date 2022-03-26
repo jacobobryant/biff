@@ -60,7 +60,7 @@
     (doseq [src (->> (file-seq example)
                      (filter #(.isFile %)))
             :let [relative (-> (.getPath src)
-                               (str/replace-first #".*?example/" "")
+                               (str/replace-first #".*?biff/example/" "")
                                (str/replace "com/example" (ns->path main-ns)))
                   dest (io/file dir relative)]]
       (io/make-parents dest)
