@@ -4,8 +4,8 @@
 
 (defn ns-contains? [nspace sym]
   (and (namespace sym)
-    (let [segments (str/split (name nspace) #"\.")]
-      (= segments (take (count segments) (str/split (namespace sym) #"\."))))))
+       (let [segments (str/split (name nspace) #"\.")]
+         (= segments (take (count segments) (str/split (namespace sym) #"\."))))))
 
 (defn select-as [m key-map]
   (-> m

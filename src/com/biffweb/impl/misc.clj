@@ -39,7 +39,6 @@
          :not-acceptable     #(on-error (assoc % :status 406))}))))
 
 (defn use-jetty [{:biff/keys [host port handler]
-                  :biff.jetty/keys [quiet websockets]
                   :or {host "localhost"
                        port 8080}
                   :as sys}]
@@ -47,10 +46,8 @@
                                 {:host host
                                  :port port
                                  :join? false
-                                 :websockets websockets
                                  :allow-null-path-info true})]
-    (when-not quiet
-      (println "Jetty running on" (str "http://" host ":" port)))
+    (println "Jetty running on" (str "http://" host ":" port))
     (update sys :biff/stop conj #(jetty/stop-server server))))
 
 (defn mailersend [{:keys [mailersend/api-key

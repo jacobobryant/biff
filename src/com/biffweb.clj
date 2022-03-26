@@ -13,15 +13,18 @@
 
 ;;;; util
 
-(def pprint util/pprint)
+(defn pprint
+  "Alias of clojure.pprint/pprint"
+  [& args]
+  (apply util/pprint args))
 
 (defonce system (atom nil))
 
 (defn start-system
   "Starts a system from an initial system map.
 
-  Stores the system in the biff.util/system atom. See
-  See https://biff.findka.com/#system-composition and refresh."
+  Stores the system in the com.biffweb/system atom. See
+  https://biffweb.com/docs/#system-composition"
   [init]
   (util/start-system system init))
 
@@ -29,14 +32,27 @@
   "Stops the system, refreshes source files, and restarts the system.
 
   The system is stopped by calling all the functions in (:biff/stop
-  @biff.util/system). (:after-refresh @system) is a fully-qualified symbol which
-  will be resolved and called after refreshing.
-
-  See start-system."
+  @com.biffweb/system). (:biff/after-refresh @system) is a fully-qualified
+  symbol which will be resolved and called after refreshing. See
+  https://biffweb.com/docs/#system-composition"
   []
   (util/refresh @system))
 
-(defn use-config [sys]
+(defn use-config
+  "Reads config from (:biff/config sys), and edn file, and merges into sys.
+
+  The config file's contents should be a map from environments to config keys
+  and values, for example:
+
+  {:prod {:host \"example.com\"
+          :port 8080}
+   :dev {:merge [:prod]
+         :host \"localhost\"}}
+
+  The current environment should be stored in the BIFF_ENV environment variable.
+  The default value is `prod`. To inherit config from other environments, set
+  :merge to a sequence of environment keys."
+  [sys]
   (merge sys (util/read-config (:biff/config sys))))
 
 (defn sh
@@ -46,44 +62,117 @@
   [& args]
   (apply util/sh args))
 
-(defn safe-merge [& ms]
+(defn safe-merge
+  "Like merge, but throws an exception if any maps share keys."
+  [& ms]
   (apply util/safe-merge ms))
 
-(defn normalize-email [email]
+(defn normalize-email
+  "Normalizes an email address to make future lookups easier.
+
+  Trims leading and trailing whitespace and converts to lower case. Returns nil
+  if the email is empty after trimming."
+  [email]
   (some-> email str/trim str/lower-case not-empty))
 
-(defn use-when [f & components]
+(defn use-when
+  "Passes the system map to components only if (f system) is true.
+
+  See https://biffweb.com/docs/#system-composition"
+  [f & components]
   (apply util/use-when f components))
 
-(defn sha256 [string]
+(defn sha256
+  "Returns the SHA256 hash of string."
+  [string]
   (util/sha256 string))
 
-(defn base64-encode [bs]
-  (util/base64-encode bs))
+(defn base64-encode
+  "Converts a byte array to a base64 string."
+  [bytes]
+  (util/base64-encode bytes))
 
-(defn base64-decode [s]
-  (util/base64-decode s))
+(defn base64-decode
+  "Converts a base64 string to a byte array."
+  [string]
+  (util/base64-decode string))
 
-(defn anomaly? [x]
+(defn anomaly?
+  "Returns true if x is an anomaly.
+
+  See https://github.com/cognitect-labs/anomalies"
+  [x]
   (util/anomaly? x))
 
-(defn anom [category & [message & [opts]]]
+(defn anom
+  "Constructs an anomaly.
+
+  Example: (anom :incorrect
+                 \"Invalid parameter\"
+                 {:info \"x should be an integer\"})
+
+  See https://github.com/cognitect-labs/anomalies"
+  [category & [message & [opts]]]
   (util/anom category message opts))
 
-(defn select-ns-as [m ns-from ns-to]
+(defn select-ns-as
+  "Selects and renames keys from m based on the namespace.
+
+  Examples:
+
+  (select-ns-as {:foo/a 1, :foo.bar/b 2, :baz/c 3} 'foo 'quux)
+  => {:quux/a 1, :quux.bar/b 2}
+
+  (select-ns-as {:foo/a 1, :foo.bar/b 2, :baz/c 3} 'foo nil)
+  => {:a 1, :bar/b 2}"
+  [m ns-from ns-to]
   (ns/select-ns-as m ns-from ns-to))
 
-(defmacro catchall [& body]
+(defmacro catchall
+  "Wraps body in (try ... (catch Exception _ nil))"
+  [& body]
   `(try ~@body (catch Exception ~'_ nil)))
 
-(defmacro letd [bindings & body]
+(defmacro letd
+  "Like let, but transparently wraps all bindings with delay.
+
+  Examples:
+
+  (letd [a (do (println \"a evaluated\")
+               1)
+         {:keys [b]} (do (println \"b evaluated\")
+                         {:b 2})
+         [_ _ c] (do (println \"c evaluated\")
+                     [1 2 3])]
+    (if (even? b)
+      a
+      c))
+  =>
+  (out) b evaluated
+  (out) a evaluated
+  1
+
+  (macroexpand-1 '(letd [a 1]
+                    a))
+  => (let [a (delay 1)]
+       @a)"
+  [bindings & body]
   (apply util/letd* bindings body))
 
-(defmacro fix-print [& body]
+(defmacro fix-print
+  "Ensures that print output doesn't get swallowed by e.g. an editor nrepl plugin.
+
+  Binds *out*, *err* and *flush-on-newline* to their root values.
+
+  (fix-print
+    (println \"hello\"))"
+  [& body]
   (apply util/fix-print* body))
 
-(defn eval-files! [{:keys [biff/eval-paths]
-                    :or {eval-paths ["src"]}}]
+(defn eval-files!
+  "Evaluates any modified files and their dependents via clojure.tools.namespace."
+  [{:keys [biff/eval-paths]
+    :or {eval-paths ["src"]}}]
   (swap! reload/global-tracker reload/refresh eval-paths)
   nil)
 
@@ -103,14 +192,24 @@
     :as sys}]
   (misc/use-hawk sys))
 
-(defn reitit-handler [opts]
+(defn reitit-handler
+  "Convenience wrapper for reitit.ring/ring-handler.
+
+  Only one of router or routes needs to be given. If you pass in routes, it
+  will be wrapped with (reitit.ring/router routes). on-error is an optional
+  Ring handler. The request map passed to it will include a :status key (either
+  404, 405, or 406).
+
+  Includes reitit.ring/redirect-trailing-slash-handler."
+  [{:keys [router routes on-error] :as opts}]
   (misc/reitit-handler opts))
 
 (defn use-jetty
-  "Starts a Jetty web server.
-
-  websockets: A map from paths to handlers, e.g. {\"/api/chsk\" ...}."
-  [sys]
+  "A Biff component that starts a Jetty web server."
+  [{:biff/keys [host port handler]
+    :or {host "localhost"
+         port 8080}
+    :as sys}]
   (misc/use-jetty sys))
 
 (defn jwt-encrypt
