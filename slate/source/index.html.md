@@ -110,6 +110,7 @@ namespace when creating your project.)
 │       │   │   └── worker.clj
 │       │   ├── repl.clj
 │       │   ├── schema.clj
+│       │   ├── test.clj
 │       │   └── ui.clj
 │       └── example.clj
 └── task
