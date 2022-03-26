@@ -11,14 +11,15 @@
             [rum.core :as rum]))
 
 (defn wrap-anti-forgery-websockets [handler]
-  (fn [{:keys [biff/base-url] :as req}]
-    (let [response (handler req)]
-      (if (and (= (:status response) 101)
-               (not= base-url (get (:headers req) "origin" :none)))
-        {:status 403
-         :headers {"content-type" "text/plain"}
-         :body "Forbidden"}
-        response))))
+  (fn [{:keys [biff/base-url headers] :as req}]
+    (if (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
+             (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")
+             (some? base-url)
+             (not= base-url (get-in req [:headers "origin"])))
+      {:status 403
+       :headers {"content-type" "text/plain"}
+       :body "Forbidden"}
+      (handler req))))
 
 (defn wrap-render-rum [handler]
   (fn [req]
