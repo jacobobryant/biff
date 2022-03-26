@@ -11,12 +11,8 @@
      [:input#email
       {:name "email"
        :type "email"
+       :autocomplete "email"
        :placeholder "abc@example.com"}]
-     ;; Even though we're using email links for authentication, include this so
-     ;; password managers will hopefully save the email address.
-     ;; TODO see if this actually works, or if there's some way to make it work.
-     [:input.hidden {:type "password"
-                     :name "password"}]
      [:.w-3]
      [:button.btn {:type "submit"} "Sign in"]]
     [:.h-1]
