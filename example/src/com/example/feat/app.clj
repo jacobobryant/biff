@@ -44,7 +44,7 @@
    [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy HH:mm:ss")]
    [:div text]])
 
-(defn notify-clients [{:keys [example/chat-clients]} tx]
+(defn notify-clients [{:keys [com.example/chat-clients]} tx]
   (doseq [[op & args] (::xt/tx-ops tx)
           :when (= op ::xt/put)
           :let [[doc] args]
@@ -127,7 +127,7 @@
       {:status 303
        :headers {"location" "/"}})))
 
-(defn ws-handler [{:keys [example/chat-clients] :as req}]
+(defn ws-handler [{:keys [com.example/chat-clients] :as req}]
   {:status 101
    :headers {"upgrade" "websocket"
              "connection" "upgrade"}

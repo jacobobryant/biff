@@ -38,7 +38,7 @@
 (def static-pages (apply biff/safe-merge (map :static features)))
 
 (defn generate-assets! [sys]
-  (when (:example/enable-web sys)
+  (when (:com.example/enable-web sys)
     (biff/export-rum static-pages "target/resources/public")
     (->> (file-seq (io/file "target/resources/public"))
          (filter (fn [file]
@@ -64,7 +64,7 @@
 
 (defn start []
   (biff/start-system
-    {:example/chat-clients (atom #{})
+    {:com.example/chat-clients (atom #{})
      :biff/after-refresh `start
      :biff/handler #'handler
      :biff/malli-opts #'malli-opts
@@ -76,14 +76,14 @@
                        biff/use-xt
                        biff/use-tx-listener
                        (biff/use-when
-                         :example/enable-web
+                         :com.example/enable-web
                          biff/use-outer-default-middleware
                          biff/use-jetty)
                        (biff/use-when
-                         :example/enable-worker
+                         :com.example/enable-worker
                          biff/use-chime)
                        (biff/use-when
-                         :example/enable-hawk
+                         :com.example/enable-hawk
                          biff/use-hawk)]})
   (generate-assets! @biff/system)
   (println "Go to" (:biff/base-url @biff/system)))

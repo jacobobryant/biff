@@ -1,6 +1,6 @@
 ;; vim: ft=clojure
-{:prod {:example/enable-web true
-        :example/enable-worker true
+{:prod {:com.example/enable-web true
+        :com.example/enable-worker true
         :biff.xtdb/dir "storage/xtdb"
         :biff.xtdb/topology :standalone
         ;; Standalone topology in production isn't recommended for anything
@@ -18,8 +18,8 @@
         :biff/jwt-secret nil}
  :dev {:merge [:prod]
        ;; See com.example.feat.worker
-       ;; :example/enable-worker false
-       :example/enable-hawk true
+       ;; :com.example/enable-worker false
+       :com.example/enable-hawk true
        :biff/host "0.0.0.0"
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone
