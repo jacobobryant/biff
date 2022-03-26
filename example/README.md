@@ -7,9 +7,11 @@ This is the example/template project for Biff.
 ### `./task dev`
 
 Starts the app locally. After running, wait for the `System started` message.
-Connect your editor to nrepl port 7888. Clojure files will be evaluated
-whenever you save a file. Static HTML and CSS files will also be regenerated on
-file save.
+Connect your editor to nrepl port 7888. Whenever you save a file, Biff will:
+
+ - Evaluate any changed Clojure files
+ - Regenerate static HTML and CSS files
+ - Run tests
 
 ### `./task clean`
 

@@ -69,9 +69,12 @@ bash <(curl -s https://biffweb.com/new-project.sh)
 ```
 
 This will create a minimal CRUD app which demonstrates most of Biff's features.
-Run `./task dev` to start the app on localhost:8080. Clojure files will be
-evaluated whenever you save them, and static HTML and CSS files will also be
-regenerated.
+Run `./task dev` to start the app on localhost:8080. Whenever you save a file,
+Biff will:
+
+ - Evaluate any changed Clojure files
+ - Regenerate static HTML and CSS files
+ - Run tests
 
 You can connect your editor to nREPL port 7888. There's also a `repl.clj` file
 which you can use as a scratch space.

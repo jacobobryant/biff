@@ -7,6 +7,7 @@
             [com.example.schema :refer [malli-opts]]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.test :as test]
             [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
@@ -60,7 +61,8 @@
 
 (defn on-save [sys]
   (biff/eval-files! sys)
-  (generate-assets! sys))
+  (generate-assets! sys)
+  (test/run-all-tests #"com.example.test.*"))
 
 (defn start []
   (biff/start-system
