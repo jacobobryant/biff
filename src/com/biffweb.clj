@@ -1,6 +1,7 @@
 (ns com.biffweb
   (:require [buddy.core.nonce :as nonce]
             [clojure.string :as str]
+            [clojure.walk :as walk]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.rum :as brum]
@@ -58,16 +59,13 @@
   (apply util/use-when f components))
 
 (defn sha256 [string]
-  (util/sha256))
+  (util/sha256 string))
 
 (defn base64-encode [bs]
   (util/base64-encode bs))
 
 (defn base64-decode [s]
   (util/base64-decode s))
-
-(defn random-uuid []
-  (java.util.UUID/randomUUID))
 
 (defn anomaly? [x]
   (util/anomaly? x))
@@ -81,11 +79,11 @@
 (defmacro catchall [& body]
   `(try ~@body (catch Exception ~'_ nil)))
 
+(defmacro letd [bindings & body]
+  (apply util/letd* bindings body))
+
 (defmacro fix-print [& body]
-  `(binding [*out* (alter-var-root #'*out* identity)
-             *err* (alter-var-root #'*err* identity)
-             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
-     ~@body))
+  (apply util/fix-print* body))
 
 (defn eval-files! [{:keys [biff/eval-paths]
                     :or {eval-paths ["src"]}}]
@@ -129,6 +127,9 @@
 (defn use-chime
   [sys]
   (misc/use-chime sys))
+
+(defn mailersend [sys opts]
+  (misc/mailersend sys opts))
 
 ;;;; middleware
 
@@ -188,10 +189,9 @@
   (brum/render body))
 
 (defn unsafe
-  "Return a map with :dangerouslySetInnerHTML, optionally merged into m."
-  ([html] (brum/unsafe html))
-  ([m html]
-   (merge m (unsafe html))))
+  "Returns {:dangerouslySetInnerHTML {:__html html}}, for use with Rum."
+  [html]
+  (brum/unsafe html))
 
 (def emdash brum/emdash)
 
@@ -211,17 +211,12 @@
 (defn export-rum [pages dir]
   (brum/export-rum pages dir))
 
-(defn mailersend [sys opts]
-  (misc/mailersend sys opts))
-
 ;;;; time
 
 (defn now []
   (java.util.Date.))
 
 (def rfc3339 time/rfc3339)
-
-(def parse-format-date time/parse-format-date)
 
 (def parse-date time/parse-date)
 
@@ -234,8 +229,8 @@
 (defn seconds-between [t1 t2]
   (time/seconds-between t1 t2))
 
-(defn duration [x unit]
-  (time/duration x unit))
+(defn seconds-in [x unit]
+  (time/seconds-in x unit))
 
 (defn elapsed? [t1 t2 x unit]
   (time/elapsed? t1 t2 x unit))

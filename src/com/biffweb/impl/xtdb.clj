@@ -153,7 +153,7 @@
   (ffirst (xt/q db {:find '[doc]
                     :where [['doc k v]]})))
 
-(defn special-val? [x]
+(defn- special-val? [x]
   (or (= x :db/dissoc)
       (and (coll? x)
            (<= 2 (count x))
@@ -163,7 +163,7 @@
               :db/add
               :db/default} (first x)))))
 
-(defn apply-special-vals [doc-before doc-after]
+(defn- apply-special-vals [doc-before doc-after]
   (->> (merge doc-before doc-after)
        (keep (fn [[k v]]
                (b/cond

@@ -6,7 +6,8 @@
             [clojure.set :as set]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
-            [clojure.tools.namespace.repl :as tn-repl]))
+            [clojure.tools.namespace.repl :as tn-repl]
+            [clojure.walk :as walk]))
 
 (defn start-system [system-atom init]
   (reset! system-atom (merge {:biff/stop '()} init))
@@ -157,3 +158,27 @@
   {:status status
    :headers {"content-type" "text/html"}
    :body (str "<h1>" (http-status->msg status) "</h1>")})
+
+(defn- wrap-deref [form syms]
+  (walk/postwalk (fn [sym]
+                   (if (contains? syms sym)
+                     `(deref ~sym)
+                     sym))
+                 form))
+
+(defn letd* [bindings & body]
+  (let [[bindings syms] (->> bindings
+                             destructure
+                             (partition 2)
+                             (reduce (fn [[bindings syms] [sym form]]
+                                       [(into bindings [sym `(delay ~(wrap-deref form syms))])
+                                        (conj syms sym)])
+                                     [[] #{}]))]
+    `(let ~bindings
+       ~@(wrap-deref body syms))))
+
+(defn fix-print* [& body]
+  `(binding [*out* (alter-var-root #'*out* identity)
+             *err* (alter-var-root #'*err* identity)
+             *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
+     ~@body))

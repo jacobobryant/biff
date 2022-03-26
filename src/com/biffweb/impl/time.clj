@@ -2,22 +2,17 @@
 
 (def rfc3339 "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
-(defn parse-format-date [date in-format out-format]
-  (cond->> date
-    in-format (.parse (new java.text.SimpleDateFormat in-format))
-    out-format (.format (new java.text.SimpleDateFormat out-format))))
-
 (defn parse-date
   ([date]
    (parse-date date rfc3339))
-  ([date in-format]
-   (parse-format-date date in-format nil)))
+  ([date format]
+   (.parse (new java.text.SimpleDateFormat format) date)))
 
 (defn format-date
   ([date]
    (format-date date rfc3339))
-  ([date out-format]
-   (parse-format-date date nil out-format)))
+  ([date format]
+   (.format (new java.text.SimpleDateFormat format) date)))
 
 (defn crop-date [d fmt]
   (-> d
@@ -35,7 +30,7 @@
 (defn seconds-between [t1 t2]
   (quot (- (inst-ms (expand-now t2)) (inst-ms (expand-now t1))) 1000))
 
-(defn duration [x unit]
+(defn seconds-in [x unit]
   (case unit
     :seconds x
     :minutes (* x 60)
@@ -44,8 +39,8 @@
     :weeks (* x 60 60 24 7)))
 
 (defn elapsed? [t1 t2 x unit]
-  (< (duration x unit)
-     (seconds-between t1 t2)))
+  (<= (seconds-in x unit)
+      (seconds-between t1 t2)))
 
 (defn between-hours? [t h1 h2]
   (let [hours (/ (mod (quot (inst-ms t) (* 1000 60))

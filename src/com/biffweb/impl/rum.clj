@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [com.biffweb.impl.util :as util]
             [ring.middleware.anti-forgery :as anti-forgery]
-            [rum.core :as rum :refer [defc]]))
+            [rum.core :as rum]))
 
 (defn render
   "Given a Rum data structure, returns a 200 HTML response."
@@ -21,7 +21,7 @@
 
 (def nbsp [:span (unsafe "&nbsp;")])
 
-(defc g-fonts
+(defn g-fonts
   "Returns a link element for requesting families from Google fonts."
   [families]
   [:link {:href (apply str "https://fonts.googleapis.com/css2?display=swap"
@@ -29,7 +29,7 @@
                          (str "&family=" f)))
           :rel "stylesheet"}])
 
-(defc base-html
+(defn base-html
   "Wraps contents in an :html and :body element with various metadata set.
 
   font-families: A collection of families to request from Google fonts.
@@ -83,7 +83,7 @@
              :flex-direction "column"}}
     body]])
 
-(defc form
+(defn form
   "Returns a form.
 
   hidden: A map from names to values, which will be converted to hidden input
