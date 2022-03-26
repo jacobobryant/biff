@@ -2,9 +2,9 @@
         buddy/buddy-sign               {:mvn/version "3.4.333"}
         cider/cider-nrepl              {:mvn/version "0.28.2"}
         clj-http/clj-http              {:mvn/version "3.12.3"}
-        com.xtdb/xtdb-core             {:mvn/version "1.20.0"}
-        com.xtdb/xtdb-jdbc             {:mvn/version "1.20.0"}
-        com.xtdb/xtdb-rocksdb          {:mvn/version "1.20.0"}
+        com.xtdb/xtdb-core             {:mvn/version "1.21.0-beta1"}
+        com.xtdb/xtdb-jdbc             {:mvn/version "1.21.0-beta1"}
+        com.xtdb/xtdb-rocksdb          {:mvn/version "1.21.0-beta1"}
         hawk/hawk                      {:mvn/version "0.2.11"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.17.2"}
         jarohen/chime                  {:mvn/version "0.3.3"}
