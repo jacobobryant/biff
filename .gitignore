@@ -15,3 +15,7 @@ pom.xml.asc
 data/
 site/
 .firebase/
+.calva/
+.clj-kondo/
+.lsp/
+.portal/
