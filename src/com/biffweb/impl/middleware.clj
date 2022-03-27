@@ -68,7 +68,9 @@
               (str duration)
               (:status resp "nil")
               (name (:request-method req))
-              (:uri req))
+              (str (:uri req)
+                   (when-some [qs (:query-string req)]
+                     (str "?" qs))))
       (flush)
       resp)))
 
