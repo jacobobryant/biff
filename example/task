@@ -20,6 +20,7 @@ install-tailwind () {
 }
 
 run () {
+  mkdir -p target/resources
   clj "$@" \
     -J-XX:-OmitStackTraceInFastThrow \
     -M -m $MAIN_NS --port 7888 --middleware '[cider.nrepl/cider-middleware]'
@@ -72,7 +73,6 @@ restart () {
 
 auto-soft-deploy () {
   soft-deploy
-  ignore_until=$(date +%s.%N)
   fswatch -orl 0.1 --event=Updated --event=Removed . | while read changed ; do
     soft-deploy
   done
