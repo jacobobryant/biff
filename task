@@ -15,4 +15,12 @@ codox () {
   clj -X:codox
 }
 
+jar () {
+  clj -X:jar :jar target/biff.jar
+}
+
+deploy () {
+  clj -X:deploy
+}
+
 "$@"
