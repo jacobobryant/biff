@@ -1,5 +1,0 @@
-{:paths ["src"],
- :deps
- {better-cond/better-cond {:mvn/version "2.1.0"},
-  org.clojure/tools.namespace {:mvn/version "1.1.0"},
-  org.slf4j/slf4j-nop {:mvn/version "1.8.0-beta4"}}}

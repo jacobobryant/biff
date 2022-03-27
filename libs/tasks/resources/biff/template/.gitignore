@@ -1,9 +1,0 @@
-.nrepl-port
-/.cpcache/
-/.shadow-cljs/
-{{ "/config/" }}
-/data/
-/node_modules/
-/storage/
-/target/
-/www/

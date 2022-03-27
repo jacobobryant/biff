@@ -1,1 +1,0 @@
-{:paths ["src"], :deps {rum/rum {:mvn/version "0.11.4"}}}
