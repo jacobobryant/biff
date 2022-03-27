@@ -3,7 +3,9 @@
             [com.biffweb :as biff]))
 
 (defn css-path []
-  (str "/css/main.css?t=" (.lastModified (io/file (io/resource "public/css/main.css")))))
+  (if-some [f (io/file (io/resource "public/css/main.css"))]
+    (str "/css/main.css?t=" (.lastModified f))
+    "/css/main.css"))
 
 (defn base [opts & body]
   (apply
