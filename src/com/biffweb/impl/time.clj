@@ -2,17 +2,11 @@
 
 (def rfc3339 "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
 
-(defn parse-date
-  ([date]
-   (parse-date date rfc3339))
-  ([date format]
-   (.parse (new java.text.SimpleDateFormat format) date)))
+(defn parse-date [date & [format]]
+  (.parse (new java.text.SimpleDateFormat (or format rfc3339)) date))
 
-(defn format-date
-  ([date]
-   (format-date date rfc3339))
-  ([date format]
-   (.format (new java.text.SimpleDateFormat format) date)))
+(defn format-date [date & [format]]
+  (.format (new java.text.SimpleDateFormat (or format rfc3339)) date))
 
 (defn crop-date [d fmt]
   (-> d

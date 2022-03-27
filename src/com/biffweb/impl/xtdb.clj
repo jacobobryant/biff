@@ -11,18 +11,6 @@
             [malli.core :as malc]))
 
 (defn start-node
-  "A higher-level version of xtdb.api/start-node.
-
-  Calls xtdb.api/sync before returning the node.
-
-  topology   - One of #{:standalone :jdbc}.
-  dir        - A path to store RocksDB instances in.
-  jdbc-spec,
-  pool-opts  - Maps to pass as
-               {:xtdb.jdbc/connection-pool
-                {:db-spec jdbc-spec :pool-opts pool-opts ...}}.
-               (Used only when topology is :jdbc).
-  opts       - Additional options to pass to xtdb.api/start-node."
   [{:keys [topology dir opts jdbc-spec pool-opts]}]
   (let [rocksdb (fn [basename]
                   {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
@@ -55,15 +43,6 @@
     node))
 
 (defn use-xt
-  "A Biff component for xtdb.
-
-  Sets :biff.xtdb/node to the xtdb node.
-
-  topology,
-  dir,
-  opts                  - passed to start-node.
-  biff.xtdb.jdbc/*      - passed to start-node as jdbc-spec, without the namespace.
-  biff.xtdb.jdbc-pool/* - passed to start-node as pool-opts, without the namespace."
   [{:biff.xtdb/keys [topology dir opts]
     :as sys}]
   (let [node (start-node
@@ -101,11 +80,6 @@
   (assoc sys :biff/db (xt/db node)))
 
 (defn q [db query & args]
-  "Convenience wrapper for xtdb.api/q.
-
-  If the :find value is not a vector, results will be passed through
-  (map first ...). Also throws an exception if (count args) doesn't match
-  (count (:in query))."
   (when-not (= (count (:in query))
                (count args))
     (throw (ex-info (str "Incorrect number of query arguments. Expected "
@@ -122,11 +96,6 @@
       (not return-tuples) (map first))))
 
 (defn lazy-q
-  "Calls xtdb.api/open-q and passes a lazy seq of the results to a function.
-
-  Accepts the same arguments as xtdb.api/open-q, except the last argument is a
-  function which must process the results eagerly. Also includes the same
-  functionality as biff.xtdb/q."
   [db query & args]
   (when-not (= (count (:in query))
                (dec (count args)))

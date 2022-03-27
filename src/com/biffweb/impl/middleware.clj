@@ -15,7 +15,7 @@
     (if (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
              (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")
              (some? base-url)
-             (not= base-url (get-in req [:headers "origin"])))
+             (not= base-url (get headers "origin")))
       {:status 403
        :headers {"content-type" "text/plain"}
        :body "Forbidden"}
@@ -27,67 +27,29 @@
       (if (vector? response)
         {:status 200
          :headers {"content-type" "text/html"}
-         :body (rum/render-static-markup response)}
+         :body (str "<!DOCTYPE html>\n" (rum/render-static-markup response))}
         response))))
 
-(defn wrap-index-files
-  "If handler returns nil, try again with each index file appended to the URI."
-  [handler {:keys [index-files]
-            :or {index-files ["index.html"]}}]
+(defn wrap-index-files [handler {:keys [index-files]
+                                 :or {index-files ["index.html"]}}]
   (fn [req]
     (->> index-files
          (map #(update req :uri str/replace-first #"/?$" (str "/" %)))
          (into [req])
          (some (wrap-content-type handler)))))
 
-(defn wrap-resource
-  "Serves static resources with ring.middleware.resource/wrap-resource-request.
+(defn wrap-resource [handler {:biff.middleware/keys [root index-files]
+                              :or {root "public"
+                                   index-files ["index.html"]}}]
+  (let [resource-handler (wrap-index-files
+                           #(res/resource-request % root)
+                           {:index-files index-files})]
+    (fn [req]
+      (or (resource-handler req)
+          (handler req)))))
 
-  root:              The resource root from which static files should be
-                     served.
-  index-files:       See wrap-index-files.
-  spa-path:          If set, replace 404 responses with this file.
-  spa-exclude-paths: Ignore spa-path if the request URI starts with one of
-                     these.
-  spa-client-paths:  A set of SPA routes. If set, ignore spa-path unless the
-                     request URI is one of these. Takes precedence over
-                     spa-exclude-paths."
-  [handler {:biff.middleware/keys [root
-                                   index-files
-                                   spa-path
-                                   spa-exclude-paths
-                                   spa-client-paths]
-            :or {root "public"
-                 index-files ["index.html"]
-                 spa-exclude-paths ["/js/"
-                                    "/css/"
-                                    "/cljs/"
-                                    "/img/"
-                                    "/assets/"
-                                    "/favicon.ico"]}}]
-  (fn [req]
-    (let [resource-handler (wrap-index-files
-                             #(res/resource-request % root)
-                             {:index-files index-files})
-          static-resp (resource-handler req)
-          handler-resp (delay (handler req))
-          spa-resp (delay
-                     (when (and spa-path
-                                (if spa-client-paths
-                                  (contains? spa-client-paths (:uri req))
-                                  (not (some #(str/starts-with? (:uri req) %)
-                                             spa-exclude-paths))))
-                       (resource-handler (assoc req :uri spa-path))))]
-      (cond
-        static-resp static-resp
-        (and (or (not @handler-resp)
-                 (= 404 (:status @handler-resp)))
-             @spa-resp) @spa-resp
-        :else @handler-resp))))
-
-(defn wrap-internal-error
-  [handler {:biff.middleware/keys [on-error]
-            :or {on-error util/default-on-error}}]
+(defn wrap-internal-error [handler {:biff.middleware/keys [on-error]
+                                    :or {on-error util/default-on-error}}]
   (fn [req]
     (try
       (handler req)
@@ -96,9 +58,7 @@
         (flush)
         (on-error (assoc req :status 500 :ex t))))))
 
-(defn wrap-log-requests
-  "Prints status, request method and response status for each request."
-  [handler]
+(defn wrap-log-requests [handler]
   (fn [req]
     (let [start (java.util.Date.)
           resp (handler req)
@@ -112,13 +72,12 @@
       (flush)
       resp)))
 
-(defn wrap-ring-defaults
-  [handler {:biff.middleware/keys [session-store
-                                   cookie-secret
-                                   secure
-                                   session-max-age]
-            :or {session-max-age (* 60 60 24 60)
-                 secure true}}]
+(defn wrap-ring-defaults [handler {:biff.middleware/keys [session-store
+                                                          cookie-secret
+                                                          secure
+                                                          session-max-age]
+                                   :or {session-max-age (* 60 60 24 60)
+                                        secure true}}]
   (let [session-store (if cookie-secret
                         (cookie/cookie-store
                           {:key (util/base64-decode cookie-secret)})
@@ -151,7 +110,6 @@
       (wrap-internal-error opts)
       wrap-log-requests))
 
-;; TODO emphasize that this doesn't include wrap-anti-forgery ?
 (defn wrap-outer-defaults [handler opts]
   (-> handler
       (wrap-ring-defaults opts)

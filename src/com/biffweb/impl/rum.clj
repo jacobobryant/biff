@@ -5,12 +5,10 @@
             [ring.middleware.anti-forgery :as anti-forgery]
             [rum.core :as rum]))
 
-(defn render
-  "Given a Rum data structure, returns a 200 HTML response."
-  [body]
+(defn render [body]
   {:status 200
    :headers {"content-type" "text/html; charset=utf-8"}
-   :body (rum/render-static-markup body)})
+   :body (str "<!DOCTYPE html>\n" (rum/render-static-markup body))})
 
 (defn unsafe [html]
   {:dangerouslySetInnerHTML {:__html html}})
@@ -22,7 +20,6 @@
 (def nbsp [:span (unsafe "&nbsp;")])
 
 (defn g-fonts
-  "Returns a link element for requesting families from Google fonts."
   [families]
   [:link {:href (apply str "https://fonts.googleapis.com/css2?display=swap"
                        (for [f families]
@@ -30,10 +27,6 @@
           :rel "stylesheet"}])
 
 (defn base-html
-  "Wraps contents in an :html and :body element with various metadata set.
-
-  font-families: A collection of families to request from Google fonts.
-  head:          Additional Rum elements to include inside the head."
   [{:base/keys [title
                 description
                 lang
@@ -43,7 +36,7 @@
                 canonical
                 font-families
                 head]}
-   & body]
+   & contents]
   [:html
    {:lang lang
     :style {:min-height "100%"
@@ -81,21 +74,14 @@
              :min-height "100%"
              :display "flex"
              :flex-direction "column"}}
-    body]])
+    contents]])
 
 (defn form
-  "Returns a form.
-
-  hidden: A map from names to values, which will be converted to hidden input
-          fields.
-  opts:   Options for the :form element (with hidden removed)"
-  [{:keys [hidden csrf-token]
-    :or {csrf-token anti-forgery/*anti-forgery-token*}
-    :as opts} & body]
+  [{:keys [hidden] :as opts} & body]
   [:form (-> (merge {:method "post"} opts)
              (dissoc :hidden)
              (assoc-in [:style :margin-bottom] 0))
-   (for [[k v] (util/assoc-some opts "__anti-forgery-token" csrf-token)]
+   (for [[k v] (util/assoc-some opts "__anti-forgery-token" anti-forgery/*anti-forgery-token*)]
      [:input {:type "hidden"
               :name k
               :value v}])
@@ -103,15 +89,9 @@
 
 ;; you could say that rum is one of our main exports
 (defn export-rum
-  "Generate HTML files and write them to a directory.
-
-  pages: A map from paths to Rum data structures, e.g.
-         {\"/\" [:div \"hello\"]}. Paths that end in / will have index.html
-         appended to them.
-  dir:   A path to the root directory where the files should be saved."
   [pages dir]
   (doseq [[path rum] pages
           :let [full-path (cond-> (str dir path)
                             (str/ends-with? path "/") (str "index.html"))]]
     (io/make-parents full-path)
-    (spit full-path (rum/render-static-markup rum))))
+    (spit full-path (str "<!DOCTYPE html>\n" (rum/render-static-markup rum)))))

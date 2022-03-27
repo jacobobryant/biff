@@ -15,7 +15,7 @@
                  :as sys}]
   (let [watch (hawk/watch!
                 [(merge {:paths paths
-                         ; todo debounce this properly
+                         ;; todo debounce this properly
                          :handler (fn [{:keys [last-ran]
                                         :or {last-ran 0}} _]
                                     (when (< 500 (- (inst-ms (java.util.Date.)) last-ran))
