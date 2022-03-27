@@ -20,8 +20,7 @@ if [[ $JAVA_MAJOR_VERSION -lt 11 ]]; then
   exit 4
 fi
 
-# TODO switch dev to HEAD
-sha="$(git ls-remote https://github.com/jacobobryant/biff.git dev | awk '{ print $1 }')"
+sha="$(git ls-remote https://github.com/jacobobryant/biff.git HEAD | awk '{ print $1 }')"
 deps="{:deps {github-jacobobryant/biff-new-project
               {:git/url \"https://github.com/jacobobryant/biff\"
                :sha \"$sha\"

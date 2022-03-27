@@ -33,12 +33,10 @@
     (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
 (defn biff-coordinates [sha]
-  ;; TODO switch to mvn
   (str ":git/url \"https://github.com/jacobobryant/biff\" :sha \"" sha "\""))
 
 (defn -main []
-  ;; TODO switch dev to HEAD
-  (let [sha (-> (sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "dev")
+  (let [sha (-> (sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "HEAD")
                 (str/split #"\s+")
                 first)
         coordinates (biff-coordinates sha)
@@ -52,11 +50,7 @@
         tmp (io/file dir "tmp")
         example (io/file tmp "biff/example")]
     (io/make-parents (io/file tmp "_"))
-    (sh "git" "clone"
-        ;; TODO remove --branch dev
-        "--branch" "dev"
-        "https://github.com/jacobobryant/biff"
-        :dir tmp)
+    (sh "git" "clone" "https://github.com/jacobobryant/biff" :dir tmp)
     (doseq [src (->> (file-seq example)
                      (filter #(.isFile %)))
             :let [relative (-> (.getPath src)
