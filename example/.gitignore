@@ -6,3 +6,7 @@
 /storage/
 /tailwindcss
 /target
+.calva/
+.clj-kondo/
+.lsp/
+.portal/
