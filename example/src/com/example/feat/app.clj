@@ -1,7 +1,6 @@
 (ns com.example.feat.app
   (:require [com.biffweb :as biff :refer [q]]
             [com.example.ui :as ui]
-            [clj-http.client :as http]
             [rum.core :as rum]
             [xtdb.api :as xt]
             [ring.adapter.jetty9 :as jetty]

@@ -61,8 +61,7 @@
                           "/auth/sent/"
                           "/auth/fail/")}})
 
-(b/defnc verify-token [{:keys [biff/db
-                               biff.xtdb/node
+(b/defnc verify-token [{:keys [biff.xtdb/node
                                biff/jwt-secret
                                path-params
                                session
