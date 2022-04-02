@@ -81,7 +81,7 @@
   [:form (-> (merge {:method "post"} opts)
              (dissoc :hidden)
              (assoc-in [:style :margin-bottom] 0))
-   (for [[k v] (util/assoc-some opts "__anti-forgery-token" anti-forgery/*anti-forgery-token*)]
+   (for [[k v] (util/assoc-some hidden "__anti-forgery-token" anti-forgery/*anti-forgery-token*)]
      [:input {:type "hidden"
               :name k
               :value v}])
