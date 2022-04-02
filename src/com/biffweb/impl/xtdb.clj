@@ -1,6 +1,5 @@
 (ns com.biffweb.impl.xtdb
   (:require [better-cond.core :as b]
-            [com.biffweb.impl.util :as util]
             [com.biffweb.impl.util.ns :as ns]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -62,7 +61,7 @@
           listener (xt/listen
                      node
                      {::xt/event-type ::xt/indexed-tx}
-                     (fn [{:keys [::xt/tx-id committed?] :as event}]
+                     (fn [{:keys [::xt/tx-id committed?]}]
                        (when committed?
                          (locking lock
                            (with-open [log (xt/open-tx-log node

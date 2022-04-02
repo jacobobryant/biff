@@ -1,7 +1,5 @@
 (ns com.biffweb
-  (:require [buddy.core.nonce :as nonce]
-            [clojure.string :as str]
-            [clojure.walk :as walk]
+  (:require [clojure.string :as str]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.rum :as brum]

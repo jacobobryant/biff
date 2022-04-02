@@ -2,8 +2,6 @@
   (:require [clojure.edn :as edn]
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
-            [clojure.repl :as repl]
-            [clojure.set :as set]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
             [clojure.tools.namespace.repl :as tn-repl]
