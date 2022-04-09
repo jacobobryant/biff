@@ -69,7 +69,10 @@ cat > /etc/systemd/journald.conf << EOD
 Storage=persistent
 EOD
 systemctl restart systemd-journald
-echo app ALL= NOPASSWD: /bin/systemctl restart app > /etc/sudoers.d/restart-app
+cat > /etc/sudoers.d/restart-app << EOD
+app ALL= NOPASSWD: /bin/systemctl reset-failed app.service
+app ALL= NOPASSWD: /bin/systemctl restart app
+EOD
 chmod 440 /etc/sudoers.d/restart-app
 
 # Firewall
