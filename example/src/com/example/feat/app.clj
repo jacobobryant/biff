@@ -17,7 +17,8 @@
 
 (defn bar-form [{:keys [value]}]
   (biff/form
-    {:hx-post "/app/set-bar"}
+    {:hx-post "/app/set-bar"
+     :hx-swap "outerHTML"}
     [:label.block {:for "bar"} "Bar: "
      [:span.font-mono (pr-str value)]]
     [:.h-1]
