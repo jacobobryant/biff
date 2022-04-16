@@ -4,6 +4,7 @@
             [chime.core :as chime]
             [clj-http.client :as http]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
             [hawk.core :as hawk]
@@ -47,7 +48,7 @@
                                  :port port
                                  :join? false
                                  :allow-null-path-info true})]
-    (println "Jetty running on" (str "http://" host ":" port))
+    (log/info "Jetty running on" (str "http://" host ":" port))
     (update sys :biff/stop conj #(jetty/stop-server server))))
 
 (defn mailersend [{:keys [mailersend/api-key
@@ -65,7 +66,7 @@
                     :form-params opts})
         [:headers "X-Message-Id"])
       (catch Exception e
-        (println "mailersend exception:" (:body (ex-data e)))
+        (log/error e "MailerSend exception")
         false))))
 
 (defn jwt-encrypt
@@ -101,8 +102,8 @@
 (defn use-random-default-secrets [sys]
   (merge sys
          (when (nil? (:biff.middleware/cookie-secret sys))
-           (println "Warning: :biff.middleware/cookie-secret is empty, using random value")
+           (log/warn ":biff.middleware/cookie-secret is empty, using random value")
            {:biff.middleware/cookie-secret (generate-secret 16)})
          (when (nil? (:biff/jwt-secret sys))
-           (println "Warning: :biff/jwt-secret is empty, using random value")
+           (log/warn ":biff/jwt-secret is empty, using random value")
            {:biff/jwt-secret (generate-secret 32)})))

@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.stacktrace :as st]
+            [clojure.tools.logging :as log]
             [clojure.walk :as walk]
             [xtdb.api :as xt]
             [malli.error :as male]
@@ -33,12 +34,10 @@
                                                :connection-pool :xtdb.jdbc/connection-pool}})
                       opts))
         f (future (xt/sync node))]
-    (println "Indexing transactions...")
     (while (not (realized? f))
       (Thread/sleep 2000)
       (when-some [indexed (xt/latest-completed-tx node)]
-        (println "Indexed" (pr-str indexed))))
-    (println "Done indexing.")
+        (log/info "Indexed" (pr-str indexed))))
     node))
 
 (defn use-xt
@@ -71,8 +70,7 @@
                                (try
                                  (on-tx sys tx)
                                  (catch Exception e
-                                   (st/print-stack-trace e)
-                                   (flush)))))))))]
+                                   (log/error e "Exception during on-tx")))))))))]
       (update sys :biff/stop conj #(.close listener)))))
 
 (defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
@@ -226,8 +224,8 @@
   (xt/tx-committed? node submitted-tx) submitted-tx
   (<= 4 n-tried) (throw (ex-info "TX failed, too much contention." {:tx biff-tx}))
   :let [seconds (int (Math/pow 2 n-tried))]
-  :do (printf "TX failed due to contention, trying again in %d seconds...\n"
-              seconds)
+  :do (log/warnf "TX failed due to contention, trying again in %d seconds...\n"
+                 seconds)
   :do (flush)
   :do (Thread/sleep (* 1000 seconds))
   (recur (update sys :biff.xtdb/n-tried (fnil inc 0)) biff-tx))

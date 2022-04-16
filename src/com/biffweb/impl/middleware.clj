@@ -1,6 +1,7 @@
 (ns com.biffweb.impl.middleware
   (:require [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.xtdb :as bxt]
             [muuntaja.middleware :as muuntaja]
@@ -54,8 +55,7 @@
     (try
       (handler req)
       (catch Throwable t
-        (st/print-stack-trace t)
-        (flush)
+        (log/error t "Exception while handling request")
         (on-error (assoc req :status 500 :ex t))))))
 
 (defn wrap-log-requests [handler]
@@ -64,14 +64,13 @@
           resp (handler req)
           stop (java.util.Date.)
           duration (- (inst-ms stop) (inst-ms start))]
-      (printf "%3sms %s %-4s %s\n"
-              (str duration)
-              (:status resp "nil")
-              (name (:request-method req))
-              (str (:uri req)
-                   (when-some [qs (:query-string req)]
-                     (str "?" qs))))
-      (flush)
+      (log/infof "%3sms %s %-4s %s"
+                 (str duration)
+                 (:status resp "nil")
+                 (name (:request-method req))
+                 (str (:uri req)
+                      (when-some [qs (:query-string req)]
+                        (str "?" qs))))
       resp)))
 
 (defn wrap-ring-defaults [handler {:biff.middleware/keys [session-store

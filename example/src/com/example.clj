@@ -8,6 +8,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :as test]
+            [clojure.tools.logging :as log]
             [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
@@ -50,14 +51,14 @@
                                        :seconds)
                         (str/ends-with? (.getPath file) ".html"))))
          (run! (fn [f]
-                 (println "deleting" f)
+                 (log/info "deleting" f)
                  (io/delete-file f))))
     (biff/sh "bin/tailwindcss"
              "-c" "resources/tailwind.config.js"
              "-i" "resources/tailwind.css"
              "-o" "target/resources/public/css/main.css"
              "--minify")
-    (println "CSS done")))
+    (log/info "CSS done")))
 
 (defn on-save [sys]
   (biff/eval-files! sys)
@@ -89,7 +90,7 @@
                          :com.example/enable-hawk
                          biff/use-hawk)]})
   (generate-assets! @biff/system)
-  (println "Go to" (:biff/base-url @biff/system)))
+  (log/info "Go to" (:biff/base-url @biff/system)))
 
 (defn -main [& args]
   (start)

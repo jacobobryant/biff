@@ -4,6 +4,7 @@
             [clojure.pprint :as pp]
             [clojure.spec.alpha :as spec]
             [clojure.string :as str]
+            [clojure.tools.logging :refer [info]]
             [clojure.tools.namespace.repl :as tn-repl]
             [clojure.walk :as walk]))
 
@@ -11,13 +12,13 @@
   (reset! system-atom (merge {:biff/stop '()} init))
   (loop [{[f & components] :biff/components :as sys} init]
     (when (some? f)
-      (println "starting:" (str f))
+      (info "starting:" (str f))
       (recur (reset! system-atom (f (assoc sys :biff/components components))))))
-  (println "System started."))
+  (info "System started."))
 
 (defn refresh [{:keys [biff/after-refresh biff/stop]}]
   (doseq [f stop]
-    (println "stopping:" (str f))
+    (info "stopping:" (str f))
     (f))
   (tn-repl/refresh :after after-refresh))
 
