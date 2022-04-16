@@ -604,7 +604,7 @@
 (defn crop-day
   "Same as (crop-date \"yyyy-MM-dd\")"
   [date]
-  time/crop-day)
+  (time/crop-day date))
 
 (defn elapsed?
   "Returns true if t2 occurs at least x units after t1.
