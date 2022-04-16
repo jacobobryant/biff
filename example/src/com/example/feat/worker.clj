@@ -4,7 +4,7 @@
             [xtdb.api :as xt]))
 
 (defn every-minute []
-  (iterate #(biff/add-seconds % 60) (java.util.Date.)))
+  (iterate #(biff/add-seconds % (* 5 60)) (java.util.Date.)))
 
 (defn print-usage [{:keys [biff/db]}]
   ;; For a real app, you can have this run once per day and send you the output
@@ -15,7 +15,7 @@
                      0
                      0)]
     (log/info "There are" n-users "users."
-              "(This message gets printed every 60 seconds. You can disable it"
+              "(This message gets printed every 5 minutes. You can disable it"
               "by setting `:com.example/enable-worker false` in config.edn)")))
 
 (defn alert-new-user [{:keys [com.example/enable-worker biff.xtdb/node]} tx]
