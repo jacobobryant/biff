@@ -83,6 +83,16 @@ which you can use as a scratch space.
 
 When you're ready to deploy, see [Production](#production).
 
+## Jacking in
+
+`cider-jack-in` and similar commands will start up a JVM and an nREPL server
+for you. However, `./task dev` already does that. Instead of running
+`cider-jack-in`, you should run `cider-connect` (or the equivalent) so that you
+can connect to the nREPL server started by `./task dev`. See [Connecting to a
+Running nREPL
+Server](https://docs.cider.mx/cider/basics/up_and_running.html#connect-to-a-running-nrepl-server)
+in the CIDER docs.
+
 # Project Structure
 
 A new Biff project will look like this:
@@ -1077,6 +1087,15 @@ Some notes:
  - [Papertrail](https://www.papertrail.com/) is cheap and easy to set up and is
    useful for alerts. For example, it can send you an email whenever your
    application logs include the text `Exception`.
+
+## Developing in prod
+
+After you've deployed at least once, you can continue developing the production
+system while it's running. You'll need to install
+[fswatch](https://emcrisostomo.github.io/fswatch/getting.html). (`sudo apt
+install fswatch` on Ubuntu, `brew install fswatch` on Mac.) Then run `./task
+prod-dev`. Whenever you save a file, it'll get copied to the server and
+evaluated. See `README.md` for more commands.
 
 # Troubleshooting
 

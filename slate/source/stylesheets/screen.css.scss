@@ -478,6 +478,13 @@ html, body {
     &.success {
       background-color: $aside-success-bg;
     }
+
+    &>p {
+      max-width: calc(800px - 28px - 2em - 3px);
+      //background-color: $code-annotation-bg;
+      //padding: $code-annotation-padding 2em;
+      //color: #eee;
+    }
   }
 
   aside:before {
@@ -486,15 +493,15 @@ html, body {
     font-size: 14px;
   }
 
-  aside.notice:before {
+  span.notice:before {
     @extend %icon-info-sign;
   }
 
-  aside.warning:before {
+  span.warning:before {
     @extend %icon-exclamation-sign;
   }
 
-  aside.success:before {
+  span.success:before {
     @extend %icon-ok-sign;
   }
 
