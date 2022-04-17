@@ -16,6 +16,8 @@ codox () {
 }
 
 jar () {
+  echo Remember to update version in pom.xml
+  clj -Spom
   clj -X:jar :jar target/biff.jar
 }
 
