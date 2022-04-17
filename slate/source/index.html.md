@@ -68,6 +68,8 @@ Run this command to create a new Biff project:
 bash <(curl -s https://biffweb.com/new-project.sh)
 ```
 
+If you run into any problems, see [Troubleshooting](#troubleshooting).
+
 This will create a minimal CRUD app which demonstrates most of Biff's features.
 Run `./task dev` to start the app on localhost:8080. Whenever you save a file,
 Biff will:
@@ -1075,3 +1077,26 @@ Some notes:
  - [Papertrail](https://www.papertrail.com/) is cheap and easy to set up and is
    useful for alerts. For example, it can send you an email whenever your
    application logs include the text `Exception`.
+
+# Troubleshooting
+
+## UnsatisfiedLinkError
+
+This is usually a problem with RocksDB. As a quick fix, you can switch to LMDB. Add the LMDB dependency
+to `deps.edn` and remove the RocksDB dependency:
+
+```clojure
+{:deps {com.biffweb/biff {...
+                          :exclusions [com.xtdb/xtdb-rocksdb]}
+        com.xtdb/xtdb-lmdb {:mvn/version "1.21.0-beta2"}
+        ...}
+ ...}
+```
+
+Then update `config.edn`:
+
+```clojure
+{:prod {:biff.xtdb/kv-store :lmdb
+        ...}
+ ...}
+```

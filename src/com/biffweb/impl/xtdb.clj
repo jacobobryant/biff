@@ -11,19 +11,23 @@
             [malli.core :as malc]))
 
 (defn start-node
-  [{:keys [topology dir opts jdbc-spec pool-opts]}]
-  (let [rocksdb (fn [basename]
-                  {:kv-store {:xtdb/module 'xtdb.rocksdb/->kv-store
-                              :db-dir (io/file dir basename)}})
+  [{:keys [topology dir opts jdbc-spec pool-opts kv-store]
+    :or {kv-store :rocksdb}}]
+  (let [kv-store-fn (fn [basename]
+                      {:kv-store {:xtdb/module (if (= kv-store :lmdb)
+                                                 'xtdb.lmdb/->kv-store
+                                                 'xtdb.rocksdb/->kv-store)
+                                  :db-dir (io/file dir (str basename (when (= kv-store :lmdb)
+                                                                       "-lmdb")))}})
         node (xt/start-node
                (merge (case topology
                         :standalone
-                        {:xtdb/index-store    (rocksdb "index")
-                         :xtdb/document-store (rocksdb "docs")
-                         :xtdb/tx-log         (rocksdb "tx-log")}
+                        {:xtdb/index-store    (kv-store-fn "index")
+                         :xtdb/document-store (kv-store-fn "docs")
+                         :xtdb/tx-log         (kv-store-fn "tx-log")}
 
                         :jdbc
-                        {:xtdb/index-store (rocksdb "index")
+                        {:xtdb/index-store (kv-store-fn "index")
                          :xtdb.jdbc/connection-pool {:dialect {:xtdb/module
                                                                'xtdb.jdbc.psql/->dialect}
                                                      :pool-opts pool-opts
@@ -41,11 +45,13 @@
     node))
 
 (defn use-xt
-  [{:biff.xtdb/keys [topology dir opts]
+  [{:biff.xtdb/keys [topology dir kv-store opts]
+    :or {kv-store :rocksdb}
     :as sys}]
   (let [node (start-node
                {:topology topology
                 :dir dir
+                :kv-store kv-store
                 :opts opts
                 :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
                 :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]

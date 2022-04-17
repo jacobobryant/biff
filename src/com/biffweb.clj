@@ -413,22 +413,26 @@
   Calls xtdb.api/sync before returning the node.
 
   topology:   One of #{:standalone :jdbc}.
+  kv-store:   One of #{:rocksdb :lmdb}. Default :rocksdb
   dir:        A path to store RocksDB instances in.
   jdbc-spec,
   pool-opts:  Used only when topology is :jdbc. Passed in as
               {:xtdb.jdbc/connection-pool
                {:db-spec jdbc-spec :pool-opts pool-opts ...}}.
   opts:       Additional options to pass to xtdb.api/start-node."
-  [opts]
-  (bxt/start-node opts))
+  [{:keys [topology dir opts jdbc-spec pool-opts kv-store]
+    :or {kv-store :rocksdb}
+    :as options}]
+  (bxt/start-node options))
 
 (defn use-xt
   "A Biff component that starts an XTDB node.
 
-  Sets :biff.xtdb/node on the system map. topology, dir and opts are passed to
-  start-node. Any keys matching :biff.xtdb.jdbc/* or :biff.xtdb.jdbc-pool/* are
-  passed in as jdbc-spec and pool-opts, respectively."
-  [{:biff.xtdb/keys [topology dir opts]
+  Sets :biff.xtdb/node on the system map. topology, kv-store, dir and opts are
+  passed to start-node. Any keys matching :biff.xtdb.jdbc/* or
+  :biff.xtdb.jdbc-pool/* are passed in as jdbc-spec and pool-opts,
+  respectively."
+  [{:biff.xtdb/keys [topology kv-store dir opts]
     :as sys}]
   (bxt/use-xt sys))
 
