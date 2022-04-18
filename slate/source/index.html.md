@@ -62,19 +62,18 @@ Requirements:
  - JDK 11 or higher
  - [clj](https://clojure.org/guides/getting_started)
 
-Run this command to create a new Biff project:
+Run this command to create a new Biff project (and if you run into any
+problems, see [Troubleshooting](#troubleshooting)):
 
 ```
 bash <(curl -s https://biffweb.com/new-project.sh)
 ```
 
-If you run into any problems, see [Troubleshooting](#troubleshooting).
-
 This will create a minimal CRUD app which demonstrates most of Biff's features.
-Run `./task dev` to start the app on localhost:8080. Whenever you save a file,
+Run `./task dev` to start the app on `localhost:8080`. Whenever you save a file,
 Biff will:
 
- - Evaluate any changed Clojure files
+ - Evaluate any changed Clojure files (and any files which depend on them)
  - Regenerate static HTML and CSS files
  - Run tests
 
@@ -92,6 +91,16 @@ can connect to the nREPL server started by `./task dev`. See [Connecting to a
 Running nREPL
 Server](https://docs.cider.mx/cider/basics/up_and_running.html#connect-to-a-running-nrepl-server)
 in the CIDER docs.
+
+This does mean that CIDER will not be able to decide what version of the nREPL
+server dependencies to use. If you run into problems, you'll need to set the
+versions manually in `deps.edn`:
+
+```clojure
+{:deps {nrepl/nrepl       {:mvn/version "..."}
+        cider/cider-nrepl {:mvn/version "..."}
+...
+```
 
 # Project Structure
 
@@ -1108,14 +1117,12 @@ to `deps.edn` and remove the RocksDB dependency:
 {:deps {com.biffweb/biff {...
                           :exclusions [com.xtdb/xtdb-rocksdb]}
         com.xtdb/xtdb-lmdb {:mvn/version "1.21.0-beta2"}
-        ...}
- ...}
+...
 ```
 
 Then update `config.edn`:
 
 ```clojure
 {:prod {:biff.xtdb/kv-store :lmdb
-        ...}
- ...}
+...
 ```
