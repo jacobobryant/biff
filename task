@@ -1,27 +1,34 @@
 #!/usr/bin/env bash
 
-slate-dev () {
+slate:dev () {
   cd slate
   bundle exec middleman server
 }
 
-slate () {
+slate:deploy () {
   cd slate
   bundle exec middleman build --clean
+  find build -type f | sed 's/^build//' > sitemap.txt
+  mv sitemap.txt build/sitemap.txt
+  netlify deploy --site biffdocs -d build --prod
 }
 
-codox () {
-  rm -rf site/codox
+codox:deploy () {
+  rm -rf target/doc
   clj -X:codox
+  cd target
+  find doc -type f | sed 's/^doc//' > sitemap.txt
+  mv sitemap.txt doc/sitemap.txt
+  netlify deploy --site biffapi -d doc --prod
 }
 
 jar () {
-  echo Remember to update version in pom.xml
+  echo You updated the version in pom.xml, right?
   clj -Spom
   clj -X:jar :jar target/biff.jar
 }
 
-deploy () {
+jar:deploy () {
   clj -X:deploy
 }
 

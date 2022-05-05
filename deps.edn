@@ -27,7 +27,7 @@
            :jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
                  :exec-fn hf.depstar/jar
                  :exec-args {}}
-           :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "RELEASE"}}
+           :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
                     :exec-fn deps-deploy.deps-deploy/deploy
                     :exec-args {:installer :remote
                                 :artifact "target/biff.jar"}}}}
