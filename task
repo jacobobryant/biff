@@ -8,18 +8,13 @@ slate:dev () {
 slate:deploy () {
   cd slate
   bundle exec middleman build --clean
-  find build -type f | sed 's/^build//' > sitemap.txt
-  mv sitemap.txt build/sitemap.txt
-  netlify deploy --site biffdocs -d build --prod
+  rsync -av --delete build/ ~/dev/platypub/themes/biffweb/assets/docs/
 }
 
 codox:deploy () {
   rm -rf target/doc
   clj -X:codox
-  cd target
-  find doc -type f | sed 's/^doc//' > sitemap.txt
-  mv sitemap.txt doc/sitemap.txt
-  netlify deploy --site biffapi -d doc --prod
+  rsync -av --delete target/doc/ ~/dev/platypub/themes/biffweb/assets/api/
 }
 
 jar () {
