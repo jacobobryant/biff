@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+dev () {
+  clj -M:dev
+}
+
+format () {
+  clj -M:format
+}
+
 slate:dev () {
   cd slate
   bundle exec middleman server
