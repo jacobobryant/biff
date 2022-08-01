@@ -3,14 +3,35 @@
             [buddy.sign.jwt :as jwt]
             [chime.core :as chime]
             [clj-http.client :as http]
+            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
             [hawk.core :as hawk]
+            [nextjournal.beholder :as beholder]
             [reitit.ring :as reitit-ring]
             [ring.adapter.jetty9 :as jetty]))
 
+(defn use-beholder [{:biff.beholder/keys [on-save exts paths]
+                     :or {paths ["src" "resources"]}
+                     :as sys}]
+  (let [;; Poor man's debouncer -- don't want to pull in core.async just for
+        ;; this, and don't want to spend time figuring out how else to do it.
+        last-called (atom #inst "1970")
+        watch (apply beholder/watch
+                     (fn [{:keys [path]}]
+                       (when (and (or (empty? exts)
+                                      (some #(str/ends-with? path %) exts))
+                                  (time/elapsed? @last-called :now 1 :seconds))
+                         ;; Give all the files some time to get written before invoking the callback.
+                         (Thread/sleep 100)
+                         (util/catchall-verbose (on-save sys))
+                         (reset! last-called (java.util.Date.))))
+                     paths)]
+    (update sys :biff/stop conj #(beholder/stop watch))))
+
+;; Deprecated
 (defn use-hawk [{:biff.hawk/keys [on-save exts paths]
                  :or {paths ["src" "resources"]}
                  :as sys}]
