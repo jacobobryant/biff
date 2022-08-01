@@ -20,23 +20,23 @@
                                   :db-dir (io/file dir (str basename (when (= kv-store :lmdb)
                                                                        "-lmdb")))}})
         node (xt/start-node
-               (merge (case topology
-                        :standalone
-                        {:xtdb/index-store    (kv-store-fn "index")
-                         :xtdb/document-store (kv-store-fn "docs")
-                         :xtdb/tx-log         (kv-store-fn "tx-log")}
+              (merge (case topology
+                       :standalone
+                       {:xtdb/index-store    (kv-store-fn "index")
+                        :xtdb/document-store (kv-store-fn "docs")
+                        :xtdb/tx-log         (kv-store-fn "tx-log")}
 
-                        :jdbc
-                        {:xtdb/index-store (kv-store-fn "index")
-                         :xtdb.jdbc/connection-pool {:dialect {:xtdb/module
-                                                               'xtdb.jdbc.psql/->dialect}
-                                                     :pool-opts pool-opts
-                                                     :db-spec jdbc-spec}
-                         :xtdb/tx-log {:xtdb/module 'xtdb.jdbc/->tx-log
-                                       :connection-pool :xtdb.jdbc/connection-pool}
-                         :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
-                                               :connection-pool :xtdb.jdbc/connection-pool}})
-                      opts))
+                       :jdbc
+                       {:xtdb/index-store (kv-store-fn "index")
+                        :xtdb.jdbc/connection-pool {:dialect {:xtdb/module
+                                                              'xtdb.jdbc.psql/->dialect}
+                                                    :pool-opts pool-opts
+                                                    :db-spec jdbc-spec}
+                        :xtdb/tx-log {:xtdb/module 'xtdb.jdbc/->tx-log
+                                      :connection-pool :xtdb.jdbc/connection-pool}
+                        :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
+                                              :connection-pool :xtdb.jdbc/connection-pool}})
+                     opts))
         f (future (xt/sync node))]
     (while (not (realized? f))
       (Thread/sleep 2000)
@@ -49,12 +49,12 @@
     :or {kv-store :rocksdb}
     :as sys}]
   (let [node (start-node
-               {:topology topology
-                :dir dir
-                :kv-store kv-store
-                :opts opts
-                :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
-                :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]
+              {:topology topology
+               :dir dir
+               :kv-store kv-store
+               :opts opts
+               :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
+               :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]
     (-> sys
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
@@ -64,19 +64,19 @@
     sys
     (let [lock (Object.)
           listener (xt/listen
-                     node
-                     {::xt/event-type ::xt/indexed-tx}
-                     (fn [{:keys [::xt/tx-id committed?]}]
-                       (when committed?
-                         (locking lock
-                           (with-open [log (xt/open-tx-log node
-                                                           (dec tx-id)
-                                                           true)]
-                             (let [tx (first (iterator-seq log))]
-                               (try
-                                 (on-tx sys tx)
-                                 (catch Exception e
-                                   (log/error e "Exception during on-tx")))))))))]
+                    node
+                    {::xt/event-type ::xt/indexed-tx}
+                    (fn [{:keys [::xt/tx-id committed?]}]
+                      (when committed?
+                        (locking lock
+                          (with-open [log (xt/open-tx-log node
+                                                          (dec tx-id)
+                                                          true)]
+                            (let [tx (first (iterator-seq log))]
+                              (try
+                                (on-tx sys tx)
+                                (catch Exception e
+                                  (log/error e "Exception during on-tx")))))))))]
       (update sys :biff/stop conj #(.close listener)))))
 
 (defn assoc-db [{:keys [biff.xtdb/node] :as sys}]

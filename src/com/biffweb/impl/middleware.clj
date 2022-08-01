@@ -43,8 +43,8 @@
                               :or {root "public"
                                    index-files ["index.html"]}}]
   (let [resource-handler (wrap-index-files
-                           #(res/resource-request % root)
-                           {:index-files index-files})]
+                          #(res/resource-request % root)
+                          {:index-files index-files})]
     (fn [req]
       (or (resource-handler req)
           (handler req)))))
@@ -81,7 +81,7 @@
                                         secure true}}]
   (let [session-store (if cookie-secret
                         (cookie/cookie-store
-                          {:key (util/base64-decode cookie-secret)})
+                         {:key (util/base64-decode cookie-secret)})
                         session-store)
         changes {[:session :store]                   session-store
                  [:session :cookie-name]             "ring-session"

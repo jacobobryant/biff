@@ -62,11 +62,11 @@
     [:meta {:charset "utf-8"}]
     (when (not-empty font-families)
       (list
-        [:link {:href "https://fonts.googleapis.com", :rel "preconnect"}]
-        [:link {:crossorigin "crossorigin",
-                :href "https://fonts.gstatic.com",
-                :rel "preconnect"}]
-        (g-fonts font-families)))
+       [:link {:href "https://fonts.googleapis.com", :rel "preconnect"}]
+       [:link {:crossorigin "crossorigin",
+               :href "https://fonts.gstatic.com",
+               :rel "preconnect"}]
+       (g-fonts font-families)))
     (apply list head)]
    [:body
     {:style {:position "absolute"
