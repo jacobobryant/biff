@@ -3,10 +3,18 @@
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.spec.alpha :as spec]
+            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [clojure.tools.logging :refer [info]]
             [clojure.tools.namespace.repl :as tn-repl]
             [clojure.walk :as walk]))
+
+(defmacro catchall-verbose
+  [& body]
+  `(try
+    ~@body
+    (catch Exception e#
+      (st/print-stack-trace e#))))
 
 (defn start-system [system-atom init]
   (reset! system-atom (merge {:biff/stop '()} init))

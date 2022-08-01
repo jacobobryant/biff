@@ -1,5 +1,6 @@
 (ns com.biffweb
-  (:require [clojure.string :as str]
+  (:require [clojure.stacktrace :as st]
+            [clojure.string :as str]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.rum :as brum]
@@ -131,6 +132,14 @@
   [& body]
   `(try ~@body (catch Exception ~'_ nil)))
 
+(defmacro catchall-verbose
+  [& body]
+  "Like catchall, but prints exceptions."
+  `(try
+    ~@body
+    (catch Exception e#
+      (st/print-stack-trace e#))))
+
 (defmacro letd
   "Like let, but transparently wraps all bindings with delay.
 
@@ -177,20 +186,30 @@
 ;;;; misc
 
 (defn use-hawk
-  "A Biff component that runs code when files are changed, via Hawk.
+  "Deprecated. Use use-beholder instead.
 
-  See (https://github.com/wkf/hawk).
-
-  on-save:  A single-argument function to call whenever a file is saved.
-            Receives the system map as a parameter. The function is called no
-            more than once every 500 milliseconds.
-  paths:    A collection of root directories to monitor for file changes.
-  exts:     If exts is non-empty, files that don't end in one of the extensions
-            will be ignored."
+  use-beholder is a drop-in replacement for use-hawk, except that keys must be
+  prefixed with :biff.beholder/ instead of :biff.hawk/"
   [{:biff.hawk/keys [on-save exts paths]
     :or {paths ["src" "resources"]}
     :as sys}]
   (misc/use-hawk sys))
+
+(defn use-beholder
+  "A Biff component that runs code when files are changed, via Beholder.
+
+  See https://github.com/nextjournal/beholder.
+
+  on-save:  A single-argument function to call whenever a file is saved.
+            Receives the system map as a parameter. Subsequent file saves
+            that occur within one second are ignored.
+  paths:    A collection of root directories to monitor for file changes.
+  exts:     If exts is non-empty, files that don't end in one of the extensions
+            will be ignored."
+  [{:biff.beholder/keys [on-save exts paths]
+    :or {paths ["src" "resources"]}
+    :as sys}]
+  (misc/use-beholder sys))
 
 (defn reitit-handler
   "Convenience wrapper for reitit.ring/ring-handler.
