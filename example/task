@@ -34,6 +34,10 @@ dev () {
   BIFF_ENV=dev run
 }
 
+format () {
+  clj -M:format
+}
+
 clean () {
   rm -rf target
 }
