@@ -13,9 +13,6 @@
   (let [{:keys [biff/db] :as sys} (get-sys)]
     (q db
        '{:find (pull user [*])
-         :where [[user :user/email]]})
-    )
+         :where [[user :user/email]]}))
 
-  (sort (keys @biff/system))
-
-  )
+  (sort (keys @biff/system)))

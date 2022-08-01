@@ -67,28 +67,28 @@
 
 (defn start []
   (biff/start-system
-    {:com.example/chat-clients (atom #{})
-     :biff/after-refresh `start
-     :biff/handler #'handler
-     :biff/malli-opts #'malli-opts
-     :biff.hawk/on-save #'on-save
-     :biff.xtdb/on-tx #'on-tx
-     :biff.chime/tasks tasks
-     :biff/config "config.edn"
-     :biff/components [biff/use-config
-                       biff/use-random-default-secrets
-                       biff/use-xt
-                       biff/use-tx-listener
-                       (biff/use-when
-                         :com.example/enable-web
-                         biff/use-outer-default-middleware
-                         biff/use-jetty)
-                       (biff/use-when
-                         :com.example/enable-worker
-                         biff/use-chime)
-                       (biff/use-when
-                         :com.example/enable-hawk
-                         biff/use-hawk)]})
+   {:com.example/chat-clients (atom #{})
+    :biff/after-refresh `start
+    :biff/handler #'handler
+    :biff/malli-opts #'malli-opts
+    :biff.hawk/on-save #'on-save
+    :biff.xtdb/on-tx #'on-tx
+    :biff.chime/tasks tasks
+    :biff/config "config.edn"
+    :biff/components [biff/use-config
+                      biff/use-random-default-secrets
+                      biff/use-xt
+                      biff/use-tx-listener
+                      (biff/use-when
+                       :com.example/enable-web
+                       biff/use-outer-default-middleware
+                       biff/use-jetty)
+                      (biff/use-when
+                       :com.example/enable-worker
+                       biff/use-chime)
+                      (biff/use-when
+                       :com.example/enable-hawk
+                       biff/use-hawk)]})
   (generate-assets! @biff/system)
   (log/info "Go to" (:biff/base-url @biff/system)))
 
