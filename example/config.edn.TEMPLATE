@@ -19,7 +19,7 @@
  :dev {:merge [:prod]
        ;; See com.example.feat.worker
        ;; :com.example/enable-worker false
-       :com.example/enable-hawk true
+       :com.example/enable-beholder true
        :biff/host "0.0.0.0"
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone

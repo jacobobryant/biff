@@ -71,7 +71,7 @@
      :biff/after-refresh `start
      :biff/handler #'handler
      :biff/malli-opts #'malli-opts
-     :biff.hawk/on-save #'on-save
+     :biff.beholder/on-save #'on-save
      :biff.xtdb/on-tx #'on-tx
      :biff.chime/tasks tasks
      :biff/config "config.edn"
@@ -87,8 +87,8 @@
                          :com.example/enable-worker
                          biff/use-chime)
                        (biff/use-when
-                         :com.example/enable-hawk
-                         biff/use-hawk)]})
+                         :com.example/enable-beholder
+                         biff/use-beholder)]})
   (generate-assets! @biff/system)
   (log/info "Go to" (:biff/base-url @biff/system)))
 
