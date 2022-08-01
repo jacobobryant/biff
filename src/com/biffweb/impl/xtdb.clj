@@ -3,7 +3,6 @@
             [com.biffweb.impl.util.ns :as ns]
             [clojure.java.io :as io]
             [clojure.set :as set]
-            [clojure.stacktrace :as st]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
             [xtdb.api :as xt]

@@ -1,6 +1,5 @@
 (ns com.biffweb.impl.middleware
-  (:require [clojure.stacktrace :as st]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.xtdb :as bxt]
