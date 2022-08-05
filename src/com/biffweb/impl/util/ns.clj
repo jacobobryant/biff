@@ -1,27 +1,17 @@
 (ns com.biffweb.impl.util.ns
-  (:require [clojure.set :as set]
-            [clojure.string :as str]))
-
-(defn ns-contains? [nspace sym]
-  (and (namespace sym)
-       (let [segments (str/split (name nspace) #"\.")]
-         (= segments (take (count segments) (str/split (namespace sym) #"\."))))))
-
-(defn select-as [m key-map]
-  (-> m
-      (select-keys (keys key-map))
-      (set/rename-keys key-map)))
-
-(defn select-ns [m nspace]
-  (select-keys m (filter #(ns-contains? nspace (symbol %)) (keys m))))
+  (:require [clojure.string :as str]))
 
 (defn ns-parts [nspace]
-  (if (nil? nspace)
+  (if (empty? (str nspace))
     []
-    (some-> nspace
-            str
-            not-empty
-            (str/split #"\."))))
+    (str/split (str nspace) #"\.")))
+
+(defn select-ns [m nspace]
+  (let [parts (ns-parts nspace)]
+    (->> (keys m)
+         (filter (fn [k]
+                   (= parts (take (count parts) (ns-parts (namespace k))))))
+         (select-keys m))))
 
 (defn select-ns-as [m ns-from ns-to]
   (->> (select-ns m ns-from)
