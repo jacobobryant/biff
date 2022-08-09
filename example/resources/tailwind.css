@@ -31,3 +31,5 @@
     @apply text-blue-600 hover:underline;
   }
 }
+
+.grecaptcha-badge { visibility: hidden; }

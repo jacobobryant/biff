@@ -9,11 +9,20 @@
         ;; :biff.xtdb/topology :jdbc
         ;; :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
         :biff/base-url "https://example.com"
+        ;; Mailersend is used to send email sign-in links. Create an account at
+        ;; https://mailersend.com/.
         :mailersend/api-key nil
-        :mailersend/defaults {[:from :email] "hello@mail.example.com"
+        :mailersend/defaults {;; Your from address must use the domain you've verified in MailerSend.
+                              [:from :email] "hello@mail.example.com"
                               [:from :name] "My Application"
+                              ;; Change this to your personal address/wherever you'd like replies to go.
                               [:reply_to :email] "hello@example.com"
                               [:reply_to :name] "My Application"}
+        ;; Recaptcha is used to protect your sign-in page. Go to
+        ;; https://www.google.com/recaptcha/about/ and add a site. Select v2
+        ;; invisible. Add localhost to your list of allowed domains.
+        :recaptcha/site-key nil
+        :recaptcha/secret-key nil
         :biff.middleware/cookie-secret nil
         :biff/jwt-secret nil}
  :dev {:merge [:prod]
@@ -21,6 +30,7 @@
        ;; :com.example/enable-worker false
        :com.example/enable-beholder true
        :biff/host "0.0.0.0"
+       :biff/port 8080
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone
        :biff.middleware/secure false}}

@@ -1,5 +1,6 @@
 (ns com.example.feat.app
   (:require [com.biffweb :as biff :refer [q]]
+            [com.example.middleware :as mid]
             [com.example.ui :as ui]
             [rum.core :as rum]
             [xtdb.api :as xt]
@@ -119,13 +120,6 @@
      [:.h-6]
      (chat req))))
 
-(defn wrap-signed-in [handler]
-  (fn [{:keys [session] :as req}]
-    (if (some? (:uid session))
-      (handler req)
-      {:status 303
-       :headers {"location" "/"}})))
-
 (defn ws-handler [{:keys [com.example/chat-clients] :as req}]
   {:status 101
    :headers {"upgrade" "websocket"
@@ -138,7 +132,7 @@
                     (swap! chat-clients disj ws))}})
 
 (def features
-  {:routes ["/app" {:middleware [wrap-signed-in]}
+  {:routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
