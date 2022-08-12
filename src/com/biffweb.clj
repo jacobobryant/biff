@@ -133,8 +133,8 @@
   `(try ~@body (catch Exception ~'_ nil)))
 
 (defmacro catchall-verbose
-  [& body]
   "Like catchall, but prints exceptions."
+  [& body]
   `(try
     ~@body
     (catch Exception e#
