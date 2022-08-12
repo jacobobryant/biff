@@ -6,8 +6,9 @@
 
 (comment
 
-  ;; If I eval (biff/refresh) with Conjure, it starts sending stdout to Vim.
-  ;; fix-print makes sure stdout keeps going to the terminal.
+  ;; As of writing this, calling (biff/refresh) with Conjure causes stdout to
+  ;; start going to Vim. fix-print makes sure stdout keeps going to the
+  ;; terminal. It may not be necessary in your editor.
   (biff/fix-print (biff/refresh))
 
   (let [{:keys [biff/db] :as sys} (get-sys)]

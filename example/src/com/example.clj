@@ -42,17 +42,8 @@
 (defn generate-assets! [sys]
   (when (:com.example/enable-web sys)
     (biff/export-rum static-pages "target/resources/public")
-    (->> (file-seq (io/file "target/resources/public"))
-         (filter (fn [file]
-                   (and (.isFile file)
-                        (biff/elapsed? (java.util.Date. (.lastModified file))
-                                       :now
-                                       30
-                                       :seconds)
-                        (str/ends-with? (.getPath file) ".html"))))
-         (run! (fn [f]
-                 (log/info "deleting" f)
-                 (io/delete-file f))))
+    (biff/delete-old-files {:dir "target/resources/public"
+                            :exts [".html"]})
     (biff/sh "bin/tailwindcss"
              "-c" "resources/tailwind.config.js"
              "-i" "resources/tailwind.css"

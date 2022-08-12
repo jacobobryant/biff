@@ -1,13 +1,15 @@
 (ns com.biffweb.impl.util
   (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.spec.alpha :as spec]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
-            [clojure.tools.logging :refer [info]]
+            [clojure.tools.logging :as log]
             [clojure.tools.namespace.repl :as tn-repl]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [com.biffweb.impl.time :as time]))
 
 (defmacro catchall-verbose
   [& body]
@@ -20,13 +22,13 @@
   (reset! system-atom (merge {:biff/stop '()} init))
   (loop [{[f & components] :biff/components :as sys} init]
     (when (some? f)
-      (info "starting:" (str f))
+      (log/info "starting:" (str f))
       (recur (reset! system-atom (f (assoc sys :biff/components components))))))
-  (info "System started."))
+  (log/info "System started."))
 
 (defn refresh [{:keys [biff/after-refresh biff/stop]}]
   (doseq [f stop]
-    (info "stopping:" (str f))
+    (log/info "stopping:" (str f))
     (f))
   (tn-repl/refresh :after after-refresh))
 
@@ -189,3 +191,16 @@
              *err* (alter-var-root #'*err* identity)
              *flush-on-newline* (alter-var-root #'*flush-on-newline* identity)]
      ~@body))
+
+(defn delete-old-files [{:keys [dir exts age-seconds]
+                         :or {age-seconds 30}}]
+  (doseq [file (file-seq (io/file dir))
+          :when (and (.isFile file)
+                     (time/elapsed? (java.util.Date. (.lastModified file))
+                                    :now
+                                    age-seconds
+                                    :seconds)
+                     (or (empty? exts)
+                         (some #(str/ends-with? (.getPath file) %) exts)))]
+    (log/info "deleting" file)
+    (io/delete-file file)))

@@ -183,6 +183,22 @@
   (swap! reload/global-tracker reload/refresh eval-paths)
   nil)
 
+(defn delete-old-files
+  "Deletes files descended from the given directory that are older than a given threshold.
+
+  dir:          A path to a directory.
+  age-seconds:  Files will only be deleted if it's been at least this number of seconds since they
+                were last modified. Defaults to 30 seconds.
+  exts:         An optional collection of filename extentions. If provided, files will only be
+                deleted if they end with one of the extentions.
+
+  For example:
+  (delete-old-files {:dir \"target/resources/public\"
+                     :exts [\".html\"]})"
+  [{:keys [dir exts age-seconds]
+    :or {age-seconds 30} :as opts}]
+  (util/delete-old-files opts))
+
 ;;;; misc
 
 (defn use-hawk
