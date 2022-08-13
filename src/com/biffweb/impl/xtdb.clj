@@ -117,7 +117,7 @@
            (not return-tuples) (map first))))))
 
 (defn lookup [db k v]
-  (ffirst (xt/q db {:find '[(pull doc '[*])]
+  (ffirst (xt/q db {:find '[(pull doc [*])]
                     :where [['doc k v]]})))
 
 (defn lookup-id [db k v]
