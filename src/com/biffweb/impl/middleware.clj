@@ -72,6 +72,11 @@
                         (str "?" qs))))
       resp)))
 
+(defn wrap-https-scheme [handler]
+  (fn [req]
+    (handler (cond-> req
+               (= :http (:scheme req)) (assoc :scheme :https)))))
+
 (defn wrap-ring-defaults [handler {:biff.middleware/keys [session-store
                                                           cookie-secret
                                                           secure
@@ -82,7 +87,8 @@
                         (cookie/cookie-store
                          {:key (util/base64-decode cookie-secret)})
                         session-store)
-        changes {[:session :store]                   session-store
+        changes {[:responses :absolute-redirects]    true
+                 [:session :store]                   session-store
                  [:session :cookie-name]             "ring-session"
                  [:session :cookie-attrs :max-age]   session-max-age
                  [:session :cookie-attrs :same-site] :lax
@@ -95,7 +101,11 @@
                                 rd/secure-site-defaults
                                 rd/site-defaults)
                               changes)]
-    (rd/wrap-defaults handler ring-defaults)))
+    (cond-> handler
+      true (rd/wrap-defaults ring-defaults)
+      ;; This is necessary when using a reverse proxy (e.g. Nginx), otherwise
+      ;; wrap-absolute-redirects will set the redirect scheme to http.
+      secure wrap-https-scheme)))
 
 (defn wrap-env [handler sys]
   (fn [req]
