@@ -165,7 +165,7 @@
 (b/defnc get-ops
   [{:keys [::now biff/db biff/malli-opts]}
    {:keys [xt/id db/doc-type db/op] :or {op :put} :as tx-doc}]
-  ;; possible ops: delete, put, merge, update
+  ;; possible ops: delete, put, create, merge, update
   :let [valid? (fn [doc] (malc/validate doc-type doc @malli-opts))
         explain (fn [doc] (male/humanize (malc/explain doc-type doc @malli-opts)))
         [lookup-id
@@ -179,7 +179,7 @@
                            [[::xt/match lookup-id lookup-doc-before]
                             [::xt/delete lookup-id]]))
 
-  ;; possible ops: put, merge, update
+  ;; possible ops: put, create, merge, update
   (nil? doc-type) (throw (ex-info "Missing :db/doc-type."
                                   {:tx-doc tx-doc}))
   :let [doc-after (cond-> tx-doc
@@ -203,8 +203,27 @@
                          :explain (explain doc-after)})))
   (= op :put) (concat [[::xt/put doc-after]] lookup-ops)
 
-  ;; possible ops: merge, update
+  ;; possible ops: create, merge, update
   :let [doc-before (xt/entity db id)]
+  :do (cond
+        (not= op :create) nil,
+
+        (some? doc-before) (throw (ex-info "Attempted to create over an existing doc."
+                                    {:tx-doc tx-doc})),
+
+        (some special-val? (vals doc-after))
+        (throw (ex-info "Attempted to use a special value on a :create operation"
+                        {:tx-doc tx-doc})),
+
+        (not (valid? doc-after))
+        (throw (ex-info (str "Doc wouldn't be a valid " doc-type " after transaction.")
+                        {:tx-doc tx-doc
+                         :explain (explain doc-after)})))
+  (= op :create) (concat [[::xt/match id nil]
+                          [::xt/put doc-after]]
+                         lookup-ops)
+
+  ;; possible ops: merge, update
   (and (= op :update)
        (nil? doc-before)) (throw (ex-info "Attempted to update on a new doc."
                                           {:tx-doc tx-doc}))
