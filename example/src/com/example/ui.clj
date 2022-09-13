@@ -7,6 +7,9 @@
     (str "/css/main.css?t=" (.lastModified f))
     "/css/main.css"))
 
+(defn include-livejs? [opts]
+  (:com.example/include-livejs opts))
+
 (defn base [opts & body]
   (apply
    biff/base-html
@@ -19,7 +22,9 @@
        (update :base/head (fn [head]
                             (concat [[:link {:rel "stylesheet" :href (css-path)}]
                                      [:script {:src "https://unpkg.com/htmx.org@1.6.1"}]
-                                     [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]]
+                                     [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]
+                                     (when (include-livejs? opts)
+                                       [:script {:src "/js/live.js"}])]
                                     head))))
    body))
 

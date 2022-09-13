@@ -10,6 +10,8 @@
             [clojure.test :as test]
             [clojure.tools.logging :as log]
             [ring.middleware.anti-forgery :as anti-forgery]
+            [ring.middleware.head :as head]
+            [ring.util.response :as resp]
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def features
@@ -18,6 +20,22 @@
    home/features
    worker/features])
 
+(defn checksum [s]
+  (let [crc (new java.util.zip.CRC32)]
+    (.update crc (.getBytes s))
+    (Long/toHexString (.getValue crc))))
+
+(defn wrap-etag [handler]
+  (fn [req]
+    (let [response (handler req)]
+      (resp/update-header
+       response
+       "ETag"
+       (fn [etag]
+         (or etag
+             (when (string? (:body response))
+               (checksum (:body response)))))))))
+
 (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
                                biff/wrap-anti-forgery-websockets
                                biff/wrap-render-rum]}
@@ -25,7 +43,9 @@
              (keep :api-routes features)])
 
 (def handler (-> (biff/reitit-handler {:routes routes})
-                 (biff/wrap-inner-defaults {})))
+                 (biff/wrap-inner-defaults {})
+                 wrap-etag
+                 head/wrap-head))
 
 (defn on-tx [sys tx]
   (let [sys (biff/assoc-db sys)]
