@@ -1,5 +1,6 @@
 (ns com.biffweb
-  (:require [clojure.stacktrace :as st]
+  (:require [clojure.java.io :as io]
+            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
@@ -10,7 +11,7 @@
             [com.biffweb.impl.util.reload :as reload]
             [com.biffweb.impl.xtdb :as bxt]))
 
-;;;; util
+;;;; Util
 
 (defn pprint
   "Alias of clojure.pprint/pprint"
@@ -199,7 +200,7 @@
     :or {age-seconds 30} :as opts}]
   (util/delete-old-files opts))
 
-;;;; misc
+;;;; Misc
 
 (defn use-hawk
   "Deprecated. Use use-beholder instead.
@@ -331,7 +332,7 @@
   [sys]
   (misc/use-random-default-secrets sys))
 
-;;;; middleware
+;;;; Middleware
 
 (defn wrap-anti-forgery-websockets
   "Ensure that websocket upgrade requests pass a CSRF check.
@@ -440,7 +441,7 @@
   [sys]
   (update sys :biff/handler middle/wrap-outer-defaults sys))
 
-;;;; xtdb
+;;;; XTDB
 
 (defn start-node
   "A higher-level version of xtdb.api/start-node.
@@ -531,7 +532,7 @@
    biff-tx]
   (bxt/submit-tx sys biff-tx))
 
-;;;; rum
+;;;; Rum
 
 (defn render
   "Renders body with rum/render-static-markup and returns a 200 response."
@@ -605,7 +606,7 @@
   [pages dir]
   (brum/export-rum pages dir))
 
-;;;; time
+;;;; Time
 
 (defn now
   "Same as (java.util.Date.)"
@@ -665,3 +666,29 @@
   "Returns a new java.util.Date with the given number of seconds added."
   [date seconds]
   (time/add-seconds date seconds))
+
+(defn- write-doc-data [dest]
+  (let [sections (->> (with-open [r (io/reader (io/resource "com/biffweb.clj"))]
+                        (doall (line-seq r)))
+                      (map-indexed (fn [i line]
+                                     (when-some [title (second (re-find #";;;; (.*)" line))]
+                                       {:line i
+                                        :title title})))
+                      (filter some?)
+                      reverse)
+        metadata (->> (ns-publics 'com.biffweb)
+                      vals
+                      (map (fn [v]
+                             (let [m (meta v)
+                                   section-title (->> sections
+                                                      (filter #(< (:line %) (:line m)))
+                                                      first
+                                                      :title)]
+                               (-> m
+                                   (select-keys [:arglists :doc :line :name])
+                                   (assoc :section section-title))))))]
+    (spit dest (with-out-str
+                (pprint metadata)))))
+
+(comment
+ (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn"))

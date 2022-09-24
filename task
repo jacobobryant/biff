@@ -8,23 +8,6 @@ format () {
   clj -M:format
 }
 
-slate:dev () {
-  cd slate
-  bundle exec middleman server
-}
-
-slate:deploy () {
-  cd slate
-  bundle exec middleman build --clean
-  rsync -av --delete build/ ~/dev/platypub/themes/biffweb/assets/docs/
-}
-
-codox:deploy () {
-  rm -rf target/doc
-  clj -X:codox
-  rsync -av --delete target/doc/ ~/dev/platypub/themes/biffweb/assets/api/
-}
-
 jar () {
   echo You updated the version in pom.xml, right?
   clj -Spom
