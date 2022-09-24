@@ -1,12 +1,6 @@
 # Biff
 
-A simple and easy web framework for Clojure.
-
- - Main website: [biffweb.com](https://biffweb.com)
- - [Newsletter](https://biffweb.com/newsletter/)
- - [Documentation](https://biffweb.com/docs/)
- - [API](https://biffweb.com/api/com.biffweb.html)
- - [Community](https://biffweb.com/community/)
+A simple and easy web framework for Clojure. See [biffweb.com](https://biffweb.com).
 
 ## Contributing
 
