@@ -504,7 +504,7 @@
   function which must process the results eagerly. Also includes the same
   functionality as biff/q."
   [db query & args]
-  (apply bxt/lazy-q args))
+  (apply bxt/lazy-q db query args))
 
 (defn lookup
   "Returns the first document found with the given key and value.
