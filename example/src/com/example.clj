@@ -52,6 +52,7 @@
     (log/info "CSS done")))
 
 (defn on-save [sys]
+  (biff/add-libs)
   (biff/eval-files! sys)
   (generate-assets! sys)
   (test/run-all-tests #"com.example.test.*"))
