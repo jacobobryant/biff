@@ -6,10 +6,12 @@
             [clojure.spec.alpha :as spec]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [clojure.tools.deps.alpha.repl :as deps-repl]
             [clojure.tools.logging :as log]
             [clojure.tools.namespace.repl :as tn-repl]
             [clojure.walk :as walk]
-            [com.biffweb.impl.time :as time]))
+            [com.biffweb.impl.time :as time])
+  (:import [clojure.lang DynamicClassLoader]))
 
 (defmacro catchall-verbose
   [& body]
@@ -31,6 +33,12 @@
     (log/info "stopping:" (str f))
     (f))
   (tn-repl/refresh :after after-refresh))
+
+(defn add-libs []
+  (let [cl (.getContextClassLoader (Thread/currentThread))]
+    (when-not (instance? DynamicClassLoader cl)
+      (.setContextClassLoader (Thread/currentThread) (DynamicClassLoader. cl))))
+  (deps-repl/add-libs (:deps (edn/read-string (slurp "deps.edn")))))
 
 (defn ppr-str [x]
   (with-out-str

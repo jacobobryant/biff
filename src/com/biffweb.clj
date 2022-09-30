@@ -184,6 +184,14 @@
   (swap! reload/global-tracker reload/refresh eval-paths)
   nil)
 
+(defn add-libs []
+  "Loads new dependencies in deps.edn via tools.deps.alpha.
+
+  Ensures that a DynamicClassLoader is available so that this works even when
+  not evaluated from the repl. See
+  https://ask.clojure.org/index.php/10761/clj-behaves-different-in-the-repl-as-opposed-to-from-a-file"
+  (util/add-libs))
+
 (defn delete-old-files
   "Deletes files descended from the given directory that are older than a given threshold.
 

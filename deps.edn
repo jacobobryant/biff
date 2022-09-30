@@ -13,6 +13,8 @@
         metosin/muuntaja               {:mvn/version "0.6.8"}
         metosin/reitit-ring            {:mvn/version "0.5.15"}
         nrepl/nrepl                    {:mvn/version "0.9.0"}
+        org.clojure/tools.deps.alpha   {:git/url "https://github.com/clojure/tools.deps.alpha"
+                                        :sha "8f8fc2571e721301b6d52e191129248355cb8c5a"}
         org.clojure/tools.logging      {:mvn/version "1.2.4"}
         org.clojure/tools.namespace    {:mvn/version "1.2.0"}
         org.postgresql/postgresql      {:mvn/version "42.3.2"}
