@@ -3,9 +3,9 @@
         cider/cider-nrepl              {:mvn/version "0.28.2"}
         clj-http/clj-http              {:mvn/version "3.12.3"}
         com.nextjournal/beholder       {:mvn/version "1.0.0"}
-        com.xtdb/xtdb-core             {:mvn/version "1.21.0-beta2"}
-        com.xtdb/xtdb-jdbc             {:mvn/version "1.21.0-beta2"}
-        com.xtdb/xtdb-rocksdb          {:mvn/version "1.21.0-beta2"}
+        com.xtdb/xtdb-core             {:mvn/version "1.22.0"}
+        com.xtdb/xtdb-jdbc             {:mvn/version "1.22.0"}
+        com.xtdb/xtdb-rocksdb          {:mvn/version "1.22.0"}
         info.sunng/ring-jetty9-adapter {:mvn/version "0.17.2"}
         jarohen/chime                  {:mvn/version "0.3.3"}
         lambdaisland/uri               {:mvn/version "1.13.95"}
