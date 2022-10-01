@@ -8,6 +8,7 @@
             [clojure.tools.logging :as log]
             [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
+            [com.biffweb.impl.xtdb :as bxt]
             [hawk.core :as hawk]
             [nextjournal.beholder :as beholder]
             [reitit.ring :as reitit-ring]
@@ -128,3 +129,8 @@
          (when (nil? (:biff/jwt-secret sys))
            (log/warn ":biff/jwt-secret is empty, using random value")
            {:biff/jwt-secret (generate-secret 32)})))
+
+(defn merge-context [{:keys [biff/merge-context-fn]
+                      :or {merge-context-fn bxt/assoc-db}
+                      :as sys}]
+  (merge-context-fn sys))

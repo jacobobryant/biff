@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
+            [com.biffweb.impl.queues :as q]
             [com.biffweb.impl.rum :as brum]
             [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
@@ -207,138 +208,6 @@
   [{:keys [dir exts age-seconds]
     :or {age-seconds 30} :as opts}]
   (util/delete-old-files opts))
-
-;;;; Misc
-
-(defn use-hawk
-  "Deprecated. Use use-beholder instead.
-
-  use-beholder is a drop-in replacement for use-hawk, except that keys must be
-  prefixed with :biff.beholder/ instead of :biff.hawk/"
-  [{:biff.hawk/keys [on-save exts paths]
-    :or {paths ["src" "resources"]}
-    :as sys}]
-  (misc/use-hawk sys))
-
-(defn use-beholder
-  "A Biff component that runs code when files are changed, via Beholder.
-
-  See https://github.com/nextjournal/beholder.
-
-  on-save:  A single-argument function to call whenever a file is saved.
-            Receives the system map as a parameter. Subsequent file saves
-            that occur within one second are ignored.
-  paths:    A collection of root directories to monitor for file changes.
-  exts:     If exts is non-empty, files that don't end in one of the extensions
-            will be ignored."
-  [{:biff.beholder/keys [on-save exts paths]
-    :or {paths ["src" "resources"]}
-    :as sys}]
-  (misc/use-beholder sys))
-
-(defn reitit-handler
-  "Convenience wrapper for reitit.ring/ring-handler.
-
-  Only one of router or routes needs to be given. If you pass in routes, it
-  will be wrapped with (reitit.ring/router routes). on-error is an optional
-  Ring handler. The request map passed to it will include a :status key (either
-  404, 405, or 406).
-
-  Includes reitit.ring/redirect-trailing-slash-handler."
-  [{:keys [router routes on-error] :as opts}]
-  (misc/reitit-handler opts))
-
-(defn use-jetty
-  "A Biff component that starts a Jetty web server."
-  [{:biff/keys [host port handler]
-    :or {host "localhost"
-         port 8080}
-    :as sys}]
-  (misc/use-jetty sys))
-
-(defn jwt-encrypt
-  "Convenience wrapper for buddy.sign.jwt/encrypt.
-
-  Returns a string token. secret is a base64-encoded string used to encrypt the
-  token. A secret can be generated with (com.biffweb/generate-secret 32).
-  exp-in is the number of seconds in the future at which the token should
-  expire. claims is passed to buddy.sign.jwt/encrypt as-is, except that :exp is
-  set based on exp-in."
-  [{:keys [exp-in] :as claims} secret]
-  (misc/jwt-encrypt claims secret))
-
-(defn jwt-decrypt
-  "Convenience wrapper for buddy.sign.jwt/decrypt.
-
-  token is a string as returned by jwt-encrypt. secret is a base64-encoded
-  string that was used to encrypt token. Returns the claims passed to
-  jwt-encrypt. Returns nil if the token is invalid or expired."
-  [token secret]
-  (misc/jwt-decrypt token secret))
-
-(defn use-chime
-  "A Biff component for running scheduled tasks with Chime.
-
-  See https://github.com/jarohen/chime. tasks is a collection of maps, for
-  example:
-
-  [{:task (fn [system] (println \"hello there\"))
-    :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]
-
-  This value of tasks would print \"hello there\" every 60 seconds. task is a
-  single-argument function that receives the system map. schedule is a
-  zero-argument function that returns a (possibly infinite) sequence of times
-  at which to run the task function."
-  [{:biff.chime/keys [tasks] :as sys}]
-  (misc/use-chime sys))
-
-(defn mailersend
-  "Sends an email with MailerSend.
-
-  See https://developers.mailersend.com/api/v1/email.html#send-an-email. Does a
-  POST request on the /v1/email endpoint and returns the X-Message-Id response
-  header on success. On failure, prints an error message and returns false.
-
-  opts is a map which will be converted to JSON and included as the body of the
-  request. defaults is a map from paths to default values. It will be combined
-  with opts. For example:
-
-  (mailersend {:mailersend/api-key \"...\"
-               :mailersend/defaults {[:from :email] \"hello@mail.example.com\"
-                                     [:from :name] \"My Application\"
-                                     [:reply_to :email] \"hello@example.com\"
-                                     [:reply_to :name] \"My Application\"}}
-              {:to [{:email \"recipient@example.com\"}]
-               :subject \"Some subject\"
-               :text \"Some text\"
-               :from {:name \"This will override the default value of 'My Application'\"}})"
-  [{:keys [mailersend/api-key
-           mailersend/defaults] :as sys}
-   opts]
-  (misc/mailersend sys opts))
-
-(defn generate-secret
-  "Generates a random byte array and returns it as a base64 string.
-
-  The bytes are generated with buddy.core.nonce/random-bytes, which uses a
-  secure random number generator."
-  [length]
-  (misc/generate-secret length))
-
-(defn use-random-default-secrets
-  "A Biff component that merges temporary secrets into the system map if needed.
-
-  Sets :biff.middleware/cookie-secret and :biff/jwt-secret if they are nil. The
-  secrets will not persist if the system is restarted. Can be useful in
-  development. e.g. a config.edn.TEMPLATE can be checked into a project's
-  repository without secrets set. Contributers can run the project by copying
-  the file to config.edn, without needing to modify it.
-
-  This component should not be relied upon in production; instead you should
-  save secrets in config.edn. This is done automatically at project setup time
-  for new Biff projects."
-  [sys]
-  (misc/use-random-default-secrets sys))
 
 ;;;; Middleware
 
@@ -697,6 +566,227 @@
                                    (assoc :section section-title))))))]
     (spit dest (with-out-str
                 (pprint metadata)))))
+
+;;;; Misc
+
+(defn use-hawk
+  "Deprecated. Use use-beholder instead.
+
+  use-beholder is a drop-in replacement for use-hawk, except that keys must be
+  prefixed with :biff.beholder/ instead of :biff.hawk/"
+  [{:biff.hawk/keys [on-save exts paths]
+    :or {paths ["src" "resources"]}
+    :as sys}]
+  (misc/use-hawk sys))
+
+(defn use-beholder
+  "A Biff component that runs code when files are changed, via Beholder.
+
+  See https://github.com/nextjournal/beholder.
+
+  on-save:  A single-argument function to call whenever a file is saved.
+            Receives the system map as a parameter. Subsequent file saves
+            that occur within one second are ignored.
+  paths:    A collection of root directories to monitor for file changes.
+  exts:     If exts is non-empty, files that don't end in one of the extensions
+            will be ignored."
+  [{:biff.beholder/keys [on-save exts paths]
+    :or {paths ["src" "resources"]}
+    :as sys}]
+  (misc/use-beholder sys))
+
+(defn reitit-handler
+  "Convenience wrapper for reitit.ring/ring-handler.
+
+  Only one of router or routes needs to be given. If you pass in routes, it
+  will be wrapped with (reitit.ring/router routes). on-error is an optional
+  Ring handler. The request map passed to it will include a :status key (either
+  404, 405, or 406).
+
+  Includes reitit.ring/redirect-trailing-slash-handler."
+  [{:keys [router routes on-error] :as opts}]
+  (misc/reitit-handler opts))
+
+(defn use-jetty
+  "A Biff component that starts a Jetty web server."
+  [{:biff/keys [host port handler]
+    :or {host "localhost"
+         port 8080}
+    :as sys}]
+  (misc/use-jetty sys))
+
+(defn jwt-encrypt
+  "Convenience wrapper for buddy.sign.jwt/encrypt.
+
+  Returns a string token. secret is a base64-encoded string used to encrypt the
+  token. A secret can be generated with (com.biffweb/generate-secret 32).
+  exp-in is the number of seconds in the future at which the token should
+  expire. claims is passed to buddy.sign.jwt/encrypt as-is, except that :exp is
+  set based on exp-in."
+  [{:keys [exp-in] :as claims} secret]
+  (misc/jwt-encrypt claims secret))
+
+(defn jwt-decrypt
+  "Convenience wrapper for buddy.sign.jwt/decrypt.
+
+  token is a string as returned by jwt-encrypt. secret is a base64-encoded
+  string that was used to encrypt token. Returns the claims passed to
+  jwt-encrypt. Returns nil if the token is invalid or expired."
+  [token secret]
+  (misc/jwt-decrypt token secret))
+
+(defn use-chime
+  "A Biff component for running scheduled tasks with Chime.
+
+  See https://github.com/jarohen/chime. tasks is a collection of maps, for
+  example:
+
+  [{:task (fn [system] (println \"hello there\"))
+    :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]
+
+  This value of tasks would print \"hello there\" every 60 seconds. task is a
+  single-argument function that receives the system map. schedule is a
+  zero-argument function that returns a (possibly infinite) sequence of times
+  at which to run the task function."
+  [{:biff.chime/keys [tasks] :as sys}]
+  (misc/use-chime sys))
+
+(defn mailersend
+  "Sends an email with MailerSend.
+
+  See https://developers.mailersend.com/api/v1/email.html#send-an-email. Does a
+  POST request on the /v1/email endpoint and returns the X-Message-Id response
+  header on success. On failure, prints an error message and returns false.
+
+  opts is a map which will be converted to JSON and included as the body of the
+  request. defaults is a map from paths to default values. It will be combined
+  with opts. For example:
+
+  (mailersend {:mailersend/api-key \"...\"
+               :mailersend/defaults {[:from :email] \"hello@mail.example.com\"
+                                     [:from :name] \"My Application\"
+                                     [:reply_to :email] \"hello@example.com\"
+                                     [:reply_to :name] \"My Application\"}}
+              {:to [{:email \"recipient@example.com\"}]
+               :subject \"Some subject\"
+               :text \"Some text\"
+               :from {:name \"This will override the default value of 'My Application'\"}})"
+  [{:keys [mailersend/api-key
+           mailersend/defaults] :as sys}
+   opts]
+  (misc/mailersend sys opts))
+
+(defn generate-secret
+  "Generates a random byte array and returns it as a base64 string.
+
+  The bytes are generated with buddy.core.nonce/random-bytes, which uses a
+  secure random number generator."
+  [length]
+  (misc/generate-secret length))
+
+(defn use-random-default-secrets
+  "A Biff component that merges temporary secrets into the system map if needed.
+
+  Sets :biff.middleware/cookie-secret and :biff/jwt-secret if they are nil. The
+  secrets will not persist if the system is restarted. Can be useful in
+  development. e.g. a config.edn.TEMPLATE can be checked into a project's
+  repository without secrets set. Contributers can run the project by copying
+  the file to config.edn, without needing to modify it.
+
+  This component should not be relied upon in production; instead you should
+  save secrets in config.edn. This is done automatically at project setup time
+  for new Biff projects."
+  [sys]
+  (misc/use-random-default-secrets sys))
+
+(defn merge-context
+  "Returns the system map with additional data merged in.
+
+  Calls (merge-context-fn sys). By default, adds an XT database object to
+  :biff/db."
+  [{:keys [biff/merge-context-fn]
+    :or {merge-context-fn assoc-db}
+    :as sys}]
+  (merge-context-fn sys))
+
+;;;; Queues
+
+(defn use-queues
+  "A Biff component that creates in-memory queues and thread pools to consume them.
+
+  features:     A var containing a collection of feature maps. Each feature map
+                map contain a :queues key, which contains a collection of queue
+                config maps. See below. Required.
+  enabled-ids:  An optional set of queue IDs. If non-nil, only queues in the
+                set will be created.
+  stop-timeout: When shutting down, the number of milliseconds to wait before
+                killing any running job consumers. Default 10000.
+
+  Adds a :biff/queues key to the system map which contains a map of queue IDs
+  to `java.util.concurrent.BlockingQueue`s. Use (.add queue {...}) to submit a
+  job. Jobs are arbitrary maps. Each queue will be consumed by a fixed-size
+  thread pool.
+
+  Queue config maps may have the following keys:
+
+  id:        Used as a key in the :biff/queues map. Required.
+  consumer:  A one-argument function that will receive a job whenever one is
+             available. Receives the system map with :biff/job and :biff/queue
+             keys set. biff/merge-context will be called on the system map
+             before the consumer is called. Required.
+  n-threads: The number of worker threads in the consumer thread pool for this
+             queue. Default 1.
+  queue-fn:  A zero-arg function that returns a BlockingQueue instance. By
+             default, a PriorityBlockingQueue with a custom comparator will be
+             used: jobs may include a :biff/priority key, which defaults to 10.
+             Lower numbers have higher priority.
+
+  Example:
+
+  (defn echo-consumer [{:keys [biff/job] :as sys}]
+    (prn :echo job)
+    (when-some [callback (:biff/callback job)]
+      (callback job)))
+
+  (def features
+    {:queues [{:id :echo
+               :consumer #'echo-consumer}]})
+
+  (biff/submit-job sys :echo {:foo \"bar\"})
+  =>
+  (out) :echo {:foo \"bar\"}
+  true
+
+  @(biff/submit-job-for-result sys :echo {:foo \"bar\"})
+  =>
+  (out) :echo {:foo \"bar\", :biff/callback #function[...]}
+  {:foo \"bar\", :biff/callback #function[...]}"
+  [{:keys [biff/features
+           biff.queues/enabled-ids
+           biff.queues/stop-timeout]
+    :as sys}]
+  (q/use-queues sys))
+
+(defn submit-job
+  "Convenience function which calls (.add (get-in sys [:biff/queues queue-id]) job)"
+  [sys queue-id job]
+  (q/submit-job sys queue-id job))
+
+(defn submit-job-for-result
+  "Like submit-job, but returns a promise which will contain the result of the
+  queue operation.
+
+  A :biff/callback key, containing a one-argument function, will be added to
+  the job. The consumer function must pass a result to this callback. If the
+  result is an Exception object, it will be re-thrown on the current thread. An
+  exception will also be thrown if the callback function is not called within
+  the number of milliseconds specified by result-timeout."
+  [{:keys [biff.queues/result-timeout]
+    :or {result-timeout 20000}
+    :as sys}
+   queue-id
+   job]
+  (q/submit-job-for-result sys queue-id job))
 
 (comment
  (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn"))
