@@ -30,7 +30,14 @@
     ;; You could send this as an email instead of printing.
     (log/info "WOAH there's a new user")))
 
+(defn echo-consumer [{:keys [biff/job] :as sys}]
+  (prn :echo job)
+  (when-some [callback (:biff/callback job)]
+    (callback job)))
+
 (def features
   {:tasks [{:task #'print-usage
             :schedule every-minute}]
-   :on-tx alert-new-user})
+   :on-tx alert-new-user
+   :queues [{:id :echo
+             :consumer #'echo-consumer}]})

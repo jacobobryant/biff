@@ -16,4 +16,8 @@
        '{:find (pull user [*])
          :where [[user :user/email]]}))
 
-  (sort (keys @biff/system)))
+  (sort (keys @biff/system))
+
+  ;; Check the terminal for output.
+  (biff/submit-job (get-sys) :echo {:foo "bar"})
+  (deref (biff/submit-job-for-result (get-sys) :echo {:foo "bar"})))

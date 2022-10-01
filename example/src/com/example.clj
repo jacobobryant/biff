@@ -59,7 +59,8 @@
 
 (defn start []
   (biff/start-system
-   {:com.example/chat-clients (atom #{})
+   {:biff/features #'features
+    :com.example/chat-clients (atom #{})
     :biff/after-refresh `start
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
@@ -70,6 +71,7 @@
     :biff/components [biff/use-config
                       biff/use-random-default-secrets
                       biff/use-xt
+                      biff/use-queues
                       biff/use-tx-listener
                       (biff/use-when
                        :com.example/enable-web
