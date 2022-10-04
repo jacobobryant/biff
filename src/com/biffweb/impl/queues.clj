@@ -56,7 +56,7 @@
         queues (into {} (map (juxt :id :queue) configs))
         sys (-> sys
                 (assoc :biff/queues queues)
-                (update :biff/stop conj #(stop configs)))]
+                (update :biff/stop conj #(stop sys configs)))]
     (doseq [{:keys [executor n-threads] :as config} configs
             _ (range n-threads)]
       (.submit executor ^Callable #(consume sys config)))
