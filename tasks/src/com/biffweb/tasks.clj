@@ -42,12 +42,15 @@
   "Internal. Used by the server to start the app."
   []
   (io/make-parents "target/resources/_")
+  (when (fs/exists? "package.json")
+    (shell "npm" "install"))
   (apply println "clj" (run-args)))
 
 (defn css [& args]
   (apply shell
-         (concat (or (:biff.tasks/tailwind-cmd @config)
-                     ["bin/tailwindcss"])
+         (concat (if (fs/exists? "bin/tailwindcss")
+                   ["bin/tailwindcss"]
+                   ["npx" "tailwindcss"])
                  ["-c" "resources/tailwind.config.js"
                   "-i" "resources/tailwind.css"
                   "-o" "target/resources/public/css/main.css"]
@@ -64,6 +67,8 @@
    - Run tests"
   [& args]
   (io/make-parents "target/resources/_")
+  (when (fs/exists? "package.json")
+    (shell "npm" "install"))
   (when-not (fs/exists? "bin/tailwindcss")
     (install-tailwind))
   (future (css "--watch"))
@@ -98,8 +103,11 @@
   server first. See https://biffweb.com/docs/reference/production/."
   []
   (let [{:biff.tasks/keys [server deploy-to deploy-from]} @config]
+    (css "--minify")
     (fs/set-posix-file-permissions "config.edn" "rw-------")
-    (shell "rsync" "-a" "config.edn" (str "app@" server ":"))
+    (shell "rsync" "-a" "--relative"
+           "config.edn" "target/resources/public/css/main.css"
+           (str "app@" server ":"))
     (time (shell "git" "push" deploy-to deploy-from))))
 
 (defn soft-deploy
@@ -109,9 +117,10 @@
   regenerates HTML and CSS files. Does not refresh or restart."
   []
   (let [{:biff.tasks/keys [server soft-deploy-fn]} @config]
+    (css "--minify")
     (fs/set-posix-file-permissions "config.edn" "rw-------")
-    (shell "rsync" "-a" "--info=name1" "--delete"
-           "config.edn" "deps.edn" "task" "src" "resources"
+    (shell "rsync" "-a" "--relative" "--info=name1" "--delete"
+           "config.edn" "deps.edn" "bb.edn" "src" "resources" "target/resources/public/css/main.css"
            (str "app@" server ":"))
     ;; does this need the extra "?
     (trench (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))
@@ -130,7 +139,7 @@
 (defn auto-soft-deploy []
   (soft-deploy)
   (let [last-ran (atom (System/nanoTime))
-        p (process/process ["fswatch" "-orl" "0.1" "--event=Updated" "--event=Removed" "."]
+        p (process/process ["fswatch" "-orl" "0.1" "--event=Updated" "--event=Removed" "--allow-overflow" "."]
                            {:err :inherit})]
     (with-open [rdr (io/reader (:out p))]
       (doseq [l (line-seq rdr)]

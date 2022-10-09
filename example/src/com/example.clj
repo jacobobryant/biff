@@ -53,8 +53,8 @@
 
 (defn start []
   (biff/start-system
-   {:biff/features #'features
-    :com.example/chat-clients (atom #{})
+   {:com.example/chat-clients (atom #{})
+    :biff/features #'features
     :biff/after-refresh `start
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
