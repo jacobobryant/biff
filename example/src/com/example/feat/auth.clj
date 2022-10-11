@@ -71,9 +71,13 @@
         existing-user-id (when success (get-user-id))]
     (when (and success (not existing-user-id))
       (biff/submit-tx req
-        [{:db/op :merge
-          :db/doc-type :user
-          :xt/id [:db/lookup {:user/email email}]}]))
+        (fn [{:keys [biff/db]}]
+          [{:db/doc-type :user
+            :db/op :merge
+            :xt/id (or (biff/lookup-id db :user/email email)
+                       (java.util.UUID/randomUUID))
+            :user/email email}
+           [::xt/fn :biff/ensure-unique {:user/email email}]])))
     (if-not success
       {:status 303
        :headers {"location" "/auth/fail/"}}
