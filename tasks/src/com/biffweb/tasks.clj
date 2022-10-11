@@ -2,6 +2,8 @@
   (:require [clojure.edn :as edn]
             [babashka.tasks :refer [shell clojure]]
             [clojure.java.io :as io]
+            [clojure.java.shell :as sh]
+            [clojure.string :as str]
             [babashka.fs :as fs]
             [babashka.process :as process]))
 
@@ -16,13 +18,13 @@
 
 (defn install-tailwind []
   (let [build (or (:biff.tasks/tailwind-build @config)
-                  (str (if (= (shell "uname") "Linux")
+                  (str (if (= (str/trim (:out (sh/sh "uname"))) "Linux")
                          "linux"
                          "macos")
                        "-"
-                       (if (= (shell "uname" "-m") "x86_64")
-                         "linux"
-                         "macos")))
+                       (if (= (str/trim (:out (sh/sh "uname" "-m"))) "x86_64")
+                         "x64"
+                         "arm64")))
         file (str "tailwindcss-" build)
         url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
                  file)]
@@ -91,7 +93,7 @@
 (defn post-receive
   "Internal. Runs on the server after a git push."
   []
-  (apply clojure ["-P"] (run-args))
+  (apply clojure "-P" (run-args))
   (shell "sudo" "systemctl" "reset-failed" "app.service")
   (shell "sudo" "systemctl" "resart" "app"))
 

@@ -25,9 +25,10 @@ if [[ $JAVA_MAJOR_VERSION -lt 11 ]]; then
   exit 5
 fi
 
-sha="$(git ls-remote https://github.com/jacobobryant/biff.git HEAD | awk '{ print $1 }')"
+branch=${1:-HEAD}
+sha="$(git ls-remote https://github.com/jacobobryant/biff.git $branch | awk '{ print $1 }')"
 deps="{:deps {github-jacobobryant/biff-new-project
               {:git/url \"https://github.com/jacobobryant/biff\"
                :sha \"$sha\"
                :deps/root \"new-project\"}}}"
-clj -Sdeps "$deps" -M -m com.biffweb.new-project
+clj -Sdeps "$deps" -M -m com.biffweb.new-project "$@"

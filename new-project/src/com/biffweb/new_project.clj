@@ -35,8 +35,8 @@
 (defn biff-coordinates [sha]
   (str ":git/url \"https://github.com/jacobobryant/biff\" :sha \"" sha "\""))
 
-(defn -main []
-  (let [sha (-> (sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" "HEAD")
+(defn -main [& [branch]]
+  (let [sha (-> (sh "git" "ls-remote" "https://github.com/jacobobryant/biff.git" (or branch "HEAD"))
                 (str/split #"\s+")
                 first)
         coordinates (biff-coordinates sha)
@@ -50,7 +50,9 @@
         tmp (io/file dir "tmp")
         example (io/file tmp "biff/example")]
     (io/make-parents (io/file tmp "_"))
-    (sh "git" "clone" "https://github.com/jacobobryant/biff" :dir tmp)
+    (if branch
+      (sh "git" "clone" "--single-branch" "--branch" branch "https://github.com/jacobobryant/biff" :dir tmp)
+      (sh "git" "clone" "https://github.com/jacobobryant/biff" :dir tmp))
     (doseq [src (->> (file-seq example)
                      (filter #(.isFile %)))
             :let [relative (-> (.getPath src)
@@ -68,6 +70,7 @@
                 (str/replace ":local/root \"../../tasks\"" (str coordinates " :deps/root \"tasks\"")))))
     (.renameTo (io/file dir "config.edn.TEMPLATE") (io/file dir "config.edn"))
     (rmrf tmp)
+    (sh "bb" "--force" "-e" "nil" :dir dir)
     (println)
     (println "Your project is ready. Run the following commands to get started:")
     (println)
