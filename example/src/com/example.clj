@@ -27,16 +27,6 @@
 (def handler (-> (biff/reitit-handler {:routes routes})
                  (biff/wrap-inner-defaults {})))
 
-(defn on-tx [sys tx]
-  (let [sys (biff/assoc-db sys)]
-    (doseq [{:keys [on-tx]} features
-            :when on-tx]
-      (on-tx sys tx))))
-
-(def tasks (->> features
-                (mapcat :tasks)
-                (map #(update % :task comp biff/assoc-db))))
-
 (def static-pages (apply biff/safe-merge (map :static features)))
 
 (defn generate-assets! [sys]
@@ -59,8 +49,6 @@
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
     :biff.beholder/on-save #'on-save
-    :biff.xtdb/on-tx #'on-tx
-    :biff.chime/tasks tasks
     :biff/config "config.edn"
     :biff/components [biff/use-config
                       biff/use-random-default-secrets
