@@ -109,7 +109,7 @@
 
 (defn wrap-env [handler sys]
   (fn [req]
-    (handler (merge (bxt/assoc-db sys) req))))
+    (handler (merge (bxt/merge-context sys) req))))
 
 (defn wrap-inner-defaults
   [handler opts]

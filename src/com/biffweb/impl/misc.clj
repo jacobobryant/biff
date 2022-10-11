@@ -111,12 +111,14 @@
       nil)))
 
 (defn use-chime
-  [{:biff.chime/keys [tasks] :as sys}]
+  [{:keys [biff/features biff.chime/tasks] :as sys}]
   (reduce (fn [sys {:keys [schedule task]}]
-            (let [scheduler (chime/chime-at (schedule) (fn [_] (task sys)))]
+            (let [f (fn [_] (task (bxt/merge-context sys)))
+                  scheduler (chime/chime-at (schedule) f)]
               (update sys :biff/stop conj #(.close scheduler))))
           sys
-          tasks))
+          (or tasks
+              (some->> features deref (mapcat :tasks)))))
 
 (defn generate-secret [length]
   (util/base64-encode (nonce/random-bytes length)))
@@ -130,7 +132,30 @@
            (log/warn ":biff/jwt-secret is empty, using random value")
            {:biff/jwt-secret (generate-secret 32)})))
 
-(defn merge-context [{:keys [biff/merge-context-fn]
-                      :or {merge-context-fn bxt/assoc-db}
-                      :as sys}]
-  (merge-context-fn sys))
+(defn doc-schema [{:keys [required optional closed wildcards]
+                   :or {closed true}}]
+  (let [ks (->> (concat required optional)
+                (map #(cond-> % (not (keyword? %)) first)))
+        schema (vec (concat [:map {:closed (and (not wildcards) closed)}]
+                            required
+                            (for [x optional
+                                  :let [[k & rst] (if (keyword? x)
+                                                    [x]
+                                                    x)
+                                        [opts rst] (if (map? (first rst))
+                                                     [(first rst) (rest rst)]
+                                                     [{} rst])
+                                        opts (assoc opts :optional true)]]
+                              (into [k opts] rst))))
+        schema (if-not wildcards
+                 schema
+                 [:and
+                  schema
+                  [:fn (fn [doc]
+                         (every? (fn [[k v]]
+                                   (if-let [v-pred (and (keyword? k)
+                                                        (wildcards (symbol (namespace k))))]
+                                     (v-pred v)
+                                     (not closed)))
+                                 (apply dissoc doc ks)))]])]
+    schema))

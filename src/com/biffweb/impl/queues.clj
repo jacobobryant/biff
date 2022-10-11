@@ -1,5 +1,5 @@
 (ns com.biffweb.impl.queues
-  (:require [com.biffweb.impl.misc :as misc]
+  (:require [com.biffweb.impl.xtdb :as bxt]
             [com.biffweb.impl.util :as util])
   (:import [java.util.concurrent
             PriorityBlockingQueue
@@ -7,11 +7,11 @@
             Executors
             Callable]))
 
-(defn- consume [sys {:keys [id queue consumer continue]}]
+(defn- consume [sys {:keys [queue consumer continue]}]
   (while @continue
     (when-some [job (.poll queue 1 TimeUnit/SECONDS)]
       (util/catchall-verbose
-       (consumer (merge (misc/merge-context sys)
+       (consumer (merge (bxt/merge-context sys)
                         {:biff/job job
                          :biff/queue queue})))
       (flush))))

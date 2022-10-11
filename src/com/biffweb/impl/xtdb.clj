@@ -58,10 +58,26 @@
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
 
-(defn use-tx-listener [{:keys [biff.xtdb/on-tx biff.xtdb/node] :as sys}]
-  (if-not on-tx
+(defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
+  (assoc sys :biff/db (xt/db node)))
+
+(defn merge-context [{:keys [biff/merge-context-fn]
+                      :or {merge-context-fn assoc-db}
+                      :as sys}]
+  (merge-context-fn sys))
+
+(defn use-tx-listener [{:keys [biff/features
+                               biff.xtdb/on-tx
+                               biff.xtdb/node]
+                        :as sys}]
+  (if-not (or on-tx features)
     sys
-    (let [lock (Object.)
+    (let [on-tx (or on-tx
+                    (fn [sys tx]
+                      (doseq [{:keys [on-tx]} @features
+                              :when on-tx]
+                        (on-tx sys tx))))
+          lock (Object.)
           listener (xt/listen
                     node
                     {::xt/event-type ::xt/indexed-tx}
@@ -73,13 +89,10 @@
                                                           true)]
                             (let [tx (first (iterator-seq log))]
                               (try
-                                (on-tx sys tx)
+                                (on-tx (merge-context sys) tx)
                                 (catch Exception e
                                   (log/error e "Exception during on-tx")))))))))]
       (update sys :biff/stop conj #(.close listener)))))
-
-(defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
-  (assoc sys :biff/db (xt/db node)))
 
 (defn q [db query & args]
   (when-not (= (count (:in query))

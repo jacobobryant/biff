@@ -212,3 +212,6 @@
                          (some #(str/ends-with? (.getPath file) %) exts)))]
     (log/info "deleting" file)
     (io/delete-file file)))
+
+(defn join [sep xs]
+  (rest (mapcat vector (repeat sep) xs)))

@@ -63,6 +63,21 @@
   [& args]
   (apply util/sh args))
 
+(defn assoc-some
+  "Like assoc, but skips kv pairs where the value is nil."
+  [m & kvs]
+  (apply util/assoc-some m kvs))
+
+(defn pred->
+  "Convenience fn for (cond-> x (pred x) f)"
+  [x pred f]
+  (cond-> x (pred x) f))
+
+(defn join
+  "Returns a sequence where the elements of coll are separated by sep."
+  [sep xs]
+  (util/join sep xs))
+
 (defn safe-merge
   "Like merge, but throws an exception if any maps share keys."
   [& ms]
@@ -283,9 +298,7 @@
   (middle/wrap-ring-defaults handler opts))
 
 (defn wrap-env
-  "Merges the system map with incoming requests and sets :biff/db.
-
-  See assoc-db."
+  "Merges (merge-context system) with incoming requests."
   [handler system]
   (middle/wrap-env handler system))
 
@@ -636,19 +649,18 @@
   (misc/jwt-decrypt token secret))
 
 (defn use-chime
-  "A Biff component for running scheduled tasks with Chime.
+  "A Biff component for running scheduled tasks with Chime (https://github.com/jarohen/chime)
 
-  See https://github.com/jarohen/chime. tasks is a collection of maps, for
-  example:
+  features: A var containing a collection of feature maps. Each feature map may
+            contain a :tasks key, which contains a collection of task maps.
+  tasks:    Deprecated. Use features instead. If set, takes precedence over
+            features.
 
-  [{:task (fn [system] (println \"hello there\"))
-    :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]
-
-  This value of tasks would print \"hello there\" every 60 seconds. task is a
-  single-argument function that receives the system map. schedule is a
-  zero-argument function that returns a (possibly infinite) sequence of times
-  at which to run the task function."
-  [{:biff.chime/keys [tasks] :as sys}]
+  For example:
+  (def features
+    {:tasks [{:task (fn [system] (println \"hello there\"))
+              :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]})"
+  [{:keys [biff/features biff.chime/tasks] :as sys}]
   (misc/use-chime sys))
 
 (defn mailersend
@@ -709,13 +721,45 @@
     :as sys}]
   (merge-context-fn sys))
 
+(defn doc-schema
+  "Returns a [:map ...] schema for use with Malli.
+
+  Example:
+
+  (doc-schema
+   {:required [:user/name
+               [:user/email :string]]
+    :optional [[:user/phone :string]]})
+  =>
+  [:map
+   {:closed true}
+   :user/name
+   [:user/email :string]
+   [:user/phone {:optional true} :string]]
+
+  wildcards is map from namespace symbols to predicate functions. Any key-value
+  pairs in the map with a matching key namespace will be valid iff the value
+  passes the predicate function. For example:
+
+  (doc-schema
+   {:required [[:user/email :string]]
+    :wildcards {'user.signup-params string?}})
+
+  ;; Valid:
+  {:user/email \"hello@example.com\"
+   :user.signup-params/utm_source \"twitter\"}"
+  [{:keys [required optional closed wildcards]
+    :or {closed true}
+    :as opts}]
+  (misc/doc-schema opts))
+
 ;;;; Queues
 
 (defn use-queues
   "A Biff component that creates in-memory queues and thread pools to consume them.
 
   features:     A var containing a collection of feature maps. Each feature map
-                map contain a :queues key, which contains a collection of queue
+                may contain a :queues key, which contains a collection of queue
                 config maps. See below. Required.
   enabled-ids:  An optional set of queue IDs. If non-nil, only queues in the
                 set will be created.
