@@ -1,4 +1,5 @@
-{:deps {better-cond/better-cond        {:mvn/version "2.1.4"}
+{:paths ["src"]
+ :deps {better-cond/better-cond        {:mvn/version "2.1.4"}
         buddy/buddy-sign               {:mvn/version "3.4.333"}
         cider/cider-nrepl              {:mvn/version "0.28.2"}
         clj-http/clj-http              {:mvn/version "3.12.3"}
@@ -23,14 +24,8 @@
                                         :exclusions [cljsjs/react cljsjs/react-dom]}
         ;; deprecated
         hawk/hawk                      {:mvn/version "0.2.11"}}
- :aliases {:dev {:extra-deps {org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}
+ :aliases {:dev {:extra-paths ["test"]
+                 :extra-deps {org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}
                  :main-opts ["-m" "nrepl.cmdline"]}
            :format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.2"}}
-                    :main-opts ["-m" "cljfmt.main" "fix" "--indents" "cljfmt-indents.edn"]}
-           :jar {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.1.303"}}
-                 :exec-fn hf.depstar/jar
-                 :exec-args {}}
-           :deploy {:extra-deps {slipset/deps-deploy {:mvn/version "0.2.0"}}
-                    :exec-fn deps-deploy.deps-deploy/deploy
-                    :exec-args {:installer :remote
-                                :artifact "target/biff.jar"}}}}
+                    :main-opts ["-m" "cljfmt.main" "fix" "--indents" "cljfmt-indents.edn"]}}}

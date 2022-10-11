@@ -1,0 +1,3 @@
+{:tasks {dev (clojure "-M:dev")
+         format (clojure "-M:format")
+         lint (shell "clj-kondo" "--lint" "src")}}

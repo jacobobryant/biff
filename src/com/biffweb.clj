@@ -900,4 +900,7 @@
   (q/submit-job-for-result sys queue-id job))
 
 (comment
-  (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn"))
+ (do
+  (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn")
+  (io/copy (io/file "new-project.sh")
+           (io/file "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/public/new-project.sh"))))

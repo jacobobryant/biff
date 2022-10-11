@@ -1,15 +1,14 @@
 # Biff
 
-A simple and easy web framework for Clojure. See [biffweb.com](https://biffweb.com).
+A Clojure web framework for solo developers. See [biffweb.com](https://biffweb.com).
 
 ## Contributing
 
-To hack on Biff:
+To hack on Biff, either run `bb dev`, or:
 
 1. `cd example`
 2. `cp config.edn.TEMPLATE config.edn`
-3. `cp config.sh.TEMPLATE config.sh`
-4. `./task dev`
+4. `bb dev`
 
 (The example project's deps.edn declares a local dependency on the Biff library
 code.)
