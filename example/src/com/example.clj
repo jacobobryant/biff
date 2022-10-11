@@ -43,13 +43,7 @@
   (when (:com.example/enable-web sys)
     (biff/export-rum static-pages "target/resources/public")
     (biff/delete-old-files {:dir "target/resources/public"
-                            :exts [".html"]})
-    (biff/sh "bin/tailwindcss"
-             "-c" "resources/tailwind.config.js"
-             "-i" "resources/tailwind.css"
-             "-o" "target/resources/public/css/main.css"
-             "--minify")
-    (log/info "CSS done")))
+                            :exts [".html"]})))
 
 (defn on-save [sys]
   (biff/add-libs)

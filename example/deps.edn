@@ -1,5 +1,3 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {com.biffweb/biff {:local/root ".."}
-        org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}
- :aliases {:format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.2"}}
-                    :main-opts ["-m" "cljfmt.main" "fix" "--indents" "cljfmt-indents.edn"]}}}
+        org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}}

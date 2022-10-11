@@ -3,10 +3,8 @@ set -x
 set -e
 
 BIFF_ENV=${1:-prod}
-CLJ_VERSION=1.10.3.822
-TRENCH_VERSION=0.3.0
-TAILWIND_VERSION=latest
-TAILWIND_ARCH=linux-x64
+CLJ_VERSION=1.11.1.1165
+TRENCH_VERSION=0.4.0
 
 echo waiting for apt to finish
 while (ps aux | grep [a]pt); do
@@ -24,6 +22,7 @@ rm linux-install-$CLJ_VERSION.sh
 wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
 tar -xf trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
 mv trench /usr/local/bin/
+bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 
 # Non-root user
 useradd -m app
@@ -40,7 +39,9 @@ set_up_app () {
   cat > hooks/post-receive << EOD
 #!/usr/bin/env bash
 git --work-tree=/home/app --git-dir=/home/app/repo.git checkout -f
-/home/app/task post-receive
+cd /home/app
+bb --force -e nil
+bb post-receive
 EOD
   chmod +x hooks/post-receive
 }
@@ -58,7 +59,8 @@ User=app
 Restart=on-failure
 RestartSec=5s
 Environment="BIFF_ENV=$BIFF_ENV"
-ExecStart=/home/app/task run
+WorkingDirectory=/home/app
+Execstart=/bin/sh -c '\$\$(bb --force -e nil; bb run-cmd)'
 
 [Install]
 WantedBy=multi-user.target
@@ -72,6 +74,8 @@ systemctl restart systemd-journald
 cat > /etc/sudoers.d/restart-app << EOD
 app ALL= NOPASSWD: /bin/systemctl reset-failed app.service
 app ALL= NOPASSWD: /bin/systemctl restart app
+app ALL= NOPASSWD: /usr/bin/systemctl reset-failed app.service
+app ALL= NOPASSWD: /usr/bin/systemctl restart app
 EOD
 chmod 440 /etc/sudoers.d/restart-app
 
@@ -85,13 +89,6 @@ snap install core
 snap refresh core
 snap install --classic certbot
 ln -s /snap/bin/certbot /usr/bin/certbot
-
-# Tailwind
-curl -LO https://github.com/tailwindlabs/tailwindcss/releases/$TAILWIND_VERSION/download/tailwindcss-$TAILWIND_ARCH
-chmod +x tailwindcss-$TAILWIND_ARCH
-mkdir -p /home/app/bin
-mv tailwindcss-$TAILWIND_ARCH /home/app/bin/tailwindcss
-chown -R app:app /home/app/bin
 
 # Nginx
 rm /etc/nginx/sites-enabled/default

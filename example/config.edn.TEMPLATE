@@ -33,4 +33,12 @@
        :biff/port 8080
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone
-       :biff.middleware/secure false}}
+       :biff.middleware/secure false}
+ :tasks {;; Set this if the auto-detection doesn't work
+         ;; Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
+         :biff.tasks/tailwind-build nil
+         :biff.tasks/main-ns com.example
+         :biff.tasks/soft-deploy-fn com.example/on-save
+         :biff.tasks/deploy-from "master"
+         :biff.tasks/deploy-to "prod"
+         :biff.tasks/server "example.com"}}
