@@ -9,8 +9,19 @@
             [malli.error :as male]
             [malli.core :as malc]))
 
+(defn save-tx-fns! [node tx-fns]
+  (let [db (xt/db node)]
+    (when-some [tx (not-empty
+                    (vec
+                     (for [[k f] tx-fns
+                           :let [doc (xt/entity db k)]
+                           :when (not= f (:xt/fn doc))]
+                       [::xt/put {:xt/id k
+                                  :xt/fn f}])))]
+      (xt/submit-tx node tx))))
+
 (defn start-node
-  [{:keys [topology dir opts jdbc-spec pool-opts kv-store]
+  [{:keys [topology dir opts jdbc-spec pool-opts kv-store tx-fns]
     :or {kv-store :rocksdb}}]
   (let [kv-store-fn (fn [basename]
                       {:kv-store {:xtdb/module (if (= kv-store :lmdb)
@@ -41,10 +52,12 @@
       (Thread/sleep 2000)
       (when-some [indexed (xt/latest-completed-tx node)]
         (log/info "Indexed" (pr-str indexed))))
+    (when (not-empty tx-fns)
+      (save-tx-fns! node tx-fns))
     node))
 
 (defn use-xt
-  [{:biff.xtdb/keys [topology dir kv-store opts]
+  [{:biff.xtdb/keys [topology dir kv-store opts tx-fns]
     :or {kv-store :rocksdb}
     :as sys}]
   (let [node (start-node
@@ -53,7 +66,8 @@
                :kv-store kv-store
                :opts opts
                :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
-               :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)})]
+               :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)
+               :tx-fns tx-fns})]
     (-> sys
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
@@ -129,13 +143,17 @@
       (f (cond->> (iterator-seq results)
            (not return-tuples) (map first))))))
 
-(defn lookup [db k v]
+(defn lookup [db & kvs]
   (ffirst (xt/q db {:find '[(pull doc [*])]
-                    :where [['doc k v]]})))
+                    :where (vec
+                            (for [[k v] (partition 2 kvs)]
+                              ['doc k v]))})))
 
-(defn lookup-id [db k v]
+(defn lookup-id [db & kvs]
   (ffirst (xt/q db {:find '[doc]
-                    :where [['doc k v]]})))
+                    :where (vec
+                            (for [[k v] (partition 2 kvs)]
+                              ['doc k v]))})))
 
 (defn- special-val? [x]
   (or (= x :db/dissoc)
@@ -175,8 +193,8 @@
                               :db/owned-by (or default-id (java.util.UUID/randomUUID))})]
   [lookup-id lookup-doc-before lookup-doc-after])
 
-(b/defnc get-ops
-  [{:keys [::now biff/db biff/malli-opts]}
+(b/defnc biff-op->xt
+  [{:keys [biff/now biff/db biff/malli-opts]}
    {:keys [xt/id db/doc-type db/op] :or {op :put} :as tx-doc}]
   ;; possible ops: delete, put, create, merge, update
   :let [valid? (fn [doc] (malc/validate doc-type doc @malli-opts))
@@ -222,7 +240,7 @@
         (not= op :create) nil,
 
         (some? doc-before) (throw (ex-info "Attempted to create over an existing doc."
-                                    {:tx-doc tx-doc})),
+                                           {:tx-doc tx-doc})),
 
         (some special-val? (vals doc-after))
         (throw (ex-info "Attempted to use a special value on a :create operation"
@@ -248,21 +266,60 @@
                  [::xt/put doc-after]]
                 lookup-ops))
 
-(b/defnc submit-tx
-  [{:keys [biff.xtdb/node
-           biff.xtdb/n-tried]
-    :or {n-tried 0}
-    :as sys}
-   biff-tx]
-  :let [sys (assoc (assoc-db sys) ::now (java.util.Date.))
-        xt-tx (mapcat #(get-ops sys %) biff-tx)
-        submitted-tx (xt/submit-tx node xt-tx)]
-  :do (xt/await-tx node submitted-tx)
-  (xt/tx-committed? node submitted-tx) submitted-tx
-  (<= 4 n-tried) (throw (ex-info "TX failed, too much contention." {:tx biff-tx}))
-  :let [seconds (int (Math/pow 2 n-tried))]
-  :do (log/warnf "TX failed due to contention, trying again in %d seconds...\n"
-                 seconds)
-  :do (flush)
-  :do (Thread/sleep (* 1000 seconds))
-  (recur (update sys :biff.xtdb/n-tried (fnil inc 0)) biff-tx))
+(defn biff-tx->xt [sys biff-tx]
+  (mapcat (fn [x]
+            (if (map? x)
+              (biff-op->xt sys x)
+              [x]))
+          (if (fn? biff-tx)
+            (biff-tx sys)
+            biff-tx)))
+
+(defn submit-with-retries [sys make-tx]
+  (let [{:keys [biff.xtdb/node
+                biff/db
+                ::n-tried]
+         :or {n-tried 0}
+         :as sys} (-> (assoc-db sys)
+                      (assoc :biff/now (java.util.Date.)))
+        tx (make-tx sys)
+        _ (when (and (some (fn [[op]]
+                             (= op ::xt/fn))
+                           tx)
+                     (nil? (xt/with-tx db tx)))
+            (throw (ex-info "Transaction violated a constraint" {:tx tx})))
+        submitted-tx (when (not-empty tx)
+                       (xt/await-tx node (xt/submit-tx node tx)))
+        seconds (int (Math/pow 2 n-tried))]
+    (cond
+      (or (nil? submitted-tx)
+          (xt/tx-committed? node submitted-tx)) submitted-tx
+      (<= 4 n-tried) (throw (ex-info "TX failed, too much contention." {:tx tx}))
+      :else (do
+              (log/warnf "TX failed due to contention, trying again in %d seconds...\n"
+                         seconds)
+              (flush)
+              (Thread/sleep (* 1000 seconds))
+              (recur (update sys ::n-tried (fnil inc 0)) make-tx)))))
+
+(defn submit-tx [{:keys [biff.xtdb/retry biff.xtdb/node]
+                  :or {retry true}
+                  :as sys} biff-tx]
+  (if retry
+    (submit-with-retries sys #(biff-tx->xt % biff-tx))
+    (xt/submit-tx node (-> (assoc-db sys)
+                           (assoc :biff/now (java.util.Date.))
+                           (biff-tx->xt biff-tx)))))
+
+(def tx-fns
+  {:biff/ensure-unique
+   '(fn [ctx kvs]
+      (when (< 1 (count (xtdb.api/q
+                         (xtdb.api/db ctx)
+                         {:find '[doc]
+                          :limit 2
+                          :where (into []
+                                       (map (fn [[k v]]
+                                              ['doc k v]))
+                                       kvs)})))
+        false))})

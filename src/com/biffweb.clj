@@ -153,9 +153,9 @@
   "Like catchall, but prints exceptions."
   [& body]
   `(try
-    ~@body
-    (catch Exception e#
-      (st/print-stack-trace e#))))
+     ~@body
+     (catch Exception e#
+       (st/print-stack-trace e#))))
 
 (defmacro letd
   "Like let, but transparently wraps all bindings with delay.
@@ -200,12 +200,13 @@
   (swap! reload/global-tracker reload/refresh eval-paths)
   nil)
 
-(defn add-libs []
+(defn add-libs
   "Loads new dependencies in deps.edn via tools.deps.alpha.
 
   Ensures that a DynamicClassLoader is available so that this works even when
   not evaluated from the repl. See
   https://ask.clojure.org/index.php/10761/clj-behaves-different-in-the-repl-as-opposed-to-from-a-file"
+  []
   (util/add-libs))
 
 (defn delete-old-files
@@ -345,8 +346,10 @@
   pool-opts:  Used only when topology is :jdbc. Passed in as
               {:xtdb.jdbc/connection-pool
                {:db-spec jdbc-spec :pool-opts pool-opts ...}}.
-  opts:       Additional options to pass to xtdb.api/start-node."
-  [{:keys [topology dir opts jdbc-spec pool-opts kv-store]
+  opts:       Additional options to pass to xtdb.api/start-node.
+  tx-fns:     A map of transaction functions to be saved after indexing
+              finishes. See save-tx-fns!"
+  [{:keys [topology dir opts jdbc-spec pool-opts kv-store tx-fns]
     :or {kv-store :rocksdb}
     :as options}]
   (bxt/start-node options))
@@ -354,23 +357,29 @@
 (defn use-xt
   "A Biff component that starts an XTDB node.
 
-  Sets :biff.xtdb/node on the system map. topology, kv-store, dir and opts are
-  passed to start-node. Any keys matching :biff.xtdb.jdbc/* or
+  Sets :biff.xtdb/node on the system map. topology, kv-store, dir, opts and
+  tx-fns are passed to start-node. Any keys matching :biff.xtdb.jdbc/* or
   :biff.xtdb.jdbc-pool/* are passed in as jdbc-spec and pool-opts,
   respectively."
-  [{:biff.xtdb/keys [topology kv-store dir opts]
+  [{:biff.xtdb/keys [topology kv-store dir opts tx-fns]
     :as sys}]
   (bxt/use-xt sys))
 
 (defn use-tx-listener
-  "If on-tx is provided, starts an XTDB transaction listener.
+  "If on-tx or features provided, starts an XTDB transaction listener.
 
-  Calls on-tx whenever a new transaction is successfully indexed. on-tx
-  receives the system map and the transaction, i.e. (on-tx system tx). tx is
-  the transaction as returned by (xtdb.api/open-tx-log node tx-id true). on-tx
-  will not be called concurrently: if a second transaction is indexed while
-  on-tx is still running, use-tx-listener will wait until it finishes."
-  [{:keys [biff.xtdb/on-tx biff.xtdb/node] :as sys}]
+  features: A var containing a collection of feature maps. Each feature map may
+            contain an :on-tx key.
+  on-tx:    Deprecated. Use features instead. If set, takes precedence over
+            features.
+
+  Calls each on-tx function in features whenever a new transaction is
+  successfully indexed. on-tx receives the system map and the transaction, i.e.
+  (on-tx system tx). tx is the transaction as returned by (xtdb.api/open-tx-log
+  node tx-id true). on-tx will not be called concurrently: if a second
+  transaction is indexed while on-tx is still running, use-tx-listener will
+  wait until it finishes before passing the second transaction."
+  [{:keys [biff/features biff.xtdb/on-tx biff.xtdb/node] :as sys}]
   (bxt/use-tx-listener sys))
 
 (defn assoc-db
@@ -397,30 +406,88 @@
   (apply bxt/lazy-q db query args))
 
 (defn lookup
-  "Returns the first document found with the given key and value.
+  "Returns the first document found with the given key(s) and value(s).
 
   For example:
   (lookup db :user/email \"hello@example.com\")
   => {:xt/id #uuid \"...\", :user/email \"hello@example.com\"}"
-  [db k v]
-  (bxt/lookup db k v))
+  [db & kvs]
+  (apply bxt/lookup db kvs))
 
 (defn lookup-id
-  "Returns the ID of the first document found with the given key and value.
+  "Returns the ID of the first document found with the given key(s) and value(s).
 
   For example:
   (lookup db :user/email \"hello@example.com\")
   => #uuid \"...\""
-  [db k v]
-  (bxt/lookup-id db k v))
+  [db & kvs]
+  (apply bxt/lookup-id db kvs))
+
+(defn biff-tx->xt
+  "Converts the given Biff transaction into an XT transaction.
+
+  The elements of biff-tx may be maps (in which case they are treated as Biff
+  operations) or vectors (in which case they are treated as XT operations). For
+  example:
+
+  [{:db/doc-type :user
+    :xt/id #uuid \"...\"
+    :user/name \"example\"}
+   [:xtdb.api/put {:xt/id #uuid \"...\"}]]
+
+  biff-tx may optionally be a function which takes sys and returns a Biff
+  transaction.
+
+  See https://biffweb.com/docs/reference/transactions."
+  [{:keys [biff/now biff/db biff/malli-opts] :as sys} biff-tx]
+  (bxt/biff-tx->xt sys biff-tx))
+
+(defn submit-with-retries
+  "Submits an XT transaction, retrying up to three times if there is contention.
+  Blocks until the transaction is indexed or aborted.
+
+  make-tx is a one-argument function that takes the system map (sys) and
+  returns an XT transaction. The :biff/db and :biff/now keys in sys will be
+  updated before each time make-tx is called."
+  [sys make-tx]
+  (bxt/submit-with-retries sys make-tx))
 
 (defn submit-tx
-  "High-level wrapper over xtdb.api/submit-tx.
+  "High-level wrapper over xtdb.api/submit-tx. See biff-tx->xt.
 
-  See https://biffweb.com/docs/#transactions."
-  [{:keys [biff.xtdb/node] :as sys}
+  If retry is true, the transaction will be passed to submit-with-retries."
+  [{:keys [biff.xtdb/retry biff.xtdb/node]
+    :or {retry true}
+    :as sys}
    biff-tx]
   (bxt/submit-tx sys biff-tx))
+
+(defn save-tx-fns!
+  "Saves (or updates) the given transaction functions.
+
+  For example, given the map {:foo '(fn ...)}, a transaction of the form
+  [:xtdb.api/put {:xt/id :foo :xt/fn '(fn ...)}] will be submitted.
+
+  If all the given functions are already in the database and haven't been
+  changed, then no transaction will be submitted."
+  [node tx-fns]
+  (bxt/save-tx-fns! node tx-fns))
+
+(def tx-fns
+  "A map of Biff-provided transaction functions. See use-xt and save-tx-fns!
+
+  Includes the following tx fns:
+
+  :biff/ensure-unique - Aborts the transaction if more than one document
+  contains the given key-value pairs. For example:
+
+  (biff/submit-tx sys
+    [{:db/doc-type :user
+      :db/op :update
+      :xt/id user-id
+      :user/name \"example\"}
+     [:xtdb.api/fn :biff/ensure-unique {:user/name \"example\"}]])"
+  bxt/tx-fns)
 
 ;;;; Rum
 
@@ -578,7 +645,7 @@
                                    (select-keys [:arglists :doc :line :name])
                                    (assoc :section section-title))))))]
     (spit dest (with-out-str
-                (pprint metadata)))))
+                 (pprint metadata)))))
 
 ;;;; Misc
 
@@ -833,4 +900,4 @@
   (q/submit-job-for-result sys queue-id job))
 
 (comment
- (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn"))
+  (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn"))

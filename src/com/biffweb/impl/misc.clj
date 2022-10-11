@@ -3,7 +3,6 @@
             [buddy.sign.jwt :as jwt]
             [chime.core :as chime]
             [clj-http.client :as http]
-            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [com.biffweb.impl.time :as time]

@@ -16,9 +16,9 @@
 (defmacro catchall-verbose
   [& body]
   `(try
-    ~@body
-    (catch Exception e#
-      (st/print-stack-trace e#))))
+     ~@body
+     (catch Exception e#
+       (st/print-stack-trace e#))))
 
 (defn start-system [system-atom init]
   (reset! system-atom (merge {:biff/stop '()} init))

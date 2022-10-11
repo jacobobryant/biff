@@ -35,7 +35,7 @@
                                         (:biff/priority b 10)))))
 
 (defn- init [{:keys [biff/features
-                     biff.queues/enabled-ids] :as sys}]
+                     biff.queues/enabled-ids]}]
   (let [continue (atom true)]
     (->> @features
          (mapcat :queues)
@@ -76,11 +76,11 @@
                  p)]
     (submit-job sys queue-id (assoc job :biff/callback #(deliver p %)))
     (delay (cond
-            (= @result ::timeout)
-            (throw (ex-info "Timed out while waiting for job result" {:queue-id queue-id :job job}))
+             (= @result ::timeout)
+             (throw (ex-info "Timed out while waiting for job result" {:queue-id queue-id :job job}))
 
-            (instance? Exception @result)
-            (throw @result)
+             (instance? Exception @result)
+             (throw @result)
 
-            :else
-            @result))))
+             :else
+             @result))))
