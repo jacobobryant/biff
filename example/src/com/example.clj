@@ -41,31 +41,34 @@
   (generate-assets! sys)
   (test/run-all-tests #"com.example.test.*"))
 
+(def components
+  [biff/use-config
+   biff/use-random-default-secrets
+   biff/use-xt
+   biff/use-queues
+   biff/use-tx-listener
+   (biff/use-when
+    :com.example/enable-web
+    biff/use-outer-default-middleware
+    biff/use-jetty)
+   (biff/use-when
+    :com.example/enable-worker
+    biff/use-chime)
+   (biff/use-when
+    :com.example/enable-beholder
+    biff/use-beholder)])
+
 (defn start []
   (biff/start-system
-   {:biff/features #'features
-    :com.example/chat-clients (atom #{})
+   {:com.example/chat-clients (atom #{})
+    :biff/features #'features
     :biff/after-refresh `start
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
     :biff.beholder/on-save #'on-save
     :biff.xtdb/tx-fns biff/tx-fns
     :biff/config "config.edn"
-    :biff/components [biff/use-config
-                      biff/use-random-default-secrets
-                      biff/use-xt
-                      biff/use-queues
-                      biff/use-tx-listener
-                      (biff/use-when
-                       :com.example/enable-web
-                       biff/use-outer-default-middleware
-                       biff/use-jetty)
-                      (biff/use-when
-                       :com.example/enable-worker
-                       biff/use-chime)
-                      (biff/use-when
-                       :com.example/enable-beholder
-                       biff/use-beholder)]})
+    :biff/components components})
   (generate-assets! @biff/system)
   (log/info "Go to" (:biff/base-url @biff/system)))
 
