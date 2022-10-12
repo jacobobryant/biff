@@ -25,7 +25,7 @@
   "Starts a system from an initial system map.
 
   Stores the system in the com.biffweb/system atom. See
-  https://biffweb.com/docs/#system-composition"
+  https://biffweb.com/docs/reference/system-composition"
   [init]
   (util/start-system system init))
 
@@ -35,7 +35,7 @@
   The system is stopped by calling all the functions in (:biff/stop
   @com.biffweb/system). (:biff/after-refresh @system) is a fully-qualified
   symbol which will be resolved and called after refreshing. See
-  https://biffweb.com/docs/#system-composition"
+  https://biffweb.com/docs/reference/system-composition"
   []
   (util/refresh @system))
 
@@ -94,7 +94,7 @@
 (defn use-when
   "Passes the system map to components only if (f system) is true.
 
-  See https://biffweb.com/docs/#system-composition"
+  See https://biffweb.com/docs/reference/system-composition"
   [f & components]
   (apply util/use-when f components))
 
