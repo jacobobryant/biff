@@ -60,7 +60,7 @@ Restart=on-failure
 RestartSec=5s
 Environment="BIFF_ENV=$BIFF_ENV"
 WorkingDirectory=/home/app
-Execstart=/bin/sh -c '\$\$(bb --force -e nil; bb run-cmd)'
+ExecStart=/bin/sh -c '\$\$(bb --force -e nil; bb run-cmd)'
 
 [Install]
 WantedBy=multi-user.target
