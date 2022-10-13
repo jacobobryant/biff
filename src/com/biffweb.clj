@@ -423,6 +423,11 @@
   [db & kvs]
   (apply bxt/lookup-id db kvs))
 
+(def ^:nodoc tx-xform-upsert bxt/tx-xform-upsert)
+(def ^:nodoc tx-xform-unique bxt/tx-xform-unique)
+(def ^:nodoc tx-xform-main bxt/tx-xform-main)
+(def ^:nodoc default-tx-transformers bxt/default-tx-transformers)
+
 (defn biff-tx->xt
   "Converts the given Biff transaction into an XT transaction.
 
@@ -623,29 +628,6 @@
   "Returns a new java.util.Date with the given number of seconds added."
   [date seconds]
   (time/add-seconds date seconds))
-
-(defn- write-doc-data [dest]
-  (let [sections (->> (with-open [r (io/reader (io/resource "com/biffweb.clj"))]
-                        (doall (line-seq r)))
-                      (map-indexed (fn [i line]
-                                     (when-some [title (second (re-find #";;;; (.*)" line))]
-                                       {:line i
-                                        :title title})))
-                      (filter some?)
-                      reverse)
-        metadata (->> (ns-publics 'com.biffweb)
-                      vals
-                      (map (fn [v]
-                             (let [m (meta v)
-                                   section-title (->> sections
-                                                      (filter #(< (:line %) (:line m)))
-                                                      first
-                                                      :title)]
-                               (-> m
-                                   (select-keys [:arglists :doc :line :name])
-                                   (assoc :section section-title))))))]
-    (spit dest (with-out-str
-                 (pprint metadata)))))
 
 ;;;; Misc
 
@@ -898,6 +880,30 @@
    queue-id
    job]
   (q/submit-job-for-result sys queue-id job))
+
+(defn- write-doc-data [dest]
+  (let [sections (->> (with-open [r (io/reader (io/resource "com/biffweb.clj"))]
+                        (doall (line-seq r)))
+                      (map-indexed (fn [i line]
+                                     (when-some [title (second (re-find #";;;; (.*)" line))]
+                                       {:line i
+                                        :title title})))
+                      (filter some?)
+                      reverse)
+        metadata (->> (ns-publics 'com.biffweb)
+                      vals
+                      (keep (fn [v]
+                              (let [m (meta v)
+                                    section-title (->> sections
+                                                       (filter #(< (:line %) (:line m)))
+                                                       first
+                                                       :title)]
+                                (when-not (:nodoc m)
+                                  (-> m
+                                      (select-keys [:arglists :doc :line :name])
+                                      (assoc :section section-title)))))))]
+    (spit dest (with-out-str
+                 (pprint metadata)))))
 
 (comment
   (do

@@ -193,6 +193,7 @@
                               :db/owned-by (or default-id (java.util.UUID/randomUUID))})]
   [lookup-id lookup-doc-before lookup-doc-after])
 
+;; TODO Refactor this into smaller tx-xform-* functions
 (b/defnc biff-op->xt
   [{:keys [biff/now biff/db biff/malli-opts]}
    {:keys [xt/id db/doc-type db/op] :or {op :put} :as tx-doc}]
@@ -266,14 +267,60 @@
                  [::xt/put doc-after]]
                 lookup-ops))
 
-(defn biff-tx->xt [sys biff-tx]
-  (mapcat (fn [x]
-            (if (map? x)
-              (biff-op->xt sys x)
-              [x]))
+(defn tx-xform-upsert [{:keys [biff/db]} tx]
+  (mapcat
+   (fn [op]
+     (if-some [m (:db.op/upsert op)]
+       (let [kvs (apply concat m)
+             id (apply lookup-id db kvs)]
+         (cond-> [(-> (apply assoc op kvs)
+                      (assoc :db/op :merge
+                             :xt/id id)
+                      (dissoc :db.op/upsert))]
+           (nil? id) (conj [::xt/fn :biff/ensure-unique m])))
+       [op]))
+   tx))
+
+(defn tx-xform-unique [_ tx]
+  (mapcat
+   (fn [op]
+     (if-let [entries (and (map? op)
+                           (->> op
+                                (keep (fn [[k v]]
+                                        (when (and (vector? v)
+                                                   (= (first v) :db/unique))
+                                          [k (second v)])))
+                                not-empty))]
+       (concat
+        [(into op entries)]
+        (for [[k v] entries]
+          [::xt/fn :biff/ensure-unique {k v}]))
+       [op]))
+   tx))
+
+(defn tx-xform-main [sys tx]
+  (mapcat
+   (fn [op]
+     (if (map? op)
+       (biff-op->xt sys op)
+       [op]))
+   tx))
+
+(def default-tx-transformers
+  [tx-xform-upsert
+   tx-xform-unique
+   tx-xform-main])
+
+(defn biff-tx->xt [{:keys [biff.xtdb/transformers]
+                    :or {transformers default-tx-transformers}
+                    :as sys}
+                   biff-tx]
+  (reduce (fn [tx xform]
+            (xform sys tx))
           (if (fn? biff-tx)
             (biff-tx sys)
-            biff-tx)))
+            biff-tx)
+          transformers))
 
 (defn submit-with-retries [sys make-tx]
   (let [{:keys [biff.xtdb/node
