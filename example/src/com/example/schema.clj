@@ -7,9 +7,11 @@
    :user/email :string
    :user/foo :string
    :user/bar :string
+   :user/joined-at inst?
    :user [:map {:closed true}
           [:xt/id :user/id]
           :user/email
+          :user/joined-at
           [:user/foo {:optional true}]
           [:user/bar {:optional true}]]
 
