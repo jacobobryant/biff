@@ -1,5 +1,6 @@
 (ns com.biffweb.impl.xtdb
   (:require [better-cond.core :as b]
+            [com.biffweb.impl.util :as util]
             [com.biffweb.impl.util.ns :as ns]
             [clojure.java.io :as io]
             [clojure.set :as set]
@@ -90,7 +91,8 @@
                     (fn [sys tx]
                       (doseq [{:keys [on-tx]} @features
                               :when on-tx]
-                        (on-tx sys tx))))
+                        (util/catchall-verbose
+                         (on-tx sys tx)))))
           lock (Object.)
           listener (xt/listen
                     node
