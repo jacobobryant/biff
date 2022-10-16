@@ -180,8 +180,8 @@
                  (= op :db/add) [k (apply + (or v-before 0) xs)]
                  :let [[default-value] xs]
                  (= op :db/default) (if (contains? doc-before k)
-                                      v-before
-                                      default-value))))
+                                      [k v-before]
+                                      [k default-value]))))
        (into {})))
 
 (b/defnc lookup-info [db doc-id]
