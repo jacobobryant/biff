@@ -29,7 +29,7 @@
 
 (def malli-opts {:registry (malr/composite-registry malc/default-registry schema)})
 
-(defn test-node [& docs]
+(defn test-node [docs]
   (let [node (xt/start-node {})]
     (when (not-empty docs)
       (xt/await-tx
@@ -45,7 +45,7 @@
     node))
 
 (deftest ensure-unique
-  (with-open [node (test-node {:foo "bar"})]
+  (with-open [node (test-node [{:foo "bar"}])]
     (let [db (xt/db node)]
       (is (nil? (xt/with-tx
                   db
@@ -59,8 +59,8 @@
                     [::xt/fn :biff/ensure-unique {:foo "bar"}]]))))))
 
 (deftest tx-upsert
-  (with-open [node (test-node {:xt/id :id/foo
-                               :foo "bar"})]
+  (with-open [node (test-node [{:xt/id :id/foo
+                                :foo "bar"}])]
     (is (= (bxt/tx-xform-upsert
             {:biff/db (xt/db node)}
             [{:db/doc-type :user
@@ -100,11 +100,41 @@
    :biff/now #inst "1970"
    :biff/malli-opts #'malli-opts})
 
+(def test-docs [{:xt/id :user/alice
+                 :user/email "alice@example.com"}
+                {:xt/id :user/bob
+                 :user/email "bob@example.com"}])
+
+(deftest tx-default
+  (with-open [node (test-node (into test-docs
+                                    [{:xt/id :user/carol
+                                      :user/email "carol@example.com"
+                                      :user/foo "x"}]))]
+    (is (= (bxt/biff-tx->xt
+            (get-sys node)
+            [{:db/doc-type :user
+              :db/op :update
+              :xt/id :user/bob
+              :user/foo [:db/default "default-value"]}
+             {:db/doc-type :user
+              :db/op :update
+              :xt/id :user/carol
+              :user/foo [:db/default "default-value"]}])
+           '([:xtdb.api/match
+              :user/bob
+              {:user/email "bob@example.com", :xt/id :user/bob}]
+             [:xtdb.api/put
+              {:user/email "bob@example.com",
+               :xt/id :user/bob,
+               :user/foo "default-value"}]
+             [:xtdb.api/match
+              :user/carol
+              {:user/email "carol@example.com", :user/foo "x", :xt/id :user/carol}]
+             [:xtdb.api/put
+              {:user/email "carol@example.com", :user/foo "x", :xt/id :user/carol}])))))
+
 (deftest tx-all
-  (with-open [node (test-node {:xt/id :user/alice
-                               :user/email "alice@example.com"}
-                              {:xt/id :user/bob
-                               :user/email "bob@example.com"})]
+  (with-open [node (test-node test-docs)]
     (is (= (bxt/biff-tx->xt
             (get-sys node)
             [{:db/doc-type :user
