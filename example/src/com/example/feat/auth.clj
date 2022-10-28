@@ -21,18 +21,20 @@
   (boolean (some->> email (re-matches #".+@.+\..+"))))
 
 (defn signin-template [{:keys [to url]}]
-  {:to [{:email to}]
+  {:to to
    :subject "Sign in to My Application"
-   :html (rum/render-static-markup
-          [:div
-           [:p "We received a request to sign in to My Application using this email address."]
-           [:p [:a {:href url :target "_blank"} "Click here to sign in."]]
-           [:p "If you did not request this link, you can ignore this email."]])})
+   :html-body (rum/render-static-markup
+               [:html
+                [:body
+                 [:p "We received a request to sign in to My Application using this email address."]
+                 [:p [:a {:href url :target "_blank"} "Click here to sign in."]]
+                 [:p "If you did not request this link, you can ignore this email."]]])
+   :message-stream "outbound"})
 
 (defn send-link! [req email url]
   (and (human? req)
        (email-valid? req email)
-       (biff/mailersend
+       (util/send-email
         req
         (signin-template {:to email :url url}))))
 
