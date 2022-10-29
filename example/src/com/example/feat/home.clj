@@ -41,7 +41,7 @@
      [:.text-sm (recaptcha-disclosure {:link-class "link"})]
      [:.text-sm
       "Doesn't need to be a real address. "
-      "Until you add API keys for MailerSend and reCAPTCHA, we'll just print your sign-in "
+      "Until you add API keys for Postmark and reCAPTCHA, we'll just print your sign-in "
       "link to the console. See config.edn."])))
 
 (def recaptcha-scripts

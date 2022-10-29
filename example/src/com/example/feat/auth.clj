@@ -93,7 +93,7 @@
    {}
    [:div
     "The sign-in link was printed to the console. If you add API "
-    "keys for MailerSend and reCAPTCHA, the link will be emailed to you instead."]))
+    "keys for Postmark and reCAPTCHA, the link will be emailed to you instead."]))
 
 (def signin-sent
   (ui/page
