@@ -14,13 +14,10 @@
                           :where [[user :user/email]]})
                      0
                      0)]
-    (log/info "There are" n-users "users."
-              "(This message gets printed every 5 minutes. You can disable it"
-              "by setting `:com.example/enable-worker false` in config.edn)")))
+    (log/info "There are" n-users "users.")))
 
-(defn alert-new-user [{:keys [com.example/enable-worker biff.xtdb/node]} tx]
+(defn alert-new-user [{:keys [biff.xtdb/node]} tx]
   (doseq [_ [nil]
-          :when enable-worker
           :let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
           [op & args] (::xt/tx-ops tx)
           :when (= op ::xt/put)

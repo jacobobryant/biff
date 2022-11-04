@@ -30,10 +30,9 @@
 (def static-pages (apply biff/safe-merge (map :static features)))
 
 (defn generate-assets! [sys]
-  (when (:com.example/enable-web sys)
-    (biff/export-rum static-pages "target/resources/public")
-    (biff/delete-old-files {:dir "target/resources/public"
-                            :exts [".html"]})))
+  (biff/export-rum static-pages "target/resources/public")
+  (biff/delete-old-files {:dir "target/resources/public"
+                          :exts [".html"]}))
 
 (defn on-save [sys]
   (biff/add-libs)
@@ -47,13 +46,9 @@
    biff/use-xt
    biff/use-queues
    biff/use-tx-listener
-   (biff/use-when
-    :com.example/enable-web
-    biff/use-outer-default-middleware
-    biff/use-jetty)
-   (biff/use-when
-    :com.example/enable-worker
-    biff/use-chime)
+   biff/use-outer-default-middleware
+   biff/use-jetty
+   biff/use-chime
    (biff/use-when
     :com.example/enable-beholder
     biff/use-beholder)])

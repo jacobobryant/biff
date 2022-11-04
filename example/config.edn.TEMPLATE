@@ -1,7 +1,5 @@
 ;; vim: ft=clojure
-{:prod {:com.example/enable-web true
-        :com.example/enable-worker true
-        :biff.xtdb/dir "storage/xtdb"
+{:prod {:biff.xtdb/dir "storage/xtdb"
         :biff.xtdb/topology :standalone
         ;; Standalone topology in production isn't recommended for anything
         ;; serious. You can uncomment the following to use managed postgres
@@ -24,8 +22,6 @@
         :biff.middleware/cookie-secret nil
         :biff/jwt-secret nil}
  :dev {:merge [:prod]
-       ;; See com.example.feat.worker
-       ;; :com.example/enable-worker false
        :com.example/enable-beholder true
        :biff/host "0.0.0.0"
        :biff/port 8080
