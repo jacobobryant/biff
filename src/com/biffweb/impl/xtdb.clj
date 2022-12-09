@@ -364,16 +364,16 @@
             (throw (ex-info "Transaction violated a constraint" {:tx tx})))
         submitted-tx (when (not-empty tx)
                        (xt/await-tx node (xt/submit-tx node tx)))
-        seconds (int (Math/pow 2 n-tried))]
+        ms (int (rand (* 1000 (Math/pow 2 n-tried))))]
     (cond
       (or (nil? submitted-tx)
           (xt/tx-committed? node submitted-tx)) submitted-tx
       (<= 4 n-tried) (throw (ex-info "TX failed, too much contention." {:tx tx}))
       :else (do
-              (log/warnf "TX failed due to contention, trying again in %d seconds...\n"
-                         seconds)
+              (log/warnf "TX failed due to contention, trying again in %d ms...\n"
+                         ms)
               (flush)
-              (Thread/sleep (* 1000 seconds))
+              (Thread/sleep ms)
               (recur (update sys ::n-tried (fnil inc 0)) make-tx)))))
 
 (defn submit-tx [{:keys [biff.xtdb/retry biff.xtdb/node]
