@@ -2,7 +2,6 @@
   (:require [clojure.test :refer [deftest is]]
             [xtdb.api :as xt]
             [com.biffweb :as biff]
-            [com.biffweb.impl.xtdb :as bxt]
             [malli.core :as malc]
             [malli.registry :as malr]))
 
@@ -40,7 +39,7 @@
            (for [d docs]
              [::xt/put (merge {:xt/id (random-uuid)}
                               d)])
-           (for [[k f] bxt/tx-fns]
+           (for [[k f] biff/tx-fns]
              [::xt/put {:xt/id k :xt/fn f}]))))))
     node))
 
@@ -61,7 +60,7 @@
 (deftest tx-upsert
   (with-open [node (test-node [{:xt/id :id/foo
                                 :foo "bar"}])]
-    (is (= (bxt/tx-xform-upsert
+    (is (= (biff/tx-xform-upsert
             {:biff/db (xt/db node)}
             [{:db/doc-type :user
               :db.op/upsert {:foo "bar"}
@@ -71,7 +70,7 @@
               :foo "bar",
               :db/op :merge,
               :xt/id :id/foo})))
-    (is (= (bxt/tx-xform-upsert
+    (is (= (biff/tx-xform-upsert
             {:biff/db (xt/db node)}
             [{:db/doc-type :user
               :db.op/upsert {:foo "eh"}
@@ -84,7 +83,7 @@
              [:xtdb.api/fn :biff/ensure-unique {:foo "eh"}])))))
 
 (deftest tx-unique
-  (is (= (bxt/tx-xform-unique
+  (is (= (biff/tx-xform-unique
           nil
           [{:foo "bar"
             :baz [:db/unique "quux"]
@@ -110,7 +109,7 @@
                                     [{:xt/id :user/carol
                                       :user/email "carol@example.com"
                                       :user/foo "x"}]))]
-    (is (= (bxt/biff-tx->xt
+    (is (= (biff/biff-tx->xt
             (get-sys node)
             [{:db/doc-type :user
               :db/op :update
@@ -135,7 +134,7 @@
 
 (deftest tx-all
   (with-open [node (test-node test-docs)]
-    (is (= (bxt/biff-tx->xt
+    (is (= (biff/biff-tx->xt
             (get-sys node)
             [{:db/doc-type :user
               :db.op/upsert {:user/email "alice@example.com"}
@@ -156,3 +155,47 @@
               {:user/email "bob@example.com", :xt/id :user/bob}]
              [:xtdb.api/put
               {:user/email "bob@example.com", :xt/id :user/bob, :user/bar "baz"}])))))
+
+(deftest lookup
+  (with-open [node (test-node [{:xt/id :user/alice
+                                :user/email "alice@example.com"
+                                :user/foo "foo"}
+                               {:xt/id :user/bob
+                                :user/email "bob@example.com"
+                                :user/foo "foo"}
+                               {:xt/id :user/carol
+                                :user/email "bob@example.com"}
+                               {:xt/id :msg/a
+                                :msg/user :user/alice
+                                :msg/text "hello"
+                                :msg/sent-at #inst "1970"}
+                               {:xt/id :msg/b
+                                :msg/user :user/alice
+                                :msg/text "there"
+                                :msg/sent-at #inst "1971"}])]
+    (let [db (xt/db node)]
+      (is (= :user/alice (biff/lookup-id db :user/email "alice@example.com")))
+      (is (= '(:user/alice :user/bob) (sort (biff/lookup-id-all db :user/foo "foo"))))
+      (is (= {:user/email "alice@example.com", :user/foo "foo", :xt/id :user/alice}
+             (biff/lookup db :user/email "alice@example.com")))
+      (is (= '({:user/email "alice@example.com", :user/foo "foo", :xt/id :user/alice}
+               {:user/email "bob@example.com", :user/foo "foo", :xt/id :user/bob})
+             (sort-by :user/email (biff/lookup-all db :user/foo "foo"))))
+      (is (= '{:user/email "alice@example.com",
+               :user/foo "foo",
+               :xt/id :user/alice,
+               :user/messages
+               ({:msg/user :user/alice,
+                 :msg/text "hello",
+                 :msg/sent-at #inst "1970-01-01T00:00:00.000-00:00",
+                 :xt/id :msg/a}
+                {:msg/user :user/alice,
+                 :msg/text "there",
+                 :msg/sent-at #inst "1971-01-01T00:00:00.000-00:00",
+                 :xt/id :msg/b})}
+             (-> (biff/lookup db
+                              '[* {(:msg/_user {:as :user/messages}) [*]}]
+                              :user/email
+                              "alice@example.com")
+                 (update :user/messages #(sort-by :msg/sent-at %)))))
+      (is (#{:user/alice :user/bob} (biff/lookup-id db :user/foo "foo"))))))

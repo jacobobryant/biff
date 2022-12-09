@@ -145,17 +145,42 @@
       (f (cond->> (iterator-seq results)
            (not return-tuples) (map first))))))
 
-(defn lookup [db & kvs]
-  (ffirst (xt/q db {:find '[(pull doc [*])]
-                    :where (vec
-                            (for [[k v] (partition 2 kvs)]
-                              ['doc k v]))})))
+(defn parse-lookup-args [args]
+  (if (vector? (first args))
+    args
+    (conj args '[*])))
+
+(defn lookup* [db opts & kvs]
+  (let [kvs (partition 2 kvs)
+        symbols (vec
+                 (for [i (range (count kvs))]
+                   (symbol (str "v" i))))]
+    (apply q
+           db
+           (merge
+            opts
+            {:in symbols
+             :where (vec
+                     (for [[[k _] sym] (map vector kvs symbols)]
+                       ['doc k sym]))})
+           (map second kvs))))
+
+(defn lookup [db & args]
+  (let [[pull-expr & kvs] (parse-lookup-args args)
+        opts {:find (list 'pull 'doc pull-expr)
+              :limit 1}]
+    (first (apply lookup* db opts kvs))))
+
+(defn lookup-all [db & args]
+  (let [[pull-expr & kvs] (parse-lookup-args args)
+        opts {:find (list 'pull 'doc pull-expr)}]
+    (apply lookup* db opts kvs)))
 
 (defn lookup-id [db & kvs]
-  (ffirst (xt/q db {:find '[doc]
-                    :where (vec
-                            (for [[k v] (partition 2 kvs)]
-                              ['doc k v]))})))
+  (first (apply lookup* db '{:find doc :limit 1} kvs)))
+
+(defn lookup-id-all [db & kvs]
+  (apply lookup* db '{:find doc} kvs))
 
 (defn- special-val? [x]
   (or (= x :db/dissoc)

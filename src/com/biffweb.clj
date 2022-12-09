@@ -410,18 +410,34 @@
 
   For example:
   (lookup db :user/email \"hello@example.com\")
-  => {:xt/id #uuid \"...\", :user/email \"hello@example.com\"}"
-  [db & kvs]
-  (apply bxt/lookup db kvs))
+  => {:xt/id #uuid \"...\", :user/email \"hello@example.com\"}
+
+  You can pass in a custom pull expression if needed (default is '[*]):
+  (lookup db '[:xt/id {:msg/_user [:msg/text]}] :user/email \"hello@example.com\")
+  => {:xt/id #uuid \"...\"
+      :msg/_user ({:msg/text \"hello\"}
+                  {:msg/text \"how do you do\"})}"
+  [db & args]
+  (apply bxt/lookup db args))
+
+(defn lookup-all
+  "Like lookup, but returns multiple documents."
+  [db & args]
+  (apply bxt/lookup-all db args))
 
 (defn lookup-id
   "Returns the ID of the first document found with the given key(s) and value(s).
 
   For example:
-  (lookup db :user/email \"hello@example.com\")
+  (lookup-id db :user/email \"hello@example.com\")
   => #uuid \"...\""
   [db & kvs]
   (apply bxt/lookup-id db kvs))
+
+(defn lookup-id-all
+  "Like lookup-id, but returns multiple documents."
+  [db & kvs]
+  (apply bxt/lookup-id-all db kvs))
 
 (def ^:nodoc tx-xform-upsert bxt/tx-xform-upsert)
 (def ^:nodoc tx-xform-unique bxt/tx-xform-unique)
