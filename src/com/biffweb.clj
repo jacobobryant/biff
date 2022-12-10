@@ -926,4 +926,6 @@
   (do
     (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn")
     (io/copy (io/file "new-project.sh")
-             (io/file "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/public/new-project.sh"))))
+             (io/file "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/public/new-project.sh"))
+    (io/copy (io/file "new-project.clj")
+             (io/file "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/public/new-project.clj"))))
