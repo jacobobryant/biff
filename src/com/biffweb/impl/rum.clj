@@ -47,8 +47,9 @@
     [:meta {:content title :property "og:title"}]
     [:meta {:content description :property "og:description"}]
     (when image
-      [:meta {:content image :property "og:image"}])
-    [:meta {:content "summary" :name "twitter:card"}]
+      [:<>
+       [:meta {:content image :property "og:image"}]
+       [:meta {:content "summary_large_image" :name "twitter:card"}]])
     (when-some [url (or url canonical)]
       [:meta {:content url :property "og:url"}])
     (when-some [url (or canonical url)]
@@ -61,13 +62,13 @@
               :href icon}])
     [:meta {:charset "utf-8"}]
     (when (not-empty font-families)
-      (list
+      [:<>
        [:link {:href "https://fonts.googleapis.com", :rel "preconnect"}]
        [:link {:crossorigin "crossorigin",
                :href "https://fonts.gstatic.com",
                :rel "preconnect"}]
-       (g-fonts font-families)))
-    (apply list head)]
+       (g-fonts font-families)])
+    (into [:<>] head)]
    [:body
     {:style {:position "absolute"
              :width "100%"
