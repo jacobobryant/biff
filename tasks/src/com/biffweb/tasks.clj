@@ -1,11 +1,21 @@
 (ns com.biffweb.tasks
-  (:require [clojure.edn :as edn]
+  (:require [babashka.curl :as curl]
+            [babashka.fs :as fs]
             [babashka.tasks :refer [shell clojure]]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.string :as str]
             [babashka.fs :as fs]
             [babashka.process :as process]))
+
+(defn windows? []
+  (not (fs/which "uname")))
+
+(defn tailwind-path []
+  (if (windows?)
+    "bin/tailwindcss.exe"
+    "bin/tailwindcss"))
 
 (def config
   (delay (:tasks (edn/read-string (slurp "config.edn")))))
@@ -18,21 +28,23 @@
 
 (defn install-tailwind []
   (let [build (or (:biff.tasks/tailwind-build @config)
-                  (str (if (= (str/trim (:out (sh/sh "uname"))) "Linux")
-                         "linux"
-                         "macos")
-                       "-"
-                       (if (= (str/trim (:out (sh/sh "uname" "-m"))) "x86_64")
-                         "x64"
-                         "arm64")))
+                  (if (windows?)
+                    "windows-x64.exe"
+                    (str (if (= (str/trim (:out (sh/sh "uname"))) "Linux")
+                           "linux"
+                           "macos")
+                         "-"
+                         (if (= (str/trim (:out (sh/sh "uname" "-m"))) "x86_64")
+                           "x64"
+                           "arm64"))))
         file (str "tailwindcss-" build)
         url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
-                 file)]
+                 file)
+        dest (io/file (tailwind-path))]
+    (io/make-parents dest)
     (println "Downloading the latest version of Tailwind CSS...")
-    (shell "curl" "-LO" url)
-    (io/make-parents "bin/_")
-    (fs/set-posix-file-permissions file "rwxr-xr-x")
-    (fs/move file "bin/tailwindcss")))
+    (io/copy (:body (curl/get url {:compressed false :as :stream})) dest)
+    (.setExecutable dest true)))
 
 (defn run-args []
   ["-J-XX:-OmitStackTraceInFastThrow"
@@ -45,13 +57,13 @@
   []
   (io/make-parents "target/resources/_")
   (when (fs/exists? "package.json")
-    (sh/sh "npm" "install"))
+    (shell "npm" "install"))
   (apply println "clj" (run-args)))
 
 (defn css [& args]
   (apply shell
-         (concat (if (fs/exists? "bin/tailwindcss")
-                   ["bin/tailwindcss"]
+         (concat (if (fs/exists? (tailwind-path))
+                   [(tailwind-path)]
                    ["npx" "tailwindcss"])
                  ["-c" "resources/tailwind.config.js"
                   "-i" "resources/tailwind.css"
@@ -71,7 +83,7 @@
   (io/make-parents "target/resources/_")
   (when (fs/exists? "package.json")
     (shell "npm" "install"))
-  (when-not (fs/exists? "bin/tailwindcss")
+  (when-not (fs/exists? (tailwind-path))
     (install-tailwind))
   (future (css "--watch"))
   (spit ".nrepl-port" "7888")
@@ -106,10 +118,17 @@
   []
   (let [{:biff.tasks/keys [server deploy-to deploy-from]} @config]
     (css "--minify")
-    (fs/set-posix-file-permissions "config.edn" "rw-------")
-    (shell "rsync" "-a" "--relative"
-           "config.edn" "target/resources/public/css/main.css"
-           (str "app@" server ":"))
+    (if (windows?)
+      (do
+        (shell "scp" "config.edn" (str "app@" server ":"))
+        (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
+        (shell "scp" "target/resources/public/css/main.css"
+               (str "app@" server ":target/resources/public/css/main.css")))
+      (do
+        (fs/set-posix-file-permissions "config.edn" "rw-------")
+        (shell "rsync" "-a" "--relative"
+               "config.edn" "target/resources/public/css/main.css"
+               (str "app@" server ":"))))
     (time (shell "git" "push" deploy-to deploy-from))))
 
 (defn soft-deploy
@@ -118,6 +137,10 @@
   `rsync`s config and code to the server, then `eval`s any changed files and
   regenerates HTML and CSS files. Does not refresh or restart."
   []
+  (when (windows?)
+    (binding [*out* *err*]
+      (println "soft-deploy is unsupported on Windows."))
+    (System/exit 1))
   (let [{:biff.tasks/keys [server soft-deploy-fn]} @config]
     (css "--minify")
     (fs/set-posix-file-permissions "config.edn" "rw-------")
@@ -163,6 +186,10 @@
 (defn prod-dev
   "Runs the auto-soft-deploy command whenever a file is modified. Also runs prod-repl and logs."
   []
+  (when (windows?)
+    (binding [*out* *err*]
+      (println "prod-dev is unsupported on Windows."))
+    (System/exit 2))
   (when-not (fs/which "fswatch")
     (println "`fswatch` command not found. Please install it: https://emcrisostomo.github.io/fswatch/getting.html")
     (println " - Ubuntu: sudo apt install fswatch")
