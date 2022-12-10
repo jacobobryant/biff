@@ -94,6 +94,18 @@
            [:xtdb.api/fn :biff/ensure-unique {:spam "eggs"}]
            {:hello "there"}))))
 
+(deftest tx-tmp-ids
+  (let [[{:keys [a b c]}
+         {:keys [d]}] (biff/tx-xform-tmp-ids
+                       nil
+                       [{:a 1
+                         :b :db.id/foo
+                         :c :db.id/bar}
+                        {:d :db.id/foo}])]
+    (is (every? uuid? [b c d]))
+    (is (= b d))
+    (is (not= b c))))
+
 (defn get-sys [node]
   {:biff/db (xt/db node)
    :biff/now #inst "1970"

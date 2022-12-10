@@ -294,6 +294,23 @@
                  [::xt/put doc-after]]
                 lookup-ops))
 
+(defn tx-xform-tmp-ids [_ tx]
+  (let [tmp-ids (->> tx
+                     (tree-seq (some-fn list?
+                                        #(instance? clojure.lang.IMapEntry %)
+                                        seq?
+                                        #(instance? clojure.lang.IRecord %)
+                                        coll?)
+                               identity)
+                     (filter (fn [x]
+                               (and (keyword? x) (= "db.id" (namespace x)))))
+                     distinct
+                     (map (fn [x]
+                            [x (java.util.UUID/randomUUID)]))
+                     (into {}))]
+    (cond->> tx
+      (not-empty tmp-ids) (walk/postwalk #(get tmp-ids % %)))))
+
 (defn tx-xform-upsert [{:keys [biff/db]} tx]
   (mapcat
    (fn [op]
@@ -334,7 +351,8 @@
    tx))
 
 (def default-tx-transformers
-  [tx-xform-upsert
+  [tx-xform-tmp-ids
+   tx-xform-upsert
    tx-xform-unique
    tx-xform-main])
 

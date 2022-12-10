@@ -439,6 +439,7 @@
   [db & kvs]
   (apply bxt/lookup-id-all db kvs))
 
+(def ^:nodoc tx-xform-tmp-ids bxt/tx-xform-tmp-ids)
 (def ^:nodoc tx-xform-upsert bxt/tx-xform-upsert)
 (def ^:nodoc tx-xform-unique bxt/tx-xform-unique)
 (def ^:nodoc tx-xform-main bxt/tx-xform-main)
