@@ -137,13 +137,14 @@
   `rsync`s config and code to the server, then `eval`s any changed files and
   regenerates HTML and CSS files. Does not refresh or restart."
   []
-  (when (windows?)
+  (when-not (fs/which "rsync")
     (binding [*out* *err*]
-      (println "soft-deploy is unsupported on Windows."))
+      (println "`rsync` command not found. Please install it."))
     (System/exit 1))
   (let [{:biff.tasks/keys [server soft-deploy-fn]} @config]
     (css "--minify")
-    (fs/set-posix-file-permissions "config.edn" "rw-------")
+    (when-not (windows?)
+      (fs/set-posix-file-permissions "config.edn" "rw-------"))
     (shell "rsync" "-a" "--relative" "--info=name1" "--delete"
            "config.edn" "deps.edn" "bb.edn" "src" "resources" "target/resources/public/css/main.css"
            (str "app@" server ":"))
@@ -186,14 +187,15 @@
 (defn prod-dev
   "Runs the auto-soft-deploy command whenever a file is modified. Also runs prod-repl and logs."
   []
-  (when (windows?)
+  (when-not (fs/which "rsync")
     (binding [*out* *err*]
-      (println "prod-dev is unsupported on Windows."))
-    (System/exit 2))
+      (println "`rsync` command not found. Please install it."))
+    (System/exit 1))
   (when-not (fs/which "fswatch")
     (println "`fswatch` command not found. Please install it: https://emcrisostomo.github.io/fswatch/getting.html")
     (println " - Ubuntu: sudo apt install fswatch")
-    (println " - Mac: brew install fswatch"))
+    (println " - Mac: brew install fswatch")
+    (System/exit 2))
   (future (prod-repl))
   (future (auto-soft-deploy))
   (logs))
