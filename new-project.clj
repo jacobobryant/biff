@@ -10,7 +10,8 @@
     (-> (shell/sh "java" "-version")
         :err
         (str/split #"\s+")
-        (nth 2)
+        (as-> $ (drop-while #(not= % "version") $))
+        (nth 1)
         (str/replace #"\..*" "")
         (str/replace #"[^0-9]" "")
         parse-long)))
