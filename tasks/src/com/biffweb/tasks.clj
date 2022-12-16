@@ -50,7 +50,7 @@
   ["-J-XX:-OmitStackTraceInFastThrow"
    "-M" "-m" (:biff.tasks/main-ns @config)
    "--port" "7888"
-   "--middleware" "[cider.nrepl/cider-middleware]"])
+   "--middleware" "[cider.nrepl/cider-middleware refactor-nrepl.middleware/wrap-refactor]"])
 
 (defn run-cmd
   "Internal. Used by the server to start the app."
