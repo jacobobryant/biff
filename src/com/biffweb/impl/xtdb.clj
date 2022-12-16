@@ -15,10 +15,11 @@
     (when-some [tx (not-empty
                     (vec
                      (for [[k f] tx-fns
-                           :let [doc (xt/entity db k)]
-                           :when (not= f (:xt/fn doc))]
-                       [::xt/put {:xt/id k
-                                  :xt/fn f}])))]
+                           :let [new-doc {:xt/id k
+                                          :xt/fn f}
+                                 old-doc (xt/entity db k)]
+                           :when (not= new-doc old-doc)]
+                       [::xt/put new-doc])))]
       (xt/submit-tx node tx))))
 
 (defn start-node
@@ -406,12 +407,19 @@
 (def tx-fns
   {:biff/ensure-unique
    '(fn [ctx kvs]
-      (when (< 1 (count (xtdb.api/q
-                         (xtdb.api/db ctx)
-                         {:find '[doc]
-                          :limit 2
-                          :where (into []
-                                       (map (fn [[k v]]
-                                              ['doc k v]))
-                                       kvs)})))
-        false))})
+      (let [kvs (for [[i [k v]] (map-indexed vector kvs)
+                      :let [sym (symbol (str "v" i))]]
+                  {:k k
+                   :v v
+                   :sym sym})
+            query {:find '[doc],
+                   :limit 2,
+                   :in (mapv :sym kvs)
+                   :where (vec
+                           (for [{:keys [k sym]} kvs]
+                             ['doc k sym]))}]
+        (when (< 1 (count (apply xtdb.api/q
+                                 (xtdb.api/db ctx)
+                                 query
+                                 (map :v kvs))))
+          false)))})
