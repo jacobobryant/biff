@@ -383,8 +383,10 @@
         ;             (nil? (xt/with-tx db tx)))
         ;    (throw (ex-info "Transaction violated a constraint" {:tx tx})))
         submitted-tx (when (not-empty tx)
-                       (xt/await-tx node (xt/submit-tx node tx)))
+                       (xt/submit-tx node tx))
         ms (int (rand (* 1000 (Math/pow 2 n-tried))))]
+    (when submitted-tx
+      (xt/await-tx node submitted-tx))
     (cond
       (or (nil? submitted-tx)
           (xt/tx-committed? node submitted-tx)) submitted-tx
