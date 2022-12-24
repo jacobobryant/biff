@@ -107,7 +107,7 @@
   []
   (apply clojure "-P" (run-args))
   (shell "sudo" "systemctl" "reset-failed" "app.service")
-  (shell "sudo" "systemctl" "resart" "app"))
+  (shell "sudo" "systemctl" "restart" "app"))
 
 (defn deploy
   "Deploys the app via `git push`.
