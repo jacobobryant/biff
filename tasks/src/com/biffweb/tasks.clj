@@ -58,7 +58,7 @@
   (io/make-parents "target/resources/_")
   (when (fs/exists? "package.json")
     (shell "npm" "install"))
-  (apply println "clj" (run-args)))
+  (apply shell "clj" (run-args)))
 
 (defn css [& args]
   (apply shell
