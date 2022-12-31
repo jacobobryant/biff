@@ -1,4 +1,4 @@
-{:deps {local/deps {:local/root "tasks"}}
+{:deps {com.example/tasks {:local/root "tasks"}}
  :tasks {dev         com.biffweb.tasks/dev
          format      com.biffweb.tasks/format
          clean       com.biffweb.tasks/clean
