@@ -1,13 +1,12 @@
 (ns com.biffweb.tasks
   (:require [babashka.curl :as curl]
             [babashka.fs :as fs]
+            [babashka.process :as process]
             [babashka.tasks :refer [shell clojure]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
-            [clojure.string :as str]
-            [babashka.fs :as fs]
-            [babashka.process :as process]))
+            [clojure.string :as str]))
 
 (defn windows? []
   (not (fs/which "uname")))
@@ -47,10 +46,13 @@
     (.setExecutable dest true)))
 
 (defn run-args []
-  ["-J-XX:-OmitStackTraceInFastThrow"
-   "-M" "-m" (:biff.tasks/main-ns @config)
-   "--port" "7888"
-   "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"])
+  (:biff.tasks/clj-args
+   @config
+   ;; For backwards compatibility
+   ["-J-XX:-OmitStackTraceInFastThrow"
+    "-M" "-m" (:biff.tasks/main-ns @config)
+    "--port" "7888"
+    "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]))
 
 (defn run-cmd
   "Internal. Used by the server to start the app."
@@ -116,7 +118,7 @@
   restarts the app process on the server (via git push hook). You must set up a
   server first. See https://biffweb.com/docs/reference/production/."
   []
-  (let [{:biff.tasks/keys [server deploy-to deploy-from]} @config]
+  (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
     (css "--minify")
     (if (windows?)
       (do
@@ -129,7 +131,10 @@
         (shell "rsync" "-a" "--relative"
                "config.edn" "target/resources/public/css/main.css"
                (str "app@" server ":"))))
-    (time (shell "git" "push" deploy-to deploy-from))))
+    (time (if deploy-cmd
+            (apply shell deploy-cmd)
+            ;; For backwards compatibility
+            (shell "git" "push" deploy-to deploy-from)))))
 
 (defn soft-deploy
   "Hotswaps modified code into the server.

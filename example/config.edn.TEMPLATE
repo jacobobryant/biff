@@ -31,8 +31,12 @@
  :tasks {;; Set this if the auto-detection doesn't work
          ;; Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
          :biff.tasks/tailwind-build nil
-         :biff.tasks/main-ns com.example
+         :biff.tasks/clj-args ["-J-XX:-OmitStackTraceInFastThrow"
+                               "-M" "-m" "com.example"
+                               "--port" "7888"
+                               "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]
          :biff.tasks/soft-deploy-fn com.example/on-save
-         :biff.tasks/deploy-from "master"
-         :biff.tasks/deploy-to "prod"
+         ;; Uncomment this if your primary branch is called main instead of master.
+         ;:biff.tasks/deploy-cmd ["git" "push" "prod" "main:master"]
+         :biff.tasks/deploy-cmd ["git" "push" "prod" "master"]
          :biff.tasks/server "example.com"}}
