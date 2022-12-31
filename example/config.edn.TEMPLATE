@@ -32,6 +32,7 @@
          ;; Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
          :biff.tasks/tailwind-build nil
          :biff.tasks/clj-args ["-J-XX:-OmitStackTraceInFastThrow"
+                               "-J-XX:+CrashOnOutOfMemoryError"
                                "-M" "-m" "com.example"
                                "--port" "7888"
                                "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]
