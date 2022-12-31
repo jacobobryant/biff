@@ -7,13 +7,26 @@
 
 (def repo-url "https://github.com/jacobobryant/biff")
 
-(def java-major-version
-  (when (fs/which "javap")
-    (->> (shell/sh "javap" "-verbose" "java.lang.String")
-         :out
-         (re-find #"major version: (\d+)")
-         second
-         parse-long)))
+(defn have-java-11? []
+  (cond
+   (fs/which "javap")
+   (->> (shell/sh "javap" "-verbose" "java.lang.String")
+        :out
+        (re-find #"major version: (\d+)")
+        second
+        parse-long
+        (<= 55))
+
+   (fs/which "java")
+   (->> (shell/sh "java" "-version")
+        :err
+        (re-find #"version[^\d]+(\d+)")
+        second
+        parse-long
+        (<= 11))
+
+   :else
+   false))
 
 (defn sh
   [& args]
@@ -53,21 +66,19 @@
 (defn die [exit-code & message]
   (binding [*out* *err*]
     (apply println message)
-    (System/exit exit-code)))
+    (System/exit 1 exit-code)))
 
 (defn -main [& [branch]]
-  (when (nil? java-major-version)
-    (die 1 "`java` command not found. Please install Java 11 or higher."))
-  (when (< java-major-version 55)
-    (die 2 "Please install Java 11 or higher."))
+  (when-not (have-java-11?)
+    (die "Please install Java 11 or higher."))
   (when-not (fs/which "curl")
-    (die 3 "`curl` command not found. Please install it. (`scoop install curl` on Windows.)"))
+    (die "`curl` command not found. Please install it. (`scoop install curl` on Windows.)"))
   (let [ref->commit (fetch-refs)
         commit (if-not branch
                  (ref->commit "HEAD")
                  (ref->commit (str "refs/heads/" branch)))
         _ (when-not commit
-            (die 4 "Invalid git branch:" branch))
+            (die "Invalid git branch:" branch))
         tag (some-> (filter (fn [[ref_ commit_]]
                               (and (= commit commit_)
                                    (str/starts-with? ref_ "refs/tags/v")))
