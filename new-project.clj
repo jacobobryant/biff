@@ -5,16 +5,13 @@
             [clojure.string :as str])
   (:import java.security.SecureRandom))
 
-(def java-version
-  (when (fs/which "java")
-    (-> (shell/sh "java" "-version")
-        :err
-        (str/split #"\s+")
-        (as-> $ (drop-while #(not= % "version") $))
-        (nth 1)
-        (str/replace #"\..*" "")
-        (str/replace #"[^0-9]" "")
-        parse-long)))
+(def java-major-version
+  (when (fs/which "javap")
+    (->> (shell/sh "javap" "-verbose" "java.lang.String")
+         :out
+         (re-find #"major version: (\d+)")
+         second
+         parse-long)))
 
 (defn sh
   [& args]
@@ -48,11 +45,11 @@
   (str ":git/url \"https://github.com/jacobobryant/biff\" :sha \"" sha "\""))
 
 (defn -main [& [branch]]
-  (when (nil? java-version)
+  (when (nil? java-major-version)
     (println "`java` command not found. Please install Java 11 or higher.")
     (System/exit 1))
-  (when (< java-version 11)
-    (println "Java" java-version "is installed. Please install Java 11 or higher.")
+  (when (< java-major-version 55)
+    (println "Please install Java 11 or higher.")
     (System/exit 2))
   (when-not (fs/which "curl")
     (println "`curl` command not found. Please install it. (`scoop install curl` on Windows.)")
