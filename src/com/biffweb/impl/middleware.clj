@@ -4,11 +4,21 @@
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.xtdb :as bxt]
             [muuntaja.middleware :as muuntaja]
+            [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.defaults :as rd]
             [ring.middleware.resource :as res]
+            [ring.middleware.session :as session]
             [ring.middleware.session.cookie :as cookie]
+            [ring.middleware.ssl :as ssl]
             [rum.core :as rum]))
+
+(defn wrap-debug [handler]
+  (fn [ctx]
+    (util/pprint [:request ctx])
+    (let [resp (handler ctx)]
+      (util/pprint [:response resp])
+      resp)))
 
 (defn wrap-anti-forgery-websockets [handler]
   (fn [{:keys [biff/base-url headers] :as req}]
@@ -30,6 +40,7 @@
          :body (str "<!DOCTYPE html>\n" (rum/render-static-markup response))}
         response))))
 
+;; Deprecated; wrap-resource does this inline now.
 (defn wrap-index-files [handler {:keys [index-files]
                                  :or {index-files ["index.html"]}}]
   (fn [req]
@@ -38,31 +49,54 @@
          (into [req])
          (some (wrap-content-type handler)))))
 
-(defn wrap-resource [handler {:biff.middleware/keys [root index-files]
-                              :or {root "public"
-                                   index-files ["index.html"]}}]
-  (let [resource-handler (wrap-index-files
-                          #(res/resource-request % root)
-                          {:index-files index-files})]
-    (fn [req]
-      (or (resource-handler req)
-          (handler req)))))
+(defn wrap-resource
+  ([handler]
+   (fn [{:biff.middleware/keys [root index-files]
+         :or {root "public"
+              index-files ["index.html"]}
+         :as ctx}]
+     (or (->> index-files
+              (map #(update ctx :uri str/replace-first #"/?$" (str "/" %)))
+              (into [ctx])
+              (some (wrap-content-type #(res/resource-request % root))))
+         (handler ctx))))
+  ;; Deprecated, use 1-arg arity
+  ([handler {:biff.middleware/keys [root index-files]
+             :or {root "public"
+                  index-files ["index.html"]}}]
+   (let [resource-handler (wrap-index-files
+                           #(res/resource-request % root)
+                           {:index-files index-files})]
+     (fn [req]
+       (or (resource-handler req)
+           (handler req))))))
 
-(defn wrap-internal-error [handler {:biff.middleware/keys [on-error]
-                                    :or {on-error util/default-on-error}}]
-  (fn [req]
-    (try
+(defn wrap-internal-error
+  ([handler]
+   (fn [{:biff.middleware/keys [on-error]
+         :or {on-error util/default-on-error}
+         :as ctx}]
+     (try
+      (handler ctx)
+      (catch Throwable t
+        (log/error t "Exception while handling request")
+        (on-error (assoc ctx :status 500 :ex t))))))
+  ;; Deprecated, use 1-arg arity
+  ([handler {:biff.middleware/keys [on-error]
+             :or {on-error util/default-on-error}}]
+   (fn [req]
+     (try
       (handler req)
       (catch Throwable t
         (log/error t "Exception while handling request")
-        (on-error (assoc req :status 500 :ex t))))))
+        (on-error (assoc req :status 500 :ex t)))))))
 
 (defn wrap-log-requests [handler]
   (fn [req]
-    (let [start (java.util.Date.)
+    (let [start (System/nanoTime)
           resp (handler req)
-          stop (java.util.Date.)
-          duration (- (inst-ms stop) (inst-ms start))]
+          stop (System/nanoTime)
+          duration (quot (- stop start) 1000000)]
       (log/infof "%3sms %s %-4s %s"
                  (str duration)
                  (:status resp "nil")
@@ -73,18 +107,99 @@
       resp)))
 
 (defn wrap-https-scheme [handler]
-  (fn [req]
-    (handler (cond-> req
-               (= :http (:scheme req)) (assoc :scheme :https)))))
+  (fn [{:keys [biff.middleware/secure] :or {secure true} :as ctx}]
+    (handler (if (and secure (= :http (:scheme ctx)))
+               (assoc ctx :scheme :https)
+               ctx))))
 
-(defn wrap-ring-defaults [handler {:keys [biff/secret]
-                                   :biff.middleware/keys [session-store
-                                                          cookie-secret
-                                                          secure
-                                                          session-max-age]
-                                   :or {session-max-age (* 60 60 24 60)
-                                        secure true}
-                                   :as ctx}]
+(defn wrap-session [handler]
+  (fn [{:keys [biff/secret]
+        :biff.middleware/keys [session-store
+                               cookie-secret
+                               secure
+                               session-max-age
+                               session-same-site]
+        :or {session-max-age (* 60 60 24 60)
+             secure true
+             session-same-site :lax}
+        :as ctx}]
+    (let [cookie-secret (if secret
+                          (secret :biff.middleware/cookie-secret)
+                          ;; For backwards compatibility
+                          cookie-secret)
+          session-store (if cookie-secret
+                          (cookie/cookie-store
+                           {:key (util/base64-decode cookie-secret)})
+                          session-store)
+          handler (session/wrap-session
+                   handler
+                   {:cookie-attrs {:max-age session-max-age
+                                   :same-site session-same-site
+                                   :http-only true
+                                   :secure secure}
+                    :store session-store})]
+      (handler ctx))))
+
+(defn wrap-ssl [handler]
+  (fn [{:keys [biff.middleware/secure
+               biff.middleware/hsts
+               biff.middleware/ssl-redirect]
+        :or {secure true
+             hsts true
+             ssl-redirect false}
+        :as ctx}]
+    (let [handler (if secure
+                    (cond-> handler
+                      hsts ssl/wrap-hsts
+                      ssl-redirect ssl/wrap-ssl-redirect)
+                    handler)]
+      (handler ctx))))
+
+(defn wrap-site-defaults [handler]
+  (-> handler
+      wrap-render-rum
+      wrap-anti-forgery-websockets
+      anti-forgery/wrap-anti-forgery
+      wrap-session
+      muuntaja/wrap-params
+      muuntaja/wrap-format
+      (rd/wrap-defaults (-> rd/site-defaults
+                            (assoc-in [:security :anti-forgery] false)
+                            (assoc-in [:responses :absolute-redirects] true)
+                            (assoc :session false)
+                            (assoc :static false)))))
+
+(defn wrap-api-defaults [handler]
+  (-> handler
+      muuntaja/wrap-params
+      muuntaja/wrap-format
+      (rd/wrap-defaults rd/api-defaults)))
+
+(defn wrap-base-defaults [handler]
+  (-> handler
+      wrap-https-scheme
+      wrap-resource
+      wrap-internal-error
+      wrap-ssl
+      wrap-log-requests))
+
+(defn use-wrap-ctx [{:keys [biff/handler] :as ctx}]
+  (assoc ctx :biff/handler (fn [req]
+                             (handler (merge (bxt/merge-context ctx) req)))))
+
+
+;;; Deprecated
+
+(defn wrap-ring-defaults
+  "Deprecated"
+  [handler {:keys [biff/secret]
+            :biff.middleware/keys [session-store
+                                   cookie-secret
+                                   secure
+                                   session-max-age]
+            :or {session-max-age (* 60 60 24 60)
+                 secure true}
+            :as ctx}]
   (let [cookie-secret (if secret
                         (secret :biff.middleware/cookie-secret)
                         ;; For backwards compatibility
@@ -113,11 +228,14 @@
       ;; wrap-absolute-redirects will set the redirect scheme to http.
       secure wrap-https-scheme)))
 
-(defn wrap-env [handler sys]
+(defn wrap-env
+  "Deprecated"
+  [handler sys]
   (fn [req]
     (handler (merge (bxt/merge-context sys) req))))
 
 (defn wrap-inner-defaults
+  "Deprecated"
   [handler opts]
   (-> handler
       muuntaja/wrap-params
@@ -126,7 +244,9 @@
       (wrap-internal-error opts)
       wrap-log-requests))
 
-(defn wrap-outer-defaults [handler opts]
+(defn wrap-outer-defaults
+  "Deprecated"
+  [handler opts]
   (-> handler
       (wrap-ring-defaults opts)
       (wrap-env opts)))

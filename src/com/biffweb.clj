@@ -254,29 +254,115 @@
   index-files:  See wrap-index-files.
 
   Checks for a static resource first. If none is found, passes the request to
-  handler."
-  [handler {:biff.middleware/keys [root index-files]
-            :or {root "public"
-                 index-files ["index.html"]}
-            :as opts}]
-  (middle/wrap-resource handler opts))
+  handler.
+
+  The single-arity version is preferred. In that case, options can be set on
+  the incoming Ring request."
+  ([handler {:biff.middleware/keys [root index-files]
+             :or {root "public"
+                  index-files ["index.html"]}
+             :as opts}]
+   (middle/wrap-resource handler opts))
+  ([handler]
+   (middle/wrap-resource handler)))
 
 (defn wrap-internal-error
   "Catches exceptions from handler, prints a stack trace, and returns a 500 response.
 
   You may optionally provide on-error, a single-argument function that receives
   the request map with the :status key set to 500. The default implementation
-  returns a plain Internal Server Error message."
-  [handler {:biff.middleware/keys [on-error]}]
-  middle/wrap-internal-error)
+  returns a plain Internal Server Error message.
+
+  The single-arity version is preferred. In that case, options can be set on
+  the incoming Ring request."
+  ([handler {:biff.middleware/keys [on-error]}]
+   middle/wrap-internal-error)
+  ([handler]
+   (middle/wrap-internal-error handler)))
 
 (defn wrap-log-requests
   "Prints execution time, status, request method, uri and query params for each request."
   [handler]
   (middle/wrap-log-requests handler))
 
+(defn wrap-https-scheme
+  "Sets the :scheme key to :https on incoming Ring requests.
+
+  This is necessary when using a reverse proxy (e.g. Nginx), otherwise
+  wrap-absolute-redirects will set the redirect scheme to http.
+
+  The following options can be set on incoming Ring requests:
+
+   - :biff.middleware/secure (default: true)
+     If false, this middleware will be disabled."
+  [handler]
+  (middle/wrap-https-scheme handler))
+
+(defn wrap-session
+  "A wrapper for ring.middleware.session/wrap-session.
+
+  The following options can be set on incoming Ring requests:
+
+   - :biff.middleware/cookie-secret
+     A 16-bit base64-encoded secret. If set, sessions will be backed by
+     encrypted cookies. Takes precedence over session-store.
+
+   - :biff.middleware/session-store
+     A session store for use with ring.middleware.session/wrap-session.
+     Required if cookie-secret isn't set.
+
+   - :biff.middleware/secure (default: true)
+     Sets the session cookie to https-only.
+
+   - :biff.middleware/session-max-age (default: (* 60 60 24 60))
+     The session cookie's max age, in seconds.
+
+   - :biff.middleware/session-same-site (default: :lax)
+     The value of the Same-Site header for the session cookie."
+  [handler]
+  (middle/wrap-session handler))
+
+(defn wrap-ssl
+  "A wrapper for ring.middleware.ssl/{wrap-hsts,wrap-ssl-redirect}.
+
+  The following options can be set on incoming Ring requests:
+
+   - :biff.middleware/secure (default: true)
+     If false, this middleware will be disabled.
+
+   - :biff.middleware/hsts (default: true)
+     If true, include wrap-hsts.
+
+   - :biff.middleware/ssl-redirect (default: false)
+     If true, include wrap-ssl-redirect. Don't enable this if you're using a
+     reverse proxy (like Nginx)."
+  [handler]
+  (middle/wrap-ssl handler))
+
+(defn wrap-site-defaults
+  "A collection of middleware for website routes."
+  [handler]
+  (middle/wrap-site-defaults handler))
+
+(defn wrap-api-defaults
+  "A collection of middleware for API routes."
+  [handler]
+  (middle/wrap-api-defaults handler))
+
+(defn wrap-base-defaults
+  "A collection of middleware for website and API routes."
+  [handler]
+  (middle/wrap-base-defaults handler))
+
+(defn use-wrap-ctx
+  "A Biff component that merges the context map into incoming Ring requests."
+  [{:keys [biff/handler] :as ctx}]
+  (middle/use-wrap-ctx ctx))
+
 (defn wrap-ring-defaults
-  "Wraps handler with ring.middleware.defaults/wrap-defaults.
+  "Deprecated. Use wrap-base-defaults, wrap-site-defaults, and wrap-api-defaults instead.
+
+  Wraps handler with ring.middleware.defaults/wrap-defaults.
 
   secure:          if true, uses ring.middleware.defaults/secure-site-defaults,
                    else uses site-defaults.
@@ -297,15 +383,19 @@
             :or {session-max-age (* 60 60 24 60)
                  secure true}
             :as ctx}]
-  (middle/wrap-ring-defaults handler opts))
+  (middle/wrap-ring-defaults handler ctx))
 
 (defn wrap-env
-  "Merges (merge-context system) with incoming requests."
+  "Deprecated. Use use-wrap-ctx instead.
+
+  Merges (merge-context system) with incoming requests."
   [handler system]
   (middle/wrap-env handler system))
 
 (defn wrap-inner-defaults
-  "Wraps handler with various middleware which don't depend on the system map.
+  "Deprecated. Use wrap-base-defaults, wrap-site-defaults, and wrap-api-defaults instead.
+
+  Wraps handler with various middleware which don't depend on the system map.
 
   Includes wrap-log-requests, wrap-internal-error, wrap-resource, and
   Muuntaja's wrap-params and wrap-format (see https://github.com/metosin/muuntaja).
@@ -327,7 +417,9 @@
   (middle/wrap-inner-defaults handler opts))
 
 (defn use-outer-default-middleware
-  "A Biff component that wraps :biff/handler with middleware that depends on the system map.
+  "Deprecated. Use wrap-base-defaults, wrap-site-defaults, and wrap-api-defaults instead.
+
+  A Biff component that wraps :biff/handler with middleware that depends on the system map.
 
   Includes wrap-ring-defaults and wrap-env."
   [sys]
