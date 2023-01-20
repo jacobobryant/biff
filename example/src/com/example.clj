@@ -5,11 +5,8 @@
             [com.example.feat.home :as home]
             [com.example.feat.worker :as worker]
             [com.example.schema :refer [malli-opts]]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
             [clojure.test :as test]
             [clojure.tools.logging :as log]
-            [ring.middleware.anti-forgery :as anti-forgery]
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def features
