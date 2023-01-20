@@ -53,17 +53,17 @@
     biff/use-beholder)])
 
 (defn start []
-  (biff/start-system
-   {:com.example/chat-clients (atom #{})
-    :biff/features #'features
-    :biff/after-refresh `start
-    :biff/handler #'handler
-    :biff/malli-opts #'malli-opts
-    :biff.beholder/on-save #'on-save
-    :biff.xtdb/tx-fns biff/tx-fns
-    :biff/components components})
-  (generate-assets! @biff/system)
-  (log/info "Go to" (:biff/base-url @biff/system)))
+  (let [ctx (biff/start-system
+             {:com.example/chat-clients (atom #{})
+              :biff/features #'features
+              :biff/after-refresh `start
+              :biff/handler #'handler
+              :biff/malli-opts #'malli-opts
+              :biff.beholder/on-save #'on-save
+              :biff.xtdb/tx-fns biff/tx-fns
+              :biff/components components})]
+    (generate-assets! ctx)
+    (log/info "Go to" (:biff/base-url ctx))))
 
 (defn -main [& args]
   (start)

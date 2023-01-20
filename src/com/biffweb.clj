@@ -24,8 +24,8 @@
 (defn start-system
   "Starts a system from an initial system map.
 
-  Stores the system in the com.biffweb/system atom. See
-  https://biffweb.com/docs/reference/system-composition"
+  Stores the system in the com.biffweb/system atom. Returns the contents of the
+  atom. See https://biffweb.com/docs/reference/system-composition"
   [init]
   (util/start-system system init))
 

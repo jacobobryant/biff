@@ -26,7 +26,8 @@
     (when (some? f)
       (log/info "starting:" (str f))
       (recur (reset! system-atom (f (assoc sys :biff/components components))))))
-  (log/info "System started."))
+  (log/info "System started.")
+  @system-atom)
 
 (defn refresh [{:keys [biff/after-refresh biff/stop]}]
   (doseq [f stop]
