@@ -18,14 +18,13 @@
    home/features
    worker/features])
 
-(def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
-                               biff/wrap-anti-forgery-websockets
-                               biff/wrap-render-rum]}
+(def routes [["" {:middleware [biff/wrap-site-defaults]}
               (keep :routes features)]
-             (keep :api-routes features)])
+             ["" {:middleware [biff/wrap-api-defaults]}
+              (keep :api-routes features)]])
 
 (def handler (-> (biff/reitit-handler {:routes routes})
-                 (biff/wrap-inner-defaults {})))
+                 biff/wrap-base-defaults))
 
 (def static-pages (apply biff/safe-merge (map :static features)))
 
@@ -46,7 +45,7 @@
    biff/use-xt
    biff/use-queues
    biff/use-tx-listener
-   biff/use-outer-default-middleware
+   biff/use-wrap-ctx
    biff/use-jetty
    biff/use-chime
    (biff/use-when
