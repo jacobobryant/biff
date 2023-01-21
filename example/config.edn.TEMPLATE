@@ -37,6 +37,7 @@
          :biff.tasks/tailwind-build nil
          :biff.tasks/clj-args ["-J-XX:-OmitStackTraceInFastThrow"
                                "-J-XX:+CrashOnOutOfMemoryError"
+                               "-J-Duser.timezone=UTC"
                                "-M" "-m" "com.example"
                                "--port" "7888"
                                "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]
