@@ -8,13 +8,34 @@
             [clojure.java.shell :as sh]
             [clojure.string :as str]))
 
+(defn new-secret [length]
+  (let [buffer (byte-array length)]
+    (.nextBytes (java.security.SecureRandom.) buffer)
+    (.encodeToString (java.util.Base64/getEncoder) buffer)))
+
+(defn generate-secrets
+  "Prints new values to put in secrets.env."
+  []
+  (println "Put these in your secrets.env file:")
+  (println)
+  (println (str "export COOKIE_SECRET=" (new-secret 16)))
+  (println (str "export JWT_SECRET=" (new-secret 32)))
+  (println))
+
+(defn shell-some [& args]
+  (apply shell (filter some? args)))
+
 (defn windows? []
   (not (fs/which "uname")))
 
-(defn tailwind-path []
+(defn local-tailwind-path []
   (if (windows?)
     "bin/tailwindcss.exe"
     "bin/tailwindcss"))
+
+(defn tailwind-path []
+  (or (some-> (fs/which "tailwindcss") str)
+      (local-tailwind-path)))
 
 (def config
   (delay (:tasks (edn/read-string (slurp "config.edn")))))
@@ -39,9 +60,13 @@
         file (str "tailwindcss-" build)
         url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
                  file)
-        dest (io/file (tailwind-path))]
+        dest (io/file (local-tailwind-path))]
     (io/make-parents dest)
     (println "Downloading the latest version of Tailwind CSS...")
+    (println "After it finishes, you can avoid downloading Tailwind again for"
+             "future projects if you copy it to your path, e.g. by running:")
+    (println "  sudo cp bin/tailwindcss /usr/local/bin/")
+    (println)
     (io/copy (:body (curl/get url {:compressed false :as :stream})) dest)
     (.setExecutable dest true)))
 
@@ -54,13 +79,27 @@
     "--port" "7888"
     "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]))
 
+;; Algorithm copied from Python's shlex.quote()
+;; https://github.com/python/cpython/blob/db65a326a4022fbd43648858b460f52734faf1b5/Lib/shlex.py#L325
+(defn shell-escape [s]
+  (str \'
+       (some-> s (str/replace "'" "'\"'\"'"))
+       \'))
+
 (defn run-cmd
   "Internal. Used by the server to start the app."
   []
-  (io/make-parents "target/resources/_")
-  (when (fs/exists? "package.json")
-    (shell "npm" "install"))
-  (apply println "clj" (run-args)))
+  (let [commands (filter some?
+                         ["mkdir -p target/resources"
+                          (when (fs/exists? "package.json")
+                            "npm install")
+                          (when (fs/exists? "secrets.env")
+                            ". ./secrets.env")
+                          (->> (run-args)
+                               (map shell-escape)
+                               (str/join " ")
+                               (str "clj "))])]
+    (println "eval" (str/join " ; " commands))))
 
 (defn css [& args]
   (apply shell
@@ -71,6 +110,20 @@
                   "-i" "resources/tailwind.css"
                   "-o" "target/resources/public/css/main.css"]
                  args)))
+
+(defn secrets []
+  (when (fs/exists? "secrets.env")
+    (->> (slurp "secrets.env")
+         str/split-lines
+         (keep (fn [s]
+                 (some-> s
+                         (str/replace #"^export\s+" "")
+                         (str/replace #"#.*" "")
+                         str/trim
+                         not-empty)))
+         (filter #(str/includes? % "="))
+         (map #(vec (str/split % #"=" 2)))
+         (into {}))))
 
 (defn dev
   "Starts the app locally.
@@ -89,7 +142,7 @@
     (install-tailwind))
   (future (css "--watch"))
   (spit ".nrepl-port" "7888")
-  (apply clojure {:extra-env {"BIFF_ENV" "dev"}}
+  (apply clojure {:extra-env (merge (secrets) {"BIFF_ENV" "dev"})}
          (concat args (run-args))))
 
 (defn format
@@ -122,15 +175,22 @@
     (css "--minify")
     (if (windows?)
       (do
-        (shell "scp" "config.edn" (str "app@" server ":"))
+        (shell-some "scp"
+                    "config.edn"
+                    (when (fs/exists? "secrets.env") "secrets.env")
+                    (str "app@" server ":"))
         (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
         (shell "scp" "target/resources/public/css/main.css"
                (str "app@" server ":target/resources/public/css/main.css")))
       (do
         (fs/set-posix-file-permissions "config.edn" "rw-------")
-        (shell "rsync" "-a" "--relative"
-               "config.edn" "target/resources/public/css/main.css"
-               (str "app@" server ":"))))
+        (when (fs/exists? "secrets.env")
+          (fs/set-posix-file-permissions "secrets.env" "rw-------"))
+        (shell-some "rsync" "-a" "--relative"
+                    "config.edn"
+                    (when (fs/exists? "secrets.env") "secrets.env")
+                    "target/resources/public/css/main.css"
+                    (str "app@" server ":"))))
     (time (if deploy-cmd
             (apply shell deploy-cmd)
             ;; For backwards compatibility
@@ -149,10 +209,23 @@
   (let [{:biff.tasks/keys [server soft-deploy-fn]} @config]
     (css "--minify")
     (when-not (windows?)
-      (fs/set-posix-file-permissions "config.edn" "rw-------"))
-    (shell "rsync" "-a" "--relative" "--info=name1" "--delete"
-           "config.edn" "deps.edn" "bb.edn" "src" "resources" "target/resources/public/css/main.css"
-           (str "app@" server ":"))
+      (fs/set-posix-file-permissions "config.edn" "rw-------")
+      (when (fs/exists? "secrets.env")
+        (fs/set-posix-file-permissions "secrets.env" "rw-------")))
+    (->> (concat ["rsync" "-a" "--relative" "--info=name1" "--delete"
+                  "config.edn"
+                  "deps.edn"
+                  "bb.edn"
+                  "src"
+                  "resources"
+                  "tasks"
+                  "target/resources/public/css/main.css"]
+                 (filter fs/exists?
+                         ["secrets.env"
+                          "package.json"
+                          "package-lock.json"])
+                 [(str "app@" server ":")])
+         (apply shell))
     (trench (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))
 
 (defn refresh
