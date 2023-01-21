@@ -378,12 +378,11 @@
          :as sys} (-> (assoc-db sys)
                       (assoc :biff/now (java.util.Date.)))
         tx (make-tx sys)
-        ;; Disabled temporarily -- I believe this sometimes triggers a bug in XT
-        ;_ (when (and (some (fn [[op]]
-        ;                     (= op ::xt/fn))
-        ;                   tx)
-        ;             (nil? (xt/with-tx db tx)))
-        ;    (throw (ex-info "Transaction violated a constraint" {:tx tx})))
+        _ (when (and (some (fn [[op]]
+                             (= op ::xt/fn))
+                           tx)
+                     (nil? (xt/with-tx db tx)))
+            (throw (ex-info "Transaction violated a constraint" {:tx tx})))
         submitted-tx (when (not-empty tx)
                        (xt/submit-tx node tx))
         ms (int (rand (* 1000 (Math/pow 2 n-tried))))]
