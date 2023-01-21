@@ -1,6 +1,8 @@
 (ns com.example.ui
-  (:require [clojure.java.io :as io]
-            [com.biffweb :as biff]))
+  (:require [cheshire.core :as cheshire]
+            [clojure.java.io :as io]
+            [com.biffweb :as biff]
+            [ring.middleware.anti-forgery :as csrf]))
 
 (defn css-path []
   (if-some [f (io/file (io/resource "public/css/main.css"))]
@@ -27,4 +29,7 @@
   (base
    opts
    [:.p-3.mx-auto.max-w-screen-sm.w-full
+    (when (bound? #'csrf/*anti-forgery-token*)
+      {:hx-headers (cheshire/generate-string
+                    {:x-csrf-token csrf/*anti-forgery-token*})})
     body]))
