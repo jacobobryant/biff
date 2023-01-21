@@ -6,11 +6,11 @@
             [rum.core :as rum]
             [xtdb.api :as xt]))
 
-(defn human? [{:keys [recaptcha/secret-key params]}]
+(defn human? [{:keys [biff/secret params]}]
   (let [{:keys [success score]}
         (:body
          (http/post "https://www.google.com/recaptcha/api/siteverify"
-                    {:form-params {:secret secret-key
+                    {:form-params {:secret (secret :recaptcha/secret-key)
                                    :response (:g-recaptcha-response params)}
                      :as :json}))]
     (and success (or (nil? score) (<= 0.5 score)))))
@@ -39,7 +39,7 @@
         (signin-template {:to email :url url}))))
 
 (defn send-token [{:keys [biff/base-url
-                          biff/jwt-secret
+                          biff/secret
                           anti-forgery-token
                           params]
                    :as req}]
@@ -49,7 +49,7 @@
                 :email email
                 :state (biff/sha256 anti-forgery-token)
                 :exp-in (* 60 60)}
-               jwt-secret)
+               (secret :biff/jwt-secret))
         url (str base-url "/auth/verify/" token)]
     (if-not (util/email-signin-enabled? req)
       (do
@@ -62,11 +62,12 @@
                               "/auth/fail/")}})))
 
 (defn verify-token [{:keys [biff.xtdb/node
-                            biff/jwt-secret
+                            biff/secret
                             path-params
                             session
                             anti-forgery-token] :as req}]
-  (let [{:keys [intent email state]} (biff/jwt-decrypt (:token path-params) jwt-secret)
+  (let [{:keys [intent email state]} (biff/jwt-decrypt (:token path-params)
+                                                       (secret :biff/jwt-secret))
         success (and (= intent "signin")
                      (= state (biff/sha256 anti-forgery-token)))
         get-user-id #(biff/lookup-id (xt/db node) :user/email email)

@@ -42,7 +42,7 @@
 
 (def components
   [biff/use-config
-   biff/use-random-default-secrets
+   biff/use-secrets
    biff/use-xt
    biff/use-queues
    biff/use-tx-listener
@@ -62,7 +62,6 @@
     :biff/malli-opts #'malli-opts
     :biff.beholder/on-save #'on-save
     :biff.xtdb/tx-fns biff/tx-fns
-    :biff/config "config.edn"
     :biff/components components})
   (generate-assets! @biff/system)
   (log/info "Go to" (:biff/base-url @biff/system)))

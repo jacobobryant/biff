@@ -5,11 +5,15 @@
         ;; serious. You can uncomment the following to use managed postgres
         ;; instead.
         ;; :biff.xtdb/topology :jdbc
-        ;; :biff.xtdb.jdbc/jdbcUrl "postgresql://user:password@host:port/dbname?sslmode=require"
+        ;; :biff.xtdb.jdbc/user "user"
+        ;; :biff.xtdb.jdbc/password "JDBC_PASSWORD" ; Leave this as-is, and update secrets.env
+        ;; :biff.xtdb.jdbc/host "host"
+        ;; :biff.xtdb.jdbc/port 5432
+        ;; :biff.xtdb.jdbc/dbname "dbname"
         :biff/base-url "https://example.com"
         ;; Postmark is used to send email sign-in links. Create an account at
         ;; https://postmarkapp.com
-        :postmark/api-key nil
+        :postmark/api-key "POSTMARK_API_KEY"
         ;; Change to the address of your sending identity. Set a reply-to
         ;; address on your sending identity if you want to receive replies and
         ;; your from address isn't configured for receiving.
@@ -18,9 +22,9 @@
         ;; https://www.google.com/recaptcha/about/ and add a site. Select v2
         ;; invisible. Add localhost to your list of allowed domains.
         :recaptcha/site-key nil
-        :recaptcha/secret-key nil
-        :biff.middleware/cookie-secret nil
-        :biff/jwt-secret nil}
+        :recaptcha/secret-key "RECAPTCHA_SECRET_KEY"
+        :biff.middleware/cookie-secret "COOKIE_SECRET"
+        :biff/jwt-secret "JWT_SECRET"}
  :dev {:merge [:prod]
        :com.example/enable-beholder true
        :biff/host "0.0.0.0"

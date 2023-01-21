@@ -4,14 +4,14 @@
             [camel-snake-kebab.extras :as cske]
             [clj-http.client :as http]))
 
-(defn email-signin-enabled? [sys]
-  (every? sys [:postmark/api-key :recaptcha/site-key :recaptcha/secret-key]))
+(defn email-signin-enabled? [{:keys [biff/secret recaptcha/site-key]}]
+  (and site-key (secret :recaptcha/secret-key) (secret :postmark/api-key)))
 
-(defn postmark [{:keys [postmark/api-key]} method endpoint & [form-params options]]
+(defn postmark [{:keys [biff/secret]} method endpoint & [form-params options]]
   (http/request
    (merge {:method method
            :url (str "https://api.postmarkapp.com" endpoint)
-           :headers {"X-Postmark-Server-Token" api-key}
+           :headers {"X-Postmark-Server-Token" (secret :postmark/api-key)}
            :as :json
            :content-type :json
            :form-params (cske/transform-keys csk/->PascalCase form-params)}
