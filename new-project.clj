@@ -116,14 +116,14 @@
             (-> src
                 slurp
                 (str/replace "com.example" main-ns)
-                (str/replace #"cookie-secret nil" (str "cookie-secret " (pr-str cookie-secret)))
-                (str/replace #"jwt-secret nil" (str "jwt-secret " (pr-str jwt-secret)))
+                (str/replace "COOKIE_SECRET=" (str "COOKIE_SECRET=" cookie-secret))
+                (str/replace "JWT_SECRET=" (str "JWT_SECRET=" jwt-secret))
                 (str/replace "{:local/root \"..\"}" (pr-str coordinates))
                 (str/replace "{:local/root \"../../tasks\"}"
                              (pr-str (assoc coordinates :deps/root "tasks"))))))
     (.renameTo (io/file dir "config.edn.TEMPLATE") (io/file dir "config.edn"))
+    (.renameTo (io/file dir "secrets.env.TEMPLATE") (io/file dir "secrets.env"))
     (rmrf tmp)
-    (sh "bb" "--force" "-e" "nil" :dir dir)
     (println)
     (println "Your project is ready. Run the following commands to get started:")
     (println)
@@ -132,6 +132,7 @@
     (println "  bb dev")
     (println)
     (println "And run `bb tasks` for a list of available commands.")
+    (println)
     (System/exit 0)))
 
 (apply -main *command-line-args*)

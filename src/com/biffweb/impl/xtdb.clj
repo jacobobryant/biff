@@ -59,7 +59,8 @@
     node))
 
 (defn use-xt
-  [{:biff.xtdb/keys [topology dir kv-store opts tx-fns]
+  [{:keys [biff/secret]
+    :biff.xtdb/keys [topology dir kv-store opts tx-fns]
     :or {kv-store :rocksdb}
     :as sys}]
   (let [node (start-node
@@ -67,7 +68,8 @@
                :dir dir
                :kv-store kv-store
                :opts opts
-               :jdbc-spec (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
+               :jdbc-spec (cond-> (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
+                            secret (assoc :password (secret :biff.xtdb.jdbc/password)))
                :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)
                :tx-fns tx-fns})]
     (-> sys

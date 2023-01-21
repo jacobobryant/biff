@@ -40,7 +40,7 @@
   (util/refresh @system))
 
 (defn use-config
-  "Reads config from (:biff/config sys), and edn file, and merges into sys.
+  "Reads config from an edn file and merges into sys.
 
   The config file's contents should be a map from environments to config keys
   and values, for example:
@@ -53,8 +53,8 @@
   The current environment should be stored in the BIFF_ENV environment variable.
   The default value is `prod`. To inherit config from other environments, set
   :merge to a sequence of environment keys."
-  [sys]
-  (merge sys (util/read-config (:biff/config sys))))
+  [{:keys [biff/config] :or {config "config.edn"} :as ctx}]
+  (merge ctx (util/read-config config)))
 
 (defn sh
   "Runs a shell command.
@@ -280,22 +280,23 @@
 
   secure:          if true, uses ring.middleware.defaults/secure-site-defaults,
                    else uses site-defaults.
-  cookie-secret:   if provided, session-store is set with
-                   ring.middleware.session.cookie/cookie-store
   session-store:   passed to wrap-defaults under the [:session :store] path.
   sesion-max-age:  the number of seconds after which a session should expire.
+
+  If secret is set and (secret :biff.middleware/cookie-secret) returns non-nil,
+  session-store is set with ring.middleware.session.cookie/cookie-store.
 
   Disables CSRF checks. You must wrap non-API routes with
   ring.middleware.anti-forgery. The Biff project template does this by default.
   Disables SSL redirects under the assumption that this is handled by e.g.
   NGINX. Also sets SameSite=Lax explicitly on the session cookie."
-  [handler {:biff.middleware/keys [session-store
-                                   cookie-secret
+  [handler {:keys [biff/secret]
+            :biff.middleware/keys [session-store
                                    secure
                                    session-max-age]
             :or {session-max-age (* 60 60 24 60)
                  secure true}
-            :as opts}]
+            :as ctx}]
   (middle/wrap-ring-defaults handler opts))
 
 (defn wrap-env
@@ -360,8 +361,12 @@
   Sets :biff.xtdb/node on the system map. topology, kv-store, dir, opts and
   tx-fns are passed to start-node. Any keys matching :biff.xtdb.jdbc/* or
   :biff.xtdb.jdbc-pool/* are passed in as jdbc-spec and pool-opts,
-  respectively."
-  [{:biff.xtdb/keys [topology kv-store dir opts tx-fns]
+  respectively.
+
+  If :biff/secret is set, the value of :biff.xtdb.jdbc/password will be replaced
+  with (secret :biff.xtdb.jdbc/password)."
+  [{:keys [biff/secret]
+    :biff.xtdb/keys [topology kv-store dir opts tx-fns]
     :as sys}]
   (bxt/use-xt sys))
 
@@ -763,7 +768,10 @@
   (misc/generate-secret length))
 
 (defn use-random-default-secrets
-  "A Biff component that merges temporary secrets into the system map if needed.
+  "Deprecated. If secrets aren't set in secrets.env, they can be generated with
+  `bb generate-secrets`.
+
+  A Biff component that merges temporary secrets into the system map if needed.
 
   Sets :biff.middleware/cookie-secret and :biff/jwt-secret if they are nil. The
   secrets will not persist if the system is restarted. Can be useful in
@@ -776,6 +784,25 @@
   for new Biff projects."
   [sys]
   (misc/use-random-default-secrets sys))
+
+(defn use-secrets
+  "Sets :biff/secret to a function which will return the value for a given secret.
+  Also ensures that secrets for :biff.middleware/cookie-secret and
+  :biff/jwt-secret are set. If they aren't, exits with an error message.
+
+  For example, if the environment variable SOME_API_KEY is set to FOO and
+  the :some-service/api-key config option is set to \"SOME_API_KEY\", then
+  you can get the API key like so:
+
+  (defn handler [{:keys [biff/secret]}]]
+    (let [api-key (secret :some-service/api-key)]
+      ...))
+
+  You could also just call (System/getenv \"SOME_API_KEY\"), which is fine in
+  application code. But Biff's internal code uses :biff/secret so that you can
+  override it if you want to store secrets somewhere else."
+  [ctx]
+  (misc/use-secrets ctx))
 
 (defn merge-context
   "Returns the system map with additional data merged in.

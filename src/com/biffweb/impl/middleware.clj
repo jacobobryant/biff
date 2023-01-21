@@ -77,13 +77,19 @@
     (handler (cond-> req
                (= :http (:scheme req)) (assoc :scheme :https)))))
 
-(defn wrap-ring-defaults [handler {:biff.middleware/keys [session-store
+(defn wrap-ring-defaults [handler {:keys [biff/secret]
+                                   :biff.middleware/keys [session-store
                                                           cookie-secret
                                                           secure
                                                           session-max-age]
                                    :or {session-max-age (* 60 60 24 60)
-                                        secure true}}]
-  (let [session-store (if cookie-secret
+                                        secure true}
+                                   :as ctx}]
+  (let [cookie-secret (if secret
+                        (secret :biff.middleware/cookie-secret)
+                        ;; For backwards compatibility
+                        cookie-secret)
+        session-store (if cookie-secret
                         (cookie/cookie-store
                          {:key (util/base64-decode cookie-secret)})
                         session-store)

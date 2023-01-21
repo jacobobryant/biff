@@ -131,6 +131,18 @@
            (log/warn ":biff/jwt-secret is empty, using random value")
            {:biff/jwt-secret (generate-secret 32)})))
 
+(defn get-secret [ctx k]
+  (some-> (get ctx k)
+          (System/getenv)
+          not-empty))
+
+(defn use-secrets [ctx]
+  (when-not (every? #(get-secret ctx %) [:biff.middleware/cookie-secret :biff/jwt-secret])
+    (binding [*out* *err*]
+      (println "Secrets are missing. Run `bb generate-secrets` and edit secrets.env.")
+      (System/exit 1)))
+  (assoc ctx :biff/secret #(get-secret ctx %)))
+
 (defn doc-schema [{:keys [required optional closed wildcards]
                    :or {closed true}}]
   (let [ks (->> (concat required optional)
