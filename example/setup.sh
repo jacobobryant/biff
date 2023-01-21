@@ -5,6 +5,7 @@ set -e
 BIFF_ENV=${1:-prod}
 CLJ_VERSION=1.11.1.1165
 TRENCH_VERSION=0.4.0
+TRENCH_FILE=trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
 
 echo waiting for apt to finish
 while (ps aux | grep [a]pt); do
@@ -15,14 +16,12 @@ done
 apt-get update
 apt-get upgrade
 apt-get -y install default-jre rlwrap
-curl -O https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh
-chmod +x linux-install-$CLJ_VERSION.sh
-./linux-install-$CLJ_VERSION.sh
-rm linux-install-$CLJ_VERSION.sh
-wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
-tar -xf trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
-mv trench /usr/local/bin/
+bash < <(curl -s https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh)
 bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
+wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/$TRENCH_FILE
+tar -xf $TRENCH_FILE
+rm $TRENCH_FILE
+mv trench /usr/local/bin/
 
 # Non-root user
 useradd -m app
@@ -40,7 +39,6 @@ set_up_app () {
 #!/usr/bin/env bash
 git --work-tree=/home/app --git-dir=/home/app/repo.git checkout -f
 cd /home/app
-bb --force -e nil
 bb post-receive
 EOD
   chmod +x hooks/post-receive
@@ -60,7 +58,7 @@ Restart=on-failure
 RestartSec=5s
 Environment="BIFF_ENV=$BIFF_ENV"
 WorkingDirectory=/home/app
-ExecStart=/bin/sh -c '\$\$(bb --force -e nil; bb run-cmd)'
+ExecStart=/bin/sh -c '\$\$(bb run-cmd)'
 
 [Install]
 WantedBy=multi-user.target
