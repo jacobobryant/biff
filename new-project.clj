@@ -7,27 +7,6 @@
 
 (def repo-url "https://github.com/jacobobryant/biff")
 
-(defn have-java-11? []
-  (cond
-   (fs/which "javap")
-   (->> (shell/sh "javap" "-verbose" "java.lang.String")
-        :out
-        (re-find #"major version: (\d+)")
-        second
-        parse-long
-        (<= 55))
-
-   (fs/which "java")
-   (->> (shell/sh "java" "-version")
-        :err
-        (re-find #"version[^\d]+(\d+)")
-        second
-        parse-long
-        (<= 11))
-
-   :else
-   false))
-
 (defn sh
   [& args]
   (let [result (apply shell/sh args)]
@@ -63,14 +42,12 @@
            (map (comp vec reverse))
            (into {}))))
 
-(defn die [exit-code & message]
+(defn die [& message]
   (binding [*out* *err*]
     (apply println message)
-    (System/exit 1 exit-code)))
+    (System/exit 1)))
 
 (defn -main [& [branch]]
-  (when-not (have-java-11?)
-    (die "Please install Java 11 or higher."))
   (when-not (fs/which "curl")
     (die "`curl` command not found. Please install it. (`scoop install curl` on Windows.)"))
   (let [ref->commit (fetch-refs)
