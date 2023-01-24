@@ -10,7 +10,7 @@
 
 (defn new-secret [length]
   (let [buffer (byte-array length)]
-    (.nextBytes (java.security.SecureRandom.) buffer)
+    (.nextBytes (java.security.SecureRandom/getInstanceStrong) buffer)
     (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
 (defn generate-secrets

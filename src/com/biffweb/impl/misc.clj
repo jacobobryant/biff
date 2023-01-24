@@ -120,7 +120,9 @@
               (some->> features deref (mapcat :tasks)))))
 
 (defn generate-secret [length]
-  (util/base64-encode (nonce/random-bytes length)))
+  (let [buffer (byte-array length)]
+    (.nextBytes (java.security.SecureRandom/getInstanceStrong) buffer)
+    (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
 (defn use-random-default-secrets [sys]
   (merge sys
