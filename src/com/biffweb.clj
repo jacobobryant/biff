@@ -275,8 +275,8 @@
 
   The single-arity version is preferred. In that case, options can be set on
   the incoming Ring request."
-  ([handler {:biff.middleware/keys [on-error]}]
-   middle/wrap-internal-error)
+  ([handler {:biff.middleware/keys [on-error] :as opts}]
+   (middle/wrap-internal-error handler opts))
   ([handler]
    (middle/wrap-internal-error handler)))
 
