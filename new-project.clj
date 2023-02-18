@@ -95,11 +95,15 @@
                 (str/replace "com.example" main-ns)
                 (str/replace "COOKIE_SECRET=" (str "COOKIE_SECRET=" cookie-secret))
                 (str/replace "JWT_SECRET=" (str "JWT_SECRET=" jwt-secret))
+                (str/replace ":biff.middleware/cookie-secret nil"
+                             (str ":biff.middleware/cookie-secret \"" cookie-secret \"))
+                (str/replace ":biff/jwt-secret nil" (str ":biff/jwt-secret \"" jwt-secret \"))
                 (str/replace "{:local/root \"..\"}" (pr-str coordinates))
                 (str/replace "{:local/root \"../../tasks\"}"
                              (pr-str (assoc coordinates :deps/root "tasks"))))))
     (.renameTo (io/file dir "config.edn.TEMPLATE") (io/file dir "config.edn"))
-    (.renameTo (io/file dir "secrets.env.TEMPLATE") (io/file dir "secrets.env"))
+    (when (.isFile (io/file dir "secrets.env.TEMPLATE"))
+      (.renameTo (io/file dir "secrets.env.TEMPLATE") (io/file dir "secrets.env")))
     (rmrf tmp)
     (println)
     (println "Your project is ready. Run the following commands to get started:")
