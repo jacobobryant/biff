@@ -1,18 +1,21 @@
 (ns com.example
   (:require [com.biffweb :as biff]
+            [com.example.email :as email]
             [com.example.feat.app :as app]
-            [com.example.feat.auth :as auth]
             [com.example.feat.home :as home]
             [com.example.feat.worker :as worker]
-            [com.example.schema :refer [malli-opts]]
+            [com.example.schema :as schema]
             [clojure.test :as test]
             [clojure.tools.logging :as log]
+            [malli.core :as malc]
+            [malli.registry :as malr]
             [nrepl.cmdline :as nrepl-cmd]))
 
 (def features
   [app/features
-   auth/features
+   (biff/authentication-plugin {})
    home/features
+   schema/features
    worker/features])
 
 (def routes [["" {:middleware [biff/wrap-site-defaults]}
@@ -36,6 +39,12 @@
   (generate-assets! sys)
   (test/run-all-tests #"com.example.test.*"))
 
+(def malli-opts
+  {:registry (malr/composite-registry
+              malc/default-registry
+              (apply biff/safe-merge
+                     (keep :schema features)))})
+
 (def components
   [biff/use-config
    biff/use-secrets
@@ -52,6 +61,7 @@
 (defn start []
   (let [ctx (biff/start-system
              {:com.example/chat-clients (atom #{})
+              :biff/send-email #'email/send-email
               :biff/features #'features
               :biff/after-refresh `start
               :biff/handler #'handler

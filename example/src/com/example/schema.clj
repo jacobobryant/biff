@@ -1,6 +1,4 @@
-(ns com.example.schema
-  (:require [malli.core :as malc]
-            [malli.registry :as malr]))
+(ns com.example.schema)
 
 (def schema
   {:user/id :uuid
@@ -25,4 +23,5 @@
          :msg/text
          :msg/sent-at]})
 
-(def malli-opts {:registry (malr/composite-registry malc/default-registry schema)})
+(def features
+  {:schema schema})

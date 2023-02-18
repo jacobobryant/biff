@@ -12,4 +12,4 @@
     (if (some? (:uid session))
       (handler req)
       {:status 303
-       :headers {"location" "/"}})))
+       :headers {"location" "/signin?error=not-signed-in"}})))
