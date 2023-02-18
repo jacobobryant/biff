@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [com.biffweb.impl.auth :as auth]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.queues :as q]
@@ -89,7 +90,7 @@
   Trims leading and trailing whitespace and converts to lower case. Returns nil
   if the email is empty after trimming."
   [email]
-  (some-> email str/trim str/lower-case not-empty))
+  (util/normalize-email email))
 
 (defn use-when
   "Passes the system map to components only if (f system) is true.
@@ -1017,6 +1018,245 @@
    job]
   (q/submit-job-for-result sys queue-id job))
 
+;;;; Authentication
+
+(defn authentication-plugin
+  "A Biff plugin that includes backend routes for passwordless authentication.
+
+  Returns a features map that can be included with the rest of your app's
+  features.
+
+  There are routes for sending signin links and six-digit signin codes. Either
+  method may be used for signing in or signing up. If a new user tries to sign
+  in, a user document will be created after they click the link or enter the
+  code.
+
+  Signin links usually have a bit less friction, while signin codes are
+  resilient to embedded browsers and PWAs on mobile devices. As a default
+  recommendation, you can use links for your signup form and codes for your
+  signin form.
+
+
+  INSTRUCTIONS
+  ============
+
+  You should provide forms that POST to /auth/send-link and/or /auth/send-code.
+  You should also provide pages at the following URLS: /link-sent,
+  /verify-link, and /verify-code. See ROUTES for details.
+
+  Your :biff/send-email function must accept the following templates:
+   - :signin-link, with parameters :to, :url, and :user-exists.
+   - :signin-code, with parameters :to, :code, and :user-exists.
+
+
+  SCHEMA
+  ======
+
+  :biff.auth/code documents are used to store users' signin codes:
+
+  {:biff.auth.code/id :uuid
+   :biff.auth/code [:map {:closed true}
+                    [:xt/id :biff.auth.code/id]
+                    [:biff.auth.code/email :string]
+                    [:biff.auth.code/code :string]
+                    [:biff.auth.code/created-at inst?]
+                    [:biff.auth.code/failed-attempts integer?]]}
+
+
+  OPTIONS
+  =======
+
+  :biff.auth/app-path
+  -------------------
+  Default: \"/app\"
+
+  Users will be redirected here after they sign in successfully.
+
+
+  :biff.auth/invalid-link-path
+  ----------------------------
+  Default: \"/signin\"
+
+  Users will be redirected here if they click on a signin link that is invalid
+  or expired.
+
+
+  :biff.auth/check-state
+  ----------------------
+  Default: true
+
+  If true and the user opens the signin link on a different device or browser
+  from the one the link was requested on, then the user will have to re-enter
+  their email address before being authenticated. This helps to prevent people
+  from being tricked into signing into someone else's account.
+
+
+  :biff.auth/new-user-tx
+  ----------------------
+  Default:
+
+    (fn [ctx email]
+      [{:db/doc-type :user
+        :db.op/upsert {:user/email email}
+        :user/joined-at :db/now}])
+
+  A function that returns a transaction for creating a new user.
+
+
+  :biff.auth/single-opt-in
+  ------------------------
+  Default: false
+
+  If true, the user's account will be created immediately after they submit
+  their email address. Otherwise, their account will only be created after they
+  verify their address by clicking the link/entering the code.
+
+
+  :biff.auth/email-validator
+  --------------------------
+  Default:
+
+    (fn [ctx email]
+      (and email (re-matches #\".+@.+\\..+\" email)))
+
+  A predicate function that checks if a given email address is valid. For extra
+  protection, you can supply a function that calls out to an email validation
+  API, like Mailgun's.
+
+
+  ROUTES
+  ======
+
+  All routes that are protected by Recaptcha take a required
+  g-recaptcha-response form parameter, which should be set automatically by the
+  Recaptcha client library.
+
+
+  POST /auth/send-link
+  --------------------
+
+  Sends a signin link to the user's email address. The link goes to
+  /auth/verify-link/:token.
+
+  Form parameters:
+   - email:    The user's email address.
+   - on-error: A path to redirect to in case of error. Default /.
+
+  Redirects:
+   - /sent-link?email={email}:       Success.
+   - {on-error}?error=recaptcha:     The recaptcha test failed.
+   - {on-error}?error=invalid-email: The :biff.auth/email-validator function
+                                     returned false.
+   - {on-error}?error=send-failed:   The :biff/send-email function returned
+                                     false.
+
+  Protected by Recaptcha.
+
+
+  GET /auth/verify-link/:token
+  ----------------------------
+
+  A link to this endpoint is generated and sent to the user by the
+  /auth/send-link endpoint. On success, assigns the :uid parameter in the
+  user's session to their user ID. If the user doesn't exist yet, creates a new
+  account.
+
+  Path parameters:
+   - token: A JWT generated by the /auth/send-link endpoint. Expires after one
+            hour.
+
+  Redirects:
+   - {:biff.auth/app-path}:          Success.
+   - {:biff.auth/invalid-link-path}: The token was invalid or expired.
+   - /verify-link?token={token}:     The user needs to provide their email
+                                     address again so we can ensure it matches
+                                     the address contained in the token.
+
+
+  POST /auth/verify-link
+  ----------------------
+
+  Verifies that the user's email address matches one contained in the token. On
+  success, assigns the :uid parameter in the user's session to their user ID.
+  If the user doesn't exist yet, creates a new account.
+
+  Form parameters:
+   - token: A JWT generated by the /auth/send-link endpoint. Expires after one
+            hour.
+   - email: The user's email address.
+
+  Redirects:
+   - {:biff.auth/app-path}
+     Success.
+
+   - {:biff.auth/invalid-link-path}
+     The token was invalid or expired.
+
+   - /verify-link?token={token}&error=incorrect-email
+     The email address provided didn't match the one in the token.
+
+
+  POST /auth/send-code
+  --------------------
+
+  Sends a six-digit (numeric) signin code to the user's email address. The code
+  expires after three minutes or three failed verification attempts.
+
+  Form parameters:
+   - email:    The user's email address.
+   - on-error: A path to redirect to in case of error. Default /.
+
+  Redirects:
+   - /verify-code?email={email}:     Success.
+   - {on-error}?error=recaptcha:     The recaptcha test failed.
+   - {on-error}?error=invalid-email: The :biff.auth/email-validator function
+                                     returned false.
+   - {on-error}?error=send-failed:   The :biff/send-email function returned
+                                     false.
+
+  Protected by Recaptcha.
+
+
+  POST /auth/verify-code
+  ----------------------
+
+  Verifies that the code provided by the user matches the one they were sent.
+  On success, assigns the :uid parameter in the user's session to their user
+  ID.
+
+  Form parameters:
+   - email: The user's email address.
+   - code:  A six-digit code.
+
+  Redirects:
+   - {:biff.auth/app-path}
+     Success.
+
+   - /verify-code?error=invalid-code&email={email}
+     The given code was incorrect or expired.
+
+  Protected by Recaptcha.
+
+
+  POST /auth/signout
+  ------------------
+
+  Removes the :uid from the user's session. Redirects to /."
+  [options]
+  (auth/plugin options))
+
+(def recaptcha-disclosure
+  "A [:div ...] element that contains a disclosure statement, which should be
+  shown on pages that include a Recaptcha test."
+  auth/recaptcha-disclosure)
+
+(defn recaptcha-callback
+  "Returns a [:script ...] element which defines a Javascript function, for use
+  as a callback with Recaptcha. The callback function submits the form with the
+  given ID."
+  [fn-name form-id]
+  (auth/recaptcha-callback fn-name form-id))
+
 (defn- write-doc-data [dest]
   (let [sections (->> (with-open [r (io/reader (io/resource "com/biffweb.clj"))]
                         (doall (line-seq r)))
@@ -1040,6 +1280,8 @@
                                       (assoc :section section-title)))))))]
     (spit dest (with-out-str
                  (pprint metadata)))))
+
+
 
 (comment
   (do

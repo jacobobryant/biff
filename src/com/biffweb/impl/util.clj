@@ -216,3 +216,6 @@
 
 (defn join [sep xs]
   (rest (mapcat vector (repeat sep) xs)))
+
+(defn normalize-email [email]
+  (some-> email str/trim str/lower-case not-empty))
