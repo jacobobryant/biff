@@ -15,7 +15,7 @@ done
 # Dependencies
 apt-get update
 apt-get upgrade
-apt-get -y install default-jre rlwrap
+apt-get -y install default-jre rlwrap ufw git snapd
 bash < <(curl -s https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh)
 bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/$TRENCH_FILE
