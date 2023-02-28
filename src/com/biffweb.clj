@@ -1103,6 +1103,17 @@
   A function that returns a transaction for creating a new user.
 
 
+  :biff.auth/get-user-id
+  ----------------------
+  Default:
+
+    (fn [db email]
+      (biff/lookup-id db :user/email email)))
+
+  A function that returns the document ID for the user with the given email, or
+  nil if there is no such user.
+
+
   :biff.auth/single-opt-in
   ------------------------
   Default: false
