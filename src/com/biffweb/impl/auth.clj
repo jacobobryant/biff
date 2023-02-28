@@ -43,12 +43,13 @@
 
 (defn send-link! [{:keys [biff.auth/email-validator
                           biff/db
+                          biff.auth/get-user-id
                           biff/send-email
                           params]
                    :as ctx}]
   (let [email (butil/normalize-email (:email params))
         url (new-link ctx email)
-        user-id (delay (bxt/lookup-id db :user/email email))]
+        user-id (delay (get-user-id db email))]
     (cond
      (not (passed-recaptcha? ctx))
      {:success false :error "recaptcha"}
@@ -92,11 +93,12 @@
 (defn send-code! [{:keys [biff.auth/email-validator
                           biff/db
                           biff/send-email
+                          biff.auth/get-user-id
                           params]
                    :as ctx}]
   (let [email (butil/normalize-email (:email params))
         code (new-code 6)
-        user-id (delay (bxt/lookup-id db :user/email email))]
+        user-id (delay (get-user-id db email))]
     (cond
      (not (passed-recaptcha? ctx))
      {:success false :error "recaptcha"}
@@ -132,14 +134,14 @@
 (defn verify-link-handler [{:keys [biff.auth/app-path
                                    biff.auth/invalid-link-path
                                    biff.auth/new-user-tx
+                                   biff.auth/get-user-id
                                    biff.xtdb/node
                                    session
                                    params
                                    path-params]
                             :as req}]
   (let [{:keys [success error email]} (verify-link req)
-        get-user-id #(bxt/lookup-id (xt/db node) :user/email email)
-        existing-user-id (when success (get-user-id))
+        existing-user-id (when success (get-user-id (xt/db node) email))
         token (:token (merge params path-params))]
     (when (and success (not existing-user-id))
       (bxt/submit-tx req (new-user-tx req email)))
@@ -157,7 +159,8 @@
                            :else
                            invalid-link-path)}
      :session (cond-> session
-                success (assoc :uid (or existing-user-id (get-user-id))))}))
+                success (assoc :uid (or existing-user-id
+                                        (get-user-id (xt/db node) email))))}))
 
 (defn send-code-handler [{:keys [biff.auth/single-opt-in
                                  biff.auth/new-user-tx
@@ -181,6 +184,7 @@
 
 (defn verify-code-handler [{:keys [biff.auth/app-path
                                    biff.auth/new-user-tx
+                                   biff.auth/get-user-id
                                    biff.xtdb/node
                                    biff/db
                                    params
@@ -193,8 +197,7 @@
                      (< (:biff.auth.code/failed-attempts code) 3)
                      (not (btime/elapsed? (:biff.auth.code/created-at code) :now 3 :minutes))
                      (= (:code params) (:biff.auth.code/code code)))
-        get-user-id #(bxt/lookup-id (xt/db node) :user/email email)
-        existing-user-id (when success (get-user-id))
+        existing-user-id (when success (get-user-id db email))
         tx (cond
             success
             (concat [[::xt/delete (:xt/id code)]]
@@ -212,7 +215,8 @@
     (if success
       {:status 303
        :headers {"location" app-path}
-       :session (assoc session :uid (or existing-user-id (get-user-id)))}
+       :session (assoc session :uid (or existing-user-id
+                                        (get-user-id db email)))}
       {:status 303
        :headers {"location" (str "/verify-code?error=invalid-code&email=" email)}})))
 
@@ -228,11 +232,15 @@
     :db.op/upsert {:user/email email}
     :user/joined-at :db/now}])
 
+(defn get-user-id [db email]
+  (bxt/lookup-id db :user/email email))
+
 (def default-options
   #:biff.auth{:app-path "/app"
               :invalid-link-path "/signin?error=invalid-link"
               :check-state true
               :new-user-tx new-user-tx
+              :get-user-id get-user-id
               :single-opt-in false
               :email-validator email-valid?})
 
