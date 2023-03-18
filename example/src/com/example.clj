@@ -1,9 +1,9 @@
 (ns com.example
   (:require [com.biffweb :as biff]
             [com.example.email :as email]
-            [com.example.feat.app :as app]
-            [com.example.feat.home :as home]
-            [com.example.feat.worker :as worker]
+            [com.example.app :as app]
+            [com.example.home :as home]
+            [com.example.worker :as worker]
             [com.example.schema :as schema]
             [clojure.test :as test]
             [clojure.tools.logging :as log]

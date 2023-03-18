@@ -1,4 +1,4 @@
-(ns com.example.feat.home
+(ns com.example.home
   (:require [clj-http.client :as http]
             [com.biffweb :as biff]
             [com.example.middleware :as mid]

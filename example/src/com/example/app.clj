@@ -1,4 +1,4 @@
-(ns com.example.feat.app
+(ns com.example.app
   (:require [com.biffweb :as biff :refer [q]]
             [com.example.middleware :as mid]
             [com.example.ui :as ui]

@@ -1,4 +1,4 @@
-(ns com.example.feat.worker
+(ns com.example.worker
   (:require [clojure.tools.logging :as log]
             [com.biffweb :as biff :refer [q]]
             [xtdb.api :as xt]))
