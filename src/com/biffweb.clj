@@ -765,14 +765,16 @@
 
   See https://github.com/nextjournal/beholder.
 
+  enabled:  If false, this component is a no-op. Default true.
   on-save:  A single-argument function to call whenever a file is saved.
             Receives the system map as a parameter. Subsequent file saves
             that occur within one second are ignored.
   paths:    A collection of root directories to monitor for file changes.
   exts:     If exts is non-empty, files that don't end in one of the extensions
             will be ignored."
-  [{:biff.beholder/keys [on-save exts paths]
-    :or {paths ["src" "resources"]}
+  [{:biff.beholder/keys [on-save exts paths enabled]
+    :or {paths ["src" "resources"]
+         enabled true}
     :as sys}]
   (misc/use-beholder sys))
 
