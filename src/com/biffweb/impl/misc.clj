@@ -67,7 +67,8 @@
                   :or {host "localhost"
                        port 8080}
                   :as sys}]
-  (let [server (jetty/run-jetty handler
+  (let [server (jetty/run-jetty (fn [req]
+                                  (handler (merge (bxt/merge-context sys) req)))
                                 {:host host
                                  :port port
                                  :join? false

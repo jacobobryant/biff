@@ -360,7 +360,9 @@
   (middle/wrap-base-defaults handler))
 
 (defn use-wrap-ctx
-  "A Biff component that merges the context map into incoming Ring requests."
+  "Deprecated. biff/use-jetty does this now.
+
+  A Biff component that merges the context map into incoming Ring requests."
   [{:keys [biff/handler] :as ctx}]
   (middle/use-wrap-ctx ctx))
 
