@@ -12,22 +12,22 @@
             [malli.registry :as malr]
             [nrepl.cmdline :as nrepl-cmd]))
 
-(def features
-  [app/features
+(def plugins
+  [app/plugin
    (biff/authentication-plugin {})
-   home/features
-   schema/features
-   worker/features])
+   home/plugin
+   schema/plugin
+   worker/plugin])
 
 (def routes [["" {:middleware [biff/wrap-site-defaults]}
-              (keep :routes features)]
+              (keep :routes plugins)]
              ["" {:middleware [biff/wrap-api-defaults]}
-              (keep :api-routes features)]])
+              (keep :api-routes plugins)]])
 
 (def handler (-> (biff/reitit-handler {:routes routes})
                  biff/wrap-base-defaults))
 
-(def static-pages (apply biff/safe-merge (map :static features)))
+(def static-pages (apply biff/safe-merge (map :static plugins)))
 
 (defn generate-assets! [sys]
   (biff/export-rum static-pages "target/resources/public")
@@ -44,7 +44,7 @@
   {:registry (malr/composite-registry
               malc/default-registry
               (apply biff/safe-merge
-                     (keep :schema features)))})
+                     (keep :schema plugins)))})
 
 (def components
   [biff/use-config
@@ -59,7 +59,7 @@
 (def initial-system
   {:com.example/chat-clients (atom #{})
    :biff/send-email #'email/send-email
-   :biff/features #'features
+   :biff/plugins #'plugins
    :biff/handler #'handler
    :biff/malli-opts #'malli-opts
    :biff.beholder/on-save #'on-save

@@ -23,5 +23,5 @@
          :msg/text
          :msg/sent-at]})
 
-(def features
+(def plugin
   {:schema schema})

@@ -131,7 +131,7 @@
         :on-close (fn [ws status-code reason]
                     (swap! chat-clients disj ws))}})
 
-(def features
+(def plugin
   {:routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
