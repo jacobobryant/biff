@@ -23,7 +23,9 @@
 (defonce system (atom nil))
 
 (defn start-system
-  "Starts a system from an initial system map.
+  "Deprecated. See Biff v0.7.3 release notes.
+
+  Starts a system from an initial system map.
 
   Stores the system in the com.biffweb/system atom. Returns the contents of the
   atom. See https://biffweb.com/docs/reference/system-composition"
@@ -31,7 +33,9 @@
   (util/start-system system init))
 
 (defn refresh
-  "Stops the system, refreshes source files, and restarts the system.
+  "Deprecated. See Biff v0.7.3 release notes.
+
+  Stops the system, refreshes source files, and restarts the system.
 
   The system is stopped by calling all the functions in (:biff/stop
   @com.biffweb/system). (:biff/after-refresh @system) is a fully-qualified
