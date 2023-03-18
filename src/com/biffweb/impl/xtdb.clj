@@ -85,14 +85,15 @@
   (merge-context-fn sys))
 
 (defn use-tx-listener [{:keys [biff/features
+                               biff/plugins
                                biff.xtdb/on-tx
                                biff.xtdb/node]
                         :as sys}]
-  (if-not (or on-tx features)
+  (if-not (or on-tx plugins features)
     sys
     (let [on-tx (or on-tx
                     (fn [sys tx]
-                      (doseq [{:keys [on-tx]} @features
+                      (doseq [{:keys [on-tx]} @(or plugins features)
                               :when on-tx]
                         (util/catchall-verbose
                          (on-tx sys tx)))))

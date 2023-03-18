@@ -114,14 +114,14 @@
       nil)))
 
 (defn use-chime
-  [{:keys [biff/features biff.chime/tasks] :as sys}]
+  [{:keys [biff/features biff/plugins biff.chime/tasks] :as sys}]
   (reduce (fn [sys {:keys [schedule task]}]
             (let [f (fn [_] (task (bxt/merge-context sys)))
                   scheduler (chime/chime-at (schedule) f)]
               (update sys :biff/stop conj #(.close scheduler))))
           sys
           (or tasks
-              (some->> features deref (mapcat :tasks)))))
+              (some->> (or plugins features) deref (mapcat :tasks)))))
 
 (defn generate-secret [length]
   (let [buffer (byte-array length)]

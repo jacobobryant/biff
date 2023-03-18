@@ -35,9 +35,10 @@
                                         (:biff/priority b 10)))))
 
 (defn- init [{:keys [biff/features
+                     biff/plugins
                      biff.queues/enabled-ids]}]
   (let [continue (atom true)]
-    (->> @features
+    (->> @(or plugins features)
          (mapcat :queues)
          (filter (fn [q]
                    (or (nil? enabled-ids) (contains? enabled-ids (:id q)))))

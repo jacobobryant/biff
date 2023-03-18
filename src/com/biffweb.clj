@@ -470,20 +470,21 @@
   (bxt/use-xt sys))
 
 (defn use-tx-listener
-  "If on-tx or features provided, starts an XTDB transaction listener.
+  "If on-tx or plugins is provided, starts an XTDB transaction listener.
 
-  features: A var containing a collection of feature maps. Each feature map may
+  plugins:  A var containing a collection of plugin maps. Each plugin map may
             contain an :on-tx key.
-  on-tx:    Deprecated. Use features instead. If set, takes precedence over
-            features.
+  features: Deprecated. Alias for plugins. plugins takes precedence.
+  on-tx:    Deprecated. Use plugins instead. If set, takes precedence over
+            plugins.
 
-  Calls each on-tx function in features whenever a new transaction is
+  Calls each on-tx function in plugins whenever a new transaction is
   successfully indexed. on-tx receives the system map and the transaction, i.e.
   (on-tx system tx). tx is the transaction as returned by (xtdb.api/open-tx-log
   node tx-id true). on-tx will not be called concurrently: if a second
   transaction is indexed while on-tx is still running, use-tx-listener will
   wait until it finishes before passing the second transaction."
-  [{:keys [biff/features biff.xtdb/on-tx biff.xtdb/node] :as sys}]
+  [{:keys [biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as sys}]
   (bxt/use-tx-listener sys))
 
 (defn assoc-db
@@ -823,16 +824,17 @@
 (defn use-chime
   "A Biff component for running scheduled tasks with Chime (https://github.com/jarohen/chime)
 
-  features: A var containing a collection of feature maps. Each feature map may
+  plugins:  A var containing a collection of plugin maps. Each plugin map may
             contain a :tasks key, which contains a collection of task maps.
-  tasks:    Deprecated. Use features instead. If set, takes precedence over
-            features.
+  features: Deprecated. Alias for plugins. plugins takes precedence.
+  tasks:    Deprecated. Use plugins instead. If set, takes precedence over
+            plugins
 
   For example:
-  (def features
+  (def plugin
     {:tasks [{:task (fn [system] (println \"hello there\"))
               :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]})"
-  [{:keys [biff/features biff.chime/tasks] :as sys}]
+  [{:keys [biff/plugins biff/features biff.chime/tasks] :as sys}]
   (misc/use-chime sys))
 
 (defn mailersend
@@ -952,9 +954,10 @@
 (defn use-queues
   "A Biff component that creates in-memory queues and thread pools to consume them.
 
-  features:     A var containing a collection of feature maps. Each feature map
+  plugins       A var containing a collection of plugin maps. Each plugin map
                 may contain a :queues key, which contains a collection of queue
                 config maps. See below. Required.
+  features:     Deprecated. Alias for plugins. plugins takes precedence.
   enabled-ids:  An optional set of queue IDs. If non-nil, only queues in the
                 set will be created.
   stop-timeout: When shutting down, the number of milliseconds to wait before
@@ -986,7 +989,7 @@
     (when-some [callback (:biff/callback job)]
       (callback job)))
 
-  (def features
+  (def plugin
     {:queues [{:id :echo
                :consumer #'echo-consumer}]})
 
@@ -999,7 +1002,8 @@
   =>
   (out) :echo {:foo \"bar\", :biff/callback #function[...]}
   {:foo \"bar\", :biff/callback #function[...]}"
-  [{:keys [biff/features
+  [{:keys [biff/plugins
+           biff/features
            biff.queues/enabled-ids
            biff.queues/stop-timeout]
     :as sys}]
@@ -1031,8 +1035,8 @@
 (defn authentication-plugin
   "A Biff plugin that includes backend routes for passwordless authentication.
 
-  Returns a features map that can be included with the rest of your app's
-  features.
+  Returns a plugin map that can be included with the rest of your app's
+  plugins.
 
   There are routes for sending signin links and six-digit signin codes. Either
   method may be used for signing in or signing up. If a new user tries to sign
