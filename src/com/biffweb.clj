@@ -45,7 +45,7 @@
   (util/refresh @system))
 
 (defn use-config
-  "Reads config from an edn file and merges into sys.
+  "Reads config from an edn file and merges into ctx.
 
   The config file's contents should be a map from environments to config keys
   and values, for example:
@@ -266,8 +266,8 @@
   ([handler {:biff.middleware/keys [root index-files]
              :or {root "public"
                   index-files ["index.html"]}
-             :as opts}]
-   (middle/wrap-resource handler opts))
+             :as ctx}]
+   (middle/wrap-resource handler ctx))
   ([handler]
    (middle/wrap-resource handler)))
 
@@ -280,8 +280,8 @@
 
   The single-arity version is preferred. In that case, options can be set on
   the incoming Ring request."
-  ([handler {:biff.middleware/keys [on-error] :as opts}]
-   (middle/wrap-internal-error handler opts))
+  ([handler {:biff.middleware/keys [on-error] :as ctx}]
+   (middle/wrap-internal-error handler ctx))
   ([handler]
    (middle/wrap-internal-error handler)))
 
@@ -393,7 +393,7 @@
   (middle/wrap-ring-defaults handler ctx))
 
 (defn wrap-env
-  "Deprecated. Use use-wrap-ctx instead.
+  "Deprecated. use-jetty handles this now.
 
   Merges (merge-context system) with incoming requests."
   [handler system]
@@ -429,8 +429,8 @@
   A Biff component that wraps :biff/handler with middleware that depends on the system map.
 
   Includes wrap-ring-defaults and wrap-env."
-  [sys]
-  (update sys :biff/handler middle/wrap-outer-defaults sys))
+  [ctx]
+  (update ctx :biff/handler middle/wrap-outer-defaults ctx))
 
 ;;;; XTDB
 
@@ -466,8 +466,8 @@
   with (secret :biff.xtdb.jdbc/password)."
   [{:keys [biff/secret]
     :biff.xtdb/keys [topology kv-store dir opts tx-fns]
-    :as sys}]
-  (bxt/use-xt sys))
+    :as ctx}]
+  (bxt/use-xt ctx))
 
 (defn use-tx-listener
   "If on-tx or plugins is provided, starts an XTDB transaction listener.
@@ -480,17 +480,17 @@
 
   Calls each on-tx function in plugins whenever a new transaction is
   successfully indexed. on-tx receives the system map and the transaction, i.e.
-  (on-tx system tx). tx is the transaction as returned by (xtdb.api/open-tx-log
+  (on-tx ctx tx). tx is the transaction as returned by (xtdb.api/open-tx-log
   node tx-id true). on-tx will not be called concurrently: if a second
   transaction is indexed while on-tx is still running, use-tx-listener will
   wait until it finishes before passing the second transaction."
-  [{:keys [biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as sys}]
-  (bxt/use-tx-listener sys))
+  [{:keys [biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as ctx}]
+  (bxt/use-tx-listener ctx))
 
 (defn assoc-db
-  "Sets :biff/db on the system map to (xt/db node)"
-  [{:keys [biff.xtdb/node] :as sys}]
-  (bxt/assoc-db sys))
+  "Sets :biff/db on the context map to (xt/db node)"
+  [{:keys [biff.xtdb/node] :as ctx}]
+  (bxt/assoc-db ctx))
 
 (defn q
   "Convenience wrapper for xtdb.api/q.
@@ -562,22 +562,22 @@
     :user/name \"example\"}
    [:xtdb.api/put {:xt/id #uuid \"...\"}]]
 
-  biff-tx may optionally be a function which takes sys and returns a Biff
+  biff-tx may optionally be a function which takes ctx and returns a Biff
   transaction.
 
   See https://biffweb.com/docs/reference/transactions."
-  [{:keys [biff/now biff/db biff/malli-opts] :as sys} biff-tx]
-  (bxt/biff-tx->xt sys biff-tx))
+  [{:keys [biff/now biff/db biff/malli-opts] :as ctx} biff-tx]
+  (bxt/biff-tx->xt ctx biff-tx))
 
 (defn submit-with-retries
   "Submits an XT transaction, retrying up to three times if there is contention.
   Blocks until the transaction is indexed or aborted.
 
-  make-tx is a one-argument function that takes the system map (sys) and
-  returns an XT transaction. The :biff/db and :biff/now keys in sys will be
-  updated before each time make-tx is called."
-  [sys make-tx]
-  (bxt/submit-with-retries sys make-tx))
+  make-tx is a one-argument function that takes the context map and returns an
+  XT transaction. The :biff/db and :biff/now keys in ctx will be updated before
+  each time make-tx is called."
+  [ctx make-tx]
+  (bxt/submit-with-retries ctx make-tx))
 
 (defn submit-tx
   "High-level wrapper over xtdb.api/submit-tx. See biff-tx->xt.
@@ -585,9 +585,9 @@
   If retry is true, the transaction will be passed to submit-with-retries."
   [{:keys [biff.xtdb/retry biff.xtdb/node]
     :or {retry true}
-    :as sys}
+    :as ctx}
    biff-tx]
-  (bxt/submit-tx sys biff-tx))
+  (bxt/submit-tx ctx biff-tx))
 
 (defn save-tx-fns!
   "Saves (or updates) the given transaction functions.
@@ -608,7 +608,7 @@
   :biff/ensure-unique - Aborts the transaction if more than one document
   contains the given key-value pairs. For example:
 
-  (biff/submit-tx sys
+  (biff/submit-tx ctx
     [{:db/doc-type :user
       :db/op :update
       :xt/id user-id
@@ -760,8 +760,8 @@
   prefixed with :biff.beholder/ instead of :biff.hawk/"
   [{:biff.hawk/keys [on-save exts paths]
     :or {paths ["src" "resources"]}
-    :as sys}]
-  (misc/use-hawk sys))
+    :as ctx}]
+  (misc/use-hawk ctx))
 
 (defn use-beholder
   "A Biff component that runs code when files are changed, via Beholder.
@@ -778,8 +778,8 @@
   [{:biff.beholder/keys [on-save exts paths enabled]
     :or {paths ["src" "resources"]
          enabled true}
-    :as sys}]
-  (misc/use-beholder sys))
+    :as ctx}]
+  (misc/use-beholder ctx))
 
 (defn reitit-handler
   "Convenience wrapper for reitit.ring/ring-handler.
@@ -798,8 +798,8 @@
   [{:biff/keys [host port handler]
     :or {host "localhost"
          port 8080}
-    :as sys}]
-  (misc/use-jetty sys))
+    :as ctx}]
+  (misc/use-jetty ctx))
 
 (defn jwt-encrypt
   "Convenience wrapper for buddy.sign.jwt/encrypt.
@@ -832,10 +832,10 @@
 
   For example:
   (def plugin
-    {:tasks [{:task (fn [system] (println \"hello there\"))
+    {:tasks [{:task (fn [ctx] (println \"hello there\"))
               :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]})"
-  [{:keys [biff/plugins biff/features biff.chime/tasks] :as sys}]
-  (misc/use-chime sys))
+  [{:keys [biff/plugins biff/features biff.chime/tasks] :as ctx}]
+  (misc/use-chime ctx))
 
 (defn mailersend
   "Sends an email with MailerSend.
@@ -858,9 +858,9 @@
                :text \"Some text\"
                :from {:name \"This will override the default value of 'My Application'\"}})"
   [{:keys [mailersend/api-key
-           mailersend/defaults] :as sys}
+           mailersend/defaults] :as ctx}
    opts]
-  (misc/mailersend sys opts))
+  (misc/mailersend ctx opts))
 
 (defn generate-secret
   "Generates a random byte array and returns it as a base64 string.
@@ -885,8 +885,8 @@
   This component should not be relied upon in production; instead you should
   save secrets in config.edn. This is done automatically at project setup time
   for new Biff projects."
-  [sys]
-  (misc/use-random-default-secrets sys))
+  [ctx]
+  (misc/use-random-default-secrets ctx))
 
 (defn use-secrets
   "Sets :biff/secret to a function which will return the value for a given secret.
@@ -908,14 +908,14 @@
   (misc/use-secrets ctx))
 
 (defn merge-context
-  "Returns the system map with additional data merged in.
+  "Returns the context map with additional data merged in.
 
-  Calls (merge-context-fn sys). By default, adds an XT database object to
+  Calls (merge-context-fn ctx). By default, adds an XT database object to
   :biff/db."
   [{:keys [biff/merge-context-fn]
     :or {merge-context-fn assoc-db}
-    :as sys}]
-  (merge-context-fn sys))
+    :as ctx}]
+  (merge-context-fn ctx))
 
 (defn doc-schema
   "Returns a [:map ...] schema for use with Malli.
@@ -984,7 +984,7 @@
 
   Example:
 
-  (defn echo-consumer [{:keys [biff/job] :as sys}]
+  (defn echo-consumer [{:keys [biff/job] :as ctx}]
     (prn :echo job)
     (when-some [callback (:biff/callback job)]
       (callback job)))
@@ -993,12 +993,12 @@
     {:queues [{:id :echo
                :consumer #'echo-consumer}]})
 
-  (biff/submit-job sys :echo {:foo \"bar\"})
+  (biff/submit-job ctx :echo {:foo \"bar\"})
   =>
   (out) :echo {:foo \"bar\"}
   true
 
-  @(biff/submit-job-for-result sys :echo {:foo \"bar\"})
+  @(biff/submit-job-for-result ctx :echo {:foo \"bar\"})
   =>
   (out) :echo {:foo \"bar\", :biff/callback #function[...]}
   {:foo \"bar\", :biff/callback #function[...]}"
@@ -1006,13 +1006,13 @@
            biff/features
            biff.queues/enabled-ids
            biff.queues/stop-timeout]
-    :as sys}]
-  (q/use-queues sys))
+    :as ctx}]
+  (q/use-queues ctx))
 
 (defn submit-job
-  "Convenience function which calls (.add (get-in sys [:biff/queues queue-id]) job)"
-  [sys queue-id job]
-  (q/submit-job sys queue-id job))
+  "Convenience function which calls (.add (get-in ctx [:biff/queues queue-id]) job)"
+  [ctx queue-id job]
+  (q/submit-job ctx queue-id job))
 
 (defn submit-job-for-result
   "Like submit-job, but returns a promise which will contain the result of the
@@ -1025,10 +1025,10 @@
   the number of milliseconds specified by result-timeout."
   [{:keys [biff.queues/result-timeout]
     :or {result-timeout 20000}
-    :as sys}
+    :as ctx}
    queue-id
    job]
-  (q/submit-job-for-result sys queue-id job))
+  (q/submit-job-for-result ctx queue-id job))
 
 ;;;; Authentication
 

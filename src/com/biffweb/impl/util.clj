@@ -22,10 +22,10 @@
 
 (defn start-system [system-atom init]
   (reset! system-atom (merge {:biff/stop '()} init))
-  (loop [{[f & components] :biff/components :as sys} init]
+  (loop [{[f & components] :biff/components :as ctx} init]
     (when (some? f)
       (log/info "starting:" (str f))
-      (recur (reset! system-atom (f (assoc sys :biff/components components))))))
+      (recur (reset! system-atom (f (assoc ctx :biff/components components))))))
   (log/info "System started.")
   @system-atom)
 
@@ -92,14 +92,14 @@
     config))
 
 (defn use-when [f & components]
-  (fn [sys]
-    (if (f sys)
+  (fn [ctx]
+    (if (f ctx)
       (reduce (fn [system component]
                 (log/info "starting:" (str component))
                 (component system))
-              sys
+              ctx
               components)
-      sys)))
+      ctx)))
 
 (defn anomaly? [x]
   (spec/valid? (spec/keys :req [:cognitect.anomalies/category]

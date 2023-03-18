@@ -62,41 +62,41 @@
   [{:keys [biff/secret]
     :biff.xtdb/keys [topology dir kv-store opts tx-fns]
     :or {kv-store :rocksdb}
-    :as sys}]
+    :as ctx}]
   (let [node (start-node
               {:topology topology
                :dir dir
                :kv-store kv-store
                :opts opts
-               :jdbc-spec (cond-> (ns/select-ns-as sys 'biff.xtdb.jdbc nil)
+               :jdbc-spec (cond-> (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
                             secret (assoc :password (secret :biff.xtdb.jdbc/password)))
-               :pool-opts (ns/select-ns-as sys 'biff.xtdb.jdbc-pool nil)
+               :pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
                :tx-fns tx-fns})]
-    (-> sys
+    (-> ctx
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
 
-(defn assoc-db [{:keys [biff.xtdb/node] :as sys}]
-  (assoc sys :biff/db (xt/db node)))
+(defn assoc-db [{:keys [biff.xtdb/node] :as ctx}]
+  (assoc ctx :biff/db (xt/db node)))
 
 (defn merge-context [{:keys [biff/merge-context-fn]
                       :or {merge-context-fn assoc-db}
-                      :as sys}]
-  (merge-context-fn sys))
+                      :as ctx}]
+  (merge-context-fn ctx))
 
 (defn use-tx-listener [{:keys [biff/features
                                biff/plugins
                                biff.xtdb/on-tx
                                biff.xtdb/node]
-                        :as sys}]
+                        :as ctx}]
   (if-not (or on-tx plugins features)
-    sys
+    ctx
     (let [on-tx (or on-tx
-                    (fn [sys tx]
+                    (fn [ctx tx]
                       (doseq [{:keys [on-tx]} @(or plugins features)
                               :when on-tx]
                         (util/catchall-verbose
-                         (on-tx sys tx)))))
+                         (on-tx ctx tx)))))
           lock (Object.)
           listener (xt/listen
                     node
@@ -109,10 +109,10 @@
                                                           true)]
                             (let [tx (first (iterator-seq log))]
                               (try
-                                (on-tx (merge-context sys) tx)
+                                (on-tx (merge-context ctx) tx)
                                 (catch Exception e
                                   (log/error e "Exception during on-tx")))))))))]
-      (update sys :biff/stop conj #(.close listener)))))
+      (update ctx :biff/stop conj #(.close listener)))))
 
 (defn q [db query & args]
   (when-not (= (count (:in query))
@@ -346,11 +346,11 @@
        [op]))
    tx))
 
-(defn tx-xform-main [sys tx]
+(defn tx-xform-main [ctx tx]
   (mapcat
    (fn [op]
      (if (map? op)
-       (biff-op->xt sys op)
+       (biff-op->xt ctx op)
        [op]))
    tx))
 
@@ -362,23 +362,23 @@
 
 (defn biff-tx->xt [{:keys [biff.xtdb/transformers]
                     :or {transformers default-tx-transformers}
-                    :as sys}
+                    :as ctx}
                    biff-tx]
   (reduce (fn [tx xform]
-            (xform sys tx))
+            (xform ctx tx))
           (if (fn? biff-tx)
-            (biff-tx sys)
+            (biff-tx ctx)
             biff-tx)
           transformers))
 
-(defn submit-with-retries [sys make-tx]
+(defn submit-with-retries [ctx make-tx]
   (let [{:keys [biff.xtdb/node
                 biff/db
                 ::n-tried]
          :or {n-tried 0}
-         :as sys} (-> (assoc-db sys)
+         :as ctx} (-> (assoc-db ctx)
                       (assoc :biff/now (java.util.Date.)))
-        tx (make-tx sys)
+        tx (make-tx ctx)
         _ (when (and (some (fn [[op]]
                              (= op ::xt/fn))
                            tx)
@@ -398,14 +398,14 @@
                          ms)
               (flush)
               (Thread/sleep ms)
-              (recur (update sys ::n-tried (fnil inc 0)) make-tx)))))
+              (recur (update ctx ::n-tried (fnil inc 0)) make-tx)))))
 
 (defn submit-tx [{:keys [biff.xtdb/retry biff.xtdb/node]
                   :or {retry true}
-                  :as sys} biff-tx]
+                  :as ctx} biff-tx]
   (if retry
-    (submit-with-retries sys #(biff-tx->xt % biff-tx))
-    (xt/submit-tx node (-> (assoc-db sys)
+    (submit-with-retries ctx #(biff-tx->xt % biff-tx))
+    (xt/submit-tx node (-> (assoc-db ctx)
                            (assoc :biff/now (java.util.Date.))
                            (biff-tx->xt biff-tx)))))
 

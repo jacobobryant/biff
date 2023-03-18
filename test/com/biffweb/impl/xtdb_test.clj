@@ -106,7 +106,7 @@
     (is (= b d))
     (is (not= b c))))
 
-(defn get-sys [node]
+(defn get-context [node]
   {:biff/db (xt/db node)
    :biff/now #inst "1970"
    :biff/malli-opts #'malli-opts})
@@ -122,7 +122,7 @@
                                       :user/email "carol@example.com"
                                       :user/foo "x"}]))]
     (is (= (biff/biff-tx->xt
-            (get-sys node)
+            (get-context node)
             [{:db/doc-type :user
               :db/op :update
               :xt/id :user/bob
@@ -147,7 +147,7 @@
 (deftest tx-all
   (with-open [node (test-node test-docs)]
     (is (= (biff/biff-tx->xt
-            (get-sys node)
+            (get-context node)
             [{:db/doc-type :user
               :db.op/upsert {:user/email "alice@example.com"}
               :user/foo "bar"}

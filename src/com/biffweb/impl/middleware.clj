@@ -21,7 +21,7 @@
       resp)))
 
 (defn wrap-anti-forgery-websockets [handler]
-  (fn [{:keys [biff/base-url headers] :as req}]
+  (fn [{:keys [biff/base-url headers] :as ctx}]
     (if (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
              (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")
              (some? base-url)
@@ -29,11 +29,11 @@
       {:status 403
        :headers {"content-type" "text/plain"}
        :body "Forbidden"}
-      (handler req))))
+      (handler ctx))))
 
 (defn wrap-render-rum [handler]
-  (fn [req]
-    (let [response (handler req)]
+  (fn [ctx]
+    (let [response (handler ctx)]
       (if (vector? response)
         {:status 200
          :headers {"content-type" "text/html"}
@@ -43,10 +43,10 @@
 ;; Deprecated; wrap-resource does this inline now.
 (defn wrap-index-files [handler {:keys [index-files]
                                  :or {index-files ["index.html"]}}]
-  (fn [req]
+  (fn [ctx]
     (->> index-files
-         (map #(update req :uri str/replace-first #"/?$" (str "/" %)))
-         (into [req])
+         (map #(update ctx :uri str/replace-first #"/?$" (str "/" %)))
+         (into [ctx])
          (some (wrap-content-type handler)))))
 
 (defn wrap-resource
@@ -67,9 +67,9 @@
    (let [resource-handler (wrap-index-files
                            #(res/resource-request % root)
                            {:index-files index-files})]
-     (fn [req]
-       (or (resource-handler req)
-           (handler req))))))
+     (fn [ctx]
+       (or (resource-handler ctx)
+           (handler ctx))))))
 
 (defn wrap-internal-error
   ([handler]
@@ -84,25 +84,25 @@
   ;; Deprecated, use 1-arg arity
   ([handler {:biff.middleware/keys [on-error]
              :or {on-error util/default-on-error}}]
-   (fn [req]
+   (fn [ctx]
      (try
-      (handler req)
+      (handler ctx)
       (catch Throwable t
         (log/error t "Exception while handling request")
-        (on-error (assoc req :status 500 :ex t)))))))
+        (on-error (assoc ctx :status 500 :ex t)))))))
 
 (defn wrap-log-requests [handler]
-  (fn [req]
+  (fn [ctx]
     (let [start (System/nanoTime)
-          resp (handler req)
+          resp (handler ctx)
           stop (System/nanoTime)
           duration (quot (- stop start) 1000000)]
       (log/infof "%3sms %s %-4s %s"
                  (str duration)
                  (:status resp "nil")
-                 (name (:request-method req))
-                 (str (:uri req)
-                      (when-some [qs (:query-string req)]
+                 (name (:request-method ctx))
+                 (str (:uri ctx)
+                      (when-some [qs (:query-string ctx)]
                         (str "?" qs))))
       resp)))
 
@@ -230,9 +230,9 @@
 
 (defn wrap-env
   "Deprecated"
-  [handler sys]
+  [handler ctx]
   (fn [req]
-    (handler (merge (bxt/merge-context sys) req))))
+    (handler (merge (bxt/merge-context ctx) req))))
 
 (defn wrap-inner-defaults
   "Deprecated"

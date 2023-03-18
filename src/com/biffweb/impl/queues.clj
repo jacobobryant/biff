@@ -7,11 +7,11 @@
             Executors
             Callable]))
 
-(defn- consume [sys {:keys [queue consumer continue]}]
+(defn- consume [ctx {:keys [queue consumer continue]}]
   (while @continue
     (when-some [job (.poll queue 1 TimeUnit/SECONDS)]
       (util/catchall-verbose
-       (consumer (merge (bxt/merge-context sys)
+       (consumer (merge (bxt/merge-context ctx)
                         {:biff/job job
                          :biff/queue queue})))
       (flush))))
@@ -52,30 +52,30 @@
                  :executor (Executors/newFixedThreadPool n-threads)
                  :continue continue})))))
 
-(defn use-queues [sys]
-  (let [configs (init sys)
+(defn use-queues [ctx]
+  (let [configs (init ctx)
         queues (into {} (map (juxt :id :queue) configs))
-        sys (-> sys
+        ctx (-> ctx
                 (assoc :biff/queues queues)
-                (update :biff/stop conj #(stop sys configs)))]
+                (update :biff/stop conj #(stop ctx configs)))]
     (doseq [{:keys [executor n-threads] :as config} configs
             _ (range n-threads)]
-      (.submit executor ^Callable #(consume sys config)))
-    sys))
+      (.submit executor ^Callable #(consume ctx config)))
+    ctx))
 
-(defn submit-job [sys queue-id job]
-  (.add (get-in sys [:biff/queues queue-id]) job))
+(defn submit-job [ctx queue-id job]
+  (.add (get-in ctx [:biff/queues queue-id]) job))
 
 (defn submit-job-for-result [{:keys [biff.queues/result-timeout]
                               :or {result-timeout 20000}
-                              :as sys}
+                              :as ctx}
                              queue-id
                              job]
   (let [p (promise)
         result (if result-timeout
                  (delay (deref p result-timeout ::timeout))
                  p)]
-    (submit-job sys queue-id (assoc job :biff/callback #(deliver p %)))
+    (submit-job ctx queue-id (assoc job :biff/callback #(deliver p %)))
     (delay (cond
              (= @result ::timeout)
              (throw (ex-info "Timed out while waiting for job result" {:queue-id queue-id :job job}))

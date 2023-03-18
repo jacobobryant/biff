@@ -16,9 +16,9 @@
 (defn use-beholder [{:biff.beholder/keys [on-save exts paths enabled]
                      :or {paths ["src" "resources"]
                           enabled true}
-                     :as sys}]
+                     :as ctx}]
   (if-not enabled
-    sys
+    ctx
     (let [;; Poor man's debouncer -- don't want to pull in core.async just for
           ;; this, and don't want to spend time figuring out how else to do it.
           last-called (atom #inst "1970")
@@ -29,28 +29,28 @@
                                     (time/elapsed? @last-called :now 1 :seconds))
                            ;; Give all the files some time to get written before invoking the callback.
                            (Thread/sleep 100)
-                           (util/catchall-verbose (on-save sys))
+                           (util/catchall-verbose (on-save ctx))
                            (reset! last-called (java.util.Date.))))
                        paths)]
-      (update sys :biff/stop conj #(beholder/stop watch)))))
+      (update ctx :biff/stop conj #(beholder/stop watch)))))
 
 ;; Deprecated
 (defn use-hawk [{:biff.hawk/keys [on-save exts paths]
                  :or {paths ["src" "resources"]}
-                 :as sys}]
+                 :as ctx}]
   (let [watch (hawk/watch!
                [(merge {:paths paths
                          ;; todo debounce this properly
                         :handler (fn [{:keys [last-ran]
                                        :or {last-ran 0}} _]
                                    (when (< 500 (- (inst-ms (java.util.Date.)) last-ran))
-                                     (on-save sys))
+                                     (on-save ctx))
                                    {:last-ran (inst-ms (java.util.Date.))})}
                        (when exts
                          {:filter (fn [_ {:keys [^java.io.File file]}]
                                     (let [path (.getPath file)]
                                       (some #(str/ends-with? path %) exts)))}))])]
-    (update sys :biff/stop conj #(hawk/stop! watch))))
+    (update ctx :biff/stop conj #(hawk/stop! watch))))
 
 (defn reitit-handler [{:keys [router routes on-error]
                        :or {on-error util/default-on-error}}]
@@ -66,15 +66,15 @@
 (defn use-jetty [{:biff/keys [host port handler]
                   :or {host "localhost"
                        port 8080}
-                  :as sys}]
+                  :as ctx}]
   (let [server (jetty/run-jetty (fn [req]
-                                  (handler (merge (bxt/merge-context sys) req)))
+                                  (handler (merge (bxt/merge-context ctx) req)))
                                 {:host host
                                  :port port
                                  :join? false
                                  :allow-null-path-info true})]
     (log/info "Jetty running on" (str "http://" host ":" port))
-    (update sys :biff/stop conj #(jetty/stop-server server))))
+    (update ctx :biff/stop conj #(jetty/stop-server server))))
 
 (defn mailersend [{:keys [mailersend/api-key
                           mailersend/defaults]}
@@ -114,12 +114,12 @@
       nil)))
 
 (defn use-chime
-  [{:keys [biff/features biff/plugins biff.chime/tasks] :as sys}]
-  (reduce (fn [sys {:keys [schedule task]}]
-            (let [f (fn [_] (task (bxt/merge-context sys)))
+  [{:keys [biff/features biff/plugins biff.chime/tasks] :as ctx}]
+  (reduce (fn [ctx {:keys [schedule task]}]
+            (let [f (fn [_] (task (bxt/merge-context ctx)))
                   scheduler (chime/chime-at (schedule) f)]
-              (update sys :biff/stop conj #(.close scheduler))))
-          sys
+              (update ctx :biff/stop conj #(.close scheduler))))
+          ctx
           (or tasks
               (some->> (or plugins features) deref (mapcat :tasks)))))
 
@@ -128,12 +128,12 @@
     (.nextBytes (java.security.SecureRandom/getInstanceStrong) buffer)
     (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
-(defn use-random-default-secrets [sys]
-  (merge sys
-         (when (nil? (:biff.middleware/cookie-secret sys))
+(defn use-random-default-secrets [ctx]
+  (merge ctx
+         (when (nil? (:biff.middleware/cookie-secret ctx))
            (log/warn ":biff.middleware/cookie-secret is empty, using random value")
            {:biff.middleware/cookie-secret (generate-secret 16)})
-         (when (nil? (:biff/jwt-secret sys))
+         (when (nil? (:biff/jwt-secret ctx))
            (log/warn ":biff/jwt-secret is empty, using random value")
            {:biff/jwt-secret (generate-secret 32)})))
 

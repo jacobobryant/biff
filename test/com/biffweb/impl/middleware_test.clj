@@ -10,8 +10,8 @@
    :headers {"host" "example.com"}
    :biff.middleware/cookie-secret (biff/generate-secret 16)})
 
-(defn call-with-headers [handler req]
-  (let [resp (handler (merge default-request req))]
+(defn call-with-headers [handler ctx]
+  (let [resp (handler (merge default-request ctx))]
     (cond-> resp
       (not (string? (:body resp))) (update :body slurp)
       true (dissoc :session))))
@@ -37,15 +37,15 @@
       biff/wrap-base-defaults))
 
 (defn call
-  ([handler req]
-   (let [req (cond-> req
-               (:body req) (update :body string->stream))
-         resp (handler (merge default-request req))]
+  ([handler ctx]
+   (let [ctx (cond-> ctx
+               (:body ctx) (update :body string->stream))
+         resp (handler (merge default-request ctx))]
      (cond-> resp
        (not (string? (:body resp))) (update :body slurp)
        true (dissoc :session :headers))))
-  ([req]
-   (call param-handler req)))
+  ([ctx]
+   (call param-handler ctx)))
 
 (deftest middleware
   (is (= (call-with-headers param-handler {})

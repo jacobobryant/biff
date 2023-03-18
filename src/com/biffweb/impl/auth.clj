@@ -139,12 +139,12 @@
                                    session
                                    params
                                    path-params]
-                            :as req}]
-  (let [{:keys [success error email]} (verify-link req)
+                            :as ctx}]
+  (let [{:keys [success error email]} (verify-link ctx)
         existing-user-id (when success (get-user-id (xt/db node) email))
         token (:token (merge params path-params))]
     (when (and success (not existing-user-id))
-      (bxt/submit-tx req (new-user-tx req email)))
+      (bxt/submit-tx ctx (new-user-tx ctx email)))
     {:status 303
      :headers {"location" (cond
                            success
@@ -189,10 +189,10 @@
                                    biff/db
                                    params
                                    session]
-                            :as req}]
+                            :as ctx}]
   (let [email (butil/normalize-email (:email params))
         code (bxt/lookup db :biff.auth.code/email email)
-        success (and (passed-recaptcha? req)
+        success (and (passed-recaptcha? ctx)
                      (some? code)
                      (< (:biff.auth.code/failed-attempts code) 3)
                      (not (btime/elapsed? (:biff.auth.code/created-at code) :now 3 :minutes))
@@ -202,7 +202,7 @@
             success
             (concat [[::xt/delete (:xt/id code)]]
                     (when-not existing-user-id
-                      (new-user-tx req email)))
+                      (new-user-tx ctx email)))
 
             (and (not success)
                  (some? code)
@@ -211,7 +211,7 @@
               :db/op :update
               :xt/id (:xt/id code)
               :biff.auth.code/failed-attempts [:db/add 1]}])]
-    (bxt/submit-tx req tx)
+    (bxt/submit-tx ctx tx)
     (if success
       {:status 303
        :headers {"location" app-path}
@@ -245,8 +245,8 @@
               :email-validator email-valid?})
 
 (defn wrap-options [handler options]
-  (fn [req]
-    (handler (merge options req))))
+  (fn [ctx]
+    (handler (merge options ctx))))
 
 (defn plugin [options]
   {:schema {:biff.auth.code/id :uuid
