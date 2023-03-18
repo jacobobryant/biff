@@ -27,7 +27,7 @@
     ;; You could send this as an email instead of printing.
     (log/info "WOAH there's a new user")))
 
-(defn echo-consumer [{:keys [biff/job] :as sys}]
+(defn echo-consumer [{:keys [biff/job] :as ctx}]
   (prn :echo job)
   (when-some [callback (:biff/callback job)]
     (callback job)))

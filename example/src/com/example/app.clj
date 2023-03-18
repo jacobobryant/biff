@@ -7,8 +7,8 @@
             [ring.adapter.jetty9 :as jetty]
             [cheshire.core :as cheshire]))
 
-(defn set-foo [{:keys [session params] :as req}]
-  (biff/submit-tx req
+(defn set-foo [{:keys [session params] :as ctx}]
+  (biff/submit-tx ctx
     [{:db/op :update
       :db/doc-type :user
       :xt/id (:uid session)
@@ -31,8 +31,8 @@
    [:.text-sm.text-gray-600
     "This demonstrates updating a value with HTMX."]))
 
-(defn set-bar [{:keys [session params] :as req}]
-  (biff/submit-tx req
+(defn set-bar [{:keys [session params] :as ctx}]
+  (biff/submit-tx ctx
     [{:db/op :update
       :db/doc-type :user
       :xt/id (:uid session)
@@ -55,9 +55,9 @@
           ws @chat-clients]
     (jetty/send! ws html)))
 
-(defn send-message [{:keys [session] :as req} {:keys [text]}]
+(defn send-message [{:keys [session] :as ctx} {:keys [text]}]
   (let [{:keys [text]} (cheshire/parse-string text true)]
-    (biff/submit-tx req
+    (biff/submit-tx ctx
       [{:db/doc-type :msg
         :msg/user (:uid session)
         :msg/text text
@@ -90,7 +90,7 @@
      [:div#messages
       (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
-(defn app [{:keys [session biff/db] :as req}]
+(defn app [{:keys [session biff/db] :as ctx}]
   (let [{:user/keys [email foo bar]} (xt/entity db (:uid session))]
     (ui/page
      {}
@@ -118,16 +118,16 @@
      [:.h-6]
      (bar-form {:value bar})
      [:.h-6]
-     (chat req))))
+     (chat ctx))))
 
-(defn ws-handler [{:keys [com.example/chat-clients] :as req}]
+(defn ws-handler [{:keys [com.example/chat-clients] :as ctx}]
   {:status 101
    :headers {"upgrade" "websocket"
              "connection" "upgrade"}
    :ws {:on-connect (fn [ws]
                       (swap! chat-clients conj ws))
         :on-text (fn [ws text-message]
-                   (send-message req {:ws ws :text text-message}))
+                   (send-message ctx {:ws ws :text text-message}))
         :on-close (fn [ws status-code reason]
                     (swap! chat-clients disj ws))}})
 

@@ -4,11 +4,11 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]))
 
-(defn get-sys []
+(defn get-context []
   (biff/assoc-db @main/system))
 
 (defn add-fixtures []
-  (biff/submit-tx (get-sys)
+  (biff/submit-tx (get-context)
     (-> (io/resource "fixtures.edn")
         slurp
         edn/read-string)))
@@ -21,13 +21,13 @@
   ;; restarting your app, and calling add-fixtures again.
   (add-fixtures)
 
-  (let [{:keys [biff/db] :as sys} (get-sys)]
+  (let [{:keys [biff/db] :as ctx} (get-context)]
     (q db
        '{:find (pull user [*])
          :where [[user :user/email]]}))
 
-  (sort (keys @main/system))
+  (sort (keys (get-context)))
 
   ;; Check the terminal for output.
-  (biff/submit-job (get-sys) :echo {:foo "bar"})
-  (deref (biff/submit-job-for-result (get-sys) :echo {:foo "bar"})))
+  (biff/submit-job (get-context) :echo {:foo "bar"})
+  (deref (biff/submit-job-for-result (get-context) :echo {:foo "bar"})))

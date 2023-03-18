@@ -29,15 +29,15 @@
 
 (def static-pages (apply biff/safe-merge (map :static plugins)))
 
-(defn generate-assets! [sys]
+(defn generate-assets! [ctx]
   (biff/export-rum static-pages "target/resources/public")
   (biff/delete-old-files {:dir "target/resources/public"
                           :exts [".html"]}))
 
-(defn on-save [sys]
+(defn on-save [ctx]
   (biff/add-libs)
-  (biff/eval-files! sys)
-  (generate-assets! sys)
+  (biff/eval-files! ctx)
+  (generate-assets! ctx)
   (test/run-all-tests #"com.example.test.*"))
 
 (def malli-opts

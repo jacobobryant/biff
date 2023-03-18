@@ -10,10 +10,10 @@
     (str "/css/main.css?t=" (.lastModified f))
     "/css/main.css"))
 
-(defn base [{:keys [::recaptcha] :as opts} & body]
+(defn base [{:keys [::recaptcha] :as ctx} & body]
   (apply
    biff/base-html
-   (-> opts
+   (-> ctx
        (merge #:base{:title settings/app-name
                      :lang "en-US"
                      :icon "/img/glider.png"
@@ -29,9 +29,9 @@
                                     head))))
    body))
 
-(defn page [opts & body]
+(defn page [ctx & body]
   (base
-   opts
+   ctx
    [:.flex-grow]
    [:.p-3.mx-auto.max-w-screen-sm.w-full
     (when (bound? #'csrf/*anti-forgery-token*)

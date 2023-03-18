@@ -12,9 +12,9 @@
    "Until you add API keys for Postmark and reCAPTCHA, we'll print your sign-up "
    "link to the console. See config.edn."])
 
-(defn home-page [{:keys [recaptcha/site-key params] :as sys}]
+(defn home-page [{:keys [recaptcha/site-key params] :as ctx}]
   (ui/page
-   (assoc sys ::ui/recaptcha true)
+   (assoc ctx ::ui/recaptcha true)
    (biff/form
     {:action "/auth/send-link"
      :id "signup"
@@ -51,15 +51,15 @@
     biff/recaptcha-disclosure
     email-disabled-notice)))
 
-(defn link-sent [{:keys [params] :as sys}]
+(defn link-sent [{:keys [params] :as ctx}]
   (ui/page
-   sys
+   ctx
    [:h2.text-xl.font-bold "Check your inbox"]
    [:p "We've sent a sign-in link to " [:span.font-bold (:email params)] "."]))
 
-(defn verify-email-page [{:keys [params] :as req}]
+(defn verify-email-page [{:keys [params] :as ctx}]
   (ui/page
-   req
+   ctx
    [:h2.text-2xl.font-bold (str "Sign up for " settings/app-name)]
    [:.h-3]
    (biff/form
@@ -82,9 +82,9 @@
         "incorrect-email" "Incorrect email address. Try again."
         "There was an error.")])))
 
-(defn signin-page [{:keys [recaptcha/site-key params] :as sys}]
+(defn signin-page [{:keys [recaptcha/site-key params] :as ctx}]
   (ui/page
-   (assoc sys ::ui/recaptcha true)
+   (assoc ctx ::ui/recaptcha true)
    (biff/form
     {:action "/auth/send-code"
      :id "signin"
@@ -123,9 +123,9 @@
     biff/recaptcha-disclosure
     email-disabled-notice)))
 
-(defn enter-code-page [{:keys [recaptcha/site-key params] :as req}]
+(defn enter-code-page [{:keys [recaptcha/site-key params] :as ctx}]
   (ui/page
-   (assoc req ::ui/recaptcha true)
+   (assoc ctx ::ui/recaptcha true)
    (biff/form
     {:action "/auth/verify-code"
      :id "code-form"
