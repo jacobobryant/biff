@@ -1304,8 +1304,6 @@
     (spit dest (with-out-str
                  (pprint metadata)))))
 
-
-
 (comment
   (do
     (write-doc-data "/home/jacob/dev/platypub/themes/biffweb/resources/com/biffweb/theme/api.edn")

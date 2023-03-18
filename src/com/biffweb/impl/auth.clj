@@ -51,21 +51,21 @@
         url (new-link ctx email)
         user-id (delay (get-user-id db email))]
     (cond
-     (not (passed-recaptcha? ctx))
-     {:success false :error "recaptcha"}
+      (not (passed-recaptcha? ctx))
+      {:success false :error "recaptcha"}
 
-     (not (email-validator ctx email))
-     {:success false :error "invalid-email"}
+      (not (email-validator ctx email))
+      {:success false :error "invalid-email"}
 
-     (not (send-email ctx
-                      {:template :signin-link
-                       :to email
-                       :url url
-                       :user-exists (some? @user-id)}))
-     {:success false :error "send-failed"}
+      (not (send-email ctx
+                       {:template :signin-link
+                        :to email
+                        :url url
+                        :user-exists (some? @user-id)}))
+      {:success false :error "send-failed"}
 
-     :else
-     {:success true :email email :user-id @user-id})))
+      :else
+      {:success true :email email :user-id @user-id})))
 
 (defn verify-link [{:keys [biff.auth/check-state
                            biff/secret
@@ -78,17 +78,17 @@
         valid-state (= state (butil/sha256 anti-forgery-token))
         valid-email (= email (:email params))]
     (cond
-     (not= intent "signin")
-     {:success false :error "invalid-link"}
+      (not= intent "signin")
+      {:success false :error "invalid-link"}
 
-     (or (not check-state) valid-state valid-email)
-     {:success true :email email}
+      (or (not check-state) valid-state valid-email)
+      {:success true :email email}
 
-     (some? (:email params))
-     {:success false :error "invalid-email"}
+      (some? (:email params))
+      {:success false :error "invalid-email"}
 
-     :else
-     {:success false :error "invalid-state"})))
+      :else
+      {:success false :error "invalid-state"})))
 
 (defn send-code! [{:keys [biff.auth/email-validator
                           biff/db
@@ -100,21 +100,21 @@
         code (new-code 6)
         user-id (delay (get-user-id db email))]
     (cond
-     (not (passed-recaptcha? ctx))
-     {:success false :error "recaptcha"}
+      (not (passed-recaptcha? ctx))
+      {:success false :error "recaptcha"}
 
-     (not (email-validator ctx email))
-     {:success false :error "invalid-email"}
+      (not (email-validator ctx email))
+      {:success false :error "invalid-email"}
 
-     (not (send-email ctx
-                      {:template :signin-code
-                       :to email
-                       :code code
-                       :user-exists (some? @user-id)}))
-     {:success false :error "send-failed"}
+      (not (send-email ctx
+                       {:template :signin-code
+                        :to email
+                        :code code
+                        :user-exists (some? @user-id)}))
+      {:success false :error "send-failed"}
 
-     :else
-     {:success true :email email :code code :user-id @user-id})))
+      :else
+      {:success true :email email :code code :user-id @user-id})))
 
 ;;; HANDLERS -------------------------------------------------------------------
 
@@ -147,17 +147,17 @@
       (bxt/submit-tx ctx (new-user-tx ctx email)))
     {:status 303
      :headers {"location" (cond
-                           success
-                           app-path
+                            success
+                            app-path
 
-                           (= error "invalid-state")
-                           (str "/verify-link?token=" token)
+                            (= error "invalid-state")
+                            (str "/verify-link?token=" token)
 
-                           (= error "invalid-email")
-                           (str "/verify-link?error=incorrect-email&token=" token)
+                            (= error "invalid-email")
+                            (str "/verify-link?error=incorrect-email&token=" token)
 
-                           :else
-                           invalid-link-path)}
+                            :else
+                            invalid-link-path)}
      :session (cond-> session
                 success (assoc :uid (or existing-user-id
                                         (get-user-id (xt/db node) email))))}))
@@ -199,18 +199,18 @@
                      (= (:code params) (:biff.auth.code/code code)))
         existing-user-id (when success (get-user-id db email))
         tx (cond
-            success
-            (concat [[::xt/delete (:xt/id code)]]
-                    (when-not existing-user-id
-                      (new-user-tx ctx email)))
+             success
+             (concat [[::xt/delete (:xt/id code)]]
+                     (when-not existing-user-id
+                       (new-user-tx ctx email)))
 
-            (and (not success)
-                 (some? code)
-                 (< (:biff.auth.code/failed-attempts code) 3))
-            [{:db/doc-type :biff.auth/code
-              :db/op :update
-              :xt/id (:xt/id code)
-              :biff.auth.code/failed-attempts [:db/add 1]}])]
+             (and (not success)
+                  (some? code)
+                  (< (:biff.auth.code/failed-attempts code) 3))
+             [{:db/doc-type :biff.auth/code
+               :db/op :update
+               :xt/id (:xt/id code)
+               :biff.auth.code/failed-attempts [:db/add 1]}])]
     (bxt/submit-tx ctx tx)
     (if success
       {:status 303

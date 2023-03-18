@@ -77,19 +77,19 @@
          :or {on-error util/default-on-error}
          :as ctx}]
      (try
-      (handler ctx)
-      (catch Throwable t
-        (log/error t "Exception while handling request")
-        (on-error (assoc ctx :status 500 :ex t))))))
+       (handler ctx)
+       (catch Throwable t
+         (log/error t "Exception while handling request")
+         (on-error (assoc ctx :status 500 :ex t))))))
   ;; Deprecated, use 1-arg arity
   ([handler {:biff.middleware/keys [on-error]
              :or {on-error util/default-on-error}}]
    (fn [ctx]
      (try
-      (handler ctx)
-      (catch Throwable t
-        (log/error t "Exception while handling request")
-        (on-error (assoc ctx :status 500 :ex t)))))))
+       (handler ctx)
+       (catch Throwable t
+         (log/error t "Exception while handling request")
+         (on-error (assoc ctx :status 500 :ex t)))))))
 
 (defn wrap-log-requests [handler]
   (fn [ctx]
@@ -186,7 +186,6 @@
 (defn use-wrap-ctx [{:keys [biff/handler] :as ctx}]
   (assoc ctx :biff/handler (fn [req]
                              (handler (merge (bxt/merge-context ctx) req)))))
-
 
 ;;; Deprecated
 
