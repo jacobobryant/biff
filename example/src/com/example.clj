@@ -55,9 +55,7 @@
    biff/use-wrap-ctx
    biff/use-jetty
    biff/use-chime
-   (biff/use-when
-    :com.example/enable-beholder
-    biff/use-beholder)])
+   biff/use-beholder])
 
 (def initial-system
   {:com.example/chat-clients (atom #{})

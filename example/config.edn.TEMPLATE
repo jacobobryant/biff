@@ -23,10 +23,11 @@
         ;; invisible. Add localhost to your list of allowed domains.
         :recaptcha/site-key nil
         :recaptcha/secret-key "RECAPTCHA_SECRET_KEY"
+        :biff.beholder/enabled false
         :biff.middleware/cookie-secret "COOKIE_SECRET"
         :biff/jwt-secret "JWT_SECRET"}
  :dev {:merge [:prod]
-       :com.example/enable-beholder true
+       :biff.beholder/enabled true
        :biff/host "0.0.0.0"
        :biff/port 8080
        :biff/base-url "http://localhost:8080"
