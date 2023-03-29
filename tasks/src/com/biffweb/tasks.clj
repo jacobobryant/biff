@@ -206,24 +206,22 @@
     (binding [*out* *err*]
       (println "`rsync` command not found. Please install it."))
     (System/exit 1))
-  (let [{:biff.tasks/keys [server soft-deploy-fn]} @config]
-    (css "--minify")
+  (css "--minify")
+  (let [{:biff.tasks/keys [server soft-deploy-fn]} @config
+        files (->> (:out (sh/sh "git" "ls-files"))
+                   str/split-lines
+                   (map #(str/replace % #"/.*" ""))
+                   distinct
+                   (concat ["config.edn"
+                            "secrets.env"
+                            "target/resources/public/css/main.css"])
+                   (filter fs/exists?))]
     (when-not (windows?)
       (fs/set-posix-file-permissions "config.edn" "rw-------")
       (when (fs/exists? "secrets.env")
         (fs/set-posix-file-permissions "secrets.env" "rw-------")))
-    (->> (concat ["rsync" "-a" "--relative" "--info=name1" "--delete"
-                  "config.edn"
-                  "deps.edn"
-                  "bb.edn"
-                  "src"
-                  "resources"
-                  "tasks"
-                  "target/resources/public/css/main.css"]
-                 (filter fs/exists?
-                         ["secrets.env"
-                          "package.json"
-                          "package-lock.json"])
+    (->> (concat ["rsync" "-a" "--relative" "--info=name1" "--delete"]
+                 files
                  [(str "app@" server ":")])
          (apply shell))
     (trench (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))
