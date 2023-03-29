@@ -206,15 +206,18 @@
     (binding [*out* *err*]
       (println "`rsync` command not found. Please install it."))
     (System/exit 1))
-  (css "--minify")
+  (future
+   (css "--minify")
+   (shell "rsync" "--relative" "--info=name1"
+          "target/resources/public/css/main.css"
+          (str "app@" (:biff.tasks/server @config) ":")))
   (let [{:biff.tasks/keys [server soft-deploy-fn on-soft-deploy]} @config
         files (->> (:out (sh/sh "git" "ls-files"))
                    str/split-lines
                    (map #(str/replace % #"/.*" ""))
                    distinct
                    (concat ["config.edn"
-                            "secrets.env"
-                            "target/resources/public/css/main.css"])
+                            "secrets.env"])
                    (filter fs/exists?))]
     (when-not (windows?)
       (fs/set-posix-file-permissions "config.edn" "rw-------")
