@@ -7,7 +7,7 @@
             clojure.tools.namespace.repl
             [clojure.tools.namespace.track :as track]))
 
-(def global-tracker (atom (track/tracker)))
+(defonce global-tracker (atom (track/tracker)))
 
 (def remove-disabled #'clojure.tools.namespace.repl/remove-disabled)
 
