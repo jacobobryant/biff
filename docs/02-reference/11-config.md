@@ -4,7 +4,7 @@ title: Configuration
 
 Most of your app's configuration is stored in the `config.edn` file:
 
-```
+```clojure
 {:prod {:biff/base-url "https://example.com"
         :biff.xtdb/dir "storage/xtdb"
         :biff.xtdb/topology :standalone
@@ -62,7 +62,7 @@ The `biff/use-secrets` component sets the `:biff/secret` key in the system map t
 function. That function takes a keyword and returns the associated secret. For
 example, if your config and secrets files have the following contents:
 
-```
+```clojure
 # secrets.env
 export POSTMARK_API_KEY=abc123
 

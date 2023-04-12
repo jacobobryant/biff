@@ -96,8 +96,8 @@ protection. You can add a CSRF token to your forms like so:
      ...]]])
 ```
 
-There is a `biff/form` convenience function which does this for you, in
-addition to providing a couple other conveniences:
+There is a `biff/form` function which does this for you, in addition to
+providing a couple other conveniences:
 
 ```clojure
 (defn signin [ctx]

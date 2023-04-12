@@ -2,8 +2,6 @@
 title: Architecture
 ---
 
-## File structure
-
 Biff has two parts: a library and a template project. As much code as
 possible is written as library code, exposed under the `com.biffweb` namespace.
 This includes a lot of high-level helper functions for other libraries.
@@ -58,7 +56,7 @@ namespace when creating your project.)
 `config.edn` and `secrets.env` contain your app's configuration and secrets,
 respectively, and are not checked into git. `server-setup.sh` is a script for
 provisioning an Ubuntu server (see [Production](/docs/reference/production/)).
-`bb.edn` defines project tasks&mdash;run `bb tasks` to see the available
+`bb.edn` defines project tasks—run `bb tasks` to see the available
 commands.
 
 ## Plugins, components, and the system
@@ -79,12 +77,12 @@ of the following keys:
 
 Each of these keys are discussed on subsequent pages:
 
- - [Static Files](docs/reference/static-files/)
+ - [Static Files](/docs/reference/static-files/)
  - [Routing](/docs/reference/routing/)
- - [Schema](docs/reference/schema/)
- - [Scheduled tasks](docs/reference/scheduled-tasks/)
- - [Transaction Listeners](docs/reference/transaction-listeners/)
- - [Queues](docs/reference/queues/)
+ - [Schema](/docs/reference/schema/)
+ - [Scheduled tasks](/docs/reference/scheduled-tasks/)
+ - [Transaction Listeners](/docs/reference/transaction-listeners/)
+ - [Queues](/docs/reference/queues/)
 
 To demonstrate, a "hello world" plugin might look like this:
 
@@ -215,8 +213,7 @@ is stored, you can replace `biff/use-config` with your own component:
 If you only need to make a slight change to one of Biff's default components, it's recommended
 to copy the source code for the component into your own project. For example, the `biff/use-xt` component
 only supports using RocksDB, LMDB, and/or JDBC as the storage backend. If you want to use Kafka, you
-could copy [the `biff/use-xt` source](https://github.com/jacobobryant/biff/blob/master/src/com/biffweb/impl/xtdb.clj#L25-L77)
-into your project and make the needed changes.
+could copy the [`biff/use-xt`](/docs/api/xtdb#use-xt) source into your project and make the needed changes.
 
 Biff also provides a single default plugin, `biff/authentication-plugin`, which
 defines the backend routes needed for Biff's email-based authentication. If you

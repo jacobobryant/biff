@@ -152,7 +152,7 @@ used to make sure the operation is atomic. Besides that, upsert operations work 
 
 **Note:** You must have installed the `:biff/ensure-unique` transaction
 function for this to work. This is done by default in new projects. See
-[`com.biffweb/tx-fns`](https://biffweb.com/docs/api/xtdb/#tx-fns).
+[`com.biffweb/tx-fns`](/docs/api/xtdb/#tx-fns).
 
 ## Attribute operations
 
@@ -265,6 +265,6 @@ the user document doesn't already exist:
 
 See also:
 
+ - [`submit-tx`](/docs/api/xtdb/#submit-tx)
  - [XTDB learning resources](https://xtdb.com/learn/)
  - [XTDB transaction reference](https://docs.xtdb.com/language-reference/datalog-transactions/)
- - [`submit-tx`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb/impl/xtdb.clj#L247)

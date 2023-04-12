@@ -27,5 +27,5 @@ a task that prints out the number of users every 60 seconds:
 
 See also:
 
+ - [`use-chime`](/docs/api/misc/#use-chime)
  - [chime documentation](https://github.com/jarohen/chime)
- - [`use-chime`](https://biffweb.com/docs/api/misc/#use-chime)

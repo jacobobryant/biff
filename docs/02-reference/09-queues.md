@@ -7,7 +7,7 @@ and [thread pools](https://docs.oracle.com/javase/8/docs/api/java/util/concurren
 For example:
 
 ```clojure
-(defn echo-consumer [{:keys [biff/job] :as sys}]
+(defn echo-consumer [{:keys [biff/job] :as ctx}]
   (prn :echo job)
   (when-some [callback (:biff/callback job)]
     (callback job)))
@@ -17,12 +17,12 @@ For example:
              :consumer #'echo-consumer
              :n-threads 1}]})
 
-(biff/submit-job sys :echo {:foo "bar"})
+(biff/submit-job ctx :echo {:foo "bar"})
 =>
 (out) :echo {:foo "bar"}
 true
 
-@(biff/submit-job-for-result sys :echo {:foo "bar"})
+@(biff/submit-job-for-result ctx :echo {:foo "bar"})
 =>
 (out) :echo {:foo "bar", :biff/callback #function[...]}
 {:foo "bar", :biff/callback #function[...]}"
@@ -34,4 +34,4 @@ There is also no retry logic for jobs that throw an exception.
 
 See also:
 
- - [API docs](/docs/api/queues/)
+ - [Queue API docs](/docs/api/queues/)

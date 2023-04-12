@@ -92,5 +92,5 @@ as Rum. The following handlers are equivalent:
 
 See also:
 
+ - [`reitit-handler`](/docs/api/misc#reitit-handler)
  - [Reitit documentation](https://cljdoc.org/d/metosin/reitit/CURRENT/doc/introduction)
- - [`reitit-handler`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb.clj#L84)

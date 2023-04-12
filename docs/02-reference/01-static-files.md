@@ -38,6 +38,6 @@ use that folder for logo images, plain JavaScript files, etc.
 
 See also:
 
+ - [`export-rum`](/docs/api/rum#export-rum)
  - [Rum documentation](https://github.com/tonsky/rum)
  - [Tailwind documentation](https://tailwindcss.com/)
- - [`export-rum`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb/impl/rum.clj#L105)

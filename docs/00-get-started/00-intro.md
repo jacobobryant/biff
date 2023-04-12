@@ -2,9 +2,10 @@
 title: Introduction
 ---
 
-> You can build "easy" on top of "simple", but it's hard to do the reverse.
->
-> – [@weavejester](https://github.com/ring-clojure/ring/issues/393#issuecomment-593005197)
+<blockquote>
+<p>You can build "easy" on top of "simple", but it's hard to do the reverse.<br>
+– <a href="https://github.com/ring-clojure/ring/issues/393#issuecomment-593005197">@weavejester</a></p>
+</blockquote>
 
 Biff speeds up web development by providing as much functionality as possible
 out-of-the-box, while making it easy to swap out, modify, or remove parts as
@@ -36,13 +37,15 @@ Other things that Biff wraps/includes:
 - [Malli](https://github.com/metosin/malli) for enforcing schema when submitting XTDB transactions.
 - [Chime](https://github.com/jarohen/chime) for scheduling tasks.
 - In-memory job queues (via Java's BlockingQueues).
-- A minimalist, 15-line dependency injection framework, similar in spirit to Component.
+- A minimalist dependency injection framework, similar in spirit to Component.
 - EDN-based config with environment variables for secrets.
 
 ## About
 
-Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all my web apps, namely
-[Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/).
+Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all my web apps, primarily
+[Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/), each of which has
+15k-20k lines of code.
+
 If you'd like to support Biff, you can [sponsor me](https://github.com/sponsors/jacobobryant/).
 I also do [consulting](https://biffweb.com/consulting) for businesses that are
 interested in using Biff.

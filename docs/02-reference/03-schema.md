@@ -74,6 +74,6 @@ For mild convenience, your schema can be defined with the `biff/doc-schema` help
 
 See also:
 
- - [`doc-schema` documentation](https://biffweb.com/docs/api/misc/#doc-schema)
+ - [`doc-schema`](/docs/api/misc/#doc-schema)
  - [Malli documentation](https://github.com/metosin/malli)
  - [Malli built-in schemas](https://github.com/metosin/malli#built-in-schemas)

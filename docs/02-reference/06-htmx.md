@@ -80,7 +80,7 @@ come in handy.
 
 For example, you can use hyperscript for tab-switching:
 
-```
+```clojure
 (def tabs ["foo" "bar" "baz"])
 
 (defn tabs-component [ctx]

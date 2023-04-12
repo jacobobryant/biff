@@ -68,5 +68,5 @@ documents.
 
 See also:
 
+ - [`lookup*`](/docs/api/xtdb/#lookup)
  - [XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/)
- - [lookup\* doc strings](https://biffweb.com/docs/api/xtdb/#lookup)
