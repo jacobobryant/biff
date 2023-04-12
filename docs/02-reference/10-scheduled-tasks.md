@@ -20,7 +20,7 @@ a task that prints out the number of users every 60 seconds:
 (defn every-minute []
   (iterate #(biff/add-seconds % 60) (java.util.Date.)))
 
-(def features
+(def plugin
   {:tasks [{:task #'print-usage
             :schedule every-minute}]})
 ```
@@ -28,4 +28,4 @@ a task that prints out the number of users every 60 seconds:
 See also:
 
  - [chime documentation](https://github.com/jarohen/chime)
- - [`use-chime`](https://github.com/jacobobryant/biff/blob/bdd1bd81d95ee36c615495a946c7c1aa92d19e2e/src/com/biffweb.clj#L297)
+ - [`use-chime`](https://biffweb.com/docs/api/misc/#use-chime)

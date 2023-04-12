@@ -5,14 +5,13 @@ title: Transactions
 *Biff uses [XTDB](https://xtdb.com/) for the database. It's OK if you haven't used XTDB before,*
 *but you may want to peruse some of the [learning resources](https://xtdb.com/learn/) at least.*
 
-The request map passed to HTTP handlers (and the scheduled tasks and
-transaction listeners) includes a `:biff.xtdb/node` key which can be used to
-submit transactions:
+The system map (and by extension, incoming requests) includes a
+`:biff.xtdb/node` key which can be used to submit transactions:
 
 ```clojure
 (require '[xtdb.api :as xt])
 
-(defn send-message [{:keys [biff.xtdb/node session params] :as req}]
+(defn send-message [{:keys [biff.xtdb/node session params] :as ctx}]
   (xt/submit-tx node
     [[::xt/put {:xt/id (java.util.UUID/randomUUID)
                 :msg/user (:uid session)
@@ -30,10 +29,10 @@ writes.
 ```clojure
 (require '[com.biffweb :as biff])
 
-(defn send-message [{:keys [session params] :as req}]
+(defn send-message [{:keys [session params] :as ctx}]
   (biff/submit-tx
-    ;; select-keys is for illustration. Normally you would just pass in req.
-    (select-keys req [:biff.xtdb/node :biff/malli-opts])
+    ;; select-keys is for illustration. Normally you would just pass in ctx.
+    (select-keys ctx [:biff.xtdb/node :biff/malli-opts])
     [{:db/doc-type :message
       :msg/user (:uid session)
       :msg/text (:text params)
@@ -45,7 +44,7 @@ If you don't set `:xt/id`, Biff will use `(java.util.UUID/randomUUID)` as the de
 The default operation is `:xtdb.api/put`.
 
 Biff transactions can also include regular XT operations. Any element of the transaction
-that isn't a map will be considered to be an XT operation:
+that isn't a map will be assumed to be an XT operation:
 
 ```clojure
 (biff/submit-tx sys
@@ -63,7 +62,7 @@ will be retried up to three times. If you pass a function that returns a transac
 then the function will be called again before each retry:
 
 ```clojure
-(biff/submit-tx req
+(biff/submit-tx ctx
   (fn [{:keys [biff/db]}]
     [{:db/doc-type :user
       :db/op :merge
@@ -76,8 +75,8 @@ then the function will be called again before each retry:
 As a convenience, any occurrences of `:db/now` will be replaced with `(java.util.Date.)`:
 
 ```clojure
-(defn send-message [{:keys [session params] :as req}]
-  (biff/submit-tx req
+(defn send-message [{:keys [session params] :as ctx}]
+  (biff/submit-tx ctx
     [{:db/doc-type :message
       :msg/user (:uid session)
       :msg/text (:text params)
@@ -108,20 +107,21 @@ Similarly, any keywords with a namespace of `db.id` will be replaced with random
 You can delete a document by setting `:db/op :delete`:
 
 ```clojure
-(defn delete-message [{:keys [params] :as req}]
-  (biff/submit-tx req
+(defn delete-message [{:keys [params] :as ctx}]
+  (biff/submit-tx ctx
     [{:xt/id (java.util.UUID/fromString (:msg-id params))
       :db/op :delete}])
   ...)
 ```
 
 If you set `:db/op :update` or `:db/op :merge`, the document will be merged
-into an existing document if it exists. The difference is that `:db/op :update` will
-cause the transaction to fail if the document doesn't already exist.
+into an existing document if it exists. The difference is that `:update` will
+cause the transaction to fail if the document doesn't already exist, while `:merge`
+will create the document.
 
 ```clojure
-(defn set-foo [{:keys [session params] :as req}]
-  (biff/submit-tx req
+(defn set-foo [{:keys [session params] :as ctx}]
+  (biff/submit-tx ctx
     [{:db/op :update
       :db/doc-type :user
       :xt/id (:uid session)
@@ -150,9 +150,9 @@ If the document is created, `:xt/id` will be set to `(random-uuid)`. A transacti
 used to make sure the operation is atomic. Besides that, upsert operations work the same as
 `:db/op :merge` operations.
 
-**Note:** You must have installed the `:biff/ensure-unique` transaction function for this
-to work. See [`com.biffweb/tx-fns`](https://biffweb.com/docs/api/xtdb/#tx-fns) (installed
-by default in new projects).
+**Note:** You must have installed the `:biff/ensure-unique` transaction
+function for this to work. This is done by default in new projects. See
+[`com.biffweb/tx-fns`](https://biffweb.com/docs/api/xtdb/#tx-fns).
 
 ## Attribute operations
 
@@ -207,7 +207,7 @@ Use `:db/dissoc` to remove an attribute:
   :user/foo :db/dissoc}]
 ```
 
-Use `:db/unique` to ensure that only one document has an attribute with this value:
+Use `:db/unique` to ensure that no other document has the same value for the given attribute:
 
 ```clojure
 [{:db/doc-type :user
@@ -215,9 +215,9 @@ Use `:db/unique` to ensure that only one document has an attribute with this val
   :user/handle [:db/unique "hunter2"]}]
 ```
 
-**Note:** You must have installed the `:biff/ensure-unique` transaction function for this
-to work. See [`com.biffweb/tx-fns`](https://biffweb.com/docs/api/xtdb/#tx-fns) (installed
-by default in new projects).
+**Note:** You must have installed the `:biff/ensure-unique` transaction
+function for this to work. This is done by default in new projects. See
+[`com.biffweb/tx-fns`](https://biffweb.com/docs/api/xtdb/#tx-fns).
 
 ### `:db/lookup`
 

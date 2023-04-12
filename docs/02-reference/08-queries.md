@@ -2,11 +2,11 @@
 title: Queries
 ---
 
-As mentioned last section, Biff uses [XTDB](https://xtdb.com/) for the
+As mentioned previous section, Biff uses [XTDB](https://xtdb.com/) for the
 database. See the
 [XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/).
 
-Biff provides a couple query convenience functions. `com.biffweb/q` is a *very*
+Biff provides a couple query convenience functions. `com.biffweb/q` is a very
 light wrapper around `xtdb.api/q`. First, it will throw an exception if you
 pass an incorrect number of arguments to `:in`.
 
@@ -40,19 +40,33 @@ the following queries are equivalent:
           :where [[user :user/email email]]})
 ```
 
-`com.biffweb/lookup` is a bit like `xtdb.api/entity`, except you pass in an
-arbitrary key-value pair instead of a document ID:
+`com.biffweb/lookup` is a bit like `xtdb.api/pull`, except you pass in a set of
+arbitrary key-value pairs instead of a document ID:
 
 ```clojure
+;; The default pull expression is [*].
 (lookup db :user/email "bob@example.com")
 ;; =>
 {:xt/id #uuid "..."
  :user/email "bob@example.com"
- :user/favorite-color :chartreuse}
+ :user/favorite-color :chartreuse
+ :user/best-friend #uuid "..."}
+
+(lookup db '[* {:user/best-friend [*]}] :user/email "bob@example.com")
+;; =>
+{:xt/id #uuid "..."
+ :user/email "bob@example.com"
+ :user/favorite-color :chartreuse
+ :user/best-friend {:xt/id #uuid "..."
+                    :user/email "alice@example.com"
+                    :user/favorite-color "mud brown"}}
 ```
 
-There is also `lookup-id` which returns the document ID instead of the entire document.
+There is also `lookup-id`, which returns the document ID instead of the entire
+document, in addition to `lookup-all` and `lookup-id-all` which return multiple
+documents.
 
 See also:
 
  - [XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/)
+ - [lookup\* doc strings](https://biffweb.com/docs/api/xtdb/#lookup)

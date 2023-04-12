@@ -58,7 +58,7 @@ With middleware:
 ```
 
 If you need to provide a public API, you can use `:api-routes` to disable
-CSRF protection (this is a Biff feature, not a Reitit one):
+CSRF protection (this is a feature of Biff, not Reitit):
 
 ```clojure
 (defn echo [{:keys [params]}]
@@ -70,7 +70,7 @@ CSRF protection (this is a Biff feature, not a Reitit one):
   {:api-routes [["/echo" {:post echo}]]})
 ```
 
-Biff includes some middleware (`wrap-render-rum`) which will treat vector responses
+Biff includes some middleware (`biff/wrap-render-rum`) which will treat vector responses
 as Rum. The following handlers are equivalent:
 
 ```clojure

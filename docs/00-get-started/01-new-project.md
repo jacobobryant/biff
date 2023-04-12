@@ -51,10 +51,17 @@ versions manually in `deps.edn`:
 ...
 ```
 
+Optionally, you can configure Cider to start `bb dev` when you jack in by
+placing the following file contents in `.dir-locals.el`:
+
+```lisp
+((nil . ((cider-preferred-build-tool . babashka)
+         (cider-babashka-parameters . "dev"))))
+```
+
 ## Windows
 
 If you're on Windows, I recommend using Biff via WSL2. I do this myself. Plain
 Windows will mostly work, but the `bb prod-dev` command (used for Biff's
-optional develop-in-prod workflow) is unsupported, unless you manage to
-install `rsync` and `fswatch` somehow. (PRs welcome if you can figure out how
-to remove those dependencies.)
+optional develop-in-prod workflow) is unsupported, unless you manage to install
+`rsync` and `fswatch` somehow.

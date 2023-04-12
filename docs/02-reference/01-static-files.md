@@ -4,37 +4,22 @@ title: Static Files
 
 You can create static HTML files by supplying a map from paths to
 [Rum](https://github.com/tonsky/rum) data structures. In
-`com.example.feat.auth`, we define two static pages, either of which is shown
-after you request a sign-in link:
+`com.example.app`, there's a static About page:
 
 
 ```clojure
-(def signin-sent
+(def about-page
   (ui/page
-    {}
-    [:div
-     "The sign-in link was printed to the console. If you add an API "
-     "key for MailerSend, the link will be emailed to you instead."]))
+   {:base/title (str "About " settings/app-name)}
+   [:p "This app was made with "
+    [:a.link {:href "https://biffweb.com"} "Biff"] "."]))
 
-(def signin-fail
-  (ui/page
-    {}
-    [:div
-     "Your sign-in request failed. There are several possible reasons:"]
-    [:ul
-     [:li "You opened the sign-in link on a different device "
-      "or browser than the one you requested it on."]
-     [:li "We're not sure you're a human."]
-     [:li "We think your email address is invalid or high risk."]
-     [:li "We tried to email the link to you, but it didn't work."]]))
-
-(def features
-  {:routes ...
-   :static {"/auth/sent/" signin-sent
-            "/auth/fail/" signin-fail}})
+(def plugin
+  {:static {"/about/" about-page}
+   ...})
 ```
 
-The map values (`signin-sent` and `signin-fail` in this case) are passed to
+The map values (`about-page` in this case) are passed to
 `rum.core/render-static-markup` and written to the path you specify. If the
 path ends in a `/`, then `index.html` will be appended to it.
 
@@ -47,7 +32,9 @@ You can use Tailwind CSS to style your HTML:
 ```
 
 The HTML and Tailwind CSS files will be regenerated whenever you save a file.
-In addition, any files you put in `resources/public/` will be served.
+
+In addition, any files you put in `resources/public/` will be served, so you
+use that folder for logo images, plain JavaScript files, etc.
 
 See also:
 
