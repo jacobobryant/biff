@@ -46,6 +46,17 @@
               (apply biff/safe-merge
                      (keep :schema plugins)))})
 
+(def initial-system
+  {:biff/plugins #'plugins
+   :biff/send-email #'email/send-email
+   :biff/handler #'handler
+   :biff/malli-opts #'malli-opts
+   :biff.beholder/on-save #'on-save
+   :biff.xtdb/tx-fns biff/tx-fns
+   :com.example/chat-clients (atom #{})})
+
+(defonce system (atom {}))
+
 (def components
   [biff/use-config
    biff/use-secrets
@@ -55,17 +66,6 @@
    biff/use-jetty
    biff/use-chime
    biff/use-beholder])
-
-(def initial-system
-  {:com.example/chat-clients (atom #{})
-   :biff/send-email #'email/send-email
-   :biff/plugins #'plugins
-   :biff/handler #'handler
-   :biff/malli-opts #'malli-opts
-   :biff.beholder/on-save #'on-save
-   :biff.xtdb/tx-fns biff/tx-fns})
-
-(defonce system (atom {}))
 
 (defn start []
   (let [new-system (reduce (fn [system component]

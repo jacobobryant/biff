@@ -1,7 +1,12 @@
 {:deps {com.example/tasks {:local/root "tasks"}}
- :tasks {dev              com.biffweb.tasks/dev
+ :tasks {;; Used only in local development.
+         dev              com.biffweb.tasks/dev
          format           com.biffweb.tasks/format
          clean            com.biffweb.tasks/clean
+         generate-secrets com.biffweb.tasks/generate-secrets
+         hello            com.example.tasks/hello
+
+         ;; Used for interacting with production.
          deploy           com.biffweb.tasks/deploy
          soft-deploy      com.biffweb.tasks/soft-deploy
          refresh          com.biffweb.tasks/refresh
@@ -9,8 +14,7 @@
          logs             com.biffweb.tasks/logs
          prod-repl        com.biffweb.tasks/prod-repl
          prod-dev         com.biffweb.tasks/prod-dev
-         generate-secrets com.biffweb.tasks/generate-secrets
-         hello            com.example.tasks/hello
 
-         post-receive com.biffweb.tasks/post-receive
-         run-cmd      com.biffweb.tasks/run-cmd}}
+         ;; Internal tasks called by Biff in production.
+         post-receive     com.biffweb.tasks/post-receive
+         run-cmd          com.biffweb.tasks/run-cmd}}

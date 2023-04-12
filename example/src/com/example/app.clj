@@ -2,6 +2,7 @@
   (:require [com.biffweb :as biff :refer [q]]
             [com.example.middleware :as mid]
             [com.example.ui :as ui]
+            [com.example.settings :as settings]
             [rum.core :as rum]
             [xtdb.api :as xt]
             [ring.adapter.jetty9 :as jetty]
@@ -70,9 +71,9 @@
                       :where [[msg :msg/sent-at t]
                               [(<= t0 t)]]}
                     (biff/add-seconds (java.util.Date.) (* -60 10)))]
-    [:div {:hx-ws "connect:/app/chat"}
-     [:form.mb0 {:hx-ws "send"
-                 :_ "on submit set value of #message to ''"}
+    [:div {:hx-ext "ws" :ws-connect "/app/chat"}
+     [:form.mb-0 {:ws-send true
+                  :_ "on submit set value of #message to ''"}
       [:label.block {:for "message"} "Write a message"]
       [:.h-1]
       [:textarea.w-full#message {:name "text"}]
@@ -94,7 +95,6 @@
   (let [{:user/keys [email foo bar]} (xt/entity db (:uid session))]
     (ui/page
      {}
-     nil
      [:div "Signed in as " email ". "
       (biff/form
        {:action "/auth/signout"
@@ -131,10 +131,23 @@
         :on-close (fn [ws status-code reason]
                     (swap! chat-clients disj ws))}})
 
+(def about-page
+  (ui/page
+   {:base/title (str "About " settings/app-name)}
+   [:p "This app was made with "
+    [:a.link {:href "https://biffweb.com"} "Biff"] "."]))
+
+(defn echo [{:keys [params]}]
+  {:status 200
+   :headers {"content-type" "application/json"}
+   :body params})
+
 (def plugin
-  {:routes ["/app" {:middleware [mid/wrap-signed-in]}
+  {:static {"/about/" about-page}
+   :routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
             ["/chat" {:get ws-handler}]]
+   :api-routes [["/api/echo" {:post echo}]]
    :on-tx notify-clients})
