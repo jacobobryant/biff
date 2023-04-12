@@ -4,6 +4,9 @@
             [com.biffweb.impl.time :as btime]
             [com.biffweb.impl.util :as butil]
             [com.biffweb.impl.xtdb :as bxt]
+            ;;; NOTE: if you copy this file into your own project, remove the
+            ;;; above lines and replace them with the com.biffweb namespace:
+            ;[com.biffweb :as biff]
             [clj-http.client :as http]
             [clojure.string :as str]
             [rum.core :as rum]
@@ -21,7 +24,9 @@
         (and success (or (nil? score) (<= threshold score))))))
 
 (defn email-valid? [ctx email]
-  (and email (re-matches #".+@.+\..+" email)))
+  (and email
+       (re-matches #".+@.+\..+" email)
+       (not (re-find #"\s" email))))
 
 (defn new-link [{:keys [biff.auth/check-state
                         biff/base-url
