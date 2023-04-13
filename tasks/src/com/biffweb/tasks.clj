@@ -207,7 +207,7 @@
       (println "`rsync` command not found. Please install it."))
     (System/exit 1))
   (css "--minify")
-  (let [{:biff.tasks/keys [server soft-deploy-fn]} @config
+  (let [{:biff.tasks/keys [server soft-deploy-fn on-soft-deploy]} @config
         files (->> (:out (sh/sh "git" "ls-files"))
                    str/split-lines
                    (map #(str/replace % #"/.*" ""))
@@ -224,7 +224,9 @@
                  files
                  [(str "app@" server ":")])
          (apply shell))
-    (trench (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))
+    (trench (or on-soft-deploy
+                ;; backwards compatibility
+                (str "\"(" soft-deploy-fn " @com.biffweb/system)\"")))))
 
 (defn refresh
   "Reloads code and restarts the system via `clojure.tools.namespace.repl/refresh` (on the server)."
