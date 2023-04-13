@@ -94,7 +94,11 @@
 (defn use-when [f & components]
   (fn [sys]
     (if (f sys)
-      (update sys :biff/components #(concat components %))
+      (reduce (fn [system component]
+                (log/info "starting:" (str component))
+                (component system))
+              sys
+              components)
       sys)))
 
 (defn anomaly? [x]
