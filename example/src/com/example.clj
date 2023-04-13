@@ -7,6 +7,7 @@
             [com.example.schema :as schema]
             [clojure.test :as test]
             [clojure.tools.logging :as log]
+            [clojure.tools.namespace.repl :as tn-repl]
             [malli.core :as malc]
             [malli.registry :as malr]
             [nrepl.cmdline :as nrepl-cmd]))
@@ -58,20 +59,44 @@
     :com.example/enable-beholder
     biff/use-beholder)])
 
+(def initial-system
+  {:com.example/chat-clients (atom #{})
+   :biff/send-email #'email/send-email
+   :biff/features #'features
+   :biff/handler #'handler
+   :biff/malli-opts #'malli-opts
+   :biff.beholder/on-save #'on-save
+   :biff.xtdb/tx-fns biff/tx-fns})
+
+(defonce system (atom {}))
+
 (defn start []
-  (let [ctx (biff/start-system
-             {:com.example/chat-clients (atom #{})
-              :biff/send-email #'email/send-email
-              :biff/features #'features
-              :biff/after-refresh `start
-              :biff/handler #'handler
-              :biff/malli-opts #'malli-opts
-              :biff.beholder/on-save #'on-save
-              :biff.xtdb/tx-fns biff/tx-fns
-              :biff/components components})]
-    (generate-assets! ctx)
-    (log/info "Go to" (:biff/base-url ctx))))
+  (let [new-system (reduce (fn [system component]
+                             (log/info "starting:" (str component))
+                             (component system))
+                           initial-system
+                           components)]
+    (reset! system new-system)
+    (generate-assets! new-system)
+    (log/info "Go to" (:biff/base-url new-system))))
 
 (defn -main [& args]
   (start)
   (apply nrepl-cmd/-main args))
+
+(defn refresh []
+  (doseq [f (:biff/stop @system)]
+    (log/info "stopping:" (str f))
+    (f))
+  (tn-repl/refresh :after `start))
+
+(comment
+ ;; Evaluate this if you make a change to initial-system, components, :tasks,
+ ;; :queues, or config.edn. If you update secrets.env, you'll need to restart
+ ;; the app.
+ (refresh)
+
+ ;; If that messes up your editor's REPL integration, you may need to use this
+ ;; instead:
+ (biff/fix-print (refresh))
+ )
