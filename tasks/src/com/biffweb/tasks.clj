@@ -223,7 +223,8 @@
       (fs/set-posix-file-permissions "config.edn" "rw-------")
       (when (fs/exists? "secrets.env")
         (fs/set-posix-file-permissions "secrets.env" "rw-------")))
-    (->> (concat ["rsync" "-a" "--relative" "--info=name1" "--delete"]
+    (->> (concat ["rsync" "-a" "--info=name1" "--include='**.gitignore'"
+                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
                  files
                  [(str "app@" server ":")])
          (apply shell))
