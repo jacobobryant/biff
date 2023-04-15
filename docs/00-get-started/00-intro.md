@@ -8,37 +8,11 @@ title: Introduction
 </blockquote>
 
 Biff speeds up web development by providing as much functionality as possible
-out-of-the-box, while making it easy to swap out, modify, or remove parts as
+out-of-the-box while making it easy to swap out, modify, or remove parts as
 your project grows. It prioritizes small-to-medium sized projects.
 
-Some of Biff's most distinctive features:
-
-- Built on [XTDB](https://xtdb.com/), the world's finest database. It has
-  flexible data modeling, Datalog queries, and immutable history. You can use
-  the filesystem for the storage backend in dev and switch to Postgres for
-  production.
-- Uses [htmx](https://htmx.org/) (and [hyperscript](https://hyperscript.org/))
-  for the frontend. htmx lets you create interactive, real-time applications
-  while keeping the majority of your code on the backend.
-- Ready to deploy. The template project comes with a script for provisioning an
-  Ubuntu server, including Git push-to-deploy, HTTPS certificates, and NGINX
-  configuration.
-- Develop in prod. Biff is designed so you can develop your entire application
-  over an nREPL connection to your production app, with minimal restarts.
-  Whenever you hit save, files get rsynced to the server and evaluated.
-  (Optional.)
-
-Other things that Biff wraps/includes:
-
-- Passwordless, email-based authentication (via [Buddy](https://funcool.github.io/buddy-sign/latest/) JWTs).
-- [Rum](https://github.com/tonsky/rum) and [Tailwind CSS](https://tailwindcss.com/) for rendering.
-- [Jetty](https://github.com/sunng87/ring-jetty9-adapter) for the web server
-  and [Reitit](https://github.com/metosin/reitit) for routing.
-- [Malli](https://github.com/metosin/malli) for enforcing schema when submitting XTDB transactions.
-- [Chime](https://github.com/jarohen/chime) for scheduling tasks.
-- In-memory job queues (via Java's BlockingQueues).
-- A minimalist dependency injection framework, similar in spirit to Component.
-- EDN-based config with environment variables for secrets.
+The goal is to provide the benefits of a web framework without sacrificing the
+simplicity that makes Clojure great.
 
 ## About
 
