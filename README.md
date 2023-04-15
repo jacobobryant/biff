@@ -1,6 +1,6 @@
 # Biff
 
-A Clojure web framework for solo developers. See [biffweb.com](https://biffweb.com).
+A batteries-included web framework for Clojure. See [biffweb.com](https://biffweb.com).
 
 ## Contributing
 
