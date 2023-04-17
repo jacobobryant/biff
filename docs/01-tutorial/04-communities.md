@@ -2,7 +2,7 @@
 title: Communities
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/bfff8fea51520b0b1ee7818865262725943c8d27).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/2773a5b28cc7af9f9af6ffa5ff3288c32bd6ca98).
 
 Now that we have our landing page finished and deployed to production,
 let's add all the bare-minimum essential features as quickly as we can.
@@ -66,10 +66,10 @@ Go to `com.eelchat.schema` and change your schema to the following:
 As our application develops, we'll inevitably need to add more schema. But this
 should be enough for now; no need to overthink it.
 
-Head over to `com.eelchat.feat.app` and throw in a "New community" button:
+Head over to `com.eelchat.app` and throw in a "New community" button:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
          "Sign out"])
        "."]
@@ -80,9 +80,9 @@ Head over to `com.eelchat.feat.app` and throw in a "New community" button:
 +      {:action "/community"}
 +      [:button.btn {:type "submit"} "New community"]))))
 +
-+(defn new-community [{:keys [session] :as req}]
++(defn new-community [{:keys [session] :as ctx}]
 +  (let [comm-id (random-uuid)]
-+    (biff/submit-tx req
++    (biff/submit-tx ctx
 +      [{:db/doc-type :community
 +        :xt/id comm-id
 +        :comm/title (str "Community #" (rand-int 1000))}
@@ -93,7 +93,7 @@ Head over to `com.eelchat.feat.app` and throw in a "New community" button:
 +    {:status 303
 +     :headers {"Location" (str "/community/" comm-id)}}))
 +
-+(defn community [{:keys [biff/db path-params] :as req}]
++(defn community [{:keys [biff/db path-params] :as ctx}]
 +  (if-some [comm (xt/entity db (parse-uuid (:id path-params)))]
 +    (ui/page
 +     {}
@@ -101,7 +101,7 @@ Head over to `com.eelchat.feat.app` and throw in a "New community" button:
 +    {:status 303
 +     :headers {"location" "/app"}}))
 
- (def features
+ (def plugin
 -  {:routes ["/app" {:middleware [mid/wrap-signed-in]}
 -            ["" {:get app}]]})
 +  {:routes ["" {:middleware [mid/wrap-signed-in]}
@@ -141,7 +141,8 @@ all the common elements like navigation controls and such. It could start out so
 On every page, we'll want to know the list of communities the current user is
 in so that we can populate the dropdown box in the upper left corner above. Let's
 modify `com.eelchat.middleware/wrap-signed-in` so it loads the user's
-memberships (and the associated communities) on each request:
+memberships (and the associated communities) on each request. We'll also change the redirect
+location to `/` instead of `/signin` while we're at it:
 
 ```diff
 ;; src/com/eelchat/middleware.clj
@@ -149,23 +150,22 @@ memberships (and the associated communities) on each request:
 +(ns com.eelchat.middleware
 +  (:require [xtdb.api :as xt]))
 
- (defn wrap-redirect-signed-in [handler]
-   (fn [{:keys [session] :as req}]
 ;; ...
-       (handler req))))
 
  (defn wrap-signed-in [handler]
--  (fn [{:keys [session] :as req}]
+-  (fn [{:keys [session] :as ctx}]
 -    (if (some? (:uid session))
--      (handler req)
-+  (fn [{:keys [biff/db session] :as req}]
+-      (handler ctx)
+-      {:status 303
+-       :headers {"location" "/signin?error=not-signed-in"}})))
++  (fn [{:keys [biff/db session] :as ctx}]
 +    (if-some [user %%(xt/pull db%%
 +                            %%'[* {(:mem/_user {:as :user/mems})%%
 +                                 %%[* {:mem/comm [*]}]}]%%
 +                            %%(:uid session))%%]
-+      (handler (assoc req :user user))
-       {:status 303
-        :headers {"location" "/"}})))
++      (handler (assoc ctx :user user))
++      {:status 303
++       :headers {"location" "/?error=not-signed-in"}})))
 ```
 
 That `xt/pull` call is a little complex; you may want to read up on
@@ -173,13 +173,13 @@ That `xt/pull` call is a little complex; you may want to read up on
 Let's add a `pprint` call to the community page so you can see the result of the query:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
      {:status 303
       :headers {"Location" (str "/community/" comm-id)}}))
 
--(defn community [{:keys [biff/db path-params] :as req}]
-+(defn community [{:keys [biff/db user path-params] :as req}]
+-(defn community [{:keys [biff/db path-params] :as ctx}]
++(defn community [{:keys [biff/db user path-params] :as ctx}]
 +  (biff/pprint user)
    (if-some [comm (xt/entity db (parse-uuid (:id path-params)))]
      (ui/page
@@ -207,9 +207,9 @@ Go to `com.eelchat.ui` and add an `app-page` function:
 ```clojure
 ;; src/com/eelchat/ui.clj
 ;; ...
-(defn app-page [{:keys [uri user] :as opts} & body]
+(defn app-page [{:keys [uri user] :as ctx} & body]
   (base
-   opts
+   ctx
    [:.flex.bg-orange-50
     [:.h-screen.w-80.p-3.pr-0.flex.flex-col.flex-grow
      [:select
@@ -245,12 +245,12 @@ Go to `com.eelchat.ui` and add an `app-page` function:
 Then use the new function in `com.eelchat.app`:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
              [com.eelchat.ui :as ui]
              [xtdb.api :as xt]))
 
--(defn app [{:keys [session biff/db] :as req}]
+-(defn app [{:keys [session biff/db] :as ctx}]
 -  (let [{:user/keys [email]} (xt/entity db (:uid session))]
 -    (ui/page
 -     {}
@@ -266,34 +266,36 @@ Then use the new function in `com.eelchat.app`:
 -     (biff/form
 -      {:action "/community"}
 -      [:button.btn {:type "submit"} "New community"]))))
-+(defn app [req]
++(defn app [ctx]
 +  (ui/app-page
-+   req
++   ctx
 +   [:p "Select a community, or create a new one."]))
 
- (defn new-community [{:keys [session] :as req}]
+ (defn new-community [{:keys [session] :as ctx}]
    (let [comm-id (random-uuid)]
 ;; ...
      {:status 303
       :headers {"Location" (str "/community/" comm-id)}}))
 
--(defn community [{:keys [biff/db user path-params] :as req}]
+-(defn community [{:keys [biff/db user path-params] :as ctx}]
 -  (biff/pprint user)
 -  (if-some [comm (xt/entity db (parse-uuid (:id path-params)))]
 -    (ui/page
 -     {}
 -     [:p "Welcome to " (:comm/title comm)])
-+(defn community [{:keys [biff/db path-params] :as req}]
+-     {:status 303
+-      :headers {"location" "/app"}}))
++(defn community [{:keys [biff/db path-params] :as ctx}]
 +  (if (some? (xt/entity db (parse-uuid (:id path-params))))
 +    (ui/app-page
-+     req
++     ctx
 +     [:.border.border-neutral-600.p-3.bg-white.grow
 +      "Messages window"]
 +     [:.h-3]
 +     [:.border.border-neutral-600.p-3.h-28.bg-white
 +      "Compose window"])
-     {:status 303
-      :headers {"location" "/app"}}))
++    {:status 303
++     :headers {"location" "/app"}}))
 ```
 
 Voila:
@@ -305,17 +307,17 @@ Copy the URL for your community (`http://localhost:8080/community/...`) and save
 Sign out, then sign in again with a different address. Paste the community URL into your browser.
 
 You should see the same page as before, like the one in the screenshot above.
-Let's have `com.eelchat.feat.app/community` check to see if the current user is
+Let's have `com.eelchat.app/community` check to see if the current user is
 a member already, and if not, show a join button:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
      {:status 303
       :headers {"Location" (str "/community/" comm-id)}}))
  
-+(defn join-community [{:keys [user community] :as req}]
-+  (biff/submit-tx req
++(defn join-community [{:keys [user community] :as ctx}]
++  (biff/submit-tx ctx
 +    [{:db/doc-type :membership
 +      :db.op/upsert {:mem/user (:xt/id user)
 +                     :mem/comm (:xt/id community)}
@@ -323,14 +325,14 @@ a member already, and if not, show a join button:
 +  {:status 303
 +   :headers {"Location" (str "/community/" (:xt/id community))}})
 +
--(defn community [{:keys [biff/db path-params] :as req}]
+-(defn community [{:keys [biff/db path-params] :as ctx}]
 -  (if (some? (xt/entity db (parse-uuid (:id path-params))))
-+(defn community [{:keys [biff/db user community] :as req}]
++(defn community [{:keys [biff/db user community] :as ctx}]
 +  (let [member (some (fn [mem]
 +                       (= (:xt/id community) (get-in mem [:mem/comm :xt/id])))
 +                     (:user/mems user))]
      (ui/app-page
-      req
+      ctx
 -     [:.border.border-neutral-600.p-3.bg-white.grow
 -      "Messages window"]
 -     [:.h-3]
@@ -356,13 +358,13 @@ a member already, and if not, show a join button:
 +        [:div {:class "grow-[1.75]"}]]))))
 +
 +(defn wrap-community [handler]
-+  (fn [{:keys [biff/db path-params] :as req}]
++  (fn [{:keys [biff/db path-params] :as ctx}]
 +    (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
-+      (handler (assoc req :community community))
++      (handler (assoc ctx :community community))
 +      {:status 303
 +       :headers {"location" "/app"}})))
  
- (def features
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]

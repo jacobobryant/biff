@@ -182,4 +182,7 @@ allowed domains. Then add your credentials to `config.edn` and `secrets.env`:
 export RECAPTCHA_SECRET_KEY=...
 ```
 
-Then run `bb soft-deploy; bb restart` to make the config change take effect.
+Then run `bb deploy; bb restart` to make the config change take effect.
+(Normally `bb deploy` would trigger a restart automatically; however, if you
+haven't made any new commits since the last deploy, `bb deploy` will upload
+your config files and then exit.)

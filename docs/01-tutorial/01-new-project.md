@@ -2,7 +2,7 @@
 title: Start a new project
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/b28580129acabe01857971307be0a73f95ccd823).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/1110f0764b81ecfe1b088ee9d286c985d14b349b).
 
 As with any Biff project, we'll need to run the new project script. We'll add a
 `tutorial` argument so that your project will be based on the same version of
@@ -46,7 +46,7 @@ Downloading the latest version of Tailwind CSS...
 [...]
 [main] INFO com.biffweb.impl.util - %%System started.%%
 [main] INFO com.eelchat - Go to http://localhost:8080
-[chime-1] INFO com.eelchat.feat.worker - There are 0 users. (This message gets printed every 5 minutes. You can disable it by setting `:com.eelchat/enable-worker false` in config.edn)
+[chime-1] INFO com.eelchat.worker - There are 0 users. (This message gets printed every 5 minutes. You can disable it by setting `:com.eelchat/enable-worker false` in config.edn)
 nREPL server started on port 7888 on host localhost - nrepl://localhost:7888
 ```
 
@@ -73,49 +73,49 @@ Open that link, and you should be signed in!
 
 New projects come with a bunch of example code for you to inspect and tinker
 with. But since this is a tutorial, we'll delete most of it and start fresh. First,
-let's remove the `com.eelchat.feat.worker` namespace. Remove it from `com.eelchat` first:
+let's remove the `com.eelchat.worker` namespace. Remove it from `com.eelchat` first:
 
 ```diff
 ;; src/com/eelchat.clj
 ;; ...
-             [com.eelchat.feat.app :as app]
-             [com.eelchat.feat.auth :as auth]
-             [com.eelchat.feat.home :as home]
--            [com.eelchat.feat.worker :as worker]
-             [com.eelchat.schema :refer [malli-opts]]
-             [clojure.java.io :as io]
-             [clojure.string :as str]
+             [com.eelchat.email :as email]
+             [com.eelchat.app :as app]
+             [com.eelchat.home :as home]
+-            [com.eelchat.worker :as worker]
+             [com.eelchat.schema :as schema]
+             [clojure.test :as test]
+             [clojure.tools.logging :as log]
 ;; ...
- (def features
-   [app/features
-    auth/features
--   home/features
--   worker/features])
-+   home/features])
+ (def plugins
+   [app/plugin
+    (biff/authentication-plugin {})
+    home/plugin
+-   schema/plugin
+-   worker/plugin])
++   schema/plugin])
 
- (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
-                                biff/wrap-anti-forgery-websockets
+ (def routes [["" {:middleware [biff/wrap-site-defaults]}
+               (keep :routes plugins)]
 ```
 
-Then delete the `src/com/eelchat/feat/worker.clj` file.
+Then delete the `src/com/eelchat/worker.clj` file.
 
-Next, we'll go to `com.eelchat.feat.app` and delete, well, almost everything.
+Next, we'll go to `com.eelchat.app` and delete, well, almost everything.
 This file is responsible for everything you see in the screenshot above. We'll replace it
 with a simple `Nothing here yet` message:
 
 ```clojure
-;; src/com/eelchat/feat/app.clj
-(ns com.eelchat.feat.app
+;; src/com/eelchat/app.clj
+(ns com.eelchat.app
   (:require [com.biffweb :as biff :refer [q]]
             [com.eelchat.middleware :as mid]
             [com.eelchat.ui :as ui]
             [xtdb.api :as xt]))
 
-(defn app [{:keys [session biff/db] :as req}]
+(defn app [{:keys [session biff/db] :as ctx}]
   (let [{:user/keys [email]} (xt/entity db (:uid session))]
     (ui/page
      {}
-     nil
      [:div "Signed in as " email ". "
       (biff/form
        {:action "/auth/signout"
@@ -126,7 +126,7 @@ with a simple `Nothing here yet` message:
      [:.h-6]
      [:div "Nothing here yet."])))
 
-(def features
+(def plugin
   {:routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]]})
 ```
@@ -138,38 +138,28 @@ this after you refresh the page:
 
 Finally, let's update our schema (`com.eelchat.schema`). We'll remove the
 `:msg` document and the `:user/foo` and `:user/bar` attributes, all of which
-were used by the code in `com.eelchat.feat.app` which we just deleted.
+were used by the code in `com.eelchat.app` which we just deleted.
 
 ```diff
 ;; src/com/eelchat/schema.clj
 ;; ...
  (def schema
    {:user/id :uuid
-    :user/email :string
--   :user/foo :string
--   :user/bar :string
-    :user/joined-at inst?
     :user [:map {:closed true}
-           [:xt/id :user/id]
-           :user/email
--          :user/joined-at
--          [:user/foo {:optional true}]
--          [:user/bar {:optional true}]]
+           [:xt/id                     :user/id]
+           [:user/email                :string]
++          [:user/joined-at            inst?]]})
+-          [:user/joined-at            inst?]
+-          [:user/foo {:optional true} :string]
+-          [:user/bar {:optional true} :string]]
 -
 -   :msg/id :uuid
--   :msg/user :user/id
--   :msg/text :string
--   :msg/sent-at inst?
 -   :msg [:map {:closed true}
--         [:xt/id :msg/id]
--         :msg/user
--         :msg/text
--         :msg/sent-at]})
-+          :user/joined-at]})
+-         [:xt/id       :msg/id]
+-         [:msg/user    :user/id]
+-         [:msg/text    :string]
+-         [:msg/sent-at inst?]]})
 ```
-
-We'll keep the `:user` document and the `:user/email` and `:user/joined-at` attributes, since these
-are used in `com.eelchat.feat.auth` (to handle signing up/signing in).
 
 If you played around with the example app at all, you might already have some
 `:msg` documents or `:user/foo`/`:user/bar` attributes in your database. Let's

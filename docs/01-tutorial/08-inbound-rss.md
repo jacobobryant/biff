@@ -2,7 +2,7 @@
 title: Inbound RSS
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/5229157b00ba01f94e16c78f65354af75fb38a4d).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/b73a4c5896a7c8ad780119e9a7369dad9671ac6f).
 
 All of eelchat's core functionality is now in place. In this section, we'll add
 a nice-to-have: inbound RSS feeds. You can add RSS feeds to channels, and
@@ -43,7 +43,7 @@ most recent item or not.
 Next, the boring part: we need some UI for subscribing to RSS feeds. Let's
 take the lazy way out and implement it as a set of chat commands. Community
 admins will be able to add subscriptions by typing `/subscribe [url]`. You can
-view subscriptions by typing `/subscriptions`, and you can unsubscribe via
+list the subscriptions by typing `/list`, and you can unsubscribe via
 `/unsubscribe [url]`. This way we don't have to figure out where to stick another form
 in the UI.
 
@@ -68,10 +68,8 @@ We'll need to update our message rendering code to handle the new value. Let's j
 that out of the way now:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
-         [:div {:class "grow-[1.75]"}]]))))
-
  (defn message-view [{:msg/keys [mem text created-at]}]
 -  (let [username (str "User " (subs (str mem) 0 4))]
 +  (let [username (if (= :system mem)
@@ -82,14 +80,14 @@ that out of the way now:
        [:span.font-bold username]
 ```
 
-Now we'll modify the `com.eelchat.feat.app/new-message` function to have it
+Now we'll modify the `com.eelchat.app/new-message` function to have it
 inspect the messages and execute commands when appropriate. Let's add a `command-tx`
 function that returns a transaction representing the result of the command (which can
 be empty if there was no command to execute):
 
 ```diff
-;; src/com/eelchat/feat/app.clj
-;; ...
+;; src/com/eelchat/app.clj
+(ns com.eelchat.app
    (:require [com.biffweb :as biff :refer [q]]
              [com.eelchat.middleware :as mid]
              [com.eelchat.ui :as ui]
@@ -98,9 +96,6 @@ be empty if there was no command to execute):
              [rum.core :as rum]
              [xtdb.api :as xt]))
 ;; ...
-       [:span.text-gray-600 (biff/format-date created-at "d MMM h:mm aa")]]
-      [:p.whitespace-pre-wrap.mb-6 text]]))
- 
 +(defn command-tx [{:keys [biff/db channel roles params]}]
 +  (let [subscribe-url (second (re-find #"^/subscribe ([^\s]+)" (:text params)))
 +        unsubscribe-url (second (re-find #"^/unsubscribe ([^\s]+)" (:text params)))
@@ -140,19 +135,17 @@ be empty if there was no command to execute):
 +                               sort)]
 +                  (str "\n - " url))))])))
 +
- (defn new-message [{:keys [channel mem params] :as req}]
+ (defn new-message [{:keys [channel mem params] :as ctx}]
    (let [msg {:xt/id (random-uuid)
               :msg/mem (:xt/id mem)
               :msg/channel (:xt/id channel)
               :msg/created-at (java.util.Date.)
               :msg/text (:text params)}]
-     (biff/submit-tx (assoc req :biff.xtdb/retry false)
+     (biff/submit-tx (assoc ctx :biff.xtdb/retry false)
 -      [(assoc msg :db/doc-type :message)])
 +      (concat [(assoc msg :db/doc-type :message)]
-+              (command-tx req)))
++              (command-tx ctx)))
      (message-view msg)))
-
- (defn channel-page [{:keys [biff/db community channel] :as req}]
 ```
 
 Try it out:
@@ -182,14 +175,12 @@ Add these dependencies to `deps.edn`:
 need to hit Ctrl-C and run `bb dev` again.)
 
 We'll use Remus to fetch and parse the RSS feeds, and we'll use jsoup to
-convert the posts' HTML content to plain text for our excerpts.
-
-Now create a new namespace `com.eelchat.feat.subscriptions` with the following
-contents:
+convert the posts' HTML content to plain text for our excerpts. Create a new
+namespace `com.eelchat.subscriptions` with the following contents:
 
 ```clojure
-;; src/com/eelchat/feat/subscriptions.clj
-(ns com.eelchat.feat.subscriptions
+;; src/com/eelchat/subscriptions.clj
+(ns com.eelchat.subscriptions
   (:require [com.biffweb :as biff :refer [q]]
             [remus :as remus])
   (:import [org.jsoup Jsoup]))
@@ -249,13 +240,13 @@ contents:
                 :msg/created-at :db/now
                 :msg/text (format-post post)}]))))
 
-(defn fetch-rss [{:keys [biff/db] :as sys}]
-  (biff/submit-tx sys
+(defn fetch-rss [{:keys [biff/db] :as ctx}]
+  (biff/submit-tx ctx
     (->> (subs-to-update db)
-         (map #(assoc-result sys %))
+         (map #(assoc-result ctx %))
          (mapcat sub-tx))))
 
-(def features
+(def plugin
   {:tasks [{:task #'fetch-rss
             :schedule #(every-n-minutes 5)}]})
 ```
@@ -264,27 +255,28 @@ Then register the new namespace in your app:
 
 ```diff
 ;; src/com/eelchat.clj
-;; ...
-             [com.eelchat.feat.app :as app]
-             [com.eelchat.feat.auth :as auth]
-             [com.eelchat.feat.home :as home]
-+            [com.eelchat.feat.subscriptions :as sub]
+ (ns com.eelchat
+   (:require [com.biffweb :as biff]
+             [com.eelchat.email :as email]
+             [com.eelchat.app :as app]
+             [com.eelchat.auth :as auth]
+             [com.eelchat.home :as home]
++            [com.eelchat.subscriptions :as sub]
              [com.eelchat.schema :refer [malli-opts]]
              [clojure.java.io :as io]
              [clojure.string :as str]
 ;; ...
- (def features
-   [app/features
-    auth/features
-+   sub/features
-    home/features])
-
- (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
+ (def plugins
+   [app/plugin
+    (biff/authentication-plugin {})
+    home/plugin
++   sub/plugin
+    schema/plugin])
 ```
 
 Scheduled tasks are only started when the system starts, so for our new task to
-take effect, you'll need to go to `com.eelchat.repl` and evaluate the
-`(biff/fix-print (biff/refresh))` form. (Again, you can alternatively hit
+take effect, you'll need to go to `com.eelchat` and evaluate the
+`(biff/refresh)` form. (Again, you can alternatively hit
 Ctrl-C in the terminal and re-run `bb dev`, but it'll be slower. However
 sometimes that's a good option if you accidentally bork something and
 `biff/refresh` doesn't work.)
@@ -300,7 +292,7 @@ was sent.)
 If you add a new subscription and want to trigger the scheduled task
 immediately without waiting five minutes, you can head over to
 `com.eelchat.repl` and add
-`(com.eelchat.feat.subscriptions/fetch-rss (get-sys))`
+`(com.eelchat.subscriptions/fetch-rss (get-context))`
 somewhere within the `comment` form. Evaluate it to fetch the feeds.
 
 That being said, it would be nice if eelchat fetched new subscriptions right
@@ -308,11 +300,11 @@ away automatically. Let's add another transaction listener that will do just
 that whenever there's a new subscription document:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
- (ns com.eelchat.feat.app
+ (ns com.eelchat.app
    (:require [com.biffweb :as biff :refer [q]]
-+            [com.eelchat.feat.subscriptions :as sub]
++            [com.eelchat.subscriptions :as sub]
              [com.eelchat.middleware :as mid]
              [com.eelchat.ui :as ui]
              [clojure.string :as str]
@@ -320,7 +312,7 @@ that whenever there's a new subscription document:
              :when (not= mem-id (:msg/mem doc))]
        (jetty/send! client html))))
 
-+(defn on-new-subscription [{:keys [biff.xtdb/node] :as sys} tx]
++(defn on-new-subscription [{:keys [biff.xtdb/node] :as ctx} tx]
 +  (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
 +    (doseq [[op & args] (::xt/tx-ops tx)
 +            :when (= op ::xt/put)
@@ -328,15 +320,15 @@ that whenever there's a new subscription document:
 +            :when (and (contains? doc :sub/url)
 +                       (nil? (xt/entity db-before (:xt/id doc))))]
 +      (future
-+       (biff/submit-tx sys
-+         (sub/sub-tx (sub/assoc-result sys doc)))))))
++       (biff/submit-tx ctx
++         (sub/sub-tx (sub/assoc-result ctx doc)))))))
 +
-+(defn on-tx [sys tx]
-+  (on-new-message sys tx)
-+  (on-new-subscription sys tx))
++(defn on-tx [ctx tx]
++  (on-new-message ctx tx)
++  (on-new-subscription ctx tx))
 +
  (defn wrap-community [handler]
-   (fn [{:keys [biff/db user path-params] :as req}]
+   (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
                     :post new-message
@@ -359,8 +351,8 @@ not *necessarily* a problem, but it could be if e.g. we add start doing somethin
 computationally intensive as part of our RSS task. We'd like to be able to make sure
 we don't have too many background tasks running at once.
 
-This is where Biff's in-memory
-[queues](https://biffweb.com/docs/reference/queues/) come in handy. Whenever we
+This is where Biff's
+[in-memory queues](https://biffweb.com/docs/reference/queues/) come in handy. Whenever we
 want to fetch an RSS feed, instead of doing it immediately, we can add a job to
 a queue. The queue will be consumed by a thread pool, and we can pick the
 amount of concurrency we want by adjusting the size of the thread pool. For
@@ -371,16 +363,16 @@ time.
 Add a `:fetch-rss` queue like so:
 
 ```diff
-;; src/com/eelchat/feat/subscriptions.clj
+;; src/com/eelchat/subscriptions.clj
 ;; ...
-          (map #(assoc-result sys %))
+          (map #(assoc-result ctx %))
           (mapcat sub-tx))))
 
-+(defn fetch-rss-consumer [{:keys [biff/job] :as sys}]
-+  (biff/submit-tx sys
-+    (sub-tx (assoc-result sys job))))
++(defn fetch-rss-consumer [{:keys [biff/job] :as ctx}]
++  (biff/submit-tx ctx
++    (sub-tx (assoc-result ctx job))))
 +
- (def features
+ (def plugin
    {:tasks [{:task #'fetch-rss
 -            :schedule #(every-n-minutes 5)}]})
 +            :schedule #(every-n-minutes 5)}]
@@ -389,15 +381,15 @@ Add a `:fetch-rss` queue like so:
 ```
 
 Queues, like scheduled tasks, are only initialized at startup, so go ahead and
-refresh the system to make the change take effect (`com.eelchat.repl` ->
-`(biff/fix-print (biff/refresh))`). Then we'll modify the
-`com.eelchat.feat.app/on-new-subscription` transaction listener to have it
+refresh the system to make the change take effect (`com.eelchat` ->
+`(biff/refresh)`). Then we'll modify the
+`com.eelchat.app/on-new-subscription` transaction listener to have it
 submit a job:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
- (defn on-new-subscription [{:keys [biff.xtdb/node] :as sys} tx]
+ (defn on-new-subscription [{:keys [biff.xtdb/node] :as ctx} tx]
    (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
      (doseq [[op & args] (::xt/tx-ops tx)
              :when (= op ::xt/put)
@@ -405,32 +397,32 @@ submit a job:
              :when (and (contains? doc :sub/url)
                         (nil? (xt/entity db-before (:xt/id doc))))]
 -      (future
--       (biff/submit-tx sys
--         (sub/sub-tx (sub/assoc-result sys doc)))))))
-+      (biff/submit-job sys :fetch-rss doc))))
+-       (biff/submit-tx ctx
+-         (sub/sub-tx (sub/assoc-result ctx doc)))))))
++      (biff/submit-job ctx :fetch-rss doc))))
 
- (defn on-tx [sys tx]
-   (on-new-message sys tx)
+ (defn on-tx [ctx tx]
+   (on-new-message ctx tx)
 ```
 
-Couldn't be easier! Try adding another subscription to one of your channels to
+Voila! Try adding another subscription to one of your channels to
 ensure everything still works. The latest post from the feed should show up
 like it did before.
 
 Let's modify our scheduled task to use the queue as well:
 
 ```diff
-;; src/com/eelchat/feat/subscriptions.clj
+;; src/com/eelchat/subscriptions.clj
 ;; ...
                  :msg/text (format-post post)}]))))
 
- (defn fetch-rss [{:keys [biff/db] :as sys}]
--  (biff/submit-tx sys
+ (defn fetch-rss [{:keys [biff/db] :as ctx}]
+-  (biff/submit-tx ctx
 -    (->> (subs-to-update db)
--         (map #(assoc-result sys %))
+-         (map #(assoc-result ctx %))
 -         (mapcat sub-tx))))
 +  (doseq [sub (subs-to-update db)]
-+    (biff/submit-job sys :fetch-rss sub)))
++    (biff/submit-job ctx :fetch-rss sub)))
 ```
 
 There's a slight caveat here: what if our scheduled task adds a bunch of jobs to the queue,
@@ -441,14 +433,14 @@ We'll fix this by adding a higher priority to jobs for new subscriptions. (The
 default priority is 10, and lower numbers take higher priority.)
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
              :let [[doc] args]
              :when (and (contains? doc :sub/url)
                         (nil? (xt/entity db-before (:xt/id doc))))]
--      (biff/submit-job sys :fetch-rss doc))))
-+      (biff/submit-job sys :fetch-rss (assoc doc :biff/priority 0)))))
+-      (biff/submit-job ctx :fetch-rss doc))))
++      (biff/submit-job ctx :fetch-rss (assoc doc :biff/priority 0)))))
 
- (defn on-tx [sys tx]
-   (on-new-message sys tx)
+ (defn on-tx [ctx tx]
+   (on-new-message ctx tx)
 ```

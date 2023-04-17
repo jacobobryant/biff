@@ -2,52 +2,37 @@
 title: Realtime updates
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/1d436ffdb6238f7632fc3e67d35fb995faea528f).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/aad55f84791bb50311bc86691e2fdf07f4f53b11).
 
 In this section, we'll use websockets to deliver new messages to other users
 who are in the same channel. htmx has some websocket features that make this
 fairly painless.
 
-Make sure you're on at least version 1.8.4, then install the websocket extension:
-
-```diff
-;; src/com/eelchat/ui.clj
-;; ...
-                      :image "/img/logo.png"})
-        (update :base/head (fn [head]
-                             (concat [[:link {:rel "stylesheet" :href (css-path)}]
--                                     [:script {:src "https://unpkg.com/htmx.org@1.6.1"}]
-+                                     [:script {:src "https://unpkg.com/htmx.org@1.8.4"}]
-+                                     [:script {:src "https://unpkg.com/htmx.org@1.8.4/dist/ext/ws.js"}]
-                                      [:script {:src "https://unpkg.com/hyperscript.org@0.9.3"}]
-                                      [:link {:href "/apple-touch-icon.png", :sizes "180x180", :rel "apple-touch-icon"}]
-                                      [:link {:href "/favicon-32x32.png", :sizes "32x32", :type "image/png", :rel "icon"}]
-```
-
-We'll soon add a handler for websocket connections. It will store all the
-active websocket connections in an atom, as a nested map of the form
-`channel ID -> membership ID -> connection`. Our `com.eelchat/start` function
-already initializes an atom (because the original example app included a
+We'll soon add a handler for websocket connection requests. It will store all
+the active websocket connections in an atom, as a nested map of the form
+`channel ID -> membership ID -> connection`. The `com.eelchat/initial-system`
+map already includes an atom (because the original example app included a
 websocket example, and we never removed the atom when we started working on
 eelchat), but it contains a set. So let's change it to a map:
 
 ```diff
 ;; src/com/eelchat.clj
 ;; ...
-
- (defn start []
-   (biff/start-system
--   {:com.eelchat/chat-clients (atom #{})
-+   {:com.eelchat/chat-clients (atom {})
-     :biff/features #'features
-     :biff/after-refresh `start
-     :biff/handler #'handler
+ (def initial-system
+   {:biff/plugins #'plugins
+    :biff/send-email #'email/send-email
+    :biff/handler #'handler
+    :biff/malli-opts #'malli-opts
+    :biff.beholder/on-save #'on-save
+    :biff.xtdb/tx-fns biff/tx-fns
+-   :com.eelchat/chat-clients (atom #{})})
++   :com.eelchat/chat-clients (atom {})})
 ```
 
 That atom will be available in all our request maps, under the
-`:com.eelchat/chat-clients` key. For changes to the `start` function to take
-effect, you'll need to restart the system. Go to `com.eelchat.repl` and
-evaluate the `(biff/fix-print (biff/refresh))` form. (Alternatively, you can
+`:com.eelchat/chat-clients` key. For changes to `initial-system` to take
+effect, you'll need to restart the system. Go to the bottom of the `com.eelchat`
+file and evaluate the `(biff/refresh)` form. (Alternatively, you can
 hit Ctrl-C in the terminal and then run `bb dev` again, but that would be
 slower.)
 
@@ -56,9 +41,9 @@ connection whenever you enter a channel, and we'll throw in a couple `prn`s for
 illustration.
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
- (defn channel-page [{:keys [biff/db community channel] :as req}]
+ (defn channel-page [{:keys [biff/db community channel] :as ctx}]
    (let [msgs (q db
                  '{:find (pull msg [*])
                    :in [channel]
@@ -68,7 +53,7 @@ illustration.
 +        href (str "/community/" (:xt/id community)
 +                  "/channel/" (:xt/id channel))]
      (ui/app-page
-      req
+      ctx
        [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
 -       {:_ "on load or newMessage set my scrollTop to my scrollHeight"}
 +       {:hx-ext "ws"
@@ -86,11 +71,43 @@ illustration.
 ;; ...
         [:.w-2]
         [:button.btn {:type "submit"} "Send"]))))
+
+ (defn channel-page [{:keys [biff/db community channel] :as ctx}]
+   (let [msgs (q db
+                 '{:find (pull msg [*])
+                   :in [channel]
+                   :where [[msg :msg/channel channel]]}
+-                (:xt/id channel))]
++               (:xt/id channel))
++       href (str "/community/" (:xt/id community)
++                 "/channel/" (:xt/id channel))]
+     (ui/app-page
+      ctx
+      [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
+-      {:_ "on load or newMessage set my scrollTop to my scrollHeight"}
++      {:hx-ext "ws"
++       :ws-connect (str href "/connect")
++       :_ "on load or newMessage set my scrollTop to my scrollHeight"}
+       (map message-view (sort-by :msg/created-at msgs))]
+      [:.h-3]
+      (biff/form
+-      {:hx-post (str "/community/" (:xt/id community)
+-                     "/channel/" (:xt/id channel))
++      {:hx-post href
+        :hx-target "#messages"
+        :hx-swap "beforeend"
+        :_ (str "on htmx:afterRequest"
+                " set <textarea/>'s value to ''"
+                " then send newMessage to #messages")
+        :class "flex"}
+       [:textarea.w-full#text {:name "text"}]
+       [:.w-2]
+       [:button.btn {:type "submit"} "Send"]))))
  
 +(defn connect [{:keys [com.eelchat/chat-clients]
 +                {chan-id :xt/id} :channel
 +                {mem-id :xt/id} :mem
-+                :as req}]
++                :as ctx}]
 +  {:status 101
 +   :headers {"upgrade" "websocket"
 +             "connection" "upgrade"}
@@ -105,10 +122,15 @@ illustration.
 +                                      (dissoc chat-clients chan-id)
 +                                      chat-clients))))))}})
 +
- (defn wrap-community [handler]
-   (fn [{:keys [biff/db user path-params] :as req}]
-     (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
+ (def plugin
+   {:routes ["" {:middleware [mid/wrap-signed-in]}
+             ["/app"           {:get app}]
+             ["/community"     {:post new-community}]
+             ["/community/:id" {:middleware [wrap-community]}
+              [""      {:get community}]
+              ["/join" {:post join-community}]
+              ["/channel" {:post new-channel}]
               ["/channel/:chan-id" {:middleware [wrap-channel]}
                ["" {:get channel-page
                     :post new-message
@@ -136,20 +158,15 @@ With the connections in place, we can add a transaction listener that will
 send new messages to all the channel participants:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
-;; ...
+;; src/com/eelchat/app.clj
+(ns com.eelchat.app
    (:require [com.biffweb :as biff :refer [q]]
              [com.eelchat.middleware :as mid]
              [com.eelchat.ui :as ui]
 +            [ring.adapter.jetty9 :as jetty]
 +            [rum.core :as rum]
              [xtdb.api :as xt]))
-
- (defn app [req]
 ;; ...
-                                  (dissoc chat-clients chan-id)
-                                  chat-clients)))))}})
-
 +(defn on-new-message [{:keys [biff.xtdb/node com.eelchat/chat-clients]} tx]
 +  (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
 +    (doseq [[op & args] (::xt/tx-ops tx)
@@ -166,12 +183,18 @@ send new messages to all the channel participants:
 +      (jetty/send! client html))))
 +
  (defn wrap-community [handler]
-   (fn [{:keys [biff/db user path-params] :as req}]
+   (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
- (def features
+ (def plugins
    {:routes ["" {:middleware [mid/wrap-signed-in]}
-;; ...
+             ["/app"           {:get app}]
+             ["/community"     {:post new-community}]
+             ["/community/:id" {:middleware [wrap-community]}
+              [""      {:get community}]
+              ["/join" {:post join-community}]
+              ["/channel" {:post new-channel}]
+              ["/channel/:chan-id" {:middleware [wrap-channel]}
                ["" {:get channel-page
                     :post new-message
                     :delete delete-channel}]
@@ -179,6 +202,14 @@ send new messages to all the channel participants:
 +              ["/connect" {:get connect}]]]]
 +   :on-tx on-new-message})
 ```
+
+Whenever a new transaction is indexed by XTDB, it will get passed to
+`on-new-message`. That function will check to see if the transaction contains a
+new message, and if so, the function will send the message via websocket to
+anyone who is in the relevant channel. By using a transaction listener, we
+ensure that the chat room will work even if you scale out beyond a single web
+server: each web server will index the transaction and will send the message to
+any channel participants that have a websocket connection to that server.
 
 Try it out!
 

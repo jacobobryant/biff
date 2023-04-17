@@ -2,29 +2,29 @@
 title: Channels
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/ee08c1c0f12d8d9ff6f8f606cdf6eb9c40426cd7).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/0cde57a7ed58c34aa6f2b775e52da4aafa7a471d).
 
 Now that users can create and join communities, we're ready to let
 community admins create and delete channels. We'll start by adding a "New
-channel" button. But first, let's update `com.eelchat.feat.app/wrap-community`
+channel" button. But first, let's update `com.eelchat.app/wrap-community`
 so it adds the current user's roles to the incoming request:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
          [:div {:class "grow-[1.75]"}]]))))
 
  (defn wrap-community [handler]
--  (fn [{:keys [biff/db path-params] :as req}]
-+  (fn [{:keys [biff/db user path-params] :as req}]
+-  (fn [{:keys [biff/db path-params] :as ctx}]
++  (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
--      (handler (assoc req :community community))
+-      (handler (assoc ctx :community community))
 +      (let [roles (->> (:user/mems user)
 +                       (filter (fn [mem]
 +                                 (= (:xt/id community) (get-in mem [:mem/comm :xt/id]))))
 +                       first
 +                       :mem/roles)]
-+        (handler (assoc req :community community :roles roles)))
++        (handler (assoc ctx :community community :roles roles)))
        {:status 303
         :headers {"location" "/app"}})))
 ```
@@ -38,10 +38,10 @@ if so:
       body]
      [:div {:class "grow-[2]"}]]))
 
--(defn app-page [{:keys [uri user] :as opts} & body]
-+(defn app-page [{:keys [uri user community roles] :as opts} & body]
+-(defn app-page [{:keys [uri user] :as ctx} & body]
++(defn app-page [{:keys [uri user community roles] :as ctx} & body]
    (base
-    opts
+    ctx
     [:.flex.bg-orange-50
 ;; ...
                        url)}
@@ -67,15 +67,15 @@ Next we'll add a handler so that the button actually does something. We'll also 
 `channel-page` handler:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
    {:status 303
     :headers {"Location" (str "/community/" (:xt/id community))}})
  
-+(defn new-channel [{:keys [community roles] :as req}]
++(defn new-channel [{:keys [community roles] :as ctx}]
 +  (if (and community (contains? roles :admin))
 +    (let [chan-id (random-uuid)]
-+     (biff/submit-tx req
++     (biff/submit-tx ctx
 +       [{:db/doc-type :channel
 +         :xt/id chan-id
 +         :chan/title (str "Channel #" (rand-int 1000))
@@ -85,33 +85,33 @@ Next we'll add a handler so that the button actually does something. We'll also 
 +    {:status 403
 +     :body "Forbidden."}))
 +
- (defn community [{:keys [biff/db user community] :as req}]
+ (defn community [{:keys [biff/db user community] :as ctx}]
    (let [member (some (fn [mem]
                         (= (:xt/id community) (get-in mem [:mem/comm :xt/id])))
 ;; ...
           [:button.btn {:type "submit"} "Join this community"])
          [:div {:class "grow-[1.75]"}]]))))
  
-+(defn channel-page [req]
++(defn channel-page [ctx]
 +  ;; We'll update this soon
-+  (community req))
++  (community ctx))
 +
  (defn wrap-community [handler]
-   (fn [{:keys [biff/db user path-params] :as req}]
+   (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
        {:status 303
         :headers {"location" "/app"}})))
  
 +(defn wrap-channel [handler]
-+  (fn [{:keys [biff/db user community path-params] :as req}]
++  (fn [{:keys [biff/db user community path-params] :as ctx}]
 +    (let [channel (xt/entity db (parse-uuid (:chan-id path-params)))]
 +      (if (= (:chan/comm channel) (:xt/id community))
-+        (handler (assoc req :channel channel))
++        (handler (assoc ctx :channel channel))
 +        {:status 303
 +         :headers {"Location" (str "/community/" (:xt/id community))}}))))
 +
- (def features
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]
@@ -131,9 +131,12 @@ in the sidebar if you're a member of the community:
 ;; src/com/eelchat/ui.clj
 ;; ...
  (ns com.eelchat.ui
-   (:require [clojure.java.io :as io]
--            [com.biffweb :as biff]))
-+            [com.biffweb :as biff :refer [q]]))
+   (:require [cheshire.core :as cheshire]
+             [clojure.java.io :as io]
+             [com.eelchat.settings :as settings]
+-            [com.biffweb :as biff]
++            [com.biffweb :as biff :refer [q]]
+             [ring.middleware.anti-forgery :as csrf]))
  
  (defn css-path []
    (if-some [f (io/file (io/resource "public/css/main.css"))]
@@ -151,17 +154,17 @@ in the sidebar if you're a member of the community:
 +          :where [[channel :chan/comm comm]]}
 +        (:xt/id community)))))
 +
--(defn app-page [{:keys [uri user community roles] :as opts} & body]
-+(defn app-page [{:keys [biff/db uri user community roles channel] :as opts} & body]
+-(defn app-page [{:keys [uri user community roles] :as ctx} & body]
++(defn app-page [{:keys [biff/db uri user community roles channel] :as ctx} & body]
    (base
-    opts
+    ctx
     [:.flex.bg-orange-50
 ;; ...
            :selected (when (= url uri)
                        url)}
           (:comm/title comm)])]
 +     [:.h-4]
-+     (for [chan (channels opts)
++     (for [chan (channels ctx)
 +           :let [active (= (:xt/id chan) (:xt/id channel))]]
 +       [:.mt-3 (if active
 +                 [:span.font-bold (:chan/title chan)]
@@ -209,22 +212,21 @@ correctly when you're on a channel page:
 ;; src/com/eelchat/ui.clj
 ;; ...
  (ns com.eelchat.ui
--  (:require [clojure.java.io :as io]
--            [com.biffweb :as biff :refer [q]]))
-+  (:require [cheshire.core :as cheshire]
-+            [clojure.java.io :as io]
+   (:require [cheshire.core :as cheshire]
+             [clojure.java.io :as io]
 +            [clojure.string :as str]
+             [com.eelchat.settings :as settings]
 +            [com.eelchat.ui.icons :refer [icon]]
-+            [com.biffweb :as biff :refer [q]]
-+            [ring.middleware.anti-forgery :as anti-forgery]))
+             [com.biffweb :as biff :refer [q]]
+             [ring.middleware.anti-forgery :as csrf]))
  
 ;; ...
-(defn app-page [{:keys [biff/db uri user community roles channel] :as opts} & body]
+(defn app-page [{:keys [biff/db uri user community roles channel] :as ctxs} & body]
    (base
-    opts
+    ctxs
     [:.flex.bg-orange-50
 +    {:hx-headers (cheshire/generate-string
-+                  {:x-csrf-token anti-forgery/*anti-forgery-token*})}
++                  {:x-csrf-token csrf/*anti-forgery-token*})}
      [:.h-screen.w-80.p-3.pr-0.flex.flex-col.flex-grow
       [:select
        {:class '[text-sm
@@ -235,10 +237,10 @@ correctly when you're on a channel page:
 -          :selected (when (= url uri)
 -                      url)}
 +          :selected (when (str/starts-with? uri url)
-+                      "selected")}
++                      true)}
           (:comm/title comm)])]
       [:.h-4]
-      (for [chan (channels opts)
+      (for [chan (channels ctx)
 -           :let [active (= (:xt/id chan) (:xt/id channel))]]
 +           :let [active (= (:xt/id chan) (:xt/id channel))
 +                 href (str "/community/" (:xt/id community)
@@ -275,19 +277,19 @@ After we define the corresponding request handler, our delete buttons will be
 fully functional:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
      {:status 403
       :body "Forbidden."}))
  
-+(defn delete-channel [{:keys [channel roles] :as req}]
++(defn delete-channel [{:keys [channel roles] :as ctx}]
 +  (when (contains? roles :admin)
-+    (biff/submit-tx req
++    (biff/submit-tx ctx
 +      [{:db/op :delete
 +        :xt/id (:xt/id channel)}]))
 +  [:<>])
 +
- (defn community [{:keys [biff/db user community] :as req}]
+ (defn community [{:keys [biff/db user community] :as ctx}]
    (let [member (some (fn [mem]
                         (= (:xt/id community) (get-in mem [:mem/comm :xt/id])))
 ;; ...

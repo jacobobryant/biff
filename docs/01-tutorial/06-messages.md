@@ -2,7 +2,7 @@
 title: Messages
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/e3a17d6552eb8fc6dfba296edc70ed992a7d4558).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/e3219152ff59b08195dbfa404d8cb16bbd376d12).
 
 It's finally time to add the core feature of any discussion app: sending and
 receiving messages. We're going to update the `com.eelchat.ui/channel-page`
@@ -16,8 +16,8 @@ have some data to start out with. Add the following function to `com.eelchat.rep
 ;; src/com/eelchat/repl.clj
 ;; ...
 (defn seed-channels []
-  (let [{:keys [biff/db] :as sys} (get-sys)]
-    (biff/submit-tx sys
+  (let [{:keys [biff/db] :as ctx} (get-context)]
+    (biff/submit-tx ctx
       (for [[mem chan] (q db
                           '{:find [mem chan]
                             :where [[mem :mem/comm comm]
@@ -37,36 +37,39 @@ same file):
 ```clojure
 ;; src/com/eelchat/repl.clj
 ;; ...
-  (let [{:keys [biff/db] :as sys} (get-sys)]
+  (let [{:keys [biff/db] :as ctx} (get-context)]
     (q db
        '{:find (pull msg [*])
          :where [[msg :msg/text]]}))
 ```
 
-Now we can render the messages in `com.eelchat.feat.app/channel-page`:
+Now we can render the messages in `com.eelchat.app/channel-page`:
 
-```clojure
-;; src/com/eelchat/feat/app.clj
+```diff
+;; src/com/eelchat/app.clj
 ;; ...
-(defn message-view [{:msg/keys [mem text created-at]}]
-  (let [username (str "User " (subs (str mem) 0 4))]
-    [:div
-     [:.text-sm
-      [:span.font-bold username]
-      [:span.w-2.inline-block]
-      [:span.text-gray-600 (biff/format-date created-at "d MMM h:mm aa")]]
-     [:p.whitespace-pre-wrap.mb-6 text]]))
-
-(defn channel-page [{:keys [biff/db community channel] :as req}]
-  (let [msgs (q db
-                '{:find (pull msg [*])
-                  :in [channel]
-                  :where [[msg :msg/channel channel]]}
-                (:xt/id channel))]
-    (ui/app-page
-     req
-     [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
-      (map message-view (sort-by :msg/created-at msgs))])))
++(defn message-view [{:msg/keys [mem text created-at]}]
++  (let [username (str "User " (subs (str mem) 0 4))]
++    [:div
++     [:.text-sm
++      [:span.font-bold username]
++      [:span.w-2.inline-block]
++      [:span.text-gray-600 (biff/format-date created-at "d MMM h:mm aa")]]
++     [:p.whitespace-pre-wrap.mb-6 text]]))
++
++(defn channel-page [{:keys [biff/db community channel] :as ctx}]
++  (let [msgs (q db
++                '{:find (pull msg [*])
++                  :in [channel]
++                  :where [[msg :msg/channel channel]]}
++                (:xt/id channel))]
++    (ui/app-page
++     ctx
++     [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
++      (map message-view (sort-by :msg/created-at msgs))])))
+-(defn channel-page [ctx]
+-  ;; We'll update this soon
+-  (community ctx))
 ```
 
 ![A screenshot of the app, with messages rendered by channel-page](/img/tutorial/render-messages.png)
@@ -80,33 +83,33 @@ We'll also tighten the `wrap-channel` middleware so it only gives access to user
 the community:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
  (defn wrap-community [handler]
-   (fn [{:keys [biff/db user path-params] :as req}]
+   (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 -      (let [roles (->> (:user/mems user)
 -                       (filter (fn [mem]
 -                                 (= (:xt/id community) (get-in mem [:mem/comm :xt/id]))))
 -                       first
 -                       :mem/roles)]
--        (handler (assoc req :community community :roles roles)))
+-        (handler (assoc ctx :community community :roles roles)))
 +      (let [mem (->> (:user/mems user)
 +                     (filter (fn [mem]
 +                               (= (:xt/id community) (get-in mem [:mem/comm :xt/id]))))
 +                     first)
 +            roles (:mem/roles mem)]
-+        (handler (assoc req :community community :roles roles :mem mem)))
++        (handler (assoc ctx :community community :roles roles :mem mem)))
        {:status 303
         :headers {"location" "/app"}})))
  
  (defn wrap-channel [handler]
--  (fn [{:keys [biff/db user community path-params] :as req}]
-+  (fn [{:keys [biff/db user mem community path-params] :as req}]
+-  (fn [{:keys [biff/db user community path-params] :as ctx}]
++  (fn [{:keys [biff/db user mem community path-params] :as ctx}]
      (let [channel (xt/entity db (parse-uuid (:chan-id path-params)))]
 -      (if (= (:chan/comm channel) (:xt/id community))
 +      (if (and (= (:chan/comm channel) (:xt/id community)) mem)
-         (handler (assoc req :channel channel))
+         (handler (assoc ctx :channel channel))
          {:status 303
           :headers {"Location" (str "/community/" (:xt/id community))}}))))
 ```
@@ -116,28 +119,29 @@ into the page without doing a full page reload, and we'll use hyperscript to
 keep the message window scrolled to the bottom whenever there's a new message:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
        [:span.text-gray-600 (biff/format-date created-at "d MMM h:mm aa")]]
       [:p.whitespace-pre-wrap.mb-6 text]]))
  
-+(defn new-message [{:keys [channel mem params] :as req}]
++(defn new-message [{:keys [channel mem params] :as ctx}]
 +  (let [msg {:xt/id (random-uuid)
 +             :msg/mem (:xt/id mem)
 +             :msg/channel (:xt/id channel)
 +             :msg/created-at (java.util.Date.)
 +             :msg/text (:text params)}]
-+    (biff/submit-tx (assoc req :biff.xtdb/retry false)
++    (biff/submit-tx (assoc ctx :biff.xtdb/retry false)
 +      [(assoc msg :db/doc-type :message)])
 +    (message-view msg)))
 +
- (defn channel-page [{:keys [biff/db community channel] :as req}]
+ (defn channel-page [{:keys [biff/db community channel] :as ctx}]
    (let [msgs (q db
                  '{:find (pull msg [*])
-;; ...
+                   :in [channel]
+                   :where [[msg :msg/channel channel]]}
                  (:xt/id channel))]
      (ui/app-page
-      req
+      ctx
 -     [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
 -      (map message-view (sort-by :msg/created-at msgs))])))
 +      [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
@@ -188,11 +192,11 @@ But one last thing before we move on: we need to update our `delete-channel`
 function so that it deletes the channel's messages too.
 
 ```clojure
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
-(defn delete-channel [{:keys [biff/db channel roles] :as req}]
+(defn delete-channel [{:keys [biff/db channel roles] :as ctx}]
   (when (contains? roles :admin)
-    (biff/submit-tx req
+    (biff/submit-tx ctx
       (for [id (conj (q db
                         '{:find msg
                           :in [channel]
