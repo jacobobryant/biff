@@ -21,7 +21,7 @@ with some text after it's clicked:
 (defn click [request]
   [:div "Earth will now self-destruct"])
 
-(def features
+(def plugin
   {:routes [["/page" {:get page}]
             ["/click" {:post click}]]})
 ```

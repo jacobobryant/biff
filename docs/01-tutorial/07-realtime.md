@@ -186,7 +186,7 @@ send new messages to all the channel participants:
    (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
- (def plugins
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]
