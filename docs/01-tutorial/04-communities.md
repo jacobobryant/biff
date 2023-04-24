@@ -101,7 +101,7 @@ Head over to `com.eelchat.feat.app` and throw in a "New community" button:
 +    {:status 303
 +     :headers {"location" "/app"}}))
 
- (def features
+ (def plugin
 -  {:routes ["/app" {:middleware [mid/wrap-signed-in]}
 -            ["" {:get app}]]})
 +  {:routes ["" {:middleware [mid/wrap-signed-in]}
@@ -362,7 +362,7 @@ a member already, and if not, show a join button:
 +      {:status 303
 +       :headers {"location" "/app"}})))
  
- (def features
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]

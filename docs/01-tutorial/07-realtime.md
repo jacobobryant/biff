@@ -169,7 +169,7 @@ send new messages to all the channel participants:
    (fn [{:keys [biff/db user path-params] :as req}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
- (def features
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
 ;; ...
                ["" {:get channel-page

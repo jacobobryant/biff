@@ -86,12 +86,12 @@ let's remove the `com.eelchat.feat.worker` namespace. Remove it from `com.eelcha
              [clojure.java.io :as io]
              [clojure.string :as str]
 ;; ...
- (def features
-   [app/features
-    auth/features
--   home/features
--   worker/features])
-+   home/features])
+ (def plugins
+   [app/plugin
+    auth/plugin
+-   home/plugin
+-   worker/plugin])
++   home/plugin])
 
  (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
                                 biff/wrap-anti-forgery-websockets
@@ -126,7 +126,7 @@ with a simple `Nothing here yet` message:
      [:.h-6]
      [:div "Nothing here yet."])))
 
-(def features
+(def plugin
   {:routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]]})
 ```

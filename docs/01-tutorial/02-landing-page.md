@@ -250,6 +250,6 @@ And do the same in `com.eelchat.feat.app`:
 +     [:div "Thanks for joining the waitlist. "
 +      "We'll let you know when eelchat is ready to use."])))
  
- (def features
+ (def plugin
    {:routes ["/app" {:middleware [mid/wrap-signed-in]}
 ```

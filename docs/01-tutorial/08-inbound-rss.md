@@ -255,7 +255,7 @@ contents:
          (map #(assoc-result sys %))
          (mapcat sub-tx))))
 
-(def features
+(def plugin
   {:tasks [{:task #'fetch-rss
             :schedule #(every-n-minutes 5)}]})
 ```
@@ -273,11 +273,11 @@ Then register the new namespace in your app:
              [clojure.java.io :as io]
              [clojure.string :as str]
 ;; ...
- (def features
-   [app/features
-    auth/features
-+   sub/features
-    home/features])
+ (def plugins
+   [app/plugin
+    auth/plugin
++   sub/plugin
+    home/plugin])
 
  (def routes [["" {:middleware [anti-forgery/wrap-anti-forgery
 ```
@@ -380,7 +380,7 @@ Add a `:fetch-rss` queue like so:
 +  (biff/submit-tx sys
 +    (sub-tx (assoc-result sys job))))
 +
- (def features
+ (def plugin
    {:tasks [{:task #'fetch-rss
 -            :schedule #(every-n-minutes 5)}]})
 +            :schedule #(every-n-minutes 5)}]

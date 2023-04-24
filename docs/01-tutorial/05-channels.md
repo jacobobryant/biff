@@ -111,7 +111,7 @@ Next we'll add a handler so that the button actually does something. We'll also 
 +        {:status 303
 +         :headers {"Location" (str "/community/" (:xt/id community))}}))))
 +
- (def features
+ (def plugin
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]
