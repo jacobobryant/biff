@@ -6,7 +6,17 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.stacktrace :as st]))
+
+(defmacro future-verbose [& body]
+  `(future
+    (try
+     ~@body
+     (catch Exception e#
+       ;; st/print-stack-trace just prints Babashka's internal stack trace.
+       (st/print-throwable e#)
+       (println)))))
 
 (defn new-secret [length]
   (let [buffer (byte-array length)]
@@ -26,7 +36,9 @@
   (apply shell (filter some? args)))
 
 (defn windows? []
-  (not (fs/which "uname")))
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
 
 (defn local-tailwind-path []
   (if (windows?)
@@ -46,24 +58,37 @@
 (defn trench [& args]
   (apply server "trench" "-p" "7888" "-e" args))
 
+(defn tailwind-file []
+  (let [os-name (str/lower-case (System/getProperty "os.name"))
+        os-type (cond
+                 (str/includes? os-name "windows") "windows"
+                 (str/includes? os-name "linux") "linux"
+                 :else "macos")
+        arch (case (System/getProperty "os.arch")
+               "amd64" "x64"
+               "arm64")]
+    (str "tailwindcss-" os-type "-" arch (when (= os-type "windows") ".exe"))))
+
 (defn install-tailwind []
-  (let [build (or (:biff.tasks/tailwind-build @config)
-                  (if (windows?)
-                    "windows-x64.exe"
-                    (str (if (= (str/trim (:out (sh/sh "uname"))) "Linux")
-                           "linux"
-                           "macos")
-                         "-"
-                         (if (= (str/trim (:out (sh/sh "uname" "-m"))) "x86_64")
-                           "x64"
-                           "arm64"))))
-        file (str "tailwindcss-" build)
+  (let [file (cond
+              (:biff.tasks/tailwind-file @config)
+              (:biff.tasks/tailwind-file @config)
+
+              ;; Backwards compatibility.
+              (:biff.tasks/tailwind-build @config)
+              (str "tailwindcss-" (:biff.tasks/tailwind-build @config))
+
+              :else
+              (tailwind-file))
         url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
                  file)
         dest (io/file (local-tailwind-path))]
     (io/make-parents dest)
     (println "Downloading the latest version of Tailwind CSS...")
-    (println "After it finishes, you can avoid downloading Tailwind again for"
+    (println)
+    (println (str "Auto-detected build: " file ". If that's incorrect, set :biff.tasks/tailwind-file in config.edn."))
+    (println)
+    (println "After the download finishes, you can avoid downloading Tailwind again for"
              "future projects if you copy it to your path, e.g. by running:")
     (println "  sudo cp bin/tailwindcss /usr/local/bin/")
     (println)
@@ -140,7 +165,7 @@
     (shell "npm" "install"))
   (when-not (fs/exists? (tailwind-path))
     (install-tailwind))
-  (future (css "--watch"))
+  (future-verbose (css "--watch"))
   (spit ".nrepl-port" "7888")
   (apply clojure {:extra-env (merge (secrets) {"BIFF_ENV" "dev"})}
          (concat args (run-args))))
@@ -206,7 +231,7 @@
     (binding [*out* *err*]
       (println "`rsync` command not found. Please install it."))
     (System/exit 1))
-  (future
+  (future-verbose
    (css "--minify")
    (shell "rsync" "--relative" "--info=name1"
           "target/resources/public/css/main.css"
@@ -278,6 +303,6 @@
     (println " - Ubuntu: sudo apt install fswatch")
     (println " - Mac: brew install fswatch")
     (System/exit 2))
-  (future (prod-repl))
-  (future (auto-soft-deploy))
+  (future-verbose (prod-repl))
+  (future-verbose (auto-soft-deploy))
   (logs))

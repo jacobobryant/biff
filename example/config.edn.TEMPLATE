@@ -33,9 +33,10 @@
        :biff/base-url "http://localhost:8080"
        :biff.xtdb/topology :standalone
        :biff.middleware/secure false}
- :tasks {;; Set this if the auto-detection doesn't work
-         ;; Possible values: macos-x64, macos-arm64, linux-x64, linux-arm64
-         :biff.tasks/tailwind-build nil
+ :tasks {;; Set this if the auto-detection doesn't work. See
+         ;; https://github.com/tailwindlabs/tailwindcss/releases/latest
+         ;; for possible values (for example: "tailwindcss-macos-arm64").
+         :biff.tasks/tailwind-file nil
          :biff.tasks/clj-args ["-J-XX:-OmitStackTraceInFastThrow"
                                "-J-XX:+CrashOnOutOfMemoryError"
                                "-J-Duser.timezone=UTC"

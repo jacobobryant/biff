@@ -1,6 +1,7 @@
 {:deps {com.example/tasks {:local/root "tasks"}}
  :tasks {;; Used only in local development.
          dev              com.biffweb.tasks/dev
+         css              com.biffweb.tasks/css
          format           com.biffweb.tasks/format
          clean            com.biffweb.tasks/clean
          generate-secrets com.biffweb.tasks/generate-secrets
