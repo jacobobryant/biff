@@ -116,4 +116,6 @@
     (println)
     (System/exit 0)))
 
-(apply -main *command-line-args*)
+;; Workaround since *command-line-args* now includes options passed to bb.
+(apply -main (cond->> *command-line-args*
+               (= "-e" (first *command-line-args*)) (drop 2)))
