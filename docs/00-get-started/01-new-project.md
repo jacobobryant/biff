@@ -12,7 +12,7 @@ problems, see [Troubleshooting](/docs/reference/troubleshooting/)):
 
 ```bash
 # Linux, Mac
-bb -e "$(curl -s https://biffweb.com/new-project.clj)"
+bb -e "$(curl -s https://biffweb.com/new-project.clj) master"
 
 # Windows
 iwr https://biffweb.com/new-project.clj -out new-project.clj
