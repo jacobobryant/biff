@@ -34,9 +34,6 @@ if so:
 
 ```diff
 ;; src/com/eelchat/ui.clj
-;; ...
-      body]
-     [:div {:class "grow-[2]"}]]))
 
 -(defn app-page [{:keys [uri user] :as ctx} & body]
 +(defn app-page [{:keys [uri user community roles] :as ctx} & body]
@@ -138,11 +135,7 @@ in the sidebar if you're a member of the community:
 +            [com.biffweb :as biff :refer [q]]
              [ring.middleware.anti-forgery :as csrf]))
  
- (defn css-path []
-   (if-some [f (io/file (io/resource "public/css/main.css"))]
 ;; ...
-      body]
-     [:div {:class "grow-[2]"}]]))
  
 +(defn channels [{:keys [biff/db community roles]}]
 +  (when (some? roles)
