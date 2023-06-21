@@ -21,7 +21,7 @@ Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all
 15k-20k lines of code.
 
 If you'd like to support Biff, you can [sponsor me](https://github.com/sponsors/jacobobryant/).
-I also do [consulting](https://biffweb.com/consulting) for businesses that are
+I also do [consulting](mailto:hello@tfos.co?subject=Biff%20consulting) for businesses that are
 interested in using Biff.
 
 ## Resources
