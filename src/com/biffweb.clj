@@ -1309,4 +1309,6 @@
     (write-doc-data (str (io/file resources-dir "api.edn")))
     (io/copy (io/file "new-project.clj")
              (io/file resources-dir "new-project.clj_"))
-    (print (sh "rsync" "-av" "--delete" "docs/" (str (io/file resources-dir "docs") "/")))))
+    (print (sh "rsync" "-av" "--delete" "docs/" (str (io/file resources-dir "docs") "/")))
+    (print (sh "bb" "soft-deploy" :dir "/home/jacob/dev/platypub"))
+    ))

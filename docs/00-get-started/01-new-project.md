@@ -7,8 +7,7 @@ Requirements:
  - Java 11 or higher
  - [Babashka](https://github.com/babashka/babashka#installation)
 
-Run these commands to create a new Biff project (and if you run into any
-problems, see [Troubleshooting](/docs/reference/troubleshooting/)):
+Run these commands to create a new Biff project:
 
 ```bash
 # Linux, Mac
