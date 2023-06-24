@@ -41,6 +41,8 @@ can connect to the nREPL server started by `bb dev`. See
 [Connecting to a Running nREPL Server](https://docs.cider.mx/cider/basics/up_and_running.html#connect-to-a-running-nrepl-server)
 in the CIDER docs.
 
+(See also [instructions for connecting with vim-iced](https://gist.github.com/avitkauskas/88ddc3c9b297f431143e22f36a224459).)
+
 This does mean that CIDER will not be able to decide which version of the nREPL
 server dependencies to use. If you run into problems, you'll need to set the
 versions manually in `deps.edn`:
