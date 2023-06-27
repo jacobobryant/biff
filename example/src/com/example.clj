@@ -75,6 +75,7 @@
                            components)]
     (reset! system new-system)
     (generate-assets! new-system)
+    (log/info "System started.")
     (log/info "Go to" (:biff/base-url new-system))))
 
 (defn -main [& args]

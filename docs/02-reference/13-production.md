@@ -2,6 +2,8 @@
 title: Production
 ---
 
+<p style="padding: 56.25% 0 0 0; position: relative;"><iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" title="output" src="https://player.vimeo.com/video/839894913?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen="allowfullscreen"></iframe></p>
+
 Biff comes with a script (`server-setup.sh`) for setting up an Ubuntu server. It's
 been tested on DigitalOcean. You can of course deploy Biff anywhere that can
 run a JVM&mdash;but if you're happy with the defaults then you can simply
