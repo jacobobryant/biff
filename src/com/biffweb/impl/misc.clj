@@ -115,9 +115,10 @@
 
 (defn use-chime
   [{:keys [biff/features biff/plugins biff.chime/tasks] :as ctx}]
-  (reduce (fn [ctx {:keys [schedule task]}]
+  (reduce (fn [ctx {:keys [schedule task error-handler]}]
             (let [f (fn [_] (task (bxt/merge-context ctx)))
-                  scheduler (chime/chime-at (schedule) f)]
+                  opts (when error-handler {:error-handler error-handler})
+                  scheduler (chime/chime-at (schedule) f opts)]
               (update ctx :biff/stop conj #(.close scheduler))))
           ctx
           (or tasks
