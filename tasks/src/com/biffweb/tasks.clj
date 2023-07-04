@@ -138,15 +138,9 @@
 
 (defn secrets []
   (when (fs/exists? "secrets.env")
-    (->> (slurp "secrets.env")
+    (->> (sh/sh "sh" "-c" ". ./secrets.env; printenv")
+         :out
          str/split-lines
-         (keep (fn [s]
-                 (some-> s
-                         (str/replace #"^export\s+" "")
-                         (str/replace #"#.*" "")
-                         str/trim
-                         not-empty)))
-         (filter #(str/includes? % "="))
          (map #(vec (str/split % #"=" 2)))
          (into {}))))
 
