@@ -126,7 +126,9 @@
                                (str "clj "))])]
     (println "eval" (str/join " ; " commands))))
 
-(defn css [& args]
+(defn css
+  "Generates the target/resources/public/css/main.css file."
+  [& args]
   (apply shell
          (concat (if (fs/exists? (tailwind-path))
                    [(tailwind-path)]

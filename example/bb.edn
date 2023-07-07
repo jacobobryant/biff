@@ -1,4 +1,4 @@
-{:deps {com.example/tasks {:local/root "tasks"}}
+{:deps {com.example/tasks {:local/root "bb"}}
  :tasks {;; Used only in local development.
          dev              com.biffweb.tasks/dev
          css              com.biffweb.tasks/css
