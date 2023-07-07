@@ -5,8 +5,8 @@ A batteries-included web framework for Clojure. See [biffweb.com](https://biffwe
 ## Contributing
 
 First, check out the [content library](https://biffweb.com/docs/library/). Many
-contributions to Biff would likely work well as simple how-to guides (e.g. paste some code
-+ instructions in a gist). If you write something for the content library, open an issue
+contributions to Biff would likely work well as simple how-to guides (e.g. paste some
+code + instructions in a gist). If you write something for the content library, open an issue
 and I'll add it.
 
 To hack on Biff, either run `bb dev`, or:
