@@ -116,7 +116,7 @@ for conversion—the resulting code is shown above in the `:base/head` section.
 Now go to `com.eelchat.home`. Remove the `home-page` function:
 
 ```diff
-;; src/com/eelchat/feat/home.clj
+;; src/com/eelchat/home.clj
 ;; ...
 -(defn home-page [{:keys [recaptcha/site-key params] :as ctx}]
 -  (ui/page
@@ -161,7 +161,7 @@ Now go to `com.eelchat.home`. Remove the `home-page` function:
 And replace it with the following two functions:
 
 ```clojure
-;; src/com/eelchat/feat/home.clj
+;; src/com/eelchat/home.clj
 ;; ...
 (defn signup-form [{:keys [recaptcha/site-key params]}]
   (biff/form
@@ -265,7 +265,7 @@ page component (`com.eelchat.ui/page`) so it has the same off-white background a
 Update some of the wording in `com.eelchat.email`:
 
 ```diff
-;; src/com/eelchat/feat/auth.clj
+;; src/com/eelchat/email.clj
 ;; ...
  (defn signin-link [{:keys [to url user-exists]}]
    {:to to
@@ -299,7 +299,7 @@ Update some of the wording in `com.eelchat.email`:
 And do the same in `com.eelchat.app`:
 
 ```diff
-;; src/com/eelchat/feat/app.clj
+;; src/com/eelchat/app.clj
 ;; ...
       [:.h-6]
 -     [:div "Nothing here yet."])))
