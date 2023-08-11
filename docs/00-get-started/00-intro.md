@@ -18,11 +18,12 @@ simplicity that makes Clojure great.
 
 Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all my web apps, primarily
 [Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/), each of which has
-15k-20k lines of code.
+15k-20k lines of code. See r/Clojure for
+[comments about Biff](https://www.reddit.com/r/Clojure/search/?q=biff&restrict_sr=1&type=comment).
 
-If you'd like to support Biff, you can [sponsor me](https://github.com/sponsors/jacobobryant/).
-I also do [consulting](mailto:hello@tfos.co?subject=Biff%20consulting) for businesses that are
-interested in using Biff.
+Biff is generously sponsored by [JUXT](https://www.juxt.pro/) and
+[other individuals](https://github.com/sponsors/jacobobryant/), and it has received
+multiple grants from [Clojurists Together](https://www.clojuriststogether.org/).
 
 ## Resources
 
