@@ -3,6 +3,7 @@
             [com.example.email :as email]
             [com.example.app :as app]
             [com.example.home :as home]
+            [com.example.middleware :as mid]
             [com.example.worker :as worker]
             [com.example.schema :as schema]
             [clojure.test :as test]
@@ -19,13 +20,13 @@
    schema/plugin
    worker/plugin])
 
-(def routes [["" {:middleware [biff/wrap-site-defaults]}
+(def routes [["" {:middleware [mid/wrap-site-defaults]}
               (keep :routes plugins)]
-             ["" {:middleware [biff/wrap-api-defaults]}
+             ["" {:middleware [mid/wrap-api-defaults]}
               (keep :api-routes plugins)]])
 
 (def handler (-> (biff/reitit-handler {:routes routes})
-                 biff/wrap-base-defaults))
+                 mid/wrap-base-defaults))
 
 (def static-pages (apply biff/safe-merge (map :static plugins)))
 
