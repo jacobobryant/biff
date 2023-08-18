@@ -2,7 +2,7 @@
 title: Inbound RSS
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/b73a4c5896a7c8ad780119e9a7369dad9671ac6f).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/1623da37209b4f043f4cf18859f47450a5e93a8e).
 
 All of eelchat's core functionality is now in place. In this section, we'll add
 a nice-to-have: inbound RSS feeds. You can add RSS feeds to channels, and
@@ -145,7 +145,7 @@ be empty if there was no command to execute):
 -      [(assoc msg :db/doc-type :message)])
 +      (concat [(assoc msg :db/doc-type :message)]
 +              (command-tx ctx)))
-     (message-view msg)))
+     [:<>]))
 ```
 
 Try it out:
@@ -309,8 +309,6 @@ that whenever there's a new subscription document:
              [com.eelchat.ui :as ui]
              [clojure.string :as str]
 ;; ...
-             :when (not= mem-id (:msg/mem doc))]
-       (jetty/send! client html))))
 
 +(defn on-new-subscription [{:keys [biff.xtdb/node] :as ctx} tx]
 +  (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]

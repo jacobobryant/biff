@@ -2,15 +2,15 @@
 title: Realtime updates
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/aad55f84791bb50311bc86691e2fdf07f4f53b11).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/635e67e4d56ac830eed0dc5d2e6f50f80d5c277d).
 
 In this section, we'll use websockets to deliver new messages to other users
 who are in the same channel. htmx has some websocket features that make this
 fairly painless.
 
 We'll soon add a handler for websocket connection requests. It will store all
-the active websocket connections in an atom, as a nested map of the form
-`channel ID -> membership ID -> connection`. The `com.eelchat/initial-system`
+the active websocket connections in an atom, as a map of the form
+`channel ID -> set of connections`. The `com.eelchat/initial-system`
 map already includes an atom (because the original example app included a
 websocket example, and we never removed the atom when we started working on
 eelchat), but it contains a set. So let's change it to a map:
@@ -104,23 +104,19 @@ illustration.
        [:.w-2]
        [:button.btn {:type "submit"} "Send"]))))
  
-+(defn connect [{:keys [com.eelchat/chat-clients]
-+                {chan-id :xt/id} :channel
-+                {mem-id :xt/id} :mem
-+                :as ctx}]
++(defn connect [{:keys [com.eelchat/chat-clients] {chan-id :xt/id} :channel :as ctx}]
 +  {:status 101
 +   :headers {"upgrade" "websocket"
 +             "connection" "upgrade"}
 +   :ws {:on-connect (fn [ws]
-+                      (prn :connect (swap! chat-clients assoc-in [chan-id mem-id] ws)))
++                      (prn :connect (swap! chat-clients update chan-id (fnil conj #{}) ws)))
 +        :on-close (fn [ws status-code reason]
 +                    (prn :disconnect
 +                         (swap! chat-clients
 +                                (fn [chat-clients]
-+                                  (let [chat-clients (update chat-clients chan-id dissoc mem-id)]
-+                                    (if (empty? (get chat-clients chan-id))
-+                                      (dissoc chat-clients chan-id)
-+                                      chat-clients))))))}})
++                                  (let [chat-clients (update chat-clients chan-id disj ws)]
++                                    (cond-> chat-clients
++                                      (empty? (get chat-clients chan-id)) (dissoc chan-id)))))))}})
 +
 ;; ...
  (def plugin
@@ -145,10 +141,10 @@ this:
 
 ```plaintext
 5ms 101 get  /community/36906af5-9e1b-43ae-a9bf-854d77b14396/channel/6598b381-22ac-47d2-9203-7b0ce2997a41/connect
-%%:connect {#uuid "6598..." {#uuid "7988..." #object[...]}}%%
+%%:connect {#uuid "6598..." #{#object[...]}}%%
 %%:disconnect {}%%
 3ms 101 get  /community/36906af5-9e1b-43ae-a9bf-854d77b14396/channel/84589a45-a56f-4ddb-81d0-aefea5b5a8c7/connect
-%%:connect {#uuid "8458..." {#uuid "7988..." #object[...]}}%%
+%%:connect {#uuid "8458..." #{#object[...]}}%%
 ```
 
 (Feel free to remove those `prn` calls once you've verified the `connect`
@@ -178,9 +174,8 @@ send new messages to all the channel participants:
 +                        [:div#messages {:hx-swap-oob "beforeend"}
 +                         (message-view doc)
 +                         [:div {:_ "init send newMessage to #messages then remove me"}]])]
-+            [mem-id client] (get @chat-clients (:msg/channel doc))
-+            :when (not= mem-id (:msg/mem doc))]
-+      (jetty/send! client html))))
++            ws (get @chat-clients (:msg/channel doc))]
++      (jetty/send! ws html))))
 +
  (defn wrap-community [handler]
    (fn [{:keys [biff/db user path-params] :as ctx}]
@@ -210,6 +205,25 @@ anyone who is in the relevant channel. By using a transaction listener, we
 ensure that the chat room will work even if you scale out beyond a single web
 server: each web server will index the transaction and will send the message to
 any channel participants that have a websocket connection to that server.
+
+Since the `on-new-message` function will also handle rendering and sending the
+new message to the author, we can remove the rendering bit from the
+`new-message` function and replace it with an empty response. Otherwise,
+whenever you sent a message, it would look like you sent it twice.
+
+```diff
+ (defn new-message [{:keys [channel mem params] :as ctx}]
+   (let [msg {:xt/id (random-uuid)
+              :msg/mem (:xt/id mem)
+              :msg/channel (:xt/id channel)
+              :msg/created-at (java.util.Date.)
+              :msg/text (:text params)}]
+     (biff/submit-tx (assoc ctx :biff.xtdb/retry false)
+       (concat [(assoc msg :db/doc-type :message)]
+               (command-tx ctx)))
+-    (message-view msg)))
++    [:<>]))
+```
 
 Try it out!
 
