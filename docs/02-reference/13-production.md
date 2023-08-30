@@ -22,12 +22,17 @@ follow these steps (for example screenshots, see [the tutorial](https://biffweb.
 4. Set an A record on `example.com` that points to your Ubuntu server.
 5. Make sure you can ssh into the server, then run `scp server-setup.sh root@example.com:`.
 6. Run `ssh root@example.com`, then `bash server-setup.sh`. After it finishes, run `reboot`.
-7. On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
+7. (Optional) On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
+   This is required if you don't have `rsync` installed.
 
 Now you can deploy your application any time by committing your code and then
-running `bb deploy`. This will copy your config files (which aren't checked
-into Git) to the server, then it'll deploy the latest commit via git push. You can run
-`bb logs` to make sure the deploy was successful.
+running `bb deploy`. Run `bb logs` to make sure the deploy was successful.
+
+Your code and config files will be uploaded with `rsync` if it's available. However,
+`git ls-files` will still be used to decide which files to upload, so files
+won't be uploaded unless they're checked into git (with the exception of
+`config.edn` and `secrets.env`, which are always uploaded). If `rsync` isn't
+installed, files will be uploaded with `git push`.
 
 If you need to make changes to the server (e.g. perhaps you need to install an
 additional package), be sure to update `server-setup.sh` so you can always

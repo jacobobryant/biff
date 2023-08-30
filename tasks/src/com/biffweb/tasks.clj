@@ -179,19 +179,48 @@
   (fs/delete-tree "target"))
 
 (defn post-receive
-  "Internal. Runs on the server after a git push."
+  "Deprecated."
   []
-  (apply clojure "-P" (run-args))
-  (shell "sudo" "systemctl" "reset-failed" "app.service")
-  (shell "sudo" "systemctl" "restart" "app"))
+  nil)
 
-(defn deploy
-  "Deploys the app via `git push`.
-
-  Copies config.edn to the server, deploys code via `git push`, and
-  restarts the app process on the server (via git push hook). You must set up a
-  server first. See https://biffweb.com/docs/reference/production/."
+(defn refresh
+  "Reloads code and restarts the system via `clojure.tools.namespace.repl/refresh` (on the server)."
   []
+  (trench "\"(com.biffweb/refresh)\""))
+
+(defn restart
+  "Restarts the app process via `systemctl restart app` (on the server)."
+  []
+  (apply shell "ssh" (str "app@" (:biff.tasks/server @config))
+         "clj" "-P" (run-args))
+  (server "systemctl" "reset-failed" "app.service")
+  (server "systemctl" "restart" "app"))
+
+(defn- push-files-rsync []
+  (future-verbose
+   (css "--minify")
+   (shell "rsync" "--relative" "--info=name1"
+          "target/resources/public/css/main.css"
+          (str "app@" (:biff.tasks/server @config) ":")))
+  (let [{:biff.tasks/keys [server]} @config
+        files (->> (:out (sh/sh "git" "ls-files"))
+                   str/split-lines
+                   (map #(str/replace % #"/.*" ""))
+                   distinct
+                   (concat ["config.edn"
+                            "secrets.env"])
+                   (filter fs/exists?))]
+    (when-not (windows?)
+      (fs/set-posix-file-permissions "config.edn" "rw-------")
+      (when (fs/exists? "secrets.env")
+        (fs/set-posix-file-permissions "secrets.env" "rw-------")))
+    (->> (concat ["rsync" "-a" "--info=name1" "--include='**.gitignore'"
+                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
+                 files
+                 [(str "app@" server ":")])
+         (apply shell))))
+
+(defn- push-files-git []
   (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
     (css "--minify")
     (if (windows?)
@@ -217,52 +246,35 @@
             ;; For backwards compatibility
             (shell "git" "push" deploy-to deploy-from)))))
 
-(defn soft-deploy
-  "Hotswaps modified code into the server.
+(defn- push-files []
+  (if (fs/which "rsync")
+    (push-files-rsync)
+    (push-files-git)))
 
-  `rsync`s config and code to the server, then `eval`s any changed files and
-  regenerates HTML and CSS files. Does not refresh or restart."
+(defn soft-deploy
+  "Pushes code to the server and evaluates changed files.
+
+  Uploads config and code to the server (see `deploy`), then `eval`s any
+  changed files and regenerates HTML and CSS files. Does not refresh or
+  restart."
   []
-  (when-not (fs/which "rsync")
-    (binding [*out* *err*]
-      (println "`rsync` command not found. Please install it."))
-    (System/exit 1))
-  (future-verbose
-   (css "--minify")
-   (shell "rsync" "--relative" "--info=name1"
-          "target/resources/public/css/main.css"
-          (str "app@" (:biff.tasks/server @config) ":")))
-  (let [{:biff.tasks/keys [server soft-deploy-fn on-soft-deploy]} @config
-        files (->> (:out (sh/sh "git" "ls-files"))
-                   str/split-lines
-                   (map #(str/replace % #"/.*" ""))
-                   distinct
-                   (concat ["config.edn"
-                            "secrets.env"])
-                   (filter fs/exists?))]
-    (when-not (windows?)
-      (fs/set-posix-file-permissions "config.edn" "rw-------")
-      (when (fs/exists? "secrets.env")
-        (fs/set-posix-file-permissions "secrets.env" "rw-------")))
-    (->> (concat ["rsync" "-a" "--info=name1" "--include='**.gitignore'"
-                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
-                 files
-                 [(str "app@" server ":")])
-         (apply shell))
+  (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]} @config]
+    (push-files)
     (trench (or on-soft-deploy
                 ;; backwards compatibility
                 (str "\"(" soft-deploy-fn " @com.biffweb/system)\"")))))
 
-(defn refresh
-  "Reloads code and restarts the system via `clojure.tools.namespace.repl/refresh` (on the server)."
-  []
-  (trench "\"(com.biffweb/refresh)\""))
+(defn deploy
+  "Pushes code to the server and restarts the app.
 
-(defn restart
-  "Restarts the app process via `systemctl restart app` (on the server)."
+  Uploads config (config.edn and secrets.env) and code to the server, using
+  `rsync` if it's available, and `git push` by default otherwise. Then restarts
+  the app.
+
+  You must set up a server first. See https://biffweb.com/docs/reference/production/"
   []
-  (server "systemctl" "reset-failed" "app.service")
-  (server "systemctl" "restart" "app"))
+  (push-files)
+  (restart))
 
 (defn auto-soft-deploy []
   (soft-deploy)
@@ -285,14 +297,17 @@
   []
   (println "Connect to nrepl port 7888")
   (spit ".nrepl-port" "7888")
-  (shell "ssh" "-NL" "7888:localhost:7888" (str "root@" (:biff.tasks/server @config))))
+  (while true
+    (shell "ssh" "-NL" "7888:localhost:7888" (str "root@" (:biff.tasks/server @config)))
+    (Thread/sleep 1)))
 
 (defn prod-dev
   "Runs the auto-soft-deploy command whenever a file is modified. Also runs prod-repl and logs."
   []
   (when-not (fs/which "rsync")
     (binding [*out* *err*]
-      (println "`rsync` command not found. Please install it."))
+      (println "`rsync` command not found. Please install it.")
+      (println "Alternatively, you can deploy without downtime by running `git add .; git commit; bb soft-deploy`"))
     (System/exit 1))
   (when-not (fs/which "fswatch")
     (println "`fswatch` command not found. Please install it: https://emcrisostomo.github.io/fswatch/getting.html")

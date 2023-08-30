@@ -38,8 +38,6 @@ set_up_app () {
   cat > hooks/post-receive << EOD
 #!/usr/bin/env bash
 git --work-tree=/home/app --git-dir=/home/app/repo.git checkout -f
-cd /home/app
-bb post-receive
 EOD
   chmod +x hooks/post-receive
 }

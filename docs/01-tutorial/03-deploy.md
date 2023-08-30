@@ -122,7 +122,8 @@ Successfully received certificate.
 
 The entire process should take under 5 minutes. When it's done, run `reboot`.
 
-> 7․ On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
+> 7․ (Optional) On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
+> This is required if you don't have `rsync` installed.
 
 This is the last step, so after we add the remote, we can go ahead and deploy our app:
 
