@@ -28,7 +28,7 @@ multiple grants from [Clojurists Together](https://www.clojuriststogether.org/).
 ## Resources
 
 - Subscribe to [the newsletter](/newsletter/) for announcements and blog posts.
-- The #biff channel on [Clojurians Slack](http://clojurians.net) is a great place to ask questions.
+- Ask questions on [the forum](https://forum.tfos.co/c/biff/) or on [Clojurians Slack](http://clojurians.net) (#biff channel).
 - New to Clojure? Here's [an opinionated list of excellent Clojure learning materials](https://gist.github.com/ssrihari/0bf159afb781eef7cc552a1a0b17786f).
 - Read Biff's source [on GitHub](https://github.com/jacobobryant/biff).
 - Looking for an open-source Biff project to study or contribute to? Check out [Platypub](https://github.com/jacobobryant/platypub).
