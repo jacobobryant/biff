@@ -199,7 +199,7 @@
 (defn- push-files-rsync []
   (future-verbose
    (css "--minify")
-   (shell "rsync" "--relative" "--info=name1"
+   (shell "rsync" "--relative" "--verbose"
           "target/resources/public/css/main.css"
           (str "app@" (:biff.tasks/server @config) ":")))
   (let [{:biff.tasks/keys [server]} @config
@@ -214,7 +214,7 @@
       (fs/set-posix-file-permissions "config.edn" "rw-------")
       (when (fs/exists? "secrets.env")
         (fs/set-posix-file-permissions "secrets.env" "rw-------")))
-    (->> (concat ["rsync" "-a" "--info=name1" "--include='**.gitignore'"
+    (->> (concat ["rsync" "--archive" "--verbose" "--include='**.gitignore'"
                   "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
                  files
                  [(str "app@" server ":")])
@@ -223,24 +223,13 @@
 (defn- push-files-git []
   (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
     (css "--minify")
-    (if (windows?)
-      (do
-        (shell-some "scp"
-                    "config.edn"
-                    (when (fs/exists? "secrets.env") "secrets.env")
-                    (str "app@" server ":"))
-        (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
-        (shell "scp" "target/resources/public/css/main.css"
-               (str "app@" server ":target/resources/public/css/main.css")))
-      (do
-        (fs/set-posix-file-permissions "config.edn" "rw-------")
-        (when (fs/exists? "secrets.env")
-          (fs/set-posix-file-permissions "secrets.env" "rw-------"))
-        (shell-some "rsync" "-a" "--relative"
-                    "config.edn"
-                    (when (fs/exists? "secrets.env") "secrets.env")
-                    "target/resources/public/css/main.css"
-                    (str "app@" server ":"))))
+    (shell-some "scp"
+                "config.edn"
+                (when (fs/exists? "secrets.env") "secrets.env")
+                (str "app@" server ":"))
+    (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
+    (shell "scp" "target/resources/public/css/main.css"
+           (str "app@" server ":target/resources/public/css/main.css"))
     (time (if deploy-cmd
             (apply shell deploy-cmd)
             ;; For backwards compatibility
