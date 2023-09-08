@@ -35,6 +35,15 @@
 (defn shell-some [& args]
   (apply shell (filter some? args)))
 
+(def config
+  (delay (:tasks (edn/read-string (slurp "config.edn")))))
+
+(defn server [& args]
+  (apply shell "ssh" (str "root@" (:biff.tasks/server @config)) args))
+
+(defn trench [& args]
+  (apply server "trench" "-p" "7888" "-e" args))
+
 (defn windows? []
   (-> (System/getProperty "os.name")
       (str/lower-case)
@@ -44,19 +53,6 @@
   (if (windows?)
     "bin/tailwindcss.exe"
     "bin/tailwindcss"))
-
-(defn tailwind-path []
-  (or (some-> (fs/which "tailwindcss") str)
-      (local-tailwind-path)))
-
-(def config
-  (delay (:tasks (edn/read-string (slurp "config.edn")))))
-
-(defn server [& args]
-  (apply shell "ssh" (str "root@" (:biff.tasks/server @config)) args))
-
-(defn trench [& args]
-  (apply server "trench" "-p" "7888" "-e" args))
 
 (defn tailwind-file []
   (let [os-name (str/lower-case (System/getProperty "os.name"))
@@ -85,15 +81,48 @@
         dest (io/file (local-tailwind-path))]
     (io/make-parents dest)
     (println "Downloading the latest version of Tailwind CSS...")
-    (println)
     (println (str "Auto-detected build: " file ". If that's incorrect, set :biff.tasks/tailwind-file in config.edn."))
     (println)
     (println "After the download finishes, you can avoid downloading Tailwind again for"
              "future projects if you copy it to your path, e.g. by running:")
-    (println "  sudo cp bin/tailwindcss /usr/local/bin/")
+    (println "  sudo cp" (local-tailwind-path) "/usr/local/bin/tailwindcss")
     (println)
     (io/copy (:body (curl/get url {:compressed false :as :stream})) dest)
     (.setExecutable dest true)))
+
+(defn css
+  "Generates the target/resources/public/css/main.css file.
+
+  The logic for running and installing Tailwind is:
+
+  1. If tailwindcss has been installed via npm, then `npx tailwindcss` will be
+     used.
+
+  2. Otherwise, if the tailwindcss standalone binary has been downloaded to
+     ./bin/, that will be used.
+
+  3. Otherwise, if the tailwindcss standalone binary has been installed to the
+     path (e.g. /usr/local/bin/tailwindcss), that will be used.
+
+  4. Otherwise, the tailwindcss standalone binary will be downloaded to ./bin/,
+     and that will be used."
+  [& args]
+  (let [local-bin-installed (fs/exists? (local-tailwind-path))
+        tailwind-cmd (cond
+                      (= 0 (:exit (sh/sh "npm" "list" "tailwindcss"))) :npm
+                      (and (fs/which "tailwindcss")
+                           (not local-bin-installed)) :global-bin
+                      :else :local-bin)]
+    (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
+      (install-tailwind))
+    (apply shell (concat (case tailwind-cmd
+                           :npm        ["npx" "tailwindcss"]
+                           :global-bin [(str (fs/which "tailwindcss"))]
+                           :local-bin  [(local-tailwind-path)])
+                         ["-c" "resources/tailwind.config.js"
+                          "-i" "resources/tailwind.css"
+                          "-o" "target/resources/public/css/main.css"]
+                         args))))
 
 (defn run-args []
   (:biff.tasks/clj-args
@@ -126,18 +155,6 @@
                                (str "clj "))])]
     (println "eval" (str/join " ; " commands))))
 
-(defn css
-  "Generates the target/resources/public/css/main.css file."
-  [& args]
-  (apply shell
-         (concat (if (fs/exists? (tailwind-path))
-                   [(tailwind-path)]
-                   ["npx" "tailwindcss"])
-                 ["-c" "resources/tailwind.config.js"
-                  "-i" "resources/tailwind.css"
-                  "-o" "target/resources/public/css/main.css"]
-                 args)))
-
 (defn secrets []
   (when (fs/exists? "secrets.env")
     (->> (sh/sh "sh" "-c" ". ./secrets.env; printenv")
@@ -159,8 +176,6 @@
   (io/make-parents "target/resources/_")
   (when (fs/exists? "package.json")
     (shell "npm" "install"))
-  (when-not (fs/exists? (tailwind-path))
-    (install-tailwind))
   (future-verbose (css "--watch"))
   (spit ".nrepl-port" "7888")
   (apply clojure {:extra-env (merge (secrets) {"BIFF_ENV" "dev"})}
