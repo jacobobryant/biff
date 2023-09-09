@@ -786,7 +786,8 @@
   Only one of router or routes needs to be given. If you pass in routes, it
   will be wrapped with (reitit.ring/router routes). on-error is an optional
   Ring handler. The request map passed to it will include a :status key (either
-  404, 405, or 406).
+  404, 405, or 406). on-error can also be supplied by setting
+  :biff.middleware/on-error on the system map.
 
   Includes reitit.ring/redirect-trailing-slash-handler."
   [{:keys [router routes on-error] :as opts}]

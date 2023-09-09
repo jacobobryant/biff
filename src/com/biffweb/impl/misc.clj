@@ -52,16 +52,21 @@
                                       (some #(str/ends-with? path %) exts)))}))])]
     (update ctx :biff/stop conj #(hawk/stop! watch))))
 
-(defn reitit-handler [{:keys [router routes on-error]
-                       :or {on-error util/default-on-error}}]
-  (reitit-ring/ring-handler
-   (or router (reitit-ring/router routes))
-   (reitit-ring/routes
-    (reitit-ring/redirect-trailing-slash-handler)
-    (reitit-ring/create-default-handler
-     {:not-found          #(on-error (assoc % :status 404))
-      :method-not-allowed #(on-error (assoc % :status 405))
-      :not-acceptable     #(on-error (assoc % :status 406))}))))
+(defn reitit-handler [{:keys [router routes on-error]}]
+  (let [make-error-handler (fn [status]
+                             (fn [ctx]
+                               ((or on-error
+                                    (:biff.middleware/on-error ctx on-error)
+                                    util/default-on-error)
+                                (assoc ctx :status status))))]
+    (reitit-ring/ring-handler
+     (or router (reitit-ring/router routes))
+     (reitit-ring/routes
+      (reitit-ring/redirect-trailing-slash-handler)
+      (reitit-ring/create-default-handler
+       {:not-found          (make-error-handler 404)
+        :method-not-allowed (make-error-handler 405)
+        :not-acceptable     (make-error-handler 406)})))))
 
 (defn use-jetty [{:biff/keys [host port handler]
                   :or {host "localhost"
