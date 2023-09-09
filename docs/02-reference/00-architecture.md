@@ -47,7 +47,7 @@ namespace when creating your project.)
 │       │   ├── ui.clj
 │       │   └── worker.clj
 │       └── example.clj
-└── tasks
+└── bb
     ├── deps.edn
     └── src
         └── com

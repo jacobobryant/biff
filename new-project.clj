@@ -110,6 +110,8 @@
     (println)
     (println "  cd" (.getPath dir))
     (println "  git init")
+    (println "  git add .")
+    (println "  git commit -m \"First commit\"")
     (println "  bb dev")
     (println)
     (println "And run `bb tasks` for a list of available commands.")

@@ -7,15 +7,10 @@ Requirements:
  - Java 11 or higher
  - [Babashka](https://github.com/babashka/babashka#installation)
 
-Run these commands to create a new Biff project:
+Run this command to create a new Biff project:
 
 ```bash
-# Linux, Mac
-bb -e "$(curl -s https://biffweb.com/new-project.clj)"
-
-# Windows
-iwr https://biffweb.com/new-project.clj -out new-project.clj
-bb new-project.clj
+bb -e '(load-string (slurp "https://biffweb.com/new-project.clj"))'
 ```
 
 This will create a minimal CRUD app which demonstrates most of Biff's features.

@@ -10,7 +10,7 @@ Biff that was used for writing this tutorial. Important bits (mainly, stuff you
 should type) are highlighted in yellow:
 
 ```plain
-$ %%bb -e "$(curl -s https://biffweb.com/new-project.clj)" tutorial%%
+$ %%bb -e '(load-string (slurp "https://biffweb.com/new-project.clj"))' tutorial%%
 Enter name for project directory: %%eelchat%%
 Enter main namespace (e.g. com.example): %%com.eelchat%%
 
@@ -18,6 +18,8 @@ Your project is ready. Run the following commands to get started:
 
   cd eelchat
   git init
+  git add .
+  git commit -m "First commit"
   bb dev
 
 And run `bb tasks` for a list of available commands.
