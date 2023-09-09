@@ -862,10 +862,9 @@
   (misc/mailersend ctx opts))
 
 (defn generate-secret
-  "Generates a random byte array and returns it as a base64 string.
+  "Generates a random byte array with (SecureRandom/getInstanceStrong) and returns it as a base64 string.
 
-  The bytes are generated with buddy.core.nonce/random-bytes, which uses a
-  secure random number generator."
+  This function will block if there isn't enough entropy available."
   [length]
   (misc/generate-secret length))
 

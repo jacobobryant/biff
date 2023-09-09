@@ -42,7 +42,12 @@
         (secret :biff/jwt-secret))))
 
 (defn new-code [length]
-  (let [rng (java.security.SecureRandom/getInstanceStrong)]
+  ;; We use (SecureRandom.) instead of (SecureRandom/getInstanceStrong) because
+  ;; the latter can block, and on some shared hosts often does. Blocking is
+  ;; fine for e.g. generating environment variables in a new project, but we
+  ;; don't want to block here.
+  ;; https://tersesystems.com/blog/2015/12/17/the-right-way-to-use-securerandom/
+  (let [rng (java.security.SecureRandom.)]
     (format (str "%0" length "d")
             (.nextInt rng (dec (int (Math/pow 10 length)))))))
 
