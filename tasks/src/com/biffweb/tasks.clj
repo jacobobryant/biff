@@ -301,9 +301,7 @@
   []
   (println "Connect to nrepl port 7888")
   (spit ".nrepl-port" "7888")
-  (while true
-    (shell "ssh" "-NL" "7888:localhost:7888" (str "root@" (:biff.tasks/server @config)))
-    (Thread/sleep 1)))
+  (shell "ssh" "-NL" "7888:localhost:7888" (str "root@" (:biff.tasks/server @config))))
 
 (defn prod-dev
   "Runs the auto-soft-deploy command whenever a file is modified. Also runs prod-repl and logs."
