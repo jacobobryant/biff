@@ -10,6 +10,11 @@
     (str "/css/main.css?t=" (.lastModified f))
     "/css/main.css"))
 
+(defn js-path []
+  (if-some [f (io/file (io/resource "public/js/main.js"))]
+    (str "/js/main.js?t=" (.lastModified f))
+    "/js/main.js"))
+
 (defn base [{:keys [::recaptcha] :as ctx} & body]
   (apply
    biff/base-html
@@ -21,6 +26,7 @@
                      :image "https://clojure.org/images/clojure-logo-120b.png"})
        (update :base/head (fn [head]
                             (concat [[:link {:rel "stylesheet" :href (css-path)}]
+                                     [:script {:src (js-path)}]
                                      [:script {:src "https://unpkg.com/htmx.org@1.9.0"}]
                                      [:script {:src "https://unpkg.com/htmx.org/dist/ext/ws.js"}]
                                      [:script {:src "https://unpkg.com/hyperscript.org@0.9.8"}]
