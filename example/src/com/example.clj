@@ -88,13 +88,3 @@
     (log/info "stopping:" (str f))
     (f))
   (tn-repl/refresh :after `start))
-
-(comment
-  ;; Evaluate this if you make a change to initial-system, components, :tasks,
-  ;; :queues, or config.edn. If you update secrets.env, you'll need to restart
-  ;; the app.
-  (refresh)
-
-  ;; If that messes up your editor's REPL integration, you may need to use this
-  ;; instead:
-  (biff/fix-print (refresh)))
