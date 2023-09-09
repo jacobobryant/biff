@@ -25,8 +25,10 @@ namespace when creating your project.)
 ├── resources
 │   ├── fixtures.edn
 │   ├── public
-│   │   └── img
-│   │       └── glider.png
+│   │   ├── img
+│   │   │   └── glider.png
+│   │   └── js
+│   │       └── main.js
 │   ├── tailwind.config.js
 │   └── tailwind.css
 ├── secrets.env
