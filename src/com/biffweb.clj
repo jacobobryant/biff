@@ -11,6 +11,7 @@
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.util.ns :as ns]
             [com.biffweb.impl.util.reload :as reload]
+            [com.biffweb.impl.util.s3 :as s3]
             [com.biffweb.impl.xtdb :as bxt]))
 
 ;;;; Util
@@ -228,6 +229,55 @@
   [{:keys [dir exts age-seconds]
     :or {age-seconds 30} :as opts}]
   (util/delete-old-files opts))
+
+(defn s3-request
+  "Makes a request to an S3-compatible service.
+
+  - `key` will be coerced to a string.
+  - `body` can be a string or a file.
+  - `headers` is a map. When putting an object, it should at least contain the
+    keys \"content-type\" and \"x-amz-acl\".
+  - Common values for the \"x-amz-acl\" header include \"public-read\" and
+    \"private\".
+  - Any keys in `opts` will be prepended with the biff.s3 namespace and merged
+    into `ctx`.
+  - Your S3 secret key should be accessible with (secret :biff.s3/secret-key).
+  - Public files will be available at \"<edge URL>/<key>\", for example,
+    https://example.ny3.cdn.digitaloceanspaces.com/your-key.
+
+  EXAMPLES
+  ========
+
+  # secrets.env
+  S3_SECRET_KEY=\"your-secret-key\"
+
+  ;; config.edn
+  {:prod {:biff.s3/origin \"https://nyc3.digitaloceanspaces.com\"
+          :biff.s3/access-key \"your-access-key\"
+          :biff.s3/secret-key \"S3_SECRET_KEY\"
+          :biff.s3/bucket \"default-bucket\"
+          ...
+
+  ;; Put an object:
+  (s3-request ctx {:method \"PUT\"
+                   :key \"some-key\"
+                   :body \"some-body\"
+                   :headers {\"x-amz-acl\" \"private\"
+                             \"content-type\" \"text/plain\"}})
+
+  ;; Get an object:
+  (:body (s3-request ctx {:method \"GET\"
+                          :key \"some-key\"}))"
+  [{:keys [biff/secret]
+    :biff.s3/keys [origin
+                   access-key
+                   bucket
+                   key
+                   method
+                   headers
+                   body]
+    :as ctx} & {:as opts}]
+  (s3/s3-request (merge ctx (ns/select-ns-as opts nil 'biff.s3))))
 
 ;;;; Middleware
 
