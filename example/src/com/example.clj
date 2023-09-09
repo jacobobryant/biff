@@ -4,6 +4,7 @@
             [com.example.app :as app]
             [com.example.home :as home]
             [com.example.middleware :as mid]
+            [com.example.ui :as ui]
             [com.example.worker :as worker]
             [com.example.schema :as schema]
             [clojure.test :as test]
@@ -53,6 +54,7 @@
    :biff/handler #'handler
    :biff/malli-opts #'malli-opts
    :biff.beholder/on-save #'on-save
+   :biff.middleware/on-error #'ui/on-error
    :biff.xtdb/tx-fns biff/tx-fns
    :com.example/chat-clients (atom #{})})
 

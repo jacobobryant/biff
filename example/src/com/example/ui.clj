@@ -3,7 +3,8 @@
             [clojure.java.io :as io]
             [com.example.settings :as settings]
             [com.biffweb :as biff]
-            [ring.middleware.anti-forgery :as csrf]))
+            [ring.middleware.anti-forgery :as csrf]
+            [rum.core :as rum]))
 
 (defn css-path []
   (if-some [f (io/file (io/resource "public/css/main.css"))]
@@ -47,3 +48,14 @@
     body]
    [:.flex-grow]
    [:.flex-grow]))
+
+(defn on-error [{:keys [status ex] :as ctx}]
+  {:status status
+   :headers {"content-type" "text/html"}
+   :body (rum/render-static-markup
+          (page
+           ctx
+           [:h1.text-lg.font-bold
+            (if (= status 404)
+              "Page not found."
+              "Something went wrong.")]))})
