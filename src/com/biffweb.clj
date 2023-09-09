@@ -202,8 +202,7 @@
   "Evaluates any modified files and their dependents via clojure.tools.namespace."
   [{:keys [biff/eval-paths]
     :or {eval-paths ["src"]}}]
-  (swap! reload/global-tracker reload/refresh eval-paths)
-  nil)
+  (swap! reload/global-tracker reload/refresh eval-paths))
 
 (defn add-libs
   "Loads new dependencies in deps.edn via tools.deps.alpha.
