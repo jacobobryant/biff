@@ -212,11 +212,10 @@
   (server "systemctl" "restart" "app"))
 
 (defn- push-files-rsync []
-  (future-verbose
-   (css "--minify")
-   (shell "rsync" "--relative" "--verbose"
-          "target/resources/public/css/main.css"
-          (str "app@" (:biff.tasks/server @config) ":")))
+  (css "--minify")
+  (shell "rsync" "--relative" "--verbose"
+         "target/resources/public/css/main.css"
+         (str "app@" (:biff.tasks/server @config) ":"))
   (let [{:biff.tasks/keys [server]} @config
         files (->> (:out (sh/sh "git" "ls-files"))
                    str/split-lines
