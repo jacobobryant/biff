@@ -318,16 +318,17 @@
     (push-files-git)))
 
 (defn- push-css []
-  (if (fs/which "rsync")
-    (do
-      (shell "rsync" "--relative"
-             "target/resources/public/css/main.css"
-             (str "app@" (:biff.tasks/server @config) ":"))
-      (println "target/resources/public/css/main.css"))
-    (do
-      (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
-      (shell "scp" "target/resources/public/css/main.css"
-             (str "app@" server ":target/resources/public/css/main.css")))))
+  (let [{:biff.tasks/keys [server]} @config]
+    (if (fs/which "rsync")
+      (do
+        (shell "rsync" "--relative"
+               "target/resources/public/css/main.css"
+               (str "app@" server ":"))
+        (println "target/resources/public/css/main.css"))
+      (do
+        (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
+        (shell "scp" "target/resources/public/css/main.css"
+               (str "app@" server ":target/resources/public/css/main.css"))))))
 
 (defn soft-deploy
   "Pushes code to the server and evaluates changed files.
