@@ -2,21 +2,53 @@
   (:require [babashka.curl :as curl]
             [babashka.fs :as fs]
             [babashka.process :as process]
-            [babashka.tasks :refer [shell clojure]]
+            [babashka.tasks :as tasks :refer [clojure]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.string :as str]
             [clojure.stacktrace :as st]))
 
+(def ^:dynamic *shell-env* {})
+
+(defn shell [& args]
+  (apply tasks/shell {:extra-env *shell-env*} args))
+
+(defn get-env-from [cmd]
+  (let [{:keys [exit out]} (sh/sh "sh" "-c" (str cmd "; printenv"))]
+    (when (= 0 exit)
+      (->> out
+           str/split-lines
+           (map #(vec (str/split % #"=" 2)))
+           (filter #(= 2 (count %)))
+           (into {})))))
+
+(defn with-ssh-agent* [f]
+  (if-let [env (and (fs/which "ssh-agent")
+                    (not= 0 (:exit (sh/sh "ssh-add" "-l")))
+                    (empty? *shell-env*)
+                    (get-env-from "eval $(ssh-agent)"))]
+    (binding [*shell-env* env]
+      (try
+        (println "Starting an ssh-agent session. If you set up `keychain`, you won't have to enter your password"
+                 "each time you run this command: https://www.funtoo.org/Funtoo:Keychain")
+        (shell "ssh-add")
+        (f)
+        (finally
+         (sh/sh "ssh-agent" "-k" :env *shell-env*))))
+    (f)))
+
+(defmacro with-ssh-agent [& body]
+  `(with-ssh-agent* (fn [] ~@body)))
+
 (defmacro future-verbose [& body]
   `(future
-    (try
-     ~@body
-     (catch Exception e#
-       ;; st/print-stack-trace just prints Babashka's internal stack trace.
-       (st/print-throwable e#)
-       (println)))))
+     (try
+       ~@body
+       (catch Exception e#
+         ;; st/print-stack-trace just prints Babashka's internal stack trace.
+         (st/print-throwable e#)
+         (println)))))
 
 (defn new-secret [length]
   (let [buffer (byte-array length)]
@@ -31,9 +63,6 @@
   (println (str "export COOKIE_SECRET=" (new-secret 16)))
   (println (str "export JWT_SECRET=" (new-secret 32)))
   (println))
-
-(defn shell-some [& args]
-  (apply shell (filter some? args)))
 
 (def config
   (delay (:tasks (edn/read-string (slurp "config.edn")))))
@@ -57,9 +86,9 @@
 (defn tailwind-file []
   (let [os-name (str/lower-case (System/getProperty "os.name"))
         os-type (cond
-                 (str/includes? os-name "windows") "windows"
-                 (str/includes? os-name "linux") "linux"
-                 :else "macos")
+                  (str/includes? os-name "windows") "windows"
+                  (str/includes? os-name "linux") "linux"
+                  :else "macos")
         arch (case (System/getProperty "os.arch")
                "amd64" "x64"
                "arm64")]
@@ -67,15 +96,15 @@
 
 (defn install-tailwind []
   (let [file (cond
-              (:biff.tasks/tailwind-file @config)
-              (:biff.tasks/tailwind-file @config)
+               (:biff.tasks/tailwind-file @config)
+               (:biff.tasks/tailwind-file @config)
 
-              ;; Backwards compatibility.
-              (:biff.tasks/tailwind-build @config)
-              (str "tailwindcss-" (:biff.tasks/tailwind-build @config))
+               ;; Backwards compatibility.
+               (:biff.tasks/tailwind-build @config)
+               (str "tailwindcss-" (:biff.tasks/tailwind-build @config))
 
-              :else
-              (tailwind-file))
+               :else
+               (tailwind-file))
         url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
                  file)
         dest (io/file (local-tailwind-path))]
@@ -157,11 +186,7 @@
 
 (defn secrets []
   (when (fs/exists? "secrets.env")
-    (->> (sh/sh "sh" "-c" ". ./secrets.env; printenv")
-         :out
-         str/split-lines
-         (map #(vec (str/split % #"=" 2)))
-         (into {}))))
+    (get-env-from ". ./secrets.env")))
 
 (defn dev
   "Starts the app locally.
@@ -206,16 +231,13 @@
 (defn restart
   "Restarts the app process via `systemctl restart app` (on the server)."
   []
-  (apply shell "ssh" (str "app@" (:biff.tasks/server @config))
-         "clj" "-P" (run-args))
-  (server "systemctl" "reset-failed" "app.service")
-  (server "systemctl" "restart" "app"))
+  (with-ssh-agent
+    (apply shell "ssh" (str "app@" (:biff.tasks/server @config))
+           "clj" "-P" (run-args))
+    (server "systemctl" "reset-failed" "app.service")
+    (server "systemctl" "restart" "app")))
 
 (defn- push-files-rsync []
-  (css "--minify")
-  (shell "rsync" "--relative" "--verbose"
-         "target/resources/public/css/main.css"
-         (str "app@" (:biff.tasks/server @config) ":"))
   (let [{:biff.tasks/keys [server]} @config
         files (->> (:out (sh/sh "git" "ls-files"))
                    str/split-lines
@@ -236,14 +258,10 @@
 
 (defn- push-files-git []
   (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
-    (css "--minify")
-    (shell-some "scp"
-                "config.edn"
-                (when (fs/exists? "secrets.env") "secrets.env")
-                (str "app@" server ":"))
-    (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
-    (shell "scp" "target/resources/public/css/main.css"
-           (str "app@" server ":target/resources/public/css/main.css"))
+    (apply shell (concat ["scp"
+                          "config.edn"]
+                         (when (fs/exists? "secrets.env") ["secrets.env"])
+                         [(str "app@" server ":")]))
     (time (if deploy-cmd
             (apply shell deploy-cmd)
             ;; For backwards compatibility
@@ -254,6 +272,18 @@
     (push-files-rsync)
     (push-files-git)))
 
+(defn- push-css []
+  (if (fs/which "rsync")
+    (do
+      (shell "rsync" "--relative"
+             "target/resources/public/css/main.css"
+             (str "app@" (:biff.tasks/server @config) ":"))
+      (println "target/resources/public/css/main.css"))
+    (do
+      (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
+      (shell "scp" "target/resources/public/css/main.css"
+             (str "app@" server ":target/resources/public/css/main.css")))))
+
 (defn soft-deploy
   "Pushes code to the server and evaluates changed files.
 
@@ -261,11 +291,17 @@
   changed files and regenerates HTML and CSS files. Does not refresh or
   restart."
   []
-  (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]} @config]
-    (push-files)
-    (trench (or on-soft-deploy
-                ;; backwards compatibility
-                (str "\"(" soft-deploy-fn " @com.biffweb/system)\"")))))
+  (with-ssh-agent
+    (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]} @config
+          css-proc (future (css "--minify"))]
+      (push-files)
+      (trench (or on-soft-deploy
+                  ;; backwards compatibility
+                  (str "\"(" soft-deploy-fn " @com.biffweb/system)\"")))
+      (println "waiting for css")
+      @css-proc
+      (println "done building css")
+      (push-css))))
 
 (defn deploy
   "Pushes code to the server and restarts the app.
@@ -276,8 +312,11 @@
 
   You must set up a server first. See https://biffweb.com/docs/reference/production/"
   []
-  (push-files)
-  (restart))
+  (with-ssh-agent
+    (css "--minify")
+    (push-files)
+    (push-css)
+    (restart)))
 
 (defn auto-soft-deploy []
   (soft-deploy)
@@ -315,6 +354,7 @@
     (println " - Ubuntu: sudo apt install fswatch")
     (println " - Mac: brew install fswatch")
     (System/exit 2))
-  (future-verbose (prod-repl))
-  (future-verbose (auto-soft-deploy))
-  (logs))
+  (with-ssh-agent
+    (future-verbose (prod-repl))
+    (future-verbose (auto-soft-deploy))
+    (logs)))
