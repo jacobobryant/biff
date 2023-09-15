@@ -9,7 +9,12 @@
             [clojure.string :as str]
             [clojure.stacktrace :as st]))
 
-(def ^:dynamic *shell-env* {})
+(def ^:dynamic *shell-env* nil)
+
+(defn windows? []
+  (-> (System/getProperty "os.name")
+      (str/lower-case)
+      (str/includes? "windows")))
 
 (defn shell [& args]
   (apply tasks/shell {:extra-env *shell-env*} args))
@@ -26,13 +31,15 @@
 (defn with-ssh-agent* [f]
   (if-let [env (and (fs/which "ssh-agent")
                     (not= 0 (:exit (sh/sh "ssh-add" "-l")))
-                    (empty? *shell-env*)
-                    (get-env-from "eval $(ssh-agent)"))]
+                    (nil? *shell-env*)
+                    (if (windows?)
+                      {}
+                      (get-env-from "eval $(ssh-agent)")))]
     (binding [*shell-env* env]
       (try
         (println "Starting an ssh-agent session. If you set up `keychain`, you won't have to enter your password"
                  "each time you run this command: https://www.funtoo.org/Funtoo:Keychain")
-        (shell "ssh-add")
+        (try (shell "ssh-add") (catch Exception _))
         (f)
         (finally
          (sh/sh "ssh-agent" "-k" :env *shell-env*))))
@@ -72,11 +79,6 @@
 
 (defn trench [& args]
   (apply server "trench" "-p" "7888" "-e" args))
-
-(defn windows? []
-  (-> (System/getProperty "os.name")
-      (str/lower-case)
-      (str/includes? "windows")))
 
 (defn local-tailwind-path []
   (if (windows?)
