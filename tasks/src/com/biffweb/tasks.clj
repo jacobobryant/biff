@@ -28,9 +28,15 @@
            (filter #(= 2 (count %)))
            (into {})))))
 
+(defn sh-success? [& args]
+  (try
+    (= 0 (:exit (apply sh/sh args)))
+    (catch Exception _
+      false)))
+
 (defn with-ssh-agent* [f]
   (if-let [env (and (fs/which "ssh-agent")
-                    (not= 0 (:exit (sh/sh "ssh-add" "-l")))
+                    (not (sh-success? "ssh-add" "-l"))
                     (nil? *shell-env*)
                     (if (windows?)
                       {}
@@ -140,10 +146,10 @@
   [& args]
   (let [local-bin-installed (fs/exists? (local-tailwind-path))
         tailwind-cmd (cond
-                      (= 0 (:exit (sh/sh "npm" "list" "tailwindcss"))) :npm
-                      (and (fs/which "tailwindcss")
-                           (not local-bin-installed)) :global-bin
-                      :else :local-bin)]
+                       (sh-success? "npm" "list" "tailwindcss") :npm
+                       (and (fs/which "tailwindcss")
+                            (not local-bin-installed)) :global-bin
+                       :else :local-bin)]
     (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
       (install-tailwind))
     (apply shell (concat (case tailwind-cmd
