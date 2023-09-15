@@ -152,14 +152,31 @@
                        :else :local-bin)]
     (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
       (install-tailwind))
-    (apply shell (concat (case tailwind-cmd
-                           :npm        ["npx" "tailwindcss"]
-                           :global-bin [(str (fs/which "tailwindcss"))]
-                           :local-bin  [(local-tailwind-path)])
-                         ["-c" "resources/tailwind.config.js"
-                          "-i" "resources/tailwind.css"
-                          "-o" "target/resources/public/css/main.css"]
-                         args))))
+    (when (= tailwind-cmd :local-bin)
+      ;; This normally will be handled by install-tailwind, but we set it here
+      ;; in case that function was interrupted. Assuming the download was
+      ;; incomplete, the 139 exit code handler will be triggered below.
+      (.setExecutable (io/file (local-tailwind-path)) true))
+    (try
+      (apply shell (concat (case tailwind-cmd
+                             :npm        ["npx" "tailwindcss"]
+                             :global-bin [(str (fs/which "tailwindcss"))]
+                             :local-bin  [(local-tailwind-path)])
+                           ["-c" "resources/tailwind.config.js"
+                            "-i" "resources/tailwind.css"
+                            "-o" "target/resources/public/css/main.css"]
+                           args))
+      (catch Exception e
+        (when (and (= 139 (:babashka/exit (ex-data e)))
+                   (#{:local-bin :global-bin} tailwind-cmd))
+          (binding [*out* *err*]
+            (println "It looks like your Tailwind installation is corrupted. Try deleting it and running this command again:")
+            (println)
+            (println "  rm" (if (= tailwind-cmd :local-bin)
+                              (local-tailwind-path)
+                              (str (fs/which "tailwindcss"))))
+            (println)))
+        (throw e)))))
 
 (defn run-args []
   (:biff.tasks/clj-args
