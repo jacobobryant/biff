@@ -186,9 +186,46 @@
                                (str "clj "))])]
     (println "eval" (str/join " ; " commands))))
 
+;; Algorithm adapted from dotenv-java:
+;; https://github.com/cdimascio/dotenv-java/blob/master/src/main/java/io/github/cdimascio/dotenv/internal/DotenvParser.java
+;; Wouldn't hurt to take a more thorough look at Ruby dotenv's algorithm:
+;; https://github.com/bkeepers/dotenv/blob/master/lib/dotenv/parser.rb
+(defn parse-env-var [line]
+  (let [line (str/trim line)
+        [_ _ k v] (re-matches #"^\s*(export\s+)?([\w.\-]+)\s*=\s*(['][^']*[']|[\"][^\"]*[\"]|[^#]*)?\s*(#.*)?$"
+                              line)]
+    (when-not (or (str/starts-with? line "#")
+                  (str/starts-with? line "////")
+                  (empty? v))
+      (let [v (str/trim v)
+            v (if (or (re-matches #"^\".*\"$" v)
+                      (re-matches #"^'.*'$" v))
+                (subs v 1 (dec (count v)))
+                v)]
+        [k v]))))
+
+(comment
+  [(parse-env-var "FOO=BAR")
+   (parse-env-var "FOO='BAR'")
+   (parse-env-var "FOO=\"BAR\"")
+   (parse-env-var "FOO=\"BAR\" # hello")
+   (parse-env-var " export FOO=\"BAR\" # hello")
+   (parse-env-var "# FOO=\"BAR\"")
+   (parse-env-var "   ")])
+
 (defn secrets []
-  (when (fs/exists? "secrets.env")
-    (get-env-from ". ./secrets.env")))
+  (cond
+    (not (fs/exists? "secrets.env"))
+    nil
+
+    (not (windows?))
+    (get-env-from ". ./secrets.env")
+
+    :else
+    (->> (slurp "secrets.env")
+         str/split-lines
+         (keep parse-env-var)
+         (into {}))))
 
 (defn dev
   "Starts the app locally.
