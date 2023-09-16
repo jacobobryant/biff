@@ -10,12 +10,10 @@
          ;; Used for interacting with production.
          deploy           com.biffweb.tasks/deploy
          soft-deploy      com.biffweb.tasks/soft-deploy
-         refresh          com.biffweb.tasks/refresh
          restart          com.biffweb.tasks/restart
          logs             com.biffweb.tasks/logs
          prod-repl        com.biffweb.tasks/prod-repl
          prod-dev         com.biffweb.tasks/prod-dev
 
          ;; Internal tasks called by Biff in production.
-         post-receive     com.biffweb.tasks/post-receive
          run-cmd          com.biffweb.tasks/run-cmd}}

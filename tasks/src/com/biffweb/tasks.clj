@@ -9,6 +9,9 @@
             [clojure.string :as str]
             [clojure.stacktrace :as st]))
 
+(def config
+  (delay (:tasks (edn/read-string (slurp "config.edn")))))
+
 (def ^:dynamic *shell-env* nil)
 
 (defn windows? []
@@ -35,7 +38,8 @@
       false)))
 
 (defn with-ssh-agent* [f]
-  (if-let [env (and (fs/which "ssh-agent")
+  (if-let [env (and (not (:biff.tasks/skip-ssh-agent @config))
+                    (fs/which "ssh-agent")
                     (not (sh-success? "ssh-add" "-l"))
                     (nil? *shell-env*)
                     (if (windows?)
@@ -43,12 +47,18 @@
                       (get-env-from "eval $(ssh-agent)")))]
     (binding [*shell-env* env]
       (try
-        (println "Starting an ssh-agent session. If you set up `keychain`, you won't have to enter your password"
-                 "each time you run this command: https://www.funtoo.org/Funtoo:Keychain")
-        (try (shell "ssh-add") (catch Exception _))
+        (try
+          (shell "ssh-add")
+          (println "Started an ssh-agent session. If you set up `keychain`, you won't have to enter your password"
+                   "each time you run this command: https://www.funtoo.org/Funtoo:Keychain")
+          (catch Exception e
+            (binding [*out* *err*]
+              (st/print-throwable e)
+              (println "\nssh-add failed. You may have to enter your password multiple times. You can avoid this if you set up `keychain`:"
+                       "https://www.funtoo.org/Funtoo:Keychain"))))
         (f)
         (finally
-         (sh/sh "ssh-agent" "-k" :env *shell-env*))))
+          (sh/sh "ssh-agent" "-k" :env *shell-env*))))
     (f)))
 
 (defmacro with-ssh-agent [& body]
@@ -76,9 +86,6 @@
   (println (str "export COOKIE_SECRET=" (new-secret 16)))
   (println (str "export JWT_SECRET=" (new-secret 32)))
   (println))
-
-(def config
-  (delay (:tasks (edn/read-string (slurp "config.edn")))))
 
 (defn server [& args]
   (apply shell "ssh" (str "root@" (:biff.tasks/server @config)) args))
@@ -127,6 +134,8 @@
     (io/copy (:body (curl/get url {:compressed false :as :stream})) dest)
     (.setExecutable dest true)))
 
+(def css-output "target/resources/public/css/main.css")
+
 (defn css
   "Generates the target/resources/public/css/main.css file.
 
@@ -164,7 +173,7 @@
                              :local-bin  [(local-tailwind-path)])
                            ["-c" "resources/tailwind.config.js"
                             "-i" "resources/tailwind.css"
-                            "-o" "target/resources/public/css/main.css"]
+                            "-o" css-output]
                            args))
       (catch Exception e
         (when (and (= 139 (:babashka/exit (ex-data e)))
@@ -288,16 +297,14 @@
 (defn refresh
   "Reloads code and restarts the system via `clojure.tools.namespace.repl/refresh` (on the server)."
   []
-  (trench "\"(com.biffweb/refresh)\""))
+  (binding [*out* *err*]
+    (println "This command has been removed. Instead, you can connect your editor to the server with"
+             "`bb prod-dev` or `bb prod-repl`, then call the (refresh) function from your editor.")))
 
 (defn restart
   "Restarts the app process via `systemctl restart app` (on the server)."
   []
-  (with-ssh-agent
-    (apply shell "ssh" (str "app@" (:biff.tasks/server @config))
-           "clj" "-P" (run-args))
-    (server "systemctl" "reset-failed" "app.service")
-    (server "systemctl" "restart" "app")))
+  (server "systemctl reset-failed app.service; systemctl restart app"))
 
 (defn- push-files-rsync []
   (let [{:biff.tasks/keys [server]} @config
@@ -306,13 +313,14 @@
                    (map #(str/replace % #"/.*" ""))
                    distinct
                    (concat ["config.edn"
-                            "secrets.env"])
+                            "secrets.env"
+                            css-output])
                    (filter fs/exists?))]
     (when-not (windows?)
       (fs/set-posix-file-permissions "config.edn" "rw-------")
       (when (fs/exists? "secrets.env")
         (fs/set-posix-file-permissions "secrets.env" "rw-------")))
-    (->> (concat ["rsync" "--archive" "--verbose" "--include='**.gitignore'"
+    (->> (concat ["rsync" "--archive" "--verbose" "--relative" "--include='**.gitignore'"
                   "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
                  files
                  [(str "app@" server ":")])
@@ -320,10 +328,12 @@
 
 (defn- push-files-git []
   (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
-    (apply shell (concat ["scp"
-                          "config.edn"]
+    (apply shell (concat ["scp" "config.edn"]
                          (when (fs/exists? "secrets.env") ["secrets.env"])
                          [(str "app@" server ":")]))
+    (when (fs/exists? css-output)
+      (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
+      (shell "scp" css-output (str "app@" server ":" css-output)))
     (time (if deploy-cmd
             (apply shell deploy-cmd)
             ;; For backwards compatibility
@@ -334,19 +344,6 @@
     (push-files-rsync)
     (push-files-git)))
 
-(defn- push-css []
-  (let [{:biff.tasks/keys [server]} @config]
-    (if (fs/which "rsync")
-      (do
-        (shell "rsync" "--relative"
-               "target/resources/public/css/main.css"
-               (str "app@" server ":"))
-        (println "target/resources/public/css/main.css"))
-      (do
-        (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
-        (shell "scp" "target/resources/public/css/main.css"
-               (str "app@" server ":target/resources/public/css/main.css"))))))
-
 (defn soft-deploy
   "Pushes code to the server and evaluates changed files.
 
@@ -355,16 +352,12 @@
   restart."
   []
   (with-ssh-agent
-    (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]} @config
-          css-proc (future (css "--minify"))]
+    (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]} @config]
+      (css "--minify")
       (push-files)
       (trench (or on-soft-deploy
                   ;; backwards compatibility
-                  (str "\"(" soft-deploy-fn " @com.biffweb/system)\"")))
-      (println "waiting for css")
-      @css-proc
-      (println "done building css")
-      (push-css))))
+                  (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))))
 
 (defn deploy
   "Pushes code to the server and restarts the app.
@@ -378,7 +371,6 @@
   (with-ssh-agent
     (css "--minify")
     (push-files)
-    (push-css)
     (restart)))
 
 (defn auto-soft-deploy []
