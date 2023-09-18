@@ -226,7 +226,7 @@
       {:status 303
        :headers {"location" app-path}
        :session (assoc session :uid (or existing-user-id
-                                        (get-user-id db email)))}
+                                        (get-user-id (xt/db db) email)))}
       {:status 303
        :headers {"location" (str "/verify-code?error=invalid-code&email=" email)}})))
 
