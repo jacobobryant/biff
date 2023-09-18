@@ -7,49 +7,55 @@
             [rum.core :as rum]))
 
 (defn signin-link [{:keys [to url user-exists]}]
-  {:to to
-   :subject (if user-exists
-              (str "Sign in to " settings/app-name)
-              (str "Sign up for " settings/app-name))
-   :html-body (rum/render-static-markup
-               [:html
-                [:body
-                 [:p "We received a request to sign in to " settings/app-name
-                  " using this email address. Click this link to sign in:"]
-                 [:p [:a {:href url :target "_blank"} "Click here to sign in."]]
-                 [:p "This link will expire in one hour. "
-                  "If you did not request this link, you can ignore this email."]]])
-   :text-body (str "We received a request to sign in to " settings/app-name
-                   " using this email address. Click this link to sign in:\n"
-                   "\n"
-                   url "\n"
-                   "\n"
-                   "This link will expire in one hour. If you did not request this link, "
-                   "you can ignore this email.")
-   :message-stream "outbound"})
+  (let [[action-cap action] (if user-exists
+                              ["Sign in" "sign in"]
+                              ["Sign up" "sign up"])]
+    {:to to
+     :subject (if user-exists
+                (str action-cap " to " settings/app-name)
+                (str action-cap " for " settings/app-name))
+     :html-body (rum/render-static-markup
+                 [:html
+                  [:body
+                   [:p "We received a request to " action " to " settings/app-name
+                    " using this email address. Click this link to " action " :"]
+                   [:p [:a {:href url :target "_blank"} "Click here to " action "."]]
+                   [:p "This link will expire in one hour. "
+                    "If you did not request this link, you can ignore this email."]]])
+     :text-body (str "We received a request to " action " to " settings/app-name
+                     " using this email address. Click this link to " action ":\n"
+                     "\n"
+                     url "\n"
+                     "\n"
+                     "This link will expire in one hour. If you did not request this link, "
+                     "you can ignore this email.")
+     :message-stream "outbound"}))
 
 (defn signin-code [{:keys [to code user-exists]}]
-  {:to to
-   :subject (if user-exists
-              (str "Sign in to " settings/app-name)
-              (str "Sign up for " settings/app-name))
-   :html-body (rum/render-static-markup
-               [:html
-                [:body
-                 [:p "We received a request to sign in to " settings/app-name
-                  " using this email address. Enter the following code to sign in:"]
-                 [:p {:style {:font-size "2rem"}} code]
-                 [:p
-                  "This code will expire in three minutes. "
-                  "If you did not request this code, you can ignore this email."]]])
-   :text-body (str "We received a request to sign in to " settings/app-name
-                   " using this email address. Enter the following code to sign in:\n"
-                   "\n"
-                   code "\n"
-                   "\n"
-                   "This code will expire in three minutes. If you did not request this code, "
-                   "you can ignore this email.")
-   :message-stream "outbound"})
+  (let [[action-cap action] (if user-exists
+                              ["Sign in" "sign in"]
+                              ["Sign up" "sign up"])]
+    {:to to
+     :subject (if user-exists
+                (str action-cap " to " settings/app-name)
+                (str action-cap " for " settings/app-name))
+     :html-body (rum/render-static-markup
+                 [:html
+                  [:body
+                   [:p "We received a request to " action " to " settings/app-name
+                    " using this email address. Enter the following code to " action ":"]
+                   [:p {:style {:font-size "2rem"}} code]
+                   [:p
+                    "This code will expire in three minutes. "
+                    "If you did not request this code, you can ignore this email."]]])
+     :text-body (str "We received a request to " action " to " settings/app-name
+                     " using this email address. Enter the following code to " action ":\n"
+                     "\n"
+                     code "\n"
+                     "\n"
+                     "This code will expire in three minutes. If you did not request this code, "
+                     "you can ignore this email.")
+     :message-stream "outbound"}))
 
 (defn template [k opts]
   ((case k
