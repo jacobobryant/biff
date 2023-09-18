@@ -7,13 +7,11 @@
             [rum.core :as rum]))
 
 (defn signin-link [{:keys [to url user-exists]}]
-  (let [[action-cap action] (if user-exists
-                              ["Sign in" "sign in"]
-                              ["Sign up" "sign up"])]
+  (let [[subject action] (if user-exists
+                           [(str "Sign in to " settings/app-name) "sign in"]
+                           [(str "Sign up for " settings/app-name) "sign up"])]
     {:to to
-     :subject (if user-exists
-                (str action-cap " to " settings/app-name)
-                (str action-cap " for " settings/app-name))
+     :subject subject
      :html-body (rum/render-static-markup
                  [:html
                   [:body
@@ -32,13 +30,11 @@
      :message-stream "outbound"}))
 
 (defn signin-code [{:keys [to code user-exists]}]
-  (let [[action-cap action] (if user-exists
-                              ["Sign in" "sign in"]
-                              ["Sign up" "sign up"])]
+  (let [[subject action] (if user-exists
+                           [(str "Sign in to " settings/app-name) "sign in"]
+                           [(str "Sign up for " settings/app-name) "sign up"])]
     {:to to
-     :subject (if user-exists
-                (str action-cap " to " settings/app-name)
-                (str action-cap " for " settings/app-name))
+     :subject subject
      :html-body (rum/render-static-markup
                  [:html
                   [:body
