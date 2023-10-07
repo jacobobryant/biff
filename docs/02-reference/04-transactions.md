@@ -3,7 +3,7 @@ title: Transactions
 ---
 
 *Biff uses [XTDB](https://xtdb.com/) for the database. It's OK if you haven't used XTDB before,*
-*but you may want to peruse some of the [learning resources](https://xtdb.com/learn/) at least.*
+*but you may want to peruse some of the [learning resources](https://xtdb.com/learn) at least.*
 
 The system map (and by extension, incoming requests) includes a
 `:biff.xtdb/node` key which can be used to submit transactions:
