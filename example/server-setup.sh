@@ -19,9 +19,10 @@ apt-get -y install default-jre rlwrap ufw git snapd
 bash < <(curl -s https://download.clojure.org/install/linux-install-$CLJ_VERSION.sh)
 bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/$TRENCH_FILE
-tar -xf $TRENCH_FILE
-rm $TRENCH_FILE
-mv trench /usr/local/bin/
+mkdir .trench_tmp
+tar -xf $TRENCH_FILE --directroy .trench_tmp
+mv .trench_tmp/trench /usr/local/bin/
+rm -rf $TRENCH_FILE .trench_tmp
 
 # Non-root user
 useradd -m app
