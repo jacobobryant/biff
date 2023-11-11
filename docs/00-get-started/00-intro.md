@@ -7,18 +7,17 @@ title: Introduction
 – <a href="https://github.com/ring-clojure/ring/issues/393#issuecomment-593005197">@weavejester</a></p>
 </blockquote>
 
-Biff speeds up web development by providing as much functionality as possible
-out-of-the-box while making it easy to swap out, modify, or remove parts as
-your project grows. It prioritizes small-to-medium sized projects.
+Biff speeds up web development by providing as much functionality as possible out-of-the-box while making it easy to
+swap out, modify, or remove parts as your project grows. It's built with solo developers in mind and is quite
+opinionated in its approach to serving that use case.
 
-The goal is to provide the benefits of a web framework without sacrificing the
-simplicity that makes Clojure great.
+The goal is to provide the benefits of a web framework without sacrificing the simplicity that makes Clojure great.
 
 ## About
 
 Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all my web apps, primarily
 [Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/), each of which has
-15k-20k lines of code. See r/Clojure for
+10-15k lines of code. See r/Clojure for
 [comments about Biff](https://www.reddit.com/r/Clojure/search/?q=biff&restrict_sr=1&type=comment).
 
 Biff is generously sponsored by [JUXT](https://www.juxt.pro/) and
@@ -31,5 +30,4 @@ multiple grants from [Clojurists Together](https://www.clojuriststogether.org/).
 - Ask questions on [the forum](https://forum.tfos.co/c/biff/) or on [Clojurians Slack](http://clojurians.net) (#biff channel).
 - New to Clojure? Here's [an opinionated list of excellent Clojure learning materials](https://gist.github.com/ssrihari/0bf159afb781eef7cc552a1a0b17786f).
 - Read Biff's source [on GitHub](https://github.com/jacobobryant/biff).
-- Looking for an open-source Biff project to study or contribute to? Check out [Platypub](https://github.com/jacobobryant/platypub).
-- For anything else, you can always email me: <hello@tfos.co>.
+- For anything else, I'm always happy to chat over email: <hello@tfos.co>.
