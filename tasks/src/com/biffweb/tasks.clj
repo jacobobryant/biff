@@ -37,8 +37,56 @@
     (catch Exception _
       false)))
 
+(defn host-ssh-config [host]
+  "Runs `ssh -G host` and parses it into a map"
+  (let [;; NB: `ssh -G host` rarely returns an error, for example
+        ;;     there's no error if you give a host that's not
+        ;;     mentioned in your configs.
+        {:keys [exit out err]} (sh/sh "ssh" "-G" host :in-enc "UTF-8")]
+    (when (not= exit 0)
+      (throw (str "ssh -G " host " returned non-zero exit code " exit " stderr follows: \n" err)))
+    (into {} (map #(str/split % #" " 2) (str/split-lines out)))))
+
+(defn ssh-agent-disabled-for-host? [host]
+  "Returns true if the user has disabled ssh-agent in their SSH
+  configuration"
+
+  (let [{:as config :strs [identitiesonly addkeystoagent]} (host-ssh-config host)]
+    ;; From SSH_CONFIG(5):
+    ;;
+    ;;      IdentitiesOnly
+    ;;           Specifies that ssh(1) should only use the configured
+    ;;           authentication identity and certificate files (either the default
+    ;;           files, or those explicitly configured in the ssh_config files or
+    ;;           passed on the ssh(1) command-line), even if ssh-agent(1) or a
+    ;;           PKCS11Provider or SecurityKeyProvider offers more identities.
+    ;;           The argument to this keyword must be yes or no (the default).
+    ;;           This option is intended for situations where ssh-agent offers
+    ;;           many different identities.
+    ;;
+    ;; and
+    ;;
+    ;;      AddKeysToAgent
+    ;;           Specifies whether keys should be automatically added to a running
+    ;;           ssh-agent(1).  If this option is set to yes and a key is loaded
+    ;;           from a file, the key and its passphrase are added to the agent
+    ;;           with the default lifetime, as if by ssh-add(1).  If this option
+    ;;           is set to ask, ssh(1) will require confirmation using the
+    ;;           SSH_ASKPASS program before adding a key (see ssh-add(1) for
+    ;;           details).  If this option is set to confirm, each use of the key
+    ;;           must be confirmed, as if the -c option was specified to
+    ;;           ssh-add(1).  If this option is set to no, no keys are added to
+    ;;           the agent.  Alternately, this option may be specified as a time
+    ;;           interval using the format described in the TIME FORMATS section
+    ;;           of sshd_config(5) to specify the key's lifetime in ssh-agent(1),
+    ;;           after which it will automatically be removed.  The argument must
+    ;;           be no (the default), yes, confirm (optionally followed by a time
+    ;;           interval), ask or a time interval."
+    (and (= identitiesonly "yes") (= addkeystoagent "false"))))
+
 (defn with-ssh-agent* [f]
-  (if-let [env (and (not (:biff.tasks/skip-ssh-agent @config))
+  (if-let [env (and (not (ssh-agent-disabled-for-host? (:biff.tasks/server @config)))
+                    (not (:biff.tasks/skip-ssh-agent @config))
                     (fs/which "ssh-agent")
                     (not (sh-success? "ssh-add" "-l"))
                     (nil? *shell-env*)
