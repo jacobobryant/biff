@@ -13,7 +13,7 @@ To hack on Biff, either run `bb dev`, or:
 
 1. `cd example`
 2. `cp config.edn.TEMPLATE config.edn`
-4. `bb dev`
+3. `bb dev`
 
 (The example project's deps.edn declares a local dependency on the Biff library
 code.)
