@@ -68,42 +68,13 @@ illustration.
          :hx-target "#messages"
          :hx-swap "beforeend"
          :_ (str "on htmx:afterRequest"
-;; ...
+                " set <textarea/>'s value to ''"
+                " then send newMessage to #messages")
+         :class "flex"}
+        [:textarea.w-full#text {:name "text"}]
         [:.w-2]
         [:button.btn {:type "submit"} "Send"]))))
 
- (defn channel-page [{:keys [biff/db community channel] :as ctx}]
-   (let [msgs (q db
-                 '{:find (pull msg [*])
-                   :in [channel]
-                   :where [[msg :msg/channel channel]]}
--                (:xt/id channel))]
-+               (:xt/id channel))
-+       href (str "/community/" (:xt/id community)
-+                 "/channel/" (:xt/id channel))]
-     (ui/app-page
-      ctx
-      [:.border.border-neutral-600.p-3.bg-white.grow.flex-1.overflow-y-auto#messages
--      {:_ "on load or newMessage set my scrollTop to my scrollHeight"}
-+      {:hx-ext "ws"
-+       :ws-connect (str href "/connect")
-+       :_ "on load or newMessage set my scrollTop to my scrollHeight"}
-       (map message-view (sort-by :msg/created-at msgs))]
-      [:.h-3]
-      (biff/form
--      {:hx-post (str "/community/" (:xt/id community)
--                     "/channel/" (:xt/id channel))
-+      {:hx-post href
-        :hx-target "#messages"
-        :hx-swap "beforeend"
-        :_ (str "on htmx:afterRequest"
-                " set <textarea/>'s value to ''"
-                " then send newMessage to #messages")
-        :class "flex"}
-       [:textarea.w-full#text {:name "text"}]
-       [:.w-2]
-       [:button.btn {:type "submit"} "Send"]))))
- 
 +(defn connect [{:keys [com.eelchat/chat-clients] {chan-id :xt/id} :channel :as ctx}]
 +  {:status 101
 +   :headers {"upgrade" "websocket"
