@@ -5,32 +5,8 @@
         ring/ring-defaults                  {:mvn/version "0.3.4"}
         org.clojure/clojure                 {:mvn/version "1.11.1"}
 
-        ;; The logging architecture of our aplication looks like
-        ;; this. The leftmost nodes are user-facing logging APIs. They
-        ;; all hand their logs over to slf4j, which in turns hand them
-        ;; over to slf4j-simple, which prints them.
-        ;;
-        ;; clojure.tools.logging -\
-        ;;                  log4j -\
-        ;;                          -> slf4j -> slf4j-simple
-        ;;                    jul -/
-        ;;                   jcl -/
-        ;;
-        ;; This dep, by virtue of being the first slf4j-binding on the
-        ;; classpath, makes slf4j log to slf4j-simple.
-        ;;
+        ;; Notes on logging: https://gist.github.com/jacobobryant/76b7a08a07d5ef2cc076b048d078f1f3
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}
-        ;;
-        ;; These three deps are slf4j bindings; They, by virtue of
-        ;; being on the classpath, make their corresponding logging
-        ;; library (log4j, jul or jcl) log to slf4j, which in turn
-        ;; logs to our slf4j binding slf4j-simple.
-        ;;
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}
         org.slf4j/jul-to-slf4j     {:mvn/version "1.7.36"}
-        org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}
-        ;;
-        ;; For historical context on why Java logging is as
-        ;; complicated as it is, see
-        ;; https://lambdaisland.com/blog/2020-06-12-logging-in-clojure-making-sense-of-the-mess
-        }}
+        org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}}}
