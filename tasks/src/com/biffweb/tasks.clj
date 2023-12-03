@@ -44,8 +44,11 @@
         ;;     mentioned in your configs.
         {:keys [exit out err]} (sh/sh "ssh" "-G" host :in-enc "UTF-8")]
     (when (not= exit 0)
-      (throw (str "ssh -G " host " returned non-zero exit code " exit " stderr follows: \n" err)))
-    (into {} (map #(str/split % #" " 2) (str/split-lines out)))))
+      (throw (ex-info (str "ssh -G " host " returned non-zero exit code " exit " stderr follows: \n" err) {})))
+    (->> (str/split-lines out)
+         (mapv #(str/split % #" " 2))
+         (filter #(= 2 (count %)))
+         (into {}))))
 
 (defn ssh-agent-disabled-for-host? [host]
   "Returns true if the user has disabled ssh-agent in their SSH
