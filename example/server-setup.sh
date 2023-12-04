@@ -20,7 +20,7 @@ bash < <(curl -s https://download.clojure.org/install/linux-install-$CLJ_VERSION
 bash < <(curl -s https://raw.githubusercontent.com/babashka/babashka/master/install)
 wget https://github.com/athos/trenchman/releases/download/v$TRENCH_VERSION/$TRENCH_FILE
 mkdir .trench_tmp
-tar -xf $TRENCH_FILE --directroy .trench_tmp
+tar -xf $TRENCH_FILE --directory .trench_tmp
 mv .trench_tmp/trench /usr/local/bin/
 rm -rf $TRENCH_FILE .trench_tmp
 
