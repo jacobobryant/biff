@@ -4,7 +4,7 @@ title: Queries
 
 As mentioned previous section, Biff uses [XTDB](https://xtdb.com/) for the
 database. See the
-[XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/).
+[XTDB query reference](https://v1-docs.xtdb.com/language-reference/datalog-queries/).
 
 Biff provides a couple query convenience functions. `com.biffweb/q` is a very
 light wrapper around `xtdb.api/q`. First, it will throw an exception if you
@@ -69,4 +69,4 @@ documents.
 See also:
 
  - [`lookup*`](/docs/api/xtdb/#lookup)
- - [XTDB query reference](https://docs.xtdb.com/language-reference/datalog-queries/)
+ - [XTDB query reference](https://v1-docs.xtdb.com/language-reference/datalog-queries/)

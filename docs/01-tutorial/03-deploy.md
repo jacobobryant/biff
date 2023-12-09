@@ -4,9 +4,11 @@ title: Deploy to production
 
 We'll follow the steps in [Reference > Production](https://biffweb.com/docs/reference/production/).
 
-> 1․ Create an Ubuntu VPS in e.g. DigitalOcean. Give it at least 1GB of memory.
+> 1․ Create an Ubuntu VPS in e.g. DigitalOcean. Give it at least 1GB of memory. Here's a
+>    [DigitalOcean referral link](https://m.do.co/c/141610534c91) that'll give you $200 of
+>    credit.
 
-Create a [Digital Ocean](https://digitalocean.com) account if you don't have one already. Go to the
+Create a [Digital Ocean](https://m.do.co/c/141610534c91) account if you don't have one already. Go to the
 [create droplet](https://cloud.digitalocean.com/droplets/new) page. Change the default droplet to something cheaper:
 
 ![Screenshot of creating a droplet on Digital Ocean](/img/tutorial/do-price.png)

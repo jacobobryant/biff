@@ -267,4 +267,4 @@ See also:
 
  - [`submit-tx`](/docs/api/xtdb/#submit-tx)
  - [XTDB learning resources](https://xtdb.com/learn/)
- - [XTDB transaction reference](https://docs.xtdb.com/language-reference/datalog-transactions/)
+ - [XTDB transaction reference](https://v1-docs.xtdb.com/language-reference/datalog-transactions/)

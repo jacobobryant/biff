@@ -13,11 +13,13 @@ opinionated in its approach to serving that use case.
 
 The goal is to provide the benefits of a web framework without sacrificing the simplicity that makes Clojure great.
 
+See also: [Should you use Biff?](https://biffweb.com/p/should-you-use-biff/)
+
 ## About
 
-Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I use it for all my web apps, primarily
-[Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/), each of which has
-10-15k lines of code. See r/Clojure for
+Biff is developed by myself, [Jacob O'Bryant](https://tfos.co). I started it while I was a full-time entrepreneur,
+working on apps like [Yakread](https://yakread.com/) and [The Sample](https://thesample.ai/) (each of which is built
+with Biff and has 10-15k lines of code). See r/Clojure for
 [comments about Biff](https://www.reddit.com/r/Clojure/search/?q=biff&restrict_sr=1&type=comment).
 
 Biff is generously sponsored by [JUXT](https://www.juxt.pro/) and

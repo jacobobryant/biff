@@ -9,7 +9,9 @@ been tested on DigitalOcean. You can of course deploy Biff anywhere that can
 run a JVM&mdash;but if you're happy with the defaults then you can simply
 follow these steps (for example screenshots, see [the tutorial](https://biffweb.com/docs/tutorial/deploy/)):
 
-1. Create an Ubuntu VPS in e.g. DigitalOcean. Give it at least 1GB of memory.
+1. Create an Ubuntu VPS in e.g. DigitalOcean. Give it at least 1GB of memory. Here's a
+   [DigitalOcean referral link](https://m.do.co/c/141610534c91) that'll give you $200 of
+   credit.
 2. (Optional) If this is an important application, you may want to set up a
    managed Postgres instance and edit `config.edn` to use that for XTDB's
    storage backend instead of the filesystem. With the default standalone
@@ -66,5 +68,5 @@ configuration.
 
 ### Container-based deployment
 
-Instructions and code for deploying with Docker are on the roadmap. In the mean time, a first
-take on a Dockerfile is [available here](https://gist.github.com/jacobobryant/d3b2654c36161414a7b6a306b3f678b5).
+Instructions and code for deploying with Docker are on the roadmap. In the mean time, a
+rough example is [available here](https://github.com/jacobobryant/biff-docker2).
