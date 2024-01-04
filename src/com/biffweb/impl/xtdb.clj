@@ -320,12 +320,13 @@
    (fn [op]
      (if-some [m (:db.op/upsert op)]
        (let [kvs (apply concat m)
-             id (apply lookup-id db kvs)]
-         (cond-> [(-> (apply assoc op kvs)
-                      (assoc :db/op :merge
-                             :xt/id id)
-                      (dissoc :db.op/upsert))]
-           (nil? id) (conj [::xt/fn :biff/ensure-unique m])))
+             id (apply lookup-id db kvs)
+             doc (-> (apply assoc op kvs)
+                     (assoc :db/op :merge)
+                     (dissoc :db.op/upsert))]
+         (if (nil? id)
+           [doc [::xt/fn :biff/ensure-unique m]]
+           [(assoc doc :xt/id id)]))
        [op]))
    tx))
 
