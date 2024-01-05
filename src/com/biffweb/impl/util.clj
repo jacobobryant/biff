@@ -13,6 +13,10 @@
             [com.biffweb.impl.time :as time])
   (:import [clojure.lang DynamicClassLoader]))
 
+(defmacro catchall
+  [& body]
+  `(try ~@body (catch Exception ~'_ nil)))
+
 (defmacro catchall-verbose
   [& body]
   `(try
