@@ -1,5 +1,6 @@
 {:paths ["src"]
- :deps {better-cond/better-cond        {:mvn/version "2.1.4"}
+ :deps {aero/aero                      {:mvn/version "1.1.6"}
+        better-cond/better-cond        {:mvn/version "2.1.4"}
         buddy/buddy-sign               {:mvn/version "3.4.333"}
         cider/cider-nrepl              {:mvn/version "0.28.3"}
         clj-http/clj-http              {:mvn/version "3.12.3"}

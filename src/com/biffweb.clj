@@ -3,6 +3,7 @@
             [clojure.stacktrace :as st]
             [clojure.string :as str]
             [com.biffweb.impl.auth :as auth]
+            [com.biffweb.impl.config :as config]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.queues :as q]
@@ -46,7 +47,9 @@
   (util/refresh @system))
 
 (defn use-config
-  "Reads config from an edn file and merges into ctx.
+  "Deprecated. Prefer use-aero-config.
+
+  Reads config from an edn file and merges into ctx.
 
   The config file's contents should be a map from environments to config keys
   and values, for example:
@@ -60,7 +63,10 @@
   The default value is `prod`. To inherit config from other environments, set
   :merge to a sequence of environment keys."
   [{:keys [biff/config] :or {config "config.edn"} :as ctx}]
-  (merge ctx (util/read-config config)))
+  (merge ctx (config/read-config config)))
+
+(defn use-aero-config [ctx]
+  (config/use-aero-config ctx))
 
 (defn sh
   "Runs a shell command.
