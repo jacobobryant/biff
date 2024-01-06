@@ -12,14 +12,19 @@
    "Until you add API keys for Postmark and reCAPTCHA, we'll print your sign-up "
    "link to the console. See config.edn."])
 
-(defn home-page [{:keys [recaptcha/site-key params] :as ctx}]
-  (ui/page
-   (assoc ctx ::ui/recaptcha true)
-   (biff/form
-    {:action "/auth/send-link"
+(defn signupForm [{:keys [recaptcha/site-key params ::render-recaptcha] :as ctx}]
+  (biff/form
+    {:hx-post "/test-htmx-recaptcha"
+     :hx-swap "outerHTML"
      :id "signup"
-     :hidden {:on-error "/"}}
-    (biff/recaptcha-callback "submitSignup" "signup")
+     :hidden {:on-error "/"}
+     :_ (when render-recaptcha
+          (str "init call grecaptcha.render('g-recaptcha-id', {sitekey:'" site-key "'})"))}
+    [:script
+     (biff/unsafe
+      (str "function submitSignup(token) { "
+           "document.getElementById('signup').requestSubmit();"
+           "}"))]
     [:h2.text-2xl.font-bold (str "Sign up for " settings/app-name)]
     [:.h-3]
     [:.flex
@@ -28,7 +33,7 @@
                     :autocomplete "email"
                     :placeholder "Enter your email address"}]
      [:.w-3]
-     [:button.btn.g-recaptcha
+     [:button.btn.g-recaptcha#g-recaptcha-id
       (merge (when site-key
                {:data-sitekey site-key
                 :data-callback "submitSignup"})
@@ -49,7 +54,13 @@
     [:.text-sm "Already have an account? " [:a.link {:href "/signin"} "Sign in"] "."]
     [:.h-3]
     biff/recaptcha-disclosure
-    email-disabled-notice)))
+    email-disabled-notice))
+
+(defn home-page [ctx]
+  (ui/page
+   (assoc ctx ::ui/recaptcha true)
+   [:.border.border-red-600.p-4
+    (signupForm ctx)]))
 
 (defn link-sent [{:keys [params] :as ctx}]
   (ui/page
@@ -163,10 +174,30 @@
             {:type "submit"})
      "Send another code"])))
 
+(defn passed-recaptcha? [{:keys [biff/secret biff.recaptcha/threshold params]
+                          :or {threshold 0.5}}]
+  (let [{:keys [success score]}
+        (:body
+         (http/post "https://www.google.com/recaptcha/api/siteverify"
+                    {:form-params {:secret (secret :recaptcha/secret-key)
+                                   :response (:g-recaptcha-response params)}
+                     :as :json}))]
+    (and success (or (nil? score) (<= threshold score)))))
+
+(defn test-htmx-recaptcha [{:keys [params] :as ctx}]
+  (let [passed (passed-recaptcha? ctx)]
+    (println "passed recaptcha:" passed)
+    (if (not= (:email params) "fail@example.com")
+      [:div "passed"]
+      (signupForm (-> ctx
+                      (assoc-in [:params :error] "invalid-email")
+                      (assoc ::render-recaptcha true))))))
+
 (def plugin
   {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
              ["/"                  {:get home-page}]]
             ["/link-sent"          {:get link-sent}]
             ["/verify-link"        {:get verify-email-page}]
             ["/signin"             {:get signin-page}]
-            ["/verify-code"        {:get enter-code-page}]]})
+            ["/verify-code"        {:get enter-code-page}]
+            ["/test-htmx-recaptcha" {:post test-htmx-recaptcha}]]})
