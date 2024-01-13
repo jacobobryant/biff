@@ -1,7 +1,8 @@
 ;; See https://github.com/juxt/aero
 {:biff/base-url #profile {:prod #join ["https://" #biff/env DOMAIN]
-                          :dev "http://localhost:8080"}
- :biff/host     #profile {:prod "localhost" :dev "0.0.0.0"}
+                          :default "http://localhost:8080"}
+ :biff/host     #profile {:dev "0.0.0.0"
+                          :default "localhost"}
  :biff/port     8080
 
  :biff.xtdb/dir           "storage/xtdb"
@@ -16,9 +17,9 @@
  ;; :biff.xtdb.jdbc/port     5432
  ;; :biff.xtdb.jdbc/dbname   "dbname"
 
- :biff.beholder/enabled         #profile {:prod false :dev true}
+ :biff.beholder/enabled         #profile {:dev true :default false}
  :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
- :biff.middleware/secure        #profile {:prod true :dev false}
+ :biff.middleware/secure        #profile {:dev false :default true}
  :biff/jwt-secret               #biff/secret JWT_SECRET
 
  ;; Postmark is used to send email sign-in links. Create an account at
