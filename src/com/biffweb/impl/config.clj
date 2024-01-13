@@ -34,22 +34,24 @@
     (fn [] value)))
 
 (defn use-aero-config [ctx]
-  (let [profile (keyword (System/getProperty "biff.profile"))
-        env (merge (some->> (util/catchall (slurp "config.env"))
+  (let [env (merge (some->> (util/catchall (slurp "config.env"))
                             str/split-lines
                             (keep parse-env-var)
                             (into {}))
                    (into {} (System/getenv)))
+        profile (some-> (or (System/getProperty "biff.profile")
+                            (get env "BIFF_PROFILE")
+                            ;; For backwards compatibility
+                            (get env "BIFF_ENV"))
+                        keyword)
         ctx (merge ctx (aero/read-config (io/resource "config.edn") {:profile profile :biff.aero/env env}))
-        secret-fn (fn get-secret
-                    ([k] (some-> (get ctx k) (.invoke)))
-                    ;; Backwards compatibility
-                    ([ctx k] (get-secret k)))
-        ctx (assoc ctx :biff/secret secret-fn)]
-    (when-not (and (secret-fn :biff.middleware/cookie-secret)
-                   (secret-fn :biff/jwt-secret))
+        get-secret (fn [k]
+                     (some-> (get ctx k) (.invoke)))
+        ctx (assoc ctx :biff/secret get-secret)]
+    (when-not (and (get-secret :biff.middleware/cookie-secret)
+                   (get-secret :biff/jwt-secret))
       (binding [*out* *err*]
-        (println "Secrets are missing. You may need to run `clj -Mdev generate-secrets` "
+        (println "Secrets are missing. You may need to run `clj -Mdev generate-config` "
                  "and then either edit config.env or set them via environment variables.")
         (System/exit 1)))
     (doseq [[k v] (util-ns/select-ns-as ctx 'biff.system-properties nil)]
