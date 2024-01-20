@@ -3,8 +3,14 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [com.biffweb.impl.util :as util]
             [com.biffweb.impl.util.ns :as util-ns]))
+
+;; Redefine here so we don't have to import com.biffweb.impl.util, which takes
+;; 3000+ ms on my machine. We want this ns to load fast since it's used by
+;; com.biffweb.build.
+(defmacro catchall
+  [& body]
+  `(try ~@body (catch Exception ~'_ nil)))
 
 ;; Algorithm adapted from dotenv-java:
 ;; https://github.com/cdimascio/dotenv-java/blob/master/src/main/java/io/github/cdimascio/dotenv/internal/DotenvParser.java
@@ -33,26 +39,34 @@
   (when-some [value (aero/reader opts 'biff/env value)]
     (fn [] value)))
 
-(defn use-aero-config [ctx]
-  (let [env (merge (some->> (util/catchall (slurp "config.env"))
-                            str/split-lines
-                            (keep parse-env-var)
-                            (into {}))
-                   (into {} (System/getenv)))
-        profile (some-> (or (System/getProperty "biff.profile")
-                            (get env "BIFF_PROFILE")
+(defn get-env []
+  (reduce into
+          {}
+          [(some->> (catchall (slurp "config.env"))
+                    str/split-lines
+                    (keep parse-env-var))
+           (System/getenv)
+           (keep (fn [[k v]]
+                   (when (str/starts-with? k "biff.env.")
+                     [(str/replace k #"^biff.env." "") v]))
+                 (System/getProperties))]))
+
+(defn use-aero-config [{:biff.config/keys [skip-validation] :as ctx}]
+  (let [env (get-env)
+        profile (some-> (or (get env "BIFF_PROFILE")
                             ;; For backwards compatibility
                             (get env "BIFF_ENV"))
                         keyword)
         ctx (merge ctx (aero/read-config (io/resource "config.edn") {:profile profile :biff.aero/env env}))
-        get-secret (fn [k]
-                     (some-> (get ctx k) (.invoke)))
-        ctx (assoc ctx :biff/secret get-secret)]
-    (when-not (and (get-secret :biff.middleware/cookie-secret)
-                   (get-secret :biff/jwt-secret))
+        secret (fn [k]
+                 (some-> (get ctx k) (.invoke)))
+        ctx (assoc ctx :biff/secret secret)]
+    (when-not (or skip-validation
+                  (and (secret :biff.middleware/cookie-secret)
+                       (secret :biff/jwt-secret)))
       (binding [*out* *err*]
-        (println "Secrets are missing. You may need to run `clj -Mdev generate-config` "
-                 "and then either edit config.env or set them via environment variables.")
+        (println "Secrets are missing. Make sure you have a config.env file in the current "
+                  "directory, or set config via environment variables.")
         (System/exit 1)))
     (doseq [[k v] (util-ns/select-ns-as ctx 'biff.system-properties nil)]
       (System/setProperty (name k) v))

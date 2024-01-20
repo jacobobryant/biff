@@ -12,7 +12,8 @@
             [clojure.tools.namespace.repl :as tn-repl]
             [malli.core :as malc]
             [malli.registry :as malr]
-            [nrepl.cmdline :as nrepl-cmd]))
+            [nrepl.cmdline :as nrepl-cmd])
+  (:gen-class))
 
 (def plugins
   [app/plugin
@@ -40,13 +41,13 @@
   (biff/add-libs)
   (biff/eval-files! ctx)
   (generate-assets! ctx)
-  (test/run-all-tests #"com.example.test.*"))
+  (biff/catchall (require 'com.example-test))
+  (test/run-all-tests #"com.example.*-test"))
 
 (def malli-opts
   {:registry (malr/composite-registry
               malc/default-registry
-              (apply biff/safe-merge
-                     (keep :schema plugins)))})
+              (apply biff/safe-merge (keep :schema plugins)))})
 
 (def initial-system
   {:biff/plugins #'plugins
@@ -78,11 +79,12 @@
     (reset! system new-system)
     (generate-assets! new-system)
     (log/info "System started.")
-    (log/info "Go to" (:biff/base-url new-system))))
+    (log/info "Go to" (:biff/base-url new-system))
+    new-system))
 
-(defn -main [& args]
-  (start)
-  (apply nrepl-cmd/-main args))
+(defn -main []
+  (let [{:keys [biff.nrepl/args]} (start)]
+    (apply nrepl-cmd/-main args)))
 
 (defn refresh []
   (doseq [f (:biff/stop @system)]

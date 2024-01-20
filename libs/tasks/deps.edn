@@ -1,0 +1,13 @@
+{:deps {io.github.clojure/tools.build {:git/sha "24f2894"
+                                       :git/tag "v0.9.5"
+                                       :git/url "https://github.com/clojure/tools.build.git"}
+        com.biffweb/biff               {:local/root "../.."} ; TODO change version
+        com.biffweb/task-runner        {:local/root "../task-runner"} ; TODO change version
+        nrepl/nrepl                    {:mvn/version "1.0.0"}
+        com.nextjournal/beholder       {:mvn/version "1.0.2"}
+        cider/cider-nrepl              {:mvn/version "0.28.3"}
+        refactor-nrepl/refactor-nrepl  {:mvn/version "3.6.0"}
+        babashka/babashka.curl {:mvn/version "0.1.2"}
+        babashka/fs {:mvn/version "0.5.20"}
+        babashka/process {:mvn/version "0.5.21"}}
+ :paths ["src"]}

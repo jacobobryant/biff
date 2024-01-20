@@ -1,8 +1,0 @@
-{:deps {io.github.clojure/tools.build {:git/sha "24f2894"
-                                       :git/tag "v0.9.5"
-                                       :git/url "https://github.com/clojure/tools.build.git"}
-        com.biffweb/biff {:local/root ".."} ; TODO change version
-        babashka/babashka.curl {:mvn/version "0.1.2"}
-        babashka/fs {:mvn/version "0.5.20"}
-        babashka/process {:mvn/version "0.5.21"}}
- :paths ["src"]}
