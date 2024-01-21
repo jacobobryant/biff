@@ -1,16 +1,37 @@
-(ns com.biffweb.impl.config
+(ns com.biffweb.config
   (:require [aero.core :as aero]
-            [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.string :as str]
-            [com.biffweb.impl.util.ns :as util-ns]))
+            [clojure.string :as str]))
 
-;; Redefine here so we don't have to import com.biffweb.impl.util, which takes
-;; 3000+ ms on my machine. We want this ns to load fast since it's used by
-;; com.biffweb.build.
+;;;; Copied from com.biffweb.impl.* --------------------------------------------
+(defn- ns-parts [nspace]
+  (if (empty? (str nspace))
+    []
+    (str/split (str nspace) #"\.")))
+
+(defn- select-ns [m nspace]
+  (let [parts (ns-parts nspace)]
+    (->> (keys m)
+         (filterv (fn [k]
+                    (= parts (take (count parts) (ns-parts (namespace k))))))
+         (select-keys m))))
+
+(defn- select-ns-as [m ns-from ns-to]
+  (into {}
+        (map (fn [[k v]]
+               (let [new-ns-parts (->> (ns-parts (namespace k))
+                                       (drop (count (ns-parts ns-from)))
+                                       (concat (ns-parts ns-to)))]
+                 [(if (empty? new-ns-parts)
+                    (keyword (name k))
+                    (keyword (str/join "." new-ns-parts) (name k)))
+                  v])))
+        (select-ns m ns-from)))
+
 (defmacro catchall
   [& body]
   `(try ~@body (catch Exception ~'_ nil)))
+;;;; ---------------------------------------------------------------------------
 
 ;; Algorithm adapted from dotenv-java:
 ;; https://github.com/cdimascio/dotenv-java/blob/master/src/main/java/io/github/cdimascio/dotenv/internal/DotenvParser.java
@@ -68,15 +89,6 @@
         (println "Secrets are missing. Make sure you have a config.env file in the current "
                   "directory, or set config via environment variables.")
         (System/exit 1)))
-    (doseq [[k v] (util-ns/select-ns-as ctx 'biff.system-properties nil)]
+    (doseq [[k v] (select-ns-as ctx 'biff.system-properties nil)]
       (System/setProperty (name k) v))
     ctx))
-
-;;;; Deprecated
-
-(defn read-config [path]
-  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
-        env->config (edn/read-string (slurp path))
-        config-keys (concat (get-in env->config [env :merge]) [env])
-        config (apply merge (map env->config config-keys))]
-    config))

@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]
             [com.biffweb.impl.config :as config]
             [com.biffweb.impl.middleware :as middle]
@@ -63,7 +64,7 @@
   The default value is `prod`. To inherit config from other environments, set
   :merge to a sequence of environment keys."
   [{:keys [biff/config] :or {config "config.edn"} :as ctx}]
-  (merge ctx (config/read-config config)))
+  (merge ctx (util/read-config config)))
 
 (defn use-aero-config [ctx]
   (config/use-aero-config ctx))

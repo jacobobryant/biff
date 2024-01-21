@@ -1,7 +1,7 @@
 {:deps {io.github.clojure/tools.build {:git/sha "24f2894"
                                        :git/tag "v0.9.5"
                                        :git/url "https://github.com/clojure/tools.build.git"}
-        com.biffweb/biff               {:local/root "../.."} ; TODO change version
+        com.biffweb/config             {:local/root "../config"} ; TODO change version
         com.biffweb/task-runner        {:local/root "../task-runner"} ; TODO change version
         nrepl/nrepl                    {:mvn/version "1.0.0"}
         com.nextjournal/beholder       {:mvn/version "1.0.2"}

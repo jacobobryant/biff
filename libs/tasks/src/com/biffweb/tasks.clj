@@ -6,7 +6,7 @@
             [com.biffweb.tasks.lazy.clojure.string :as str]
             [com.biffweb.tasks.lazy.babashka.fs :as fs]
             [com.biffweb.tasks.lazy.babashka.process :as process]
-            [com.biffweb.tasks.lazy.com.biffweb.impl.config :as config]
+            [com.biffweb.tasks.lazy.com.biffweb.config :as config]
             [com.biffweb.tasks.lazy.clojure.stacktrace :as st]
             [com.biffweb.tasks.lazy.hato.client :as hato]
             [com.biffweb.tasks.lazy.nrepl.cmdline :as nrepl-cmd]
@@ -48,7 +48,13 @@
       (str/lower-case)
       (str/includes? "windows")))
 
-(defn- shell [& args]
+(defn- shell
+  "Difference between this and clojure.java.shell/sh:
+
+   - inherits std{in,out,err}
+   - throws on non-zero exit code
+   - puts *shell-env* in the environment"
+  [& args]
   (apply process/shell {:extra-env *shell-env*} args))
 
 (defn- sh-success? [& args]
