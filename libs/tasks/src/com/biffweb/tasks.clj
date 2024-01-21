@@ -6,9 +6,9 @@
             [com.biffweb.tasks.lazy.clojure.string :as str]
             [com.biffweb.tasks.lazy.babashka.fs :as fs]
             [com.biffweb.tasks.lazy.babashka.process :as process]
-            [com.biffweb.tasks.lazy.babashka.curl :as curl]
             [com.biffweb.tasks.lazy.com.biffweb.impl.config :as config]
             [com.biffweb.tasks.lazy.clojure.stacktrace :as st]
+            [com.biffweb.tasks.lazy.hato.client :as hato]
             [com.biffweb.tasks.lazy.nrepl.cmdline :as nrepl-cmd]
             [com.biffweb.tasks.lazy.nextjournal.beholder :as beholder]
             [com.biffweb.tasks.lazy.clojure.tools.build.api :as clj-build])
@@ -48,7 +48,6 @@
       (str/lower-case)
       (str/includes? "windows")))
 
-;; TODO make sure this throws on nonzero exit codes
 (defn- shell [& args]
   (apply process/shell {:extra-env *shell-env*} args))
 
@@ -195,7 +194,7 @@
              "future projects if you copy it to your path, e.g. by running:")
     (println "  sudo cp" (local-tailwind-path) "/usr/local/bin/tailwindcss")
     (println)
-    (io/copy (:body (curl/get url {:compressed false :as :stream})) dest)
+    (io/copy (:body (hato/get url {:as :stream :http-client {:redirect-policy :normal}})) dest)
     (.setExecutable dest true)))
 
 (defn css
