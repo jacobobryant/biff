@@ -4,16 +4,23 @@
             [com.example.settings :as settings]
             [com.biffweb :as biff]
             [ring.middleware.anti-forgery :as csrf]
+            [ring.util.response :as ring-response]
             [rum.core :as rum]))
 
 (defn css-path []
-  (if-some [f (io/file (io/resource "public/css/main.css"))]
-    (str "/css/main.css?t=" (.lastModified f))
+  (if-some [last-modified (some-> (io/resource "public/css/main.css")
+                                  ring-response/resource-data
+                                  :last-modified
+                                  (.getTime))]
+    (str "/css/main.css?t=" last-modified)
     "/css/main.css"))
 
 (defn js-path []
-  (if-some [f (io/file (io/resource "public/js/main.js"))]
-    (str "/js/main.js?t=" (.lastModified f))
+  (if-some [last-modified (some-> (io/resource "public/js/main.js")
+                                  ring-response/resource-data
+                                  :last-modified
+                                  (.getTime))]
+    (str "/js/main.js?t=" last-modified)
     "/js/main.js"))
 
 (defn base [{:keys [::recaptcha] :as ctx} & body]
