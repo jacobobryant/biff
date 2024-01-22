@@ -4,7 +4,6 @@
             [clojure.string :as str]
             [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]
-            [com.biffweb.impl.config :as config]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.queues :as q]
