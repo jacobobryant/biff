@@ -84,13 +84,6 @@
       (:out result)
       (throw (ex-info (:err result) result)))))
 
-(defn read-config [path]
-  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
-        env->config (edn/read-string (slurp path))
-        config-keys (concat (get-in env->config [env :merge]) [env])
-        config (apply merge (map env->config config-keys))]
-    config))
-
 (defn use-when [f & components]
   (fn [ctx]
     (if (f ctx)
@@ -223,3 +216,12 @@
 
 (defn normalize-email [email]
   (some-> email str/trim str/lower-case not-empty))
+
+;;;; Deprecated
+
+(defn read-config [path]
+  (let [env (keyword (or (System/getenv "BIFF_ENV") "prod"))
+        env->config (edn/read-string (slurp path))
+        config-keys (concat (get-in env->config [env :merge]) [env])
+        config (apply merge (map env->config config-keys))]
+    config))

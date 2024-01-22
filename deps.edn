@@ -23,6 +23,10 @@
         ring/ring-defaults             {:mvn/version "0.3.4"}
         rum/rum                        {:mvn/version "0.12.8"
                                         :exclusions [cljsjs/react cljsjs/react-dom]}
+        com.biffweb/config             {:git/url "https://github.com/jacobobryant/biff"
+                                        :git/tag "v0.7.25"
+                                        :git/sha "7e920b2"
+                                        :deps/root "libs/config"}
         ;; deprecated
         hawk/hawk                      {:mvn/version "0.2.11"}}
  :aliases {:dev {:extra-paths ["test"]

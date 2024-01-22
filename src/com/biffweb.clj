@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
@@ -46,7 +47,9 @@
   (util/refresh @system))
 
 (defn use-config
-  "Reads config from an edn file and merges into ctx.
+  "Deprecated. Prefer use-aero-config.
+
+  Reads config from an edn file and merges into ctx.
 
   The config file's contents should be a map from environments to config keys
   and values, for example:
@@ -61,6 +64,52 @@
   :merge to a sequence of environment keys."
   [{:keys [biff/config] :or {config "config.edn"} :as ctx}]
   (merge ctx (util/read-config config)))
+
+(defn use-aero-config
+  "Reads config from various places and merges it into ctx.
+
+   Loads a config.edn file from resources and parses it with Aero. (See
+   https://github.com/juxt/aero). Two additional reader tags are supported:
+   #biff/env and #biff/secret.
+
+   #biff/env is like #env, but environment variables can also be specified in an
+   optional config.env file (read from the filesystem, not from resources) and
+   in the system properties (variable names should be prefixed with biff.env,
+   e.g biff.env.BIFF_PROFILE). If values are defined in multiple places,
+   precedence is as follows:
+
+     1. System properties
+     2. Actual environment variables
+     3. config.env
+
+   The :profile value for Aero is also taken from these sources, in the
+   BIFF_PROFILE key (e.g. `BIFF_PROFILE=prod` -- the value is converted to a
+   keyword). It can also be passed in with `ctx` via the :biff.config/profile
+   key, but this is only intended as a convenience for inspecting your config
+   from the REPL.
+
+   #biff/secret is like #biff/env, but wraps values in a function so that they
+   aren't visible if you serialize the system map. The :biff/secret key on the
+   system map will be set to a function that can be used to retrieve secret
+   values, for example:
+
+     (let [{:keys [biff/secret]} ctx
+           jwt-secret (secret :biff/jwt-secret)]
+       ...)
+
+   After config is merged into ctx, any keys in ctx with the
+   biff.system-properties namespace will be added to the system properties. For
+   example:
+
+     :biff.system-properties/user.timezone \"UTC\"
+     ;; Equivalent to:
+     (System/setProperty \"user.timezone\" \"UTC\"
+
+   Finally, if :biff.middleware/cookie-secret or :biff/jwt-secret aren't set, an
+   error will be printed and the process will exit. This can be disabled by
+   setting `:biff.config/skip-validation true`."
+  [{:keys [biff.config/skip-validation] :as ctx}]
+  (config/use-aero-config ctx))
 
 (defn sh
   "Runs a shell command.
