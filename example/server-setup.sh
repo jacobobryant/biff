@@ -2,7 +2,7 @@
 set -x
 set -e
 
-BIFF_ENV=${1:-prod}
+BIFF_PROFILE=${1:-prod}
 CLJ_VERSION=1.11.1.1165
 TRENCH_VERSION=0.4.0
 TRENCH_FILE=trenchman_${TRENCH_VERSION}_linux_amd64.tar.gz
@@ -30,7 +30,7 @@ mkdir -m 700 -p /home/app/.ssh
 cp /root/.ssh/authorized_keys /home/app/.ssh
 chown -R app:app /home/app/.ssh
 
-# Git deploys
+# Git deploys - only used if you don't have rsync on your machine
 set_up_app () {
   cd
   mkdir repo.git
@@ -55,7 +55,7 @@ StartLimitBurst=5
 User=app
 Restart=on-failure
 RestartSec=5s
-Environment="BIFF_ENV=$BIFF_ENV"
+Environment="BIFF_PROFILE=$BIFF_PROFILE"
 WorkingDirectory=/home/app
 ExecStart=/bin/sh -c "mkdir -p target/resources; clj -M:prod"
 

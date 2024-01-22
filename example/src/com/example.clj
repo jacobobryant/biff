@@ -47,8 +47,7 @@
 (def malli-opts
   {:registry (malr/composite-registry
               malc/default-registry
-              (apply biff/safe-merge
-                     (keep :schema plugins)))})
+              (apply biff/safe-merge (keep :schema plugins)))})
 
 (def initial-system
   {:biff/plugins #'plugins

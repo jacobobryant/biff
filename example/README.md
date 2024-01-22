@@ -1,5 +1,7 @@
 # Biff example project
 
-This is the example/template project for Biff.
+This is the example project for Biff.
 
-Run `bb dev` to get started. See `bb tasks` for other commands.
+Run `clj -Mdev dev` to get started. See `clj -Mdev --help` for other commands.
+
+Consider adding `alias biff='clj -Mdev'` to your `.bashrc`.
