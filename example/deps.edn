@@ -12,7 +12,7 @@
         org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}}
  :aliases
  {:dev {:extra-deps {com.biffweb/tasks {:local/root "../libs/tasks"}}
-        :extra-paths ["dev"]
+        :extra-paths ["dev" "test"]
         :jvm-opts ["-XX:-OmitStackTraceInFastThrow"
                    "-XX:+CrashOnOutOfMemoryError"
                    "-Dbiff.env.BIFF_PROFILE=dev"]

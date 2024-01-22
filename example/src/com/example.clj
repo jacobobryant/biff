@@ -41,7 +41,8 @@
   (biff/add-libs)
   (biff/eval-files! ctx)
   (generate-assets! ctx)
-  (test/run-all-tests #"com.example.test.*"))
+  (biff/catchall (require 'com.example-test))
+  (test/run-all-tests #"com.example.*-test"))
 
 (def malli-opts
   {:registry (malr/composite-registry

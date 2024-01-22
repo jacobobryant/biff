@@ -1,4 +1,4 @@
-(ns com.example.repl
+(ns repl
   (:require [com.example :as main]
             [com.biffweb :as biff :refer [q]]
             [clojure.edn :as edn]
@@ -11,12 +11,12 @@
 ;; cases, that's all you'll need to do for your changes to take effect. (See main/refresh
 ;; below for more details.)
 ;;
-;; The `bb dev` command also starts an nREPL server on port 7888, so if you're already
-;; familiar with REPL-driven development, you can connect to that with your editor.
+;; The `clj -Mdev dev` command also starts an nREPL server on port 7888, so if you're
+;; already familiar with REPL-driven development, you can connect to that with your editor.
 ;;
 ;; If you're used to jacking in with your editor first and then starting your app via the
-;; REPL, you will need to instead connect your editor to the nREPL server that `bb dev`
-;; starts. e.g. if you use emacs, instead of running `cider-jack-in`, you would run
+;; REPL, you will need to instead connect your editor to the nREPL server that `clj -Mdev
+;; dev` starts. e.g. if you use emacs, instead of running `cider-jack-in`, you would run
 ;; `cider-connect`. See "Connecting to a Running nREPL Server:"
 ;; https://docs.cider.mx/cider/basics/up_and_running.html#connect-to-a-running-nrepl-server
 ;; ----------------------------------------------------------------------------------------
@@ -55,8 +55,7 @@
 
 (comment
   ;; Call this function if you make a change to main/initial-system,
-  ;; main/components, :tasks, :queues, config.edn, or deps.edn. If you update
-  ;; secrets.env, you'll need to restart the app.
+  ;; main/components, :tasks, :queues, config.env, or deps.edn.
   (main/refresh)
 
   ;; Call this in dev if you'd like to add some seed data to your database. If
