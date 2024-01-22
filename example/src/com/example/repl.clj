@@ -33,6 +33,26 @@
         slurp
         edn/read-string)))
 
+(defn check-config []
+  (let [prod-config (biff/use-aero-config {:biff.config/profile "prod"})
+        dev-config  (biff/use-aero-config {:biff.config/profile "dev"})
+        ;; Add keys for any other secrets you've added to resources/config.edn
+        secret-keys [:biff.middleware/cookie-secret
+                     :biff/jwt-secret
+                     :postmark/api-key
+                     :recaptcha/secret-key
+                     ; ...
+                     ]
+        get-secrets (fn [{:keys [biff/secret] :as config}]
+                      (into {}
+                            (map (fn [k]
+                                   [k (secret k)]))
+                            secret-keys))]
+    {:prod-config prod-config
+     :dev-config dev-config
+     :prod-secrets (get-secrets prod-config)
+     :dev-secrets (get-secrets dev-config)}))
+
 (comment
   ;; Call this function if you make a change to main/initial-system,
   ;; main/components, :tasks, :queues, config.edn, or deps.edn. If you update
