@@ -78,11 +78,12 @@
     (reset! system new-system)
     (generate-assets! new-system)
     (log/info "System started.")
-    (log/info "Go to" (:biff/base-url new-system))))
+    (log/info "Go to" (:biff/base-url new-system))
+    new-system))
 
-(defn -main [& args]
-  (start)
-  (apply nrepl-cmd/-main args))
+(defn -main []
+  (let [{:keys [biff.nrepl/args]} (start)]
+    (apply nrepl-cmd/-main args)))
 
 (defn refresh []
   (doseq [f (:biff/stop @system)]

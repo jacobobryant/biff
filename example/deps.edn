@@ -9,4 +9,15 @@
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}
         org.slf4j/jul-to-slf4j     {:mvn/version "1.7.36"}
-        org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}}}
+        org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}}
+ :aliases
+ {:dev {:extra-deps {com.biffweb/tasks {:local/root "../libs/tasks"}}
+        :extra-paths ["dev"]
+        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+                   "-XX:+CrashOnOutOfMemoryError"
+                   "-Dbiff.env.BIFF_PROFILE=dev"]
+        :main-opts ["-m" "com.biffweb.task-runner" "tasks/tasks"]}
+  :prod {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+                    "-XX:+CrashOnOutOfMemoryError"
+                    "-Dbiff.env.BIFF_PROFILE=prod"]
+         :main-opts ["-m" "com.example"]}}}

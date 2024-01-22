@@ -57,7 +57,7 @@ Restart=on-failure
 RestartSec=5s
 Environment="BIFF_ENV=$BIFF_ENV"
 WorkingDirectory=/home/app
-ExecStart=/bin/sh -c '\$\$(bb run-cmd)'
+ExecStart=/bin/sh -c "mkdir -p target/resources; clj -M:prod"
 
 [Install]
 WantedBy=multi-user.target
