@@ -68,8 +68,11 @@
                :dir dir
                :kv-store kv-store
                :opts opts
-               :jdbc-spec (cond-> (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
-                            secret (assoc :password (secret :biff.xtdb.jdbc/password)))
+               :jdbc-spec (into (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
+                                (keep (fn [k]
+                                        (when-let [value (and secret (secret (keyword "biff.xtdb.jdbc" (name k))))]
+                                          [k value])))
+                                [:password :jdbcUrl])
                :pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
                :tx-fns tx-fns})]
     (-> ctx
