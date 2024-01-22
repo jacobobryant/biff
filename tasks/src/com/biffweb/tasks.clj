@@ -212,6 +212,8 @@
                             "npm install")
                           (when (fs/exists? "secrets.env")
                             ". ./secrets.env")
+                          (when (fs/exists? "config.env")
+                            ". ./config.env")
                           (->> (run-args)
                                (map shell-escape)
                                (str/join " ")
@@ -246,18 +248,19 @@
    (parse-env-var "   ")])
 
 (defn secrets []
-  (cond
-    (not (fs/exists? "secrets.env"))
-    nil
+  (let [config-file (first (filter fs/exists? ["config.env" "secrets.env"]))]
+    (cond
+      (nil? config-file)
+      nil
 
-    (not (windows?))
-    (get-env-from ". ./secrets.env")
+      (not (windows?))
+      (get-env-from (str ". ./" config-file))
 
-    :else
-    (->> (slurp "secrets.env")
-         str/split-lines
-         (keep parse-env-var)
-         (into {}))))
+      :else
+      (->> (slurp config-file)
+           str/split-lines
+           (keep parse-env-var)
+           (into {})))))
 
 (defn dev
   "Starts the app locally.
@@ -314,12 +317,16 @@
                    distinct
                    (concat ["config.edn"
                             "secrets.env"
+                            "config.env"
                             css-output])
                    (filter fs/exists?))]
     (when-not (windows?)
       (fs/set-posix-file-permissions "config.edn" "rw-------")
       (when (fs/exists? "secrets.env")
-        (fs/set-posix-file-permissions "secrets.env" "rw-------")))
+        (fs/set-posix-file-permissions "secrets.env" "rw-------"))
+      (when (fs/exists? "config.env")
+        (fs/set-posix-file-permissions "config.env" "rw-------"))
+      )
     (->> (concat ["rsync" "--archive" "--verbose" "--relative" "--include='**.gitignore'"
                   "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
                  files
@@ -330,6 +337,7 @@
   (let [{:biff.tasks/keys [server deploy-to deploy-from deploy-cmd]} @config]
     (apply shell (concat ["scp" "config.edn"]
                          (when (fs/exists? "secrets.env") ["secrets.env"])
+                         (when (fs/exists? "config.env") ["config.env"])
                          [(str "app@" server ":")]))
     (when (fs/exists? css-output)
       (shell "ssh" (str "app@" server) "mkdir" "-p" "target/resources/public/css/")
@@ -362,7 +370,7 @@
 (defn deploy
   "Pushes code to the server and restarts the app.
 
-  Uploads config (config.edn and secrets.env) and code to the server, using
+  Uploads config (config.edn, secrets.env and/or config.env) and code to the server, using
   `rsync` if it's available, and `git push` by default otherwise. Then restarts
   the app.
 
