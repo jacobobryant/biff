@@ -2,42 +2,25 @@
 
 ## v1.0.0 (2023-01-27)
 
-This release changes the way Biff handles config and tasks by default. Config is now parsed by
-[Aero](https://github.com/juxt/aero), which makes it easier to decide which values you'd like to be
-defined in environment variables and which ones should be hardcoded in `config.edn` (now located
-under the `resources` directory). `config.edn` is also checked into source by default now, and
-there's a new `config.env` file—similar to the old `secrets.env` file, but not just for secrets.
+Changes:
 
-These changes make it easier to deploy Biff in a variety of ways, since any config that you need to
-set at runtime can be set with standard environment variables instead of with a Clojure-specific
-`config.edn` file. It's also easier to work with open-source apps now, since the amount of
-config/structure outside of source control is minimized.
+- Use Aero to parse config.
+- Switch from bb tasks to plain clj-based tasks.
+- When using `:db.op/upsert` on a document that doesn't yet exist, use the provided `:xt/id` value
+  if there is one instead of always using `(random-uuid)` as the value.
+- Make `use-xtdb` get the value of `:biff.xtdb.jdbc/jdbcUrl` from the `:biff/secret` function if
+  it's defined as a secret.
+- Documentation fixes/improvements.
+- Make `server-setup.sh` delete Trenchman artifacts after installing.
+- Add libs to forward Java logs to slf4j.
 
-Tasks like `bb dev` and `bb deploy` are now implemented with plain Clojure instead of Babashka.
-Tasks are invoked with `clj -Mdev <task name>`, e.g. `clj -Mdev deploy`. This means tasks have a bit
-more startup time (1 - 2 seconds), but new Biff users are no longer required to install Babashka.
-This also makes some tasks easier to write since we have access to more libraries, not just those
-that are bb-compatible.
-
-(Biff also defines a [general-purpose task
-runner](https://github.com/jacobobryant/biff/commit/fcb4ff343e442a42f47a968f4518a674b9a74a3b) that
-could in theory be used in other projects—my attempt at making clj-based tasks fairly ergonomic,
-fast-ish, and reusable. Until Babashka starts getting bundled with `clj`, I think this is an area
-worth exploring.)
-
-There is a new `clj -Mdev uberjar` task which packages your app into an Uberjar. New projects also
-include a `Dockerfile`. Like the config changes, this makes it easier to deploy Biff apps in a
-variety of ways besides just the default approach of using DigitalOcean droplets.
-
-Both of these changes are optional: you can upgrade your Biff dependency but continue to use the old
-config format and bb tasks if you like. You can also upgrade to the new config format without
-switching from bb tasks to clj tasks. However, if you do switch to clj tasks, you must upgrade your
-config since the new clj tasks only recognize the new config format.
+Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.com/carlos) and
+[@olavfosse](https://github.com/olavfosse) for contributions.
 
 ### Upgrade instructions
 
- - Update your Biff dependencies (in `deps.edn`, `bb/deps.edn` and/or `tasks/deps.edn`) to
-   `:git/tag "v1.0.0", :git/sha "ec1dfd2"`
+- Update your Biff dependencies (in `deps.edn`, `bb/deps.edn` and/or `tasks/deps.edn`) to
+  `:git/tag "v1.0.0", :git/sha "68ade36"`
 
 #### Optional: upgrade config to use Aero
 
@@ -81,7 +64,7 @@ to your project:
 1. Add the [`:dev` and `:prod`
    aliases](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-6e20ca141152dfb6f7f46348d9cfa96099e11c646de6c53afb382bb5d2df53e6)
    to your `deps.edn` file. Replace `:local/root "../libs/tasks"` with `:git/url
-   "https://github.com/jacobobryant/biff, :git/tag "v1.0.0", :git/sha "ec1dfd2", :deps/root
+   "https://github.com/jacobobryant/biff, :git/tag "v1.0.0", :git/sha "68ade36", :deps/root
    "libs/tasks"`.
 2. Add the [`dev/tasks.clj`
    file](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-7938fae2e6818a0970d52c71ac7b16b4dd0b47b337238dd4d3dfbf63769c5efe)
@@ -129,19 +112,6 @@ Additionally, you can move your `repl.clj` file into the new `dev` directory and
 file into a new `test` directory. You'll also need to edit `deps.edn` and your `on-save`
 function—see [this
 commit](https://github.com/jacobobryant/biff/commit/6bad33c60f07e949ef59c2a571baa53c668f6be4).
-
-### Additional changes
-
-- When using `:db.op/upsert` on a document that doesn't yet exist, use the provided `:xt/id` value
-  if there is one instead of always using `(random-uuid)` as the value.
-- Make `use-xtdb` get the value of `:biff.xtdb.jdbc/jdbcUrl` from the `:biff/secret` function if
-  it's defined as a secret.
-- Documentation fixes/improvements.
-- Make `server-setup.sh` delete Trenchman artifacts after installing.
-- Add libs to forward Java logs to slf4j.
-
-Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.com/carlos) and
-[@olavfosse](https://github.com/olavfosse) for contributions.
 
 ## v0.7.15 (2023-09-20)
 
