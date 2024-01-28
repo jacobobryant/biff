@@ -1,14 +1,12 @@
 # Changelog
 
-## v1.0.0
-
-2023-01-27
+## v1.0.0 (2023-01-27)
 
 This release changes the way Biff handles config and tasks by default. Config is now parsed by
 [Aero](https://github.com/juxt/aero), which makes it easier to decide which values you'd like to be
 defined in environment variables and which ones should be hardcoded in `config.edn` (now located
 under the `resources` directory). `config.edn` is also checked into source by default now, and
-there's a new `config.env` file--similar to the old `secrets.env` file, but not just for secrets.
+there's a new `config.env` file—similar to the old `secrets.env` file, but not just for secrets.
 
 These changes make it easier to deploy Biff in a variety of ways, since any config that you need to
 set at runtime can be set with standard environment variables instead of with a Clojure-specific
@@ -21,9 +19,11 @@ more startup time (1 - 2 seconds), but new Biff users are no longer required to 
 This also makes some tasks easier to write since we have access to more libraries, not just those
 that are bb-compatible.
 
-(Biff also defines a [general-purpose task runner](...) that could in theory be used in other
-projects--my attempt at making clj-based tasks fairly ergonomic, fast-ish, and reusable. Until
-Babashka starts getting bundled with `clj`, I think this is an area worth exploring.)
+(Biff also defines a [general-purpose task
+runner](https://github.com/jacobobryant/biff/commit/fcb4ff343e442a42f47a968f4518a674b9a74a3b) that
+could in theory be used in other projects—my attempt at making clj-based tasks fairly ergonomic,
+fast-ish, and reusable. Until Babashka starts getting bundled with `clj`, I think this is an area
+worth exploring.)
 
 There is a new `clj -Mdev uberjar` task which packages your app into an Uberjar. New projects also
 include a `Dockerfile`. Like the config changes, this makes it easier to deploy Biff apps in a
@@ -37,7 +37,7 @@ config since the new clj tasks only recognize the new config format.
 ### Upgrade instructions
 
  - Update your Biff dependencies (in `deps.edn`, `bb/deps.edn` and/or `tasks/deps.edn`) to
-   `:git/tag "v1.0.0", :git/sha "69cf31a"`
+   `:git/tag "v1.0.0", :git/sha "ec1dfd2"`
 
 #### Optional: upgrade config to use Aero
 
@@ -62,10 +62,13 @@ your project:
 5. Test your config. Add the [`check-config`
    function](https://github.com/jacobobryant/biff/commit/40510a006f8c436effdef4f9956e02856525bfbf#diff-43bcb43dea16d7f18c742b44d2ec057d3c97bd4a3717c89558aa714d7b9bc4b1)
    to your `repl.clj` file. Then run `bb dev` and evaluate `(check-config)` from your editor. (You
-   can also do `(biff/pprint (check-config))` if needed.) Make sure everything looks correct..
+   can also do `(biff/pprint (check-config))` if needed.) Make sure everything looks correct.
 6. [Edit your main
    namespace](https://github.com/jacobobryant/biff/commit/40510a006f8c436effdef4f9956e02856525bfbf#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82)
    and replace `biff/use-config` and `biff/use-secrets` with `biff/use-aero-config`.
+
+NOTE: this will make your application use the new Aero config, however, bb tasks will still read
+from the old `config.edn` file. To completely upgrade, you'll need to switch to clj tasks.
 
 #### Optional: switch from bb tasks to clj tasks
 
@@ -78,7 +81,7 @@ to your project:
 1. Add the [`:dev` and `:prod`
    aliases](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-6e20ca141152dfb6f7f46348d9cfa96099e11c646de6c53afb382bb5d2df53e6)
    to your `deps.edn` file. Replace `:local/root "../libs/tasks"` with `:git/url
-   "https://github.com/jacobobryant/biff, :git/tag "v1.0.0", :git/sha "69cf31a", :deps/root
+   "https://github.com/jacobobryant/biff, :git/tag "v1.0.0", :git/sha "ec1dfd2", :deps/root
    "libs/tasks"`.
 2. Add the [`dev/tasks.clj`
    file](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-7938fae2e6818a0970d52c71ac7b16b4dd0b47b337238dd4d3dfbf63769c5efe)
@@ -98,8 +101,8 @@ deploy`.
 #### Optional: make your app work with Docker/Uberjars
 
 After you upgrade to clj tasks, you can run `clj -Mdev uberjar` to generate an Uberjar for your app.
-You can also add [`this
-Dockerfile`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-864db13d8bc4f4de07dbc9d7d376481b8ab5bda07c176d78738836cb5cf86ab0)
+You can also add [this
+`Dockerfile`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-864db13d8bc4f4de07dbc9d7d376481b8ab5bda07c176d78738836cb5cf86ab0)
 to your app. The recommended way for most people to deploy Biff is still the old way (setting up a
 DigitalOcean droplet with `server-setup.sh` and deploying with `clj -Mdev deploy`). But for those
 who know they want to deploy another way, `clj -Mdev uberjar` and the `Dockerfile` are provided as a
@@ -124,7 +127,7 @@ longer need. Feel free to delete them:
 
 Additionally, you can move your `repl.clj` file into the new `dev` directory and your `test.clj`
 file into a new `test` directory. You'll also need to edit `deps.edn` and your `on-save`
-function--see [this
+function—see [this
 commit](https://github.com/jacobobryant/biff/commit/6bad33c60f07e949ef59c2a571baa53c668f6be4).
 
 ### Additional changes
@@ -140,9 +143,7 @@ commit](https://github.com/jacobobryant/biff/commit/6bad33c60f07e949ef59c2a571ba
 Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.com/carlos) and
 [@olavfosse](https://github.com/olavfosse) for contributions.
 
-## v0.7.15
-
-2023-09-20
+## v0.7.15 (2023-09-20)
 
 ### Upgrade instructions
 
@@ -172,11 +173,9 @@ Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.
 - Fix a bug in the authentication plugin where the 6-digit code flow didn't correctly update new
   users' sessions. #167 (Thanks @Invertisment)
 
-## 0.7.11
+## 0.7.11 (2023-09-09)
 
-2023-09-09
-
-### Update 16 Sep 2023:
+### Update 2023-09-16:
 
 There were a few regressions in this release. I've updated the upgrade instructions below to have
 you upgrade to a commit with the fixes. I'll write up separate release notes for that soon.
