@@ -266,15 +266,22 @@
    - Regenerate static HTML and CSS files
    - Run tests"
   []
-  (let [{:keys [biff.tasks/main-ns biff.nrepl/port] :as ctx} @config]
-    (when-not (fs/exists? "config.env")
-      (run-task "generate-config"))
-    (io/make-parents "target/resources/_")
-    (when (fs/exists? "package.json")
-      (shell "npm install"))
-    (future (run-task "css" "--watch"))
-    (spit ".nrepl-port" port)
-    ((requiring-resolve (symbol (str main-ns) "-main")))))
+  (if-not (fs/exists? "target/resources")
+    ;; This is an awful hack. We have to run the app in a new process, otherwise
+    ;; target/resources won't be included in the classpath. Downside of not
+    ;; using bb tasks anymore -- no longer have a lightweight parent process
+    ;; that can create the directory before starting the JVM.
+    (do
+      (io/make-parents "target/resources/_")
+      (shell "clj" "-Mdev" "dev"))
+    (let [{:keys [biff.tasks/main-ns biff.nrepl/port] :as ctx} @config]
+      (when-not (fs/exists? "config.env")
+        (run-task "generate-config"))
+      (when (fs/exists? "package.json")
+        (shell "npm install"))
+      (future (run-task "css" "--watch"))
+      (spit ".nrepl-port" port)
+      ((requiring-resolve (symbol (str main-ns) "-main"))))))
 
 (defn uberjar
   "Compiles the app into an Uberjar."
