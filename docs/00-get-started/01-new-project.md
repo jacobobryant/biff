@@ -5,12 +5,12 @@ title: Create a project
 Requirements:
 
  - Java 11 or higher
- - [Babashka](https://github.com/babashka/babashka#installation)
+ - [Clojure](https://clojure.org/guides/install_clojure)
 
 Run this command to create a new Biff project:
 
 ```bash
-bb -e '(load-string (slurp "https://biffweb.com/new-project.clj"))'
+clj -M -e '(load-string (slurp "https://biffweb.com/new.clj"))'
 ```
 
 This will create a minimal CRUD app which demonstrates most of Biff's features.
@@ -21,5 +21,5 @@ Biff will:
  - Regenerate static HTML and CSS files
  - Run tests
 
-Open the `src/your/app/repl.clj` file for notes about REPL-driven development.
+Open the `dev/repl.clj` file for notes about REPL-driven development.
 When you're ready to deploy, see [Production](/docs/reference/production/).
