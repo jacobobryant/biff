@@ -142,7 +142,7 @@
    :headers {"content-type" "application/json"}
    :body params})
 
-(def plugin
+(def module
   {:static {"/about/" about-page}
    :routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]

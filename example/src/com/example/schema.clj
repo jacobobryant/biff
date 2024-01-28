@@ -16,5 +16,5 @@
          [:msg/text    :string]
          [:msg/sent-at inst?]]})
 
-(def plugin
+(def module
   {:schema schema})

@@ -163,7 +163,7 @@
             {:type "submit"})
      "Send another code"])))
 
-(def plugin
+(def module
   {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
              ["/"                  {:get home-page}]]
             ["/link-sent"          {:get link-sent}]
