@@ -89,14 +89,15 @@
 
 (defn use-tx-listener [{:keys [biff/features
                                biff/plugins
+                               biff/modules
                                biff.xtdb/on-tx
                                biff.xtdb/node]
                         :as ctx}]
-  (if-not (or on-tx plugins features)
+  (if-not (or on-tx modules plugins features)
     ctx
     (let [on-tx (or on-tx
                     (fn [ctx tx]
-                      (doseq [{:keys [on-tx]} @(or plugins features)
+                      (doseq [{:keys [on-tx]} @(or modules plugins features)
                               :when on-tx]
                         (util/catchall-verbose
                          (on-tx ctx tx)))))

@@ -568,21 +568,22 @@
   (bxt/use-xt ctx))
 
 (defn use-tx-listener
-  "If on-tx or plugins is provided, starts an XTDB transaction listener.
+  "If on-tx or modules is provided, starts an XTDB transaction listener.
 
-  plugins:  A var containing a collection of plugin maps. Each plugin map may
+  modules:  A var containing a collection of module maps. Each module map may
             contain an :on-tx key.
-  features: Deprecated. Alias for plugins. plugins takes precedence.
-  on-tx:    Deprecated. Use plugins instead. If set, takes precedence over
-            plugins.
+  plugins:  Deprecated. Alias for modules. modules takes precedence.
+  features: Deprecated. Alias for modules. modules and plugins take precedence.
+  on-tx:    Deprecated. Use modules instead. If set, takes precedence over
+            modules.
 
-  Calls each on-tx function in plugins whenever a new transaction is
+  Calls each on-tx function in modules whenever a new transaction is
   successfully indexed. on-tx receives the system map and the transaction, i.e.
   (on-tx ctx tx). tx is the transaction as returned by (xtdb.api/open-tx-log
   node tx-id true). on-tx will not be called concurrently: if a second
   transaction is indexed while on-tx is still running, use-tx-listener will
   wait until it finishes before passing the second transaction."
-  [{:keys [biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as ctx}]
+  [{:keys [biff/modules biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as ctx}]
   (bxt/use-tx-listener ctx))
 
 (defn assoc-db
@@ -923,17 +924,18 @@
 (defn use-chime
   "A Biff component for running scheduled tasks with Chime (https://github.com/jarohen/chime)
 
-  plugins:  A var containing a collection of plugin maps. Each plugin map may
+  modules:  A var containing a collection of module maps. Each module map may
             contain a :tasks key, which contains a collection of task maps.
-  features: Deprecated. Alias for plugins. plugins takes precedence.
-  tasks:    Deprecated. Use plugins instead. If set, takes precedence over
-            plugins
+  plugins:  Deprecated. Alias for modules. modules takes precedence.
+  features: Deprecated. Alias for plugins. modules and plugins take precedence.
+  tasks:    Deprecated. Use modules instead. If set, takes precedence over
+            modules.
 
   For example:
-  (def plugin
+  (def module
     {:tasks [{:task (fn [ctx] (println \"hello there\"))
               :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]})"
-  [{:keys [biff/plugins biff/features biff.chime/tasks] :as ctx}]
+  [{:keys [biff/modules biff/plugins biff/features biff.chime/tasks] :as ctx}]
   (misc/use-chime ctx))
 
 (defn mailersend
@@ -1052,10 +1054,12 @@
 (defn use-queues
   "A Biff component that creates in-memory queues and thread pools to consume them.
 
-  plugins       A var containing a collection of plugin maps. Each plugin map
+  modules:      A var containing a collection of module maps. Each module map
                 may contain a :queues key, which contains a collection of queue
                 config maps. See below. Required.
-  features:     Deprecated. Alias for plugins. plugins takes precedence.
+  plugins:      Deprecated. Alias for modules. modules takes precedence.
+  features:     Deprecated. Alias for modules. modules and plugins take
+                precedence.
   enabled-ids:  An optional set of queue IDs. If non-nil, only queues in the
                 set will be created.
   stop-timeout: When shutting down, the number of milliseconds to wait before
@@ -1087,7 +1091,7 @@
     (when-some [callback (:biff/callback job)]
       (callback job)))
 
-  (def plugin
+  (def module
     {:queues [{:id :echo
                :consumer #'echo-consumer}]})
 
@@ -1100,7 +1104,8 @@
   =>
   (out) :echo {:foo \"bar\", :biff/callback #function[...]}
   {:foo \"bar\", :biff/callback #function[...]}"
-  [{:keys [biff/plugins
+  [{:keys [biff/modules
+           biff/plugins
            biff/features
            biff.queues/enabled-ids
            biff.queues/stop-timeout]
@@ -1130,11 +1135,11 @@
 
 ;;;; Authentication
 
-(defn authentication-plugin
-  "A Biff plugin that includes backend routes for passwordless authentication.
+(defn authentication-module
+  "A Biff module that includes backend routes for passwordless authentication.
 
-  Returns a plugin map that can be included with the rest of your app's
-  plugins.
+  Returns a module map that can be included with the rest of your app's
+  modules.
 
   There are routes for sending signin links and six-digit signin codes. Either
   method may be used for signing in or signing up. If a new user tries to sign
@@ -1364,7 +1369,11 @@
 
   Removes the :uid from the user's session. Redirects to /."
   [options]
-  (auth/plugin options))
+  (auth/module options))
+
+(def authentication-plugin
+  "Deprecated. Alias for authentication-module."
+  authentication-module)
 
 (def recaptcha-disclosure
   "A [:div ...] element that contains a disclosure statement, which should be

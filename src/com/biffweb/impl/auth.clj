@@ -258,7 +258,7 @@
   (fn [ctx]
     (handler (merge options ctx))))
 
-(defn plugin [options]
+(defn module [options]
   {:schema {:biff.auth.code/id :uuid
             :biff.auth/code [:map {:closed true}
                              [:xt/id :biff.auth.code/id]
@@ -273,6 +273,11 @@
              ["/send-code"          {:post send-code-handler}]
              ["/verify-code"        {:post verify-code-handler}]
              ["/signout"            {:post signout}]]]})
+
+
+;; No one should be depending on this var since this namespace isn't part of the
+;; public API, but it doesn't hurt to add an alias anyway...
+(def plugin module)
 
 ;;; FRONTEND HELPERS -----------------------------------------------------------
 

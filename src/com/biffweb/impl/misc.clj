@@ -119,7 +119,7 @@
       nil)))
 
 (defn use-chime
-  [{:keys [biff/features biff/plugins biff.chime/tasks] :as ctx}]
+  [{:keys [biff/features biff/plugins biff/modules biff.chime/tasks] :as ctx}]
   (reduce (fn [ctx {:keys [schedule task error-handler]}]
             (let [f (fn [_] (task (bxt/merge-context ctx)))
                   opts (when error-handler {:error-handler error-handler})
@@ -127,7 +127,7 @@
               (update ctx :biff/stop conj #(.close scheduler))))
           ctx
           (or tasks
-              (some->> (or plugins features) deref (mapcat :tasks)))))
+              (some->> (or modules plugins features) deref (mapcat :tasks)))))
 
 (defn generate-secret [length]
   (let [buffer (byte-array length)]
