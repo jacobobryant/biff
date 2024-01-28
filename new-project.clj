@@ -84,6 +84,7 @@
                  (str/replace "{:local/root \"../libs/tasks\"}"
                               (pr-str (assoc coordinates :deps/root "libs/tasks"))))))
      (rmrf tmp)
+     (io/make-parents dir "target/resources/_")
      (println)
      (println "Your project is ready. Run the following commands to get started:")
      (println)
