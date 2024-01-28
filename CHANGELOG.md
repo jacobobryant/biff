@@ -113,6 +113,12 @@ file into a new `test` directory. You'll also need to edit `deps.edn` and your `
 function—see [this
 commit](https://github.com/jacobobryant/biff/commit/6bad33c60f07e949ef59c2a571baa53c668f6be4).
 
+#### Optional: rename "plugins" to "modules"
+
+This is a purely cosmetic change, but if you'd like to stay in line with new projects,
+the change is [a simple
+find-and-replace](https://github.com/jacobobryant/biff/commit/68ade369e7d5689bed63d7bae317fd47b73835f6).
+
 ## v0.7.15 (2023-09-20)
 
 ### Upgrade instructions
