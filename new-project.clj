@@ -40,6 +40,12 @@
     (apply println message)
     (System/exit 1)))
 
+(defn shell-expand [s]
+  (try
+    (sh "bash" "-c" (str "echo -n " s))
+    (catch Exception e
+      s)))
+
 (defn -main
   ([] (-main "release"))
   ([branch]
@@ -60,8 +66,7 @@
                        {:git/url repo-url
                         :git/sha commit})
          dir (->> (prompt "Enter name for project directory: ")
-                  (str "echo -n ")
-                  (sh "bash" "-c")
+                  shell-expand
                   (io/file))
          main-ns (prompt "Enter main namespace (e.g. com.example): ")
          tmp (io/file dir "tmp")
