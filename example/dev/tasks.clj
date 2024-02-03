@@ -6,7 +6,7 @@
   []
   (println "Hello"))
 
-;; Tasks should be vars (#'hello instead of hello) so that `clj -Mdev help` can
+;; Tasks should be vars (#'hello instead of hello) so that `clj -M:dev help` can
 ;; print their docstrings.
 (def custom-tasks
   {"hello" #'hello})

@@ -20,7 +20,7 @@ COPY dev ./dev
 COPY resources ./resources
 COPY deps.edn .
 
-RUN clj -Mdev uberjar && cp target/jar/app.jar . && rm -r target
+RUN clj -M:dev uberjar && cp target/jar/app.jar . && rm -r target
 RUN rm -r /usr/local/bin/tailwindcss src dev resources deps.edn
 
 EXPOSE 8080

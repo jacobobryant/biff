@@ -97,10 +97,10 @@
      (println "  git init")
      (println "  git add .")
      (println "  git commit -m \"First commit\"")
-     (println "  clj -Mdev dev")
+     (println "  clj -M:dev dev")
      (println)
-     (println "Run `clj -Mdev --help` for a list of available commands.")
-     (println "(Consider adding `alias biff='clj -Mdev'` to your .bashrc)")
+     (println "Run `clj -M:dev --help` for a list of available commands.")
+     (println "(Consider adding `alias biff='clj -M:dev'` to your .bashrc)")
      (println)
      (System/exit 0))))
 

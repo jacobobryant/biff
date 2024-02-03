@@ -11,11 +11,11 @@
 ;; cases, that's all you'll need to do for your changes to take effect. (See main/refresh
 ;; below for more details.)
 ;;
-;; The `clj -Mdev dev` command also starts an nREPL server on port 7888, so if you're
+;; The `clj -M:dev dev` command also starts an nREPL server on port 7888, so if you're
 ;; already familiar with REPL-driven development, you can connect to that with your editor.
 ;;
 ;; If you're used to jacking in with your editor first and then starting your app via the
-;; REPL, you will need to instead connect your editor to the nREPL server that `clj -Mdev
+;; REPL, you will need to instead connect your editor to the nREPL server that `clj -M:dev
 ;; dev` starts. e.g. if you use emacs, instead of running `cider-jack-in`, you would run
 ;; `cider-connect`. See "Connecting to a Running nREPL Server:"
 ;; https://docs.cider.mx/cider/basics/up_and_running.html#connect-to-a-running-nrepl-server

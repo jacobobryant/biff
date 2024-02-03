@@ -195,7 +195,7 @@
     (io/make-parents dest)
     (println "Downloading the latest version of " file "...")
     (when inferred
-      (println "If that's the wrong file, run `clj -Mdev install-tailwind <correct file>`"))
+      (println "If that's the wrong file, run `clj -M:dev install-tailwind <correct file>`"))
     (println)
     (println "After the download finishes, you can avoid downloading Tailwind again for"
              "future projects if you copy it to your path, e.g. by running:")
@@ -273,7 +273,7 @@
     ;; that can create the directory before starting the JVM.
     (do
       (io/make-parents "target/resources/_")
-      (shell "clj" "-Mdev" "dev"))
+      (shell "clj" "-M:dev" "dev"))
     (let [{:keys [biff.tasks/main-ns biff.nrepl/port] :as ctx} @config]
       (when-not (fs/exists? "config.env")
         (run-task "generate-config"))

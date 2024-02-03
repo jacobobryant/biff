@@ -2,6 +2,6 @@
 
 This is the example project for Biff.
 
-Run `clj -Mdev dev` to get started. See `clj -Mdev --help` for other commands.
+Run `clj -M:dev dev` to get started. See `clj -M:dev --help` for other commands.
 
-Consider adding `alias biff='clj -Mdev'` to your `.bashrc`.
+Consider adding `alias biff='clj -M:dev'` to your `.bashrc`.
