@@ -210,6 +210,7 @@
                          ["mkdir -p target/resources"
                           (when (fs/exists? "package.json")
                             "npm install")
+                          "set -a"
                           (when (fs/exists? "secrets.env")
                             ". ./secrets.env")
                           (when (fs/exists? "config.env")
@@ -253,7 +254,10 @@
       (nil? config-file)
       nil
 
-      (not (windows?))
+      (and (not (windows?))
+           ;; Backwards compatibility--just in case someone was relying on fancy behavior in secrets.env. Problem with
+           ;; doing this for config.env is it doesn't work if you don't have `export` on every line.
+           (= config-file "secrets.env"))
       (get-env-from (str ". ./" config-file))
 
       :else
