@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0 (2023-01-27)
+## v1.0.0 (2023-02-03)
 
 Changes:
 
@@ -20,7 +20,7 @@ Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.
 ### Upgrade instructions
 
 - Update your Biff dependencies (in `deps.edn`, `bb/deps.edn` and/or `tasks/deps.edn`) to
-  `:git/tag "v1.0.0", :git/sha "68ade36"`
+  `:git/tag "v1.0.0", :git/sha "529660f"`
 
 #### Optional: upgrade config to use Aero
 
@@ -41,14 +41,19 @@ your project:
    and `JWT_SECRET` from `secrets.env` into `config.env`. `resources/config.edn` will be parsed with
    [Aero](https://github.com/juxt/aero). To specify different config values for different
    environments, you'll do e.g. `{:example/foo #profile {:prod "bar" :dev "baz"} ...` instead of
-   `{:prod {:example/foo "bar" ...} :dev {:example/foo "baz" ...} ...`.
+   `{:prod {:example/foo "bar" ...} :dev {:example/foo "baz" ...} ...`. Here's some
+   [more migration advice](https://github.com/jacobobryant/biff/discussions/184).
 5. Test your config. Add the [`check-config`
    function](https://github.com/jacobobryant/biff/commit/40510a006f8c436effdef4f9956e02856525bfbf#diff-43bcb43dea16d7f18c742b44d2ec057d3c97bd4a3717c89558aa714d7b9bc4b1)
    to your `repl.clj` file. Then run `bb dev` and evaluate `(check-config)` from your editor. (You
    can also do `(biff/pprint (check-config))` if needed.) Make sure everything looks correct.
-6. [Edit your main
+6. Run `git add .; git commit`.
+7. If your app is already deployed, run `bb deploy` and then `bb prod-repl`. Evaluate `(check-config)` again to make
+   sure the new config is available in production.
+8. [Edit your main
    namespace](https://github.com/jacobobryant/biff/commit/40510a006f8c436effdef4f9956e02856525bfbf#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82)
-   and replace `biff/use-config` and `biff/use-secrets` with `biff/use-aero-config`.
+   and replace `biff/use-config` and `biff/use-secrets` with `biff/use-aero-config`. Run `bb dev` and make sure
+   everything works locally. Then make a new commit, run `bb deploy`, and ensure everything works in production.
 
 NOTE: this will make your application use the new Aero config, however, bb tasks will still read
 from the old `config.edn` file. To completely upgrade, you'll need to switch to clj tasks.
@@ -58,45 +63,47 @@ from the old `config.edn` file. To completely upgrade, you'll need to switch to 
 If you switch to clj tasks, you must first upgrade your config to use Aero as described above.
 
 Apply the changes in [this
-commit](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a)
+commit](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3)
 to your project:
 
 1. Add the [`:dev` and `:prod`
-   aliases](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-6e20ca141152dfb6f7f46348d9cfa96099e11c646de6c53afb382bb5d2df53e6)
+   aliases](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3#diff-6e20ca141152dfb6f7f46348d9cfa96099e11c646de6c53afb382bb5d2df53e6)
    to your `deps.edn` file. Replace `:local/root "../libs/tasks"` with `:git/url
-   "https://github.com/jacobobryant/biff, :git/tag "v1.0.0", :git/sha "68ade36", :deps/root
-   "libs/tasks"`.
+   "https://github.com/jacobobryant/biff", :git/tag "v1.0.0", :git/sha "529660f", :deps/root
+   "libs/tasks"` and change `com.example` to your main namespace.
 2. Add the [`dev/tasks.clj`
-   file](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-7938fae2e6818a0970d52c71ac7b16b4dd0b47b337238dd4d3dfbf63769c5efe)
+   file](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3#diff-7938fae2e6818a0970d52c71ac7b16b4dd0b47b337238dd4d3dfbf63769c5efe)
    to your project.
 3. Edit your `-main` and `start` functions [like
-   so](https://github.com/jacobobryant/biff/commit/07a4becbd16be6445794ef2c2cbc74f9df8ec32a#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82).
-4. If you set up a server with `server-setup.sh`, SSH into it as root, edit
-   `/etc/systemd/system/app.service`, and change the `ExecStart` line to `ExecStart=clj -M:prod`.
-   Also update your `server-setup.sh` file. (Note: new projects also have `server-setup.sh` set
-   `BIFF_PROFILE=prod` instead of `BIFF_ENV=dev`, but `BIFF_ENV` is stils recognized.)
-5. Recommended: add `alias biff='clj -Mdev'` to your `.bashrc` file.
+   so](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82).
+4. If you set up a server with `server-setup.sh`, SSH into it as root, edit `/etc/systemd/system/app.service`, and
+   change the `ExecStart` line to `ExecStart=/bin/sh -c "mkdir -p target/resources; clj -M:prod"`. Then run `systemctl
+   daemon-reload`. Also make the same change in your `server-setup.sh` file. (Note: new projects also have
+   `server-setup.sh` set `BIFF_PROFILE=prod` instead of `BIFF_ENV=dev`, but `BIFF_ENV` is still recognized.)
+5. Run `clj -M:dev dev` to make sure everything works locally, then (if you did step 4) run
+   `clj -M:dev deploy` and make sure it works in prod.
+6. Recommended: add `alias biff='clj -M:dev'` to your `.bashrc` file.
 
-Run `clj -Mdev --help` (or `biff --help` if you set up the alias) for a list of available commands.
-e.g. Instead of running `bb dev` and `bb deploy`, you'll now run `clj -Mdev dev` and `clj -Mdev
+Run `clj -M:dev --help` (or `biff --help` if you set up the alias) for a list of available commands.
+e.g. instead of running `bb dev` and `bb deploy`, you'll now run `clj -M:dev dev` and `clj -M:dev
 deploy`.
 
 #### Optional: make your app work with Docker/Uberjars
 
-After you upgrade to clj tasks, you can run `clj -Mdev uberjar` to generate an Uberjar for your app.
+After you upgrade to clj tasks, you can run `clj -M:dev uberjar` to generate an Uberjar for your app.
 You can also add [this
-`Dockerfile`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-864db13d8bc4f4de07dbc9d7d376481b8ab5bda07c176d78738836cb5cf86ab0)
+`Dockerfile`](https://github.com/jacobobryant/biff/commit/731c9716bb34352a240334a967825ed35bcb5af1#diff-864db13d8bc4f4de07dbc9d7d376481b8ab5bda07c176d78738836cb5cf86ab0)
 to your app. The recommended way for most people to deploy Biff is still the old way (setting up a
-DigitalOcean droplet with `server-setup.sh` and deploying with `clj -Mdev deploy`). But for those
-who know they want to deploy another way, `clj -Mdev uberjar` and the `Dockerfile` are provided as a
+DigitalOcean droplet with `server-setup.sh` and deploying with `clj -M:dev deploy`). But for those
+who know they want to deploy another way, `clj -M:dev uberjar` and the `Dockerfile` are provided as a
 convenience.
 
 You'll need to make a few additional changes to your project. See [this
-commit](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832):
+commit](https://github.com/jacobobryant/biff/commit/731c9716bb34352a240334a967825ed35bcb5af1):
 
-- [Add `(:gen-class)`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82) to your main namespace.
-- [Update `css-path` and `js-path`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-5209835b4e108639e20e21f93531eb22ed904154da72098d62db3cf1a29c49d6) so they don't break when called inside an Uberjar.
-- Add [`.dockerignore`](https://github.com/jacobobryant/biff/commit/a5cf899c3d33c4df93ecdbc117ff3563b98de832#diff-f5654fbea76a10b28b2baa9d3e1aecaed62e1946f8d97a1d9bab2c68400a7ccb) to your project.
+- [Add `(:gen-class)`](https://github.com/jacobobryant/biff/commit/731c9716bb34352a240334a967825ed35bcb5af1#diff-dc8d794a683c27486f2b534a9fd84dab78e04d2c68963cd22dc776598320aa82) to your main namespace.
+- [Update `css-path` and `js-path`](https://github.com/jacobobryant/biff/commit/731c9716bb34352a240334a967825ed35bcb5af1#diff-5209835b4e108639e20e21f93531eb22ed904154da72098d62db3cf1a29c49d6) so they don't break when called inside an Uberjar.
+- Add [`.dockerignore`](https://github.com/jacobobryant/biff/commit/731c9716bb34352a240334a967825ed35bcb5af1#diff-f5654fbea76a10b28b2baa9d3e1aecaed62e1946f8d97a1d9bab2c68400a7ccb) to your project.
 
 #### Optional: clean up
 
@@ -111,13 +118,13 @@ longer need. Feel free to delete them:
 Additionally, you can move your `repl.clj` file into the new `dev` directory and your `test.clj`
 file into a new `test` directory. You'll also need to edit `deps.edn` and your `on-save`
 function—see [this
-commit](https://github.com/jacobobryant/biff/commit/6bad33c60f07e949ef59c2a571baa53c668f6be4).
+commit](https://github.com/jacobobryant/biff/commit/700fa177527c9da50f90e7e86c0a9048337139c3).
 
 #### Optional: rename "plugins" to "modules"
 
 This is a purely cosmetic change, but if you'd like to stay in line with new projects,
 the change is [a simple
-find-and-replace](https://github.com/jacobobryant/biff/commit/68ade369e7d5689bed63d7bae317fd47b73835f6).
+find-and-replace](https://github.com/jacobobryant/biff/commit/1bb5365f6bff51a7e6da37b133702cb86f5016bf).
 
 ## v0.7.15 (2023-09-20)
 
