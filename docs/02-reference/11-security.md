@@ -4,13 +4,13 @@ title: Security
 
 ## Authentication
 
-Biff includes an authentication plugin that implements passwordless,
+Biff includes an authentication module that implements passwordless,
 email-based signin. There are two options: email links, where users click a
 link in an email to sign in; and email codes, where users copy and paste a
 six-digit code to sign in. The starter project uses email links for the signup
 form and email codes for the signin form.
 
-The authentication plugin provides the backend routes, which handle sending
+The authentication module provides the backend routes, which handle sending
 emails to your users and verifying the links and codes. UI and email templates
 are handled in your application code so that they can be easily customized.
 
@@ -32,20 +32,20 @@ the user's ID from the session like so:
       [:p "Signed in: " (some? user)]
       [:p "Email: " (:user/email user)]]]))
 
-(def plugin
+(def module
   {:routes [["/whoami" {:get whoami}]]})
 ```
 
-See the [`authentication-plugin` API docs](https://biffweb.com/docs/api/authentication/) for full details.
+See the [`authentication-module` API docs](https://biffweb.com/docs/api/authentication/) for full details.
 
-If you need to modify the plugin beyond what the configuration options allow,
+If you need to modify the module beyond what the configuration options allow,
 you can copy
 [the source code](https://github.com/jacobobryant/biff/blob/master/src/com/biffweb/impl/auth.clj)
 into your project or replace it altogether.
 
-Your `secrets.env` file contains two secrets which are used to encrypt/sign
+Your `config.env` file contains two secrets which are used to encrypt/sign
 your session cookies and JWTs, respectively. If you want to rotate the secrets,
-you can generate new values by running the `bb generate-secrets` command.
+you can generate new values by running `clj -M:dev generate-secrets`.
 
 ## Authorization
 
@@ -124,7 +124,7 @@ into all htmx requests that are triggered by child elements, even if they aren't
    ...))
 ```
 
-CSRF protection only applies to routes that are included under the `:routes` key of your plugins. If you want to
+CSRF protection only applies to routes that are included under the `:routes` key of your modules. If you want to
 bypass CSRF protection (e.g. because you're providing a public API), you can use the `:api-routes` key:
 
 ```clojure
@@ -133,7 +133,7 @@ bypass CSRF protection (e.g. because you're providing a public API), you can use
    :headers {"content-type" "application/json"}
    :body {:foo "bar"}})
 
-(def plugin
+(def module
   {:api-routes [["/api/hello" {:post hello}]]})
 ```
 

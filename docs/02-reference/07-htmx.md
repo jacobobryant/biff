@@ -21,7 +21,7 @@ with some text after it's clicked:
 (defn click [request]
   [:div "Earth will now self-destruct"])
 
-(def plugin
+(def module
   {:routes [["/page" {:get page}]
             ["/click" {:post click}]]})
 ```
@@ -61,7 +61,7 @@ You can also use htmx to establish websocket connections:
         :on-close (fn [ws status-code reason]
                     (swap! chat-clients disj ws))}})
 
-(def plugin
+(def module
   {:routes [["/chat-page" {:get chat-page}]
             ["/chat-ws" {:get chat-ws}]]})
 ```

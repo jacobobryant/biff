@@ -246,7 +246,7 @@ namespace `com.eelchat.subscriptions` with the following contents:
          (map #(assoc-result ctx %))
          (mapcat sub-tx))))
 
-(def plugin
+(def module
   {:tasks [{:task #'fetch-rss
             :schedule #(every-n-minutes 5)}]})
 ```
@@ -266,12 +266,12 @@ Then register the new namespace in your app:
              [clojure.java.io :as io]
              [clojure.string :as str]
 ;; ...
- (def plugins
-   [app/plugin
-    (biff/authentication-plugin {})
-    home/plugin
-+   sub/plugin
-    schema/plugin])
+ (def modules
+   [app/module
+    (biff/authentication-module {})
+    home/module
++   sub/module
+    schema/module])
 ```
 
 Scheduled tasks are only started when the system starts, so for our new task to
@@ -370,7 +370,7 @@ Add a `:fetch-rss` queue like so:
 +  (biff/submit-tx ctx
 +    (sub-tx (assoc-result ctx job))))
 +
- (def plugin
+ (def module
    {:tasks [{:task #'fetch-rss
 -            :schedule #(every-n-minutes 5)}]})
 +            :schedule #(every-n-minutes 5)}]

@@ -4,7 +4,7 @@ title: Transaction Listeners
 
 XTDB maintains an immutable transaction log. You can register a listener
 function which will get called whenever a new transaction has been appended to
-the log. If you provide a function for the `:on-tx` plugin key, Biff will
+the log. If you provide a function for the `:on-tx` module key, Biff will
 register it for you and pass the new transaction to it. For example, here's a
 transaction listener that prints a message whenever there's a new user:
 
@@ -18,7 +18,7 @@ transaction listener that prints a message whenever there's a new user:
                        (nil? (xt/entity db-before (:xt/id doc))))]
       (println "there's a new user"))))
 
-(def plugin
+(def module
   {:on-tx alert-new-user})
 ```
 

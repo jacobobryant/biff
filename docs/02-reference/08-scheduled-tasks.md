@@ -25,11 +25,10 @@ users every 60 seconds:
 (defn error-handler [error]
   (println "Uh oh!"))
 
-(def plugin
+(def module
   {:tasks [{:task #'print-usage
             :schedule every-minute
-            :error-handler error-handler
-            }]})
+            :error-handler error-handler}]})
 ```
 
 See also:

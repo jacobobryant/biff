@@ -88,16 +88,16 @@ let's remove the `com.eelchat.worker` namespace. Remove it from `com.eelchat` fi
              [clojure.test :as test]
              [clojure.tools.logging :as log]
 ;; ...
- (def plugins
-   [app/plugin
-    (biff/authentication-plugin {})
-    home/plugin
--   schema/plugin
--   worker/plugin])
-+   schema/plugin])
+ (def modules
+   [app/module
+    (biff/authentication-module {})
+    home/module
+-   schema/module
+-   worker/module])
++   schema/module])
 
  (def routes [["" {:middleware [biff/wrap-site-defaults]}
-               (keep :routes plugins)]
+               (keep :routes modules)]
 ```
 
 Then delete the `src/com/eelchat/worker.clj` file.
@@ -128,7 +128,7 @@ with a simple `Nothing here yet` message:
      [:.h-6]
      [:div "Nothing here yet."])))
 
-(def plugin
+(def module
   {:routes ["/app" {:middleware [mid/wrap-signed-in]}
             ["" {:get app}]]})
 ```

@@ -17,12 +17,16 @@ A new Biff project will look like this:
 namespace when creating your project.)
 
 ```text
+├── Dockerfile
 ├── README.md
-├── bb.edn
 ├── cljfmt-indents.edn
-├── config.edn
 ├── deps.edn
+├── dev
+│   ├── repl.clj
+│   └── tasks.clj
 ├── resources
+│   ├── config.edn
+│   ├── config.template.env
 │   ├── fixtures.edn
 │   ├── public
 │   │   ├── img
@@ -31,7 +35,6 @@ namespace when creating your project.)
 │   │       └── main.js
 │   ├── tailwind.config.js
 │   └── tailwind.css
-├── secrets.env
 ├── server-setup.sh
 ├── src
 │   └── com
@@ -40,23 +43,23 @@ namespace when creating your project.)
 │       │   ├── email.clj
 │       │   ├── home.clj
 │       │   ├── middleware.clj
-│       │   ├── repl.clj
 │       │   ├── schema.clj
 │       │   ├── settings.clj
-│       │   ├── test.clj
 │       │   ├── ui.clj
 │       │   └── worker.clj
 │       └── example.clj
-└── bb
-    ├── deps.edn
-    └── src
-        └── com
-            └── example
-                └── tasks.clj
+├── target
+│   └── resources
+└── test
+    └── com
+        └── example_test.clj
 ```
 
-`config.edn` and `secrets.env` contain your app's configuration and secrets,
-respectively, and are not checked into git. `server-setup.sh` is a script for
-provisioning an Ubuntu server (see [Production](/docs/reference/production/)).
-`bb.edn` defines project tasks—run `bb tasks` to see the available
-commands.
+- `src/com/example/app.clj` demonstrates how to create routes and request handlers.
+- `dev/repl.clj` contains instructions and helper code for interacting with your app via the REPL.
+- `dev/tasks.clj` contains tasks that can be ran with `clj -M:dev <task name>`. Biff provides some common tasks (see
+  `clj -M:dev --help`), and you can also define your own custom tasks.
+- `src/com/example/schema.clj` contains your database schema.
+- `src/com/example.clj` is the entrypoint.
+- `config.env` and `resources/config.edn` contain your app's configuration. `config.template.env` is used to autogenerate `config.env`.
+- `server-setup.sh` is a script for provisioning an Ubuntu server (see [Production](/docs/reference/production/)).

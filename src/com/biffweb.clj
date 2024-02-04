@@ -103,7 +103,7 @@
 
      :biff.system-properties/user.timezone \"UTC\"
      ;; Equivalent to:
-     (System/setProperty \"user.timezone\" \"UTC\"
+     (System/setProperty \"user.timezone\" \"UTC\")
 
    Finally, if :biff.middleware/cookie-secret or :biff/jwt-secret aren't set, an
    error will be printed and the process will exit. This can be disabled by

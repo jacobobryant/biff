@@ -14,7 +14,7 @@ You can create static HTML files by supplying a map from paths to
    [:p "This app was made with "
     [:a.link {:href "https://biffweb.com"} "Biff"] "."]))
 
-(def plugin
+(def module
   {:static {"/about/" about-page}
    ...})
 ```
@@ -33,7 +33,7 @@ You can use Tailwind CSS to style your HTML:
 
 The HTML and Tailwind CSS files will be regenerated whenever you save a file.
 
-In addition, any files you put in `resources/public/` will be served, so you
+In addition, any files you put in `resources/public/` will be served, so you can
 use that folder for logo images, plain JavaScript files, etc.
 
 See also:

@@ -16,7 +16,7 @@ Multiple routes:
 
 (defn bar ...)
 
-(def plugin
+(def module
   {:routes [["/foo" {:get foo}]
             ["/bar" {:post bar}]]})
 ```
@@ -28,14 +28,14 @@ Path parameters:
   (println (:token path-params))
   ...)
 
-(def plugin
+(def module
   {:routes [["/click/:token" {:get click}]]})
 ```
 
 Nested routes:
 
 ```clojure
-(def plugin
+(def module
   {:routes [["/auth/"
              ["send" {:post send-token}]
              ["verify/:token" {:get verify-token}]]]})
@@ -51,7 +51,7 @@ With middleware:
       {:status 303
        :headers {"location" "/"}})))
 
-(def plugin
+(def module
   {:routes [["/app" {:middleware [wrap-signed-in]}
              ["" {:get app}]
              ["/set-foo" {:post set-foo}]]]})
@@ -66,7 +66,7 @@ CSRF protection (this is a feature of Biff, not Reitit):
    :headers {"content-type" "application/json"}
    :body params})
 
-(def plugin
+(def module
   {:api-routes [["/echo" {:post echo}]]})
 ```
 

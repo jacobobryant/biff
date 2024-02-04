@@ -19,7 +19,7 @@ eelchat), but it contains a set. So let's change it to a map:
 ;; src/com/eelchat.clj
 ;; ...
  (def initial-system
-   {:biff/plugins #'plugins
+   {:biff/modules #'modules
     :biff/send-email #'email/send-email
     :biff/handler #'handler
     :biff/malli-opts #'malli-opts
@@ -90,7 +90,7 @@ illustration.
 +                                      (empty? (get chat-clients chan-id)) (dissoc chan-id)))))))}})
 +
 ;; ...
- (def plugin
+ (def module
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]
@@ -152,7 +152,7 @@ send new messages to all the channel participants:
    (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 ;; ...
- (def plugin
+ (def module
    {:routes ["" {:middleware [mid/wrap-signed-in]}
              ["/app"           {:get app}]
              ["/community"     {:post new-community}]

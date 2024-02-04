@@ -12,7 +12,7 @@ For example:
   (when-some [callback (:biff/callback job)]
     (callback job)))
 
-(def plugin
+(def module
   {:queues [{:id :echo
              :consumer #'echo-consumer
              :n-threads 1}]})
