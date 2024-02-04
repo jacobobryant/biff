@@ -11,7 +11,7 @@ fairly painless.
 We'll soon add a handler for websocket connection requests. It will store all
 the active websocket connections in an atom, as a map of the form
 `channel ID -> set of connections`. The `com.eelchat/initial-system`
-map already includes an atom (because the original example app included a
+map already includes an atom (because the starter app included a
 websocket example, and we never removed the atom when we started working on
 eelchat), but it contains a set. So let's change it to a map:
 

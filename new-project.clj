@@ -70,10 +70,10 @@
                   (io/file))
          main-ns (prompt "Enter main namespace (e.g. com.example): ")
          tmp (io/file dir "tmp")
-         example (io/file tmp "biff" "example")]
+         starter (io/file tmp "biff" "starter")]
      (io/make-parents (io/file tmp "_"))
      (sh "git" "clone" "--single-branch" "--branch" branch repo-url :dir tmp)
-     (doseq [src (->> (file-seq example)
+     (doseq [src (->> (file-seq starter)
                       (filter #(.isFile %)))
              :let [relative (-> (.getPath src)
                                 (str/replace #"\\" "/")

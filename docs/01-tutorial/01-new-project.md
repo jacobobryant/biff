@@ -69,7 +69,7 @@ Click here to sign in as hello@example.com: %%http://localhost:8080/auth/verify/
 
 Open that link, and you should be signed in!
 
-![A screenshot of the example app after signing in](/img/tutorial/signed-in.png)
+![A screenshot of the starter app after signing in](/img/tutorial/signed-in.png)
 
 ### Delete some code
 
@@ -136,7 +136,7 @@ with a simple `Nothing here yet` message:
 Go back to [localhost:8080](http://localhost:8080), and it should look like
 this after you refresh the page:
 
-![A screenshot of the example app after updating app.clj](/img/tutorial/nothing-here-yet.png)
+![A screenshot of the starter app after updating app.clj](/img/tutorial/nothing-here-yet.png)
 
 Finally, let's update our schema (`com.eelchat.schema`). We'll remove the
 `:msg` document and the `:user/foo` and `:user/bar` attributes, all of which
@@ -163,7 +163,7 @@ were used by the code in `com.eelchat.app` which we just deleted.
 -         [:msg/sent-at inst?]]})
 ```
 
-If you played around with the example app at all, you might already have some
+If you played around with the starter app at all, you might already have some
 `:msg` documents or `:user/foo`/`:user/bar` attributes in your database. Let's
 clear out the database to ensure we don't have any non-schema-conforming
 documents. Hit `Ctrl-C` in your terminal to stop the app, then run
