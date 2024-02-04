@@ -478,7 +478,7 @@
   session-store is set with ring.middleware.session.cookie/cookie-store.
 
   Disables CSRF checks. You must wrap non-API routes with
-  ring.middleware.anti-forgery. The Biff project template does this by default.
+  ring.middleware.anti-forgery. The Biff starter project does this by default.
   Disables SSL redirects under the assumption that this is handled by e.g.
   NGINX. Also sets SameSite=Lax explicitly on the session cookie."
   [handler {:keys [biff/secret]

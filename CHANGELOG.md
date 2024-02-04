@@ -197,7 +197,7 @@ you upgrade to a commit with the fixes. I'll write up separate release notes for
 - `com.biffweb/eval-files!` now returns the result from
   `clojure.tools.namespace.reload/track-reload` instead of `nil`, which will be helpful for #117.
 
-- Template project changes (discussed above in Upgrade instructions > Optional).
+- Starter project changes (discussed above in Upgrade instructions > Optional).
 
 ### Fixed
 

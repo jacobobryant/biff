@@ -7,14 +7,14 @@ title: Security
 Biff includes an authentication plugin that implements passwordless,
 email-based signin. There are two options: email links, where users click a
 link in an email to sign in; and email codes, where users copy and paste a
-six-digit code to sign in. The example project uses email links for the signup
+six-digit code to sign in. The starter project uses email links for the signup
 form and email codes for the signin form.
 
 The authentication plugin provides the backend routes, which handle sending
 emails to your users and verifying the links and codes. UI and email templates
 are handled in your application code so that they can be easily customized.
 
-The example project comes with code for sending emails with
+The starter project comes with code for sending emails with
 [Postmark](https://postmarkapp.com/). Until you add API keys for Postmark and
 Recaptcha (which is used to protect your signin forms from bots), signin links
 and codes will be printed to the console instead of being emailed.
@@ -49,7 +49,7 @@ you can generate new values by running the `bb generate-secrets` command.
 
 ## Authorization
 
-You can use middleware to restrict routes to certain users. The example project comes
+You can use middleware to restrict routes to certain users. The starter project comes
 with a `wrap-signed-in` middleware which redirects unauthenticated users to the signin page:
 
 ```clojure
@@ -109,7 +109,7 @@ providing a couple other conveniences:
      ...)]])
 ```
 
-The example project also includes a `com.example.ui/page` function, which will inject the CSRF token
+The starter project also includes a `com.example.ui/page` function, which will inject the CSRF token
 into all htmx requests that are triggered by child elements, even if they aren't triggered inside a form element:
 
 ```clojure

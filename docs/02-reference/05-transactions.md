@@ -222,7 +222,7 @@ function for this to work. This is done by default in new projects. See
 ### `:db/lookup`
 
 **Note:** `:db/lookup` is deprecated. It's recommended to use `:db.op/upsert`
-instead, as is done in the example project.
+instead, as is done in the starter project.
 
 Finally, you can use `:db/lookup` to enforce uniqueness constraints on attributes
 other than `:xt/id`:

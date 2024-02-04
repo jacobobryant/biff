@@ -2,68 +2,7 @@
 title: Architecture
 ---
 
-Biff has two parts: a library and a template project. As much code as
-possible is written as library code, exposed under the `com.biffweb` namespace.
-This includes a lot of high-level helper functions for other libraries.
-
-The template project contains the top-level framework code&mdash;the stuff that glues
-everything else together. When you start a new Biff project, this template code is
-copied directly into your project directory, and the Biff library is added as a regular
-dependency in `deps.edn`.
-
-A new Biff project will look like this:
-
-(Throughout these docs, we'll assume you selected `com.example` for the main
-namespace when creating your project.)
-
-```text
-├── README.md
-├── bb.edn
-├── cljfmt-indents.edn
-├── config.edn
-├── deps.edn
-├── resources
-│   ├── fixtures.edn
-│   ├── public
-│   │   ├── img
-│   │   │   └── glider.png
-│   │   └── js
-│   │       └── main.js
-│   ├── tailwind.config.js
-│   └── tailwind.css
-├── secrets.env
-├── server-setup.sh
-├── src
-│   └── com
-│       ├── example
-│       │   ├── app.clj
-│       │   ├── email.clj
-│       │   ├── home.clj
-│       │   ├── middleware.clj
-│       │   ├── repl.clj
-│       │   ├── schema.clj
-│       │   ├── settings.clj
-│       │   ├── test.clj
-│       │   ├── ui.clj
-│       │   └── worker.clj
-│       └── example.clj
-└── bb
-    ├── deps.edn
-    └── src
-        └── com
-            └── example
-                └── tasks.clj
-```
-
-`config.edn` and `secrets.env` contain your app's configuration and secrets,
-respectively, and are not checked into git. `server-setup.sh` is a script for
-provisioning an Ubuntu server (see [Production](/docs/reference/production/)).
-`bb.edn` defines project tasks—run `bb tasks` to see the available
-commands.
-
-## Plugins, components, and the system
-
-Application code is stored in *plugins*. A plugin is a map which can have any
+Application code is stored in **plugins**. A plugin is a map which can have any
 of the following keys:
 
 ```clojure
@@ -98,7 +37,7 @@ To demonstrate, a "hello world" plugin might look like this:
   {:routes [["/hello" {:get hello}]]})
 ```
 
-Your app's plugins are bundled together and stored in the *system map*:
+Your app's plugins are bundled together and stored in the **system map**:
 
 ```clojure
 (def plugins
@@ -115,7 +54,7 @@ Your app's plugins are bundled together and stored in the *system map*:
    ...})
 ```
 
-When your app starts, this system map is passed through a sequence of *components*:
+When your app starts, this system map is passed through a sequence of **components**:
 
 ```clojure
 (defonce system (atom {}))

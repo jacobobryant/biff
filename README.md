@@ -9,9 +9,9 @@ contributions to Biff would likely work well as simple how-to guides (e.g. paste
 code + instructions in a gist). If you write something for the content library, open an issue
 and I'll add it.
 
-To hack on Biff, either run `bb dev` or `cd example; clj -M:dev dev`.
+To hack on Biff, either run `bb dev` or `cd starter; clj -M:dev dev`.
 
-(The example project's deps.edn declares a local dependency on the Biff library
+(The starter project's deps.edn declares a local dependency on the Biff library
 code.)
 
 ## Sponsors
