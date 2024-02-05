@@ -10,7 +10,7 @@ Biff that was used for writing this tutorial. Important bits (mainly, stuff you
 should type) are highlighted in yellow:
 
 ```plain
-$ %%bb -e '(load-string (slurp "https://biffweb.com/new-project.clj"))' tutorial%%
+$ %%clj -M -e '(load-string (slurp "https://biffweb.com/new.clj"))' -M tutorial%%
 Enter name for project directory: %%eelchat%%
 Enter main namespace (e.g. com.example): %%com.eelchat%%
 
@@ -20,15 +20,15 @@ Your project is ready. Run the following commands to get started:
   git init
   git add .
   git commit -m "First commit"
-  bb dev
+  clj -M:dev dev
 
-And run `bb tasks` for a list of available commands.
+Run `clj -M:dev --help` for a list of available commands.
 ```
 
 You'll need to
-[install Babashka](https://github.com/babashka/babashka#installation) if you
+[install clj](https://clojure.org/guides/install_clojure) if you
 haven't already. After your project has been created, start up the app with
-`bb dev`:
+`clj -M:dev dev`:
 
 ```plain
 $ %%cd eelchat/%%
@@ -39,16 +39,17 @@ Initialized empty Git repository in /home/jacob/dev/eelchat/.git/
 $ %%git add .%%
 
 $ %%git commit -m "First commit"%%
-[master (root-commit) 95db1ca] First commit
- 22 files changed, 785 insertions(+)
+ [master (root-commit) 85f99db] First commit
+ 26 files changed, 1146 insertions(+)
  [...]
 
-$ %%bb dev%%
-Downloading the latest version of Tailwind CSS...
+$ %%clj -M:dev dev%%
+New config generated and written to config.env.
+[main] INFO hello.there - starting: com.biffweb$use_aero_config@1449ffba
 [...]
-[main] INFO com.biffweb.impl.util - %%System started.%%
-[main] INFO com.eelchat - Go to http://localhost:8080
-[chime-1] INFO com.eelchat.worker - There are 0 users. (This message gets printed every 5 minutes. You can disable it by setting `:com.eelchat/enable-worker false` in config.edn)
+[main] INFO hello.there - %%System started.%%
+[main] INFO hello.there - Go to http://localhost:8080
+[chime-1] INFO hello.there.worker - There are 0 users.
 nREPL server started on port 7888 on host localhost - nrepl://localhost:7888
 ```
 
@@ -57,15 +58,27 @@ Go to [localhost:8080](http://localhost:8080), then enter `hello@example.com`
 into the signin form. You'll see a link printed to the terminal:
 
 ```plain
-[qtp1015916495-34] INFO com.biffweb.impl.middleware -   2ms 200 get  /
-[qtp1015916495-37] INFO com.biffweb.impl.middleware -   1ms 200 get  /css/main.css?t=1667015729284
-[qtp1015916495-33] INFO com.biffweb.impl.middleware -   1ms 200 get  /img/glider.png
-[qtp1015916495-37] INFO com.biffweb.impl.middleware -   2ms 200 get  /
-Click here to sign in as hello@example.com: %%http://localhost:8080/auth/verify/ey[...]%%
-[qtp1015916495-33] INFO com.biffweb.impl.middleware -  14ms 303 post /auth/send
-[qtp1015916495-37] INFO com.biffweb.impl.middleware -   0ms 200 get  /auth/printed/
-[qtp1015916495-33] INFO com.biffweb.impl.middleware -   0ms 200 get  /css/main.css?t=1667015729284
+[qtp1209549907-42] INFO com.biffweb.impl.middleware -  10ms 200 get  /
+[qtp1209549907-41] INFO com.biffweb.impl.middleware -   1ms 200 get  /css/main.css?t=1707102698000
+[qtp1209549907-44] INFO com.biffweb.impl.middleware -   0ms 200 get  /js/main.js?t=1707102552000
+TO: hello@example.com
+SUBJECT: Sign up for My Application
+
+We received a request to sign up to My Application using this email address. Click this link to sign up:
+
+%%http://localhost:8080/auth/verify-link/ey[...]%%
+
+This link will expire in one hour. If you did not request this link, you can ignore this email.
+
+To send emails instead of printing them to the console, add your API keys for Postmark and Recaptcha to config.edn.
+[qtp1209549907-42] INFO com.biffweb.impl.middleware -  10ms 303 post /auth/send-link
+[qtp1209549907-44] INFO com.biffweb.impl.middleware -   4ms 200 get  /link-sent?email=hello@example.com
+[qtp1209549907-42] INFO com.biffweb.impl.middleware -   1ms 200 get  /css/main.css?t=1707102698000
+
+
 ```
+
+
 
 Open that link, and you should be signed in!
 

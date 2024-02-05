@@ -78,7 +78,7 @@
   (println (:text-body form-params))
   (println)
   (println "To send emails instead of printing them to the console, add your"
-           "API keys for Postmark and Recaptcha to config.edn.")
+           "API keys for Postmark and Recaptcha to config.env.")
   true)
 
 (defn send-email [{:keys [biff/secret recaptcha/site-key] :as ctx} opts]
