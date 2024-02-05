@@ -70,7 +70,7 @@
                   (io/file))
          main-ns (prompt "Enter main namespace (e.g. com.example): ")
          tmp (io/file dir "tmp")
-         starter (io/file tmp "biff" "starter")]
+         starter (io/file tmp "biff" "example")]
      (io/make-parents (io/file tmp "_"))
      (sh "git" "clone" "--single-branch" "--branch" branch repo-url :dir tmp)
      (doseq [src (->> (file-seq starter)
