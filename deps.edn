@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps {better-cond/better-cond        {:mvn/version "2.1.4"}
         buddy/buddy-sign               {:mvn/version "3.4.333"}
-        cider/cider-nrepl              {:mvn/version "0.28.3"}
+        cider/cider-nrepl              {:mvn/version "0.45.0"}
         clj-http/clj-http              {:mvn/version "3.12.3"}
         com.nextjournal/beholder       {:mvn/version "1.0.2"}
         com.xtdb/xtdb-core             {:mvn/version "1.23.1"}
