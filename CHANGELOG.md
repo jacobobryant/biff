@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0 (2023-02-03)
+## v1.8.0 (2023-02-10)
 
 Changes:
 
@@ -13,14 +13,15 @@ Changes:
 - Documentation fixes/improvements.
 - Make `server-setup.sh` delete Trenchman artifacts after installing.
 - Add libs to forward Java logs to slf4j.
+- Update cider-nrepl to 0.45.0
 
-Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.com/carlos) and
-[@olavfosse](https://github.com/olavfosse) for contributions.
+Thank you to [@mathisto](https://github.com/mathisto), [@carlos](https://github.com/carlos),
+[@olavfosse](https://github.com/olavfosse), and [@wunki](https://github.com/wunki) for contributions.
 
 ### Upgrade instructions
 
 - Update your Biff dependencies (in `deps.edn`, `bb/deps.edn` and/or `tasks/deps.edn`) to
-  `:git/tag "v1.0.0", :git/sha "529660f"`
+  `:git/tag "v1.8.0", :git/sha "7134552"`
 
 #### Optional: upgrade config to use Aero
 
@@ -69,7 +70,7 @@ to your project:
 1. Add the [`:dev` and `:prod`
    aliases](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3#diff-6e20ca141152dfb6f7f46348d9cfa96099e11c646de6c53afb382bb5d2df53e6)
    to your `deps.edn` file. Replace `:local/root "../libs/tasks"` with `:git/url
-   "https://github.com/jacobobryant/biff", :git/tag "v1.0.0", :git/sha "529660f", :deps/root
+   "https://github.com/jacobobryant/biff", :git/tag "v1.8.0", :git/sha "7134552", :deps/root
    "libs/tasks"` and change `com.example` to your main namespace.
 2. Add the [`dev/tasks.clj`
    file](https://github.com/jacobobryant/biff/commit/2f341c0a517944978ac52c77a4e8d9d490680db3#diff-7938fae2e6818a0970d52c71ac7b16b4dd0b47b337238dd4d3dfbf63769c5efe)
