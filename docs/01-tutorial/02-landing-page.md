@@ -2,7 +2,7 @@
 title: Make a landing page
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/f5d13cd9afea8a92251a054c49272d38a86b2e1e).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/56f951a092fcac57c920123ce4918e94c5907978).
 
 Now that we've stripped our app down to the essentials, let's start building it
 back up. For now we'll just do a little branding. The app won't do anything
@@ -84,6 +84,7 @@ Then add the appropriate metadata to `ui.clj`:
 +                     :image "/img/logo.png"})
         (update :base/head (fn [head]
                              (concat [[:link {:rel "stylesheet" :href (css-path)}]
+                                      [:script {:src (js-path)}]
                                       [:script {:src "https://unpkg.com/htmx.org@1.9.0"}]
                                       [:script {:src "https://unpkg.com/htmx.org/dist/ext/ws.js"}]
                                       [:script {:src "https://unpkg.com/hyperscript.org@0.9.8"}]

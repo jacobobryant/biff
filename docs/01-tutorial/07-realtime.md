@@ -2,7 +2,7 @@
 title: Realtime updates
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/635e67e4d56ac830eed0dc5d2e6f50f80d5c277d).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/c5e9090a925b65bb99ae9cbc31e75b3fe7b777ce).
 
 In this section, we'll use websockets to deliver new messages to other users
 who are in the same channel. htmx has some websocket features that make this
@@ -31,9 +31,9 @@ eelchat), but it contains a set. So let's change it to a map:
 
 That atom will be available in all our request maps, under the
 `:com.eelchat/chat-clients` key. For changes to `initial-system` to take
-effect, you'll need to restart the system. Go to the bottom of the `com.eelchat`
-file and evaluate the `(biff/refresh)` form. (Alternatively, you can
-hit Ctrl-C in the terminal and then run `bb dev` again, but that would be
+effect, you'll need to restart the system. Go to the `dev/repl.clj`
+file and evaluate the `(main/refresh)` form. (Alternatively, you can
+hit Ctrl-C in the terminal and then run `clj -M:dev dev` again, but that would be
 slower.)
 
 Now we can add that websocket connection handler. We'll have htmx start the
@@ -44,10 +44,10 @@ illustration.
 ;; src/com/eelchat/app.clj
 ;; ...
  (defn channel-page [{:keys [biff/db community channel] :as ctx}]
-   (let [msgs (q db
-                 '{:find (pull msg [*])
+   (let [messages (q db
+                 '{:find (pull message [*])
                    :in [channel]
-                   :where [[msg :msg/channel channel]]}
+                   :where [[message :message/channel channel]]}
 -                (:xt/id channel))]
 +                (:xt/id channel))
 +        href (str "/community/" (:xt/id community)
@@ -59,7 +59,7 @@ illustration.
 +       {:hx-ext "ws"
 +        :ws-connect (str href "/connect")
 +        :_ "on load or newMessage set my scrollTop to my scrollHeight"}
-        (map message-view (sort-by :msg/created-at msgs))]
+        (map message-view (sort-by :message/created-at messages))]
        [:.h-3]
        (biff/form
 -       {:hx-post (str "/community/" (:xt/id community)
@@ -75,19 +75,19 @@ illustration.
         [:.w-2]
         [:button.btn {:type "submit"} "Send"]))))
 
-+(defn connect [{:keys [com.eelchat/chat-clients] {chan-id :xt/id} :channel :as ctx}]
++(defn connect [{:keys [com.eelchat/chat-clients] {channel-id :xt/id} :channel :as ctx}]
 +  {:status 101
 +   :headers {"upgrade" "websocket"
 +             "connection" "upgrade"}
 +   :ws {:on-connect (fn [ws]
-+                      (prn :connect (swap! chat-clients update chan-id (fnil conj #{}) ws)))
++                      (prn :connect (swap! chat-clients update channel-id (fnil conj #{}) ws)))
 +        :on-close (fn [ws status-code reason]
 +                    (prn :disconnect
 +                         (swap! chat-clients
 +                                (fn [chat-clients]
-+                                  (let [chat-clients (update chat-clients chan-id disj ws)]
++                                  (let [chat-clients (update chat-clients channel-id disj ws)]
 +                                    (cond-> chat-clients
-+                                      (empty? (get chat-clients chan-id)) (dissoc chan-id)))))))}})
++                                      (empty? (get chat-clients channel-id)) (dissoc channel-id)))))))}})
 +
 ;; ...
  (def module
@@ -98,7 +98,7 @@ illustration.
               [""      {:get community}]
               ["/join" {:post join-community}]
               ["/channel" {:post new-channel}]
-              ["/channel/:chan-id" {:middleware [wrap-channel]}
+              ["/channel/:channel-id" {:middleware [wrap-channel]}
                ["" {:get channel-page
                     :post new-message
 -                   :delete delete-channel}]]]]})
@@ -139,13 +139,13 @@ send new messages to all the channel participants:
 +    (doseq [[op & args] (::xt/tx-ops tx)
 +            :when (= op ::xt/put)
 +            :let [[doc] args]
-+            :when (and (contains? doc :msg/text)
++            :when (and (contains? doc :message/text)
 +                       (nil? (xt/entity db-before (:xt/id doc))))
 +            :let [html (rum/render-static-markup
 +                        [:div#messages {:hx-swap-oob "beforeend"}
 +                         (message-view doc)
 +                         [:div {:_ "init send newMessage to #messages then remove me"}]])]
-+            ws (get @chat-clients (:msg/channel doc))]
++            ws (get @chat-clients (:message/channel doc))]
 +      (jetty/send! ws html))))
 +
  (defn wrap-community [handler]
@@ -160,7 +160,7 @@ send new messages to all the channel participants:
               [""      {:get community}]
               ["/join" {:post join-community}]
               ["/channel" {:post new-channel}]
-              ["/channel/:chan-id" {:middleware [wrap-channel]}
+              ["/channel/:channel-id" {:middleware [wrap-channel]}
                ["" {:get channel-page
                     :post new-message
                     :delete delete-channel}]
@@ -183,16 +183,16 @@ new message to the author, we can remove the rendering bit from the
 whenever you sent a message, it would look like you sent it twice.
 
 ```diff
- (defn new-message [{:keys [channel mem params] :as ctx}]
-   (let [msg {:xt/id (random-uuid)
-              :msg/mem (:xt/id mem)
-              :msg/channel (:xt/id channel)
-              :msg/created-at (java.util.Date.)
-              :msg/text (:text params)}]
+ (defn new-message [{:keys [channel membership params] :as ctx}]
+   (let [message {:xt/id (random-uuid)
+              :message/membership (:xt/id membership)
+              :message/channel (:xt/id channel)
+              :message/created-at (java.util.Date.)
+              :message/text (:text params)}]
      (biff/submit-tx (assoc ctx :biff.xtdb/retry false)
-       (concat [(assoc msg :db/doc-type :message)]
+       (concat [(assoc message :db/doc-type :message)]
                (command-tx ctx)))
--    (message-view msg)))
+-    (message-view message)))
 +    [:<>]))
 ```
 

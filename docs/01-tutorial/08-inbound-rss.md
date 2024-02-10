@@ -2,7 +2,7 @@
 title: Inbound RSS
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/1623da37209b4f043f4cf18859f47450a5e93a8e).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/6a0f3eeb84c081c6e29054007ff44ae5d44054ee).
 
 All of eelchat's core functionality is now in place. In this section, we'll add
 a nice-to-have: inbound RSS feeds. You can add RSS feeds to channels, and
@@ -16,28 +16,28 @@ First we'll add a `:subscription` document type to our schema:
 ```diff
 ;; src/com/eelchat/schema.clj
 ;; ...
-              [:chan/title :string]
-              [:chan/comm  :comm/id]]
+              [:channel/title     :string]
+              [:channel/community :community/id]]
 
-+   :sub/id       :uuid
-+   :subscription [:map {:closed true}
-+                  [:xt/id             :sub/id]
-+                  [:sub/url           :string]
-+                  [:sub/chan          :chan/id]
-+                  [:sub/last-post-uri {:optional true} :string]
-+                  [:sub/fetched-at    {:optional true} inst?]
-+                  [:sub/last-modified {:optional true} :string]
-+                  [:sub/etag          {:optional true} :string]]
++    :subscription/id :uuid
++    :subscription [:map {:closed true}
++                   [:xt/id                      :subscription/id]
++                   [:subscription/url           :string]
++                   [:subscription/channel       :channel/id]
++                   [:subscription/last-post-uri {:optional true} :string]
++                   [:subscription/fetched-at    {:optional true} inst?]
++                   [:subscription/last-modified {:optional true} :string]
++                   [:subscription/etag          {:optional true} :string]]
 +
-    :msg/id  :uuid
+    :message/id :uuid
     :message [:map {:closed true}
-              [:xt/id          :msg/id]
+              [:xt/id               :message/id]
 ```
 
-`:sub/last-modified` and `:sub/etag` will hold the values of their respective
+`:subscription/last-modified` and `:subscription/etag` will hold the values of their respective
 response headers whenever we fetch the RSS feed. This will let us avoid
 downloading the feed when there haven't been any new items yet.
-`:sub/last-post-uri` will help us double check if we've already seen the feed's
+`:subscription/last-post-uri` will help us double check if we've already seen the feed's
 most recent item or not.
 
 Next, the boring part: we need some UI for subscribing to RSS feeds. Let's
@@ -49,19 +49,19 @@ in the UI.
 
 Our RSS bot will need to write messages of its own to the channel (both to provide output for
 chat commands and to display new RSS items), so let's add `:system` as a possible value for
-the `:msg/mem` key:
+the `:message/membership` key:
 
 ```diff
 ;; src/com/eelchat/schema.clj
 ;; ...
-    :msg/id  :uuid
+    :message/id :uuid
     :message [:map {:closed true}
-              [:xt/id          :msg/id]
--             [:msg/mem        :mem/id]
-+             [:msg/mem        [:or :mem/id [:enum :system]]]
-              [:msg/text       :string]
-              [:msg/channel    :chan/id]
-              [:msg/created-at inst?]
+              [:xt/id              :message/id]
+-             [:message/membership :membership/id]
++             [:message/membership [:or :membership/id [:enum :system]]]
+              [:message/text       :string]
+              [:message/channel    :channel/id]
+              [:message/created-at inst?]]})
 ```
 
 We'll need to update our message rendering code to handle the new value. Let's just get
@@ -70,11 +70,11 @@ that out of the way now:
 ```diff
 ;; src/com/eelchat/app.clj
 ;; ...
- (defn message-view [{:msg/keys [mem text created-at]}]
--  (let [username (str "User " (subs (str mem) 0 4))]
-+  (let [username (if (= :system mem)
+ (defn message-view [{:message/keys [membership text created-at]}]
+-  (let [username (str "User " (subs (str membership) 0 4))]
++  (let [username (if (= :system membership)
 +                   "🎅🏻 System 🎅🏻"
-+                   (str "User " (subs (str mem) 0 4)))]
++                   (str "User " (subs (str membership) 0 4)))]
      [:div
       [:.text-sm
        [:span.font-bold username]
@@ -102,48 +102,48 @@ be empty if there was no command to execute):
 +        list-command (= (str/trimr (:text params)) "/list")
 +        message (fn [text]
 +                  {:db/doc-type :message
-+                   :msg/mem :system
-+                   :msg/channel (:xt/id channel)
-+                   :msg/text text
++                   :message/membership :system
++                   :message/channel (:xt/id channel)
++                   :message/text text
 +                   ;; Make sure this message comes after the user's message.
-+                   :msg/created-at (biff/add-seconds (java.util.Date.) 1)})]
++                   :message/created-at (biff/add-seconds (java.util.Date.) 1)})]
 +    (cond
-+     (not (contains? roles :admin))
-+     nil
++      list-command
++      [(message (apply
++                 str
++                 "Subscriptions:"
++                 (for [url (->> (q db
++                                   '{:find (pull subscription [:subscription/url])
++                                     :in [channel]
++                                     :where [[subscription :subscription/channel channel]]}
++                                   (:xt/id channel))
++                                (map :subscription/url)
++                                sort)]
++                   (str "\n - " url))))]
 +
-+     subscribe-url
-+     [{:db/doc-type :subscription
-+       :db.op/upsert {:sub/url subscribe-url
-+                      :sub/chan (:xt/id channel)}}
-+      (message (str "Subscribed to " subscribe-url))]
++      (not (contains? roles :admin))
++      nil
 +
-+     unsubscribe-url
-+     [{:db/op :delete
-+       :xt/id (biff/lookup-id db :sub/chan (:xt/id channel) :sub/url unsubscribe-url)}
-+      (message (str "Unsubscribed from " unsubscribe-url))]
++      subscribe-url
++      [{:db/doc-type :subscription
++        :db.op/upsert {:subscription/url subscribe-url
++                       :subscription/channel (:xt/id channel)}}
++       (message (str "Subscribed to " subscribe-url))]
 +
-+     list-command
-+     [(message (apply
-+                str
-+                "Subscriptions:"
-+                (for [url (->> (q db
-+                                  '{:find (pull sub [:sub/url])
-+                                    :in [channel]
-+                                    :where [[sub :sub/chan channel]]}
-+                                  (:xt/id channel))
-+                               (map :sub/url)
-+                               sort)]
-+                  (str "\n - " url))))])))
++      unsubscribe-url
++      [{:db/op :delete
++        :xt/id (biff/lookup-id db :subscription/channel (:xt/id channel) :subscription/url unsubscribe-url)}
++       (message (str "Unsubscribed from " unsubscribe-url))])))
 +
- (defn new-message [{:keys [channel mem params] :as ctx}]
-   (let [msg {:xt/id (random-uuid)
-              :msg/mem (:xt/id mem)
-              :msg/channel (:xt/id channel)
-              :msg/created-at (java.util.Date.)
-              :msg/text (:text params)}]
+ (defn new-message [{:keys [channel membership params] :as ctx}]
+   (let [message {:xt/id (random-uuid)
+              :message/membership (:xt/id membership)
+              :message/channel (:xt/id channel)
+              :message/created-at (java.util.Date.)
+              :message/text (:text params)}]
      (biff/submit-tx (assoc ctx :biff.xtdb/retry false)
--      [(assoc msg :db/doc-type :message)])
-+      (concat [(assoc msg :db/doc-type :message)]
+-      [(assoc message :db/doc-type :message)])
++      (concat [(assoc message :db/doc-type :message)]
 +              (command-tx ctx)))
      [:<>]))
 ```
@@ -164,15 +164,15 @@ Add these dependencies to `deps.edn`:
 ;; deps.edn
 ;; ...
  {:paths ["src" "resources" "target/resources"]
-  :deps {com.biffweb/biff {:git/url "https://github.com/jacobobryant/biff" :sha "9d725ba74514032b3a6f86affe16f8d3c9693135"}
+  :deps {com.biffweb/biff                    #:git{:url "https://github.com/jacobobryant/biff", :sha "529660f", :tag "v1.0.0"}
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
-+        remus/remus {:mvn/version "0.2.2"}
-+        org.jsoup/jsoup {:mvn/version "1.11.3"}
-         org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}}
++        remus/remus                         {:mvn/version "0.2.2"}
++        org.jsoup/jsoup                     {:mvn/version "1.11.3"}
+         metosin/muuntaja                    {:mvn/version "0.6.8"}
 ```
 
 (Sometimes dependencies can be added automatically, but in this case you'll
-need to hit Ctrl-C and run `bb dev` again.)
+need to hit Ctrl-C and run `clj -M:dev dev` again.)
 
 We'll use Remus to fetch and parse the RSS feeds, and we'll use jsoup to
 convert the posts' HTML content to plain text for our excerpts. Create a new
@@ -188,26 +188,26 @@ namespace `com.eelchat.subscriptions` with the following contents:
 (defn every-n-minutes [n]
   (iterate #(biff/add-seconds % (* n 60)) (java.util.Date.)))
 
-(defn subs-to-update [db]
+(defn subscriptions-to-update [db]
   (q db
-     '{:find (pull sub [*])
+     '{:find (pull subscription [*])
        :in [t]
-       :where [[sub :sub/url]
-               [(get-attr sub :sub/fetched-at #inst "1970")
+       :where [[subscription :subscription/url]
+               [(get-attr subscription :subscription/fetched-at #inst "1970")
                 [fetched-at ...]]
                [(<= fetched-at t)]]}
      (biff/add-seconds (java.util.Date.) (* -60 30))))
 
-(defn assoc-result [{:keys [biff/base-url]} {:sub/keys [url last-modified etag] :as sub}]
-  (assoc sub ::result (biff/catchall-verbose
-                       (remus/parse-url
-                        url
-                        {:headers (biff/assoc-some
-                                   {"User-Agent" base-url}
-                                   "If-None-Match" etag
-                                   "If-Modified-Since" last-modified)
-                         :socket-timeout 5000
-                         :connection-timeout 5000}))))
+(defn assoc-result [{:keys [biff/base-url]} {:subscription/keys [url last-modified etag] :as subscription}]
+  (assoc subscription ::result (biff/catchall-verbose
+                                (remus/parse-url
+                                 url
+                                 {:headers (biff/assoc-some
+                                            {"User-Agent" base-url}
+                                            "If-None-Match" etag
+                                            "If-Modified-Since" last-modified)
+                                  :socket-timeout 5000
+                                  :connection-timeout 5000}))))
 
 (defn format-post [{:keys [title author published-date updated-date link contents]}]
   (let [text-body (some-> contents
@@ -222,29 +222,29 @@ namespace `com.eelchat.subscriptions` with the following contents:
          text-body "\n"
          link)))
 
-(defn sub-tx [{:sub/keys [chan last-post-uri] :keys [xt/id ::result]}]
+(defn subscription-tx [{:subscription/keys [channel last-post-uri] :keys [xt/id ::result]}]
   (let [post (-> result :feed :entries first)
         uri ((some-fn :uri :link) post)]
     (concat [(biff/assoc-some
               {:db/doc-type :subscription
                :db/op :update
                :xt/id id
-               :sub/fetched-at :db/now}
-              :sub/last-post-uri uri
-              :sub/last-modified (get-in result [:response :headers "Last-Modified"])
-              :sub/etag (get-in result [:response :headers "Etag"]))]
+               :subscription/fetched-at :db/now}
+              :subscription/last-post-uri uri
+              :subscription/last-modified (get-in result [:response :headers "Last-Modified"])
+              :subscription/etag (get-in result [:response :headers "Etag"]))]
             (when (and (some? uri) (not= uri last-post-uri))
               [{:db/doc-type :message
-                :msg/mem :system
-                :msg/channel chan
-                :msg/created-at :db/now
-                :msg/text (format-post post)}]))))
+                :message/membership :system
+                :message/channel channel
+                :message/created-at :db/now
+                :message/text (format-post post)}]))))
 
 (defn fetch-rss [{:keys [biff/db] :as ctx}]
   (biff/submit-tx ctx
-    (->> (subs-to-update db)
+    (->> (subscriptions-to-update db)
          (map #(assoc-result ctx %))
-         (mapcat sub-tx))))
+         (mapcat subscription-tx))))
 
 (def module
   {:tasks [{:task #'fetch-rss
@@ -275,11 +275,11 @@ Then register the new namespace in your app:
 ```
 
 Scheduled tasks are only started when the system starts, so for our new task to
-take effect, you'll need to go to `com.eelchat` and evaluate the
-`(biff/refresh)` form. (Again, you can alternatively hit
+take effect, you'll need to go to `dev/repl.clj` and evaluate the
+`(main/refresh)` form. (Again, you can alternatively hit
 Ctrl-C in the terminal and re-run `bb dev`, but it'll be slower. However
 sometimes that's a good option if you accidentally bork something and
-`biff/refresh` doesn't work.)
+`main/refresh` doesn't work.)
 
 Once the system starts up, it will run our scheduled task
 immediately. If you already added a subscription to one of your channels, you
@@ -291,7 +291,7 @@ was sent.)
 
 If you add a new subscription and want to trigger the scheduled task
 immediately without waiting five minutes, you can head over to
-`com.eelchat.repl` and add
+`dev/repl.clj` and add
 `(com.eelchat.subscriptions/fetch-rss (get-context))`
 somewhere within the `comment` form. Evaluate it to fetch the feeds.
 
@@ -315,11 +315,11 @@ that whenever there's a new subscription document:
 +    (doseq [[op & args] (::xt/tx-ops tx)
 +            :when (= op ::xt/put)
 +            :let [[doc] args]
-+            :when (and (contains? doc :sub/url)
++            :when (and (contains? doc :subscription/url)
 +                       (nil? (xt/entity db-before (:xt/id doc))))]
 +      (future
 +       (biff/submit-tx ctx
-+         (sub/sub-tx (sub/assoc-result ctx doc)))))))
++         (sub/subscription-tx (sub/assoc-result ctx doc)))))))
 +
 +(defn on-tx [ctx tx]
 +  (on-new-message ctx tx)
@@ -364,11 +364,11 @@ Add a `:fetch-rss` queue like so:
 ;; src/com/eelchat/subscriptions.clj
 ;; ...
           (map #(assoc-result ctx %))
-          (mapcat sub-tx))))
+          (mapcat subscription-tx))))
 
 +(defn fetch-rss-consumer [{:keys [biff/job] :as ctx}]
 +  (biff/submit-tx ctx
-+    (sub-tx (assoc-result ctx job))))
++    (subscription-tx (assoc-result ctx job))))
 +
  (def module
    {:tasks [{:task #'fetch-rss
@@ -379,8 +379,8 @@ Add a `:fetch-rss` queue like so:
 ```
 
 Queues, like scheduled tasks, are only initialized at startup, so go ahead and
-refresh the system to make the change take effect (`com.eelchat` ->
-`(biff/refresh)`). Then we'll modify the
+refresh the system to make the change take effect (`dev/repl.clj` ->
+`(main/refresh)`). Then we'll modify the
 `com.eelchat.app/on-new-subscription` transaction listener to have it
 submit a job:
 
@@ -392,11 +392,11 @@ submit a job:
      (doseq [[op & args] (::xt/tx-ops tx)
              :when (= op ::xt/put)
              :let [[doc] args]
-             :when (and (contains? doc :sub/url)
+             :when (and (contains? doc :subscription/url)
                         (nil? (xt/entity db-before (:xt/id doc))))]
 -      (future
 -       (biff/submit-tx ctx
--         (sub/sub-tx (sub/assoc-result ctx doc)))))))
+-         (sub/subscription-tx (sub/assoc-result ctx doc)))))))
 +      (biff/submit-job ctx :fetch-rss doc))))
 
  (defn on-tx [ctx tx]
@@ -412,15 +412,15 @@ Let's modify our scheduled task to use the queue as well:
 ```diff
 ;; src/com/eelchat/subscriptions.clj
 ;; ...
-                 :msg/text (format-post post)}]))))
+                 :message/text (format-post post)}]))))
 
  (defn fetch-rss [{:keys [biff/db] :as ctx}]
 -  (biff/submit-tx ctx
--    (->> (subs-to-update db)
+-    (->> (subscriptions-to-update db)
 -         (map #(assoc-result ctx %))
--         (mapcat sub-tx))))
-+  (doseq [sub (subs-to-update db)]
-+    (biff/submit-job ctx :fetch-rss sub)))
+-         (mapcat subscription-tx))))
++  (doseq [subscription (subscriptions-to-update db)]
++    (biff/submit-job ctx :fetch-rss subscription)))
 ```
 
 There's a slight caveat here: what if our scheduled task adds a bunch of jobs to the queue,
@@ -433,8 +433,12 @@ default priority is 10, and lower numbers take higher priority.)
 ```diff
 ;; src/com/eelchat/app.clj
 ;; ...
+ (defn on-new-subscription [{:keys [biff.xtdb/node] :as ctx} tx]
+   (let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
+     (doseq [[op & args] (::xt/tx-ops tx)
+             :when (= op ::xt/put)
              :let [[doc] args]
-             :when (and (contains? doc :sub/url)
+             :when (and (contains? doc :subscription/url)
                         (nil? (xt/entity db-before (:xt/id doc))))]
 -      (biff/submit-job ctx :fetch-rss doc))))
 +      (biff/submit-job ctx :fetch-rss (assoc doc :biff/priority 0)))))

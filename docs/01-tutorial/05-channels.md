@@ -2,7 +2,7 @@
 title: Channels
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/0cde57a7ed58c34aa6f2b775e52da4aafa7a471d).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/ef3ed9c45f36899b7c56a200f64cbcc943c598e1).
 
 Now that users can create and join communities, we're ready to let
 community admins create and delete channels. We'll start by adding a "New
@@ -19,11 +19,12 @@ so it adds the current user's roles to the incoming request:
 +  (fn [{:keys [biff/db user path-params] :as ctx}]
      (if-some [community (xt/entity db (parse-uuid (:id path-params)))]
 -      (handler (assoc ctx :community community))
-+      (let [roles (->> (:user/mems user)
-+                       (filter (fn [mem]
-+                                 (= (:xt/id community) (get-in mem [:mem/comm :xt/id]))))
++      (let [roles (->> (:user/memberships user)
++                       (filter (fn [membership]
++                                 (= (:xt/id community)
++                                    (get-in membership [:membership/community :xt/id]))))
 +                       first
-+                       :mem/roles)]
++                       :membership/roles)]
 +        (handler (assoc ctx :community community :roles roles)))
        {:status 303
         :headers {"location" "/app"}})))
@@ -42,7 +43,7 @@ if so:
     [:.flex.bg-orange-50
 ;; ...
                        url)}
-          (:comm/title comm)])]
+          (:community/title community)])]
       [:.grow]
 +     (when (contains? roles :admin)
 +       [:<>
@@ -71,20 +72,20 @@ Next we'll add a handler so that the button actually does something. We'll also 
  
 +(defn new-channel [{:keys [community roles] :as ctx}]
 +  (if (and community (contains? roles :admin))
-+    (let [chan-id (random-uuid)]
++    (let [channel-id (random-uuid)]
 +     (biff/submit-tx ctx
 +       [{:db/doc-type :channel
-+         :xt/id chan-id
-+         :chan/title (str "Channel #" (rand-int 1000))
-+         :chan/comm (:xt/id community)}])
++         :xt/id channel-id
++         :channel/title (str "Channel #" (rand-int 1000))
++         :channel/community (:xt/id community)}])
 +     {:status 303
-+      :headers {"Location" (str "/community/" (:xt/id community) "/channel/" chan-id)}})
++      :headers {"Location" (str "/community/" (:xt/id community) "/channel/" channel-id)}})
 +    {:status 403
 +     :body "Forbidden."}))
 +
  (defn community [{:keys [biff/db user community] :as ctx}]
-   (let [member (some (fn [mem]
-                        (= (:xt/id community) (get-in mem [:mem/comm :xt/id])))
+   (let [member (some (fn [membership]
+                        (= (:xt/id community) (get-in membership [:membership/community :xt/id])))
 ;; ...
           [:button.btn {:type "submit"} "Join this community"])
          [:div {:class "grow-[1.75]"}]]))))
@@ -102,8 +103,8 @@ Next we'll add a handler so that the button actually does something. We'll also 
  
 +(defn wrap-channel [handler]
 +  (fn [{:keys [biff/db user community path-params] :as ctx}]
-+    (let [channel (xt/entity db (parse-uuid (:chan-id path-params)))]
-+      (if (= (:chan/comm channel) (:xt/id community))
++    (let [channel (xt/entity db (parse-uuid (:channel-id path-params)))]
++      (if (= (:channel/community channel) (:xt/id community))
 +        (handler (assoc ctx :channel channel))
 +        {:status 303
 +         :headers {"Location" (str "/community/" (:xt/id community))}}))))
@@ -117,7 +118,7 @@ Next we'll add a handler so that the button actually does something. We'll also 
 -             ["/join" {:post join-community}]]]})
 +             ["/join" {:post join-community}]
 +             ["/channel" {:post new-channel}]
-+             ["/channel/:chan-id" {:middleware [wrap-channel]}
++             ["/channel/:channel-id" {:middleware [wrap-channel]}
 +              ["" {:get channel-page}]]]]})
 ```
 
@@ -140,11 +141,11 @@ in the sidebar if you're a member of the community:
 +(defn channels [{:keys [biff/db community roles]}]
 +  (when (some? roles)
 +    (sort-by
-+     :chan/title
++     :channel/title
 +     (q db
 +        '{:find (pull channel [*])
-+          :in [comm]
-+          :where [[channel :chan/comm comm]]}
++          :in [community]
++          :where [[channel :channel/community community]]}
 +        (:xt/id community)))))
 +
 -(defn app-page [{:keys [uri user community roles] :as ctx} & body]
@@ -155,15 +156,15 @@ in the sidebar if you're a member of the community:
 ;; ...
            :selected (when (= url uri)
                        url)}
-          (:comm/title comm)])]
+          (:community/title community)])]
 +     [:.h-4]
-+     (for [chan (channels ctx)
-+           :let [active (= (:xt/id chan) (:xt/id channel))]]
++     (for [c (channels ctx)
++           :let [active (= (:xt/id c) (:xt/id channel))]]
 +       [:.mt-3 (if active
-+                 [:span.font-bold (:chan/title chan)]
++                 [:span.font-bold (:channel/title c)]
 +                 [:a.link {:href (str "/community/" (:xt/id community)
-+                                      "/channel/" (:xt/id chan))}
-+                  (:chan/title chan)])])
++                                      "/channel/" (:xt/id c))}
++                  (:channel/title c)])])
       [:.grow]
       (when (contains? roles :admin)
         [:<>
@@ -197,9 +198,7 @@ Make a new `src/com/eelchat/ui/icons.clj` file, containing the free
 ```
 
 Then modify `com.eelchat.ui/app-page` so it includes the delete buttons. We'll
-do a little finagling to make the icon vertically aligned. And while we're at
-it, let's fix the community drop-down box so it displays the current community
-correctly when you're on a channel page:
+do a little finagling to make the icon vertically aligned:
 
 ```diff
 ;; src/com/eelchat/ui.clj
@@ -207,12 +206,9 @@ correctly when you're on a channel page:
  (ns com.eelchat.ui
    (:require [cheshire.core :as cheshire]
              [clojure.java.io :as io]
-+            [clojure.string :as str]
+             [clojure.string :as str]
              [com.eelchat.settings :as settings]
 +            [com.eelchat.ui.icons :refer [icon]]
-             [com.biffweb :as biff :refer [q]]
-             [ring.middleware.anti-forgery :as csrf]))
- 
 ;; ...
 (defn app-page [{:keys [biff/db uri user community roles channel] :as ctxs} & body]
    (base
@@ -224,34 +220,31 @@ correctly when you're on a channel page:
       [:select
        {:class '[text-sm
 ;; ...
-             :let [url (str "/community/" (:xt/id comm))]]
+             :let [url (str "/community/" (:xt/id community))]]
          [:option.cursor-pointer
           {:value url
--          :selected (when (= url uri)
--                      url)}
-+          :selected (when (str/starts-with? uri url)
-+                      true)}
-          (:comm/title comm)])]
+           :selected (str/starts-with? uri url)}
+          (:community/title community)])]
       [:.h-4]
-      (for [chan (channels ctx)
--           :let [active (= (:xt/id chan) (:xt/id channel))]]
-+           :let [active (= (:xt/id chan) (:xt/id channel))
+      (for [c (channels ctx)
+-           :let [active (= (:xt/id c) (:xt/id channel))]]
++           :let [active (= (:xt/id c) (:xt/id channel))
 +                 href (str "/community/" (:xt/id community)
-+                           "/channel/" (:xt/id chan))]]
++                           "/channel/" (:xt/id c))]]
 -       [:.mt-3 (if active
--                 [:span.font-bold (:chan/title chan)]
+-                 [:span.font-bold (:channel/title c)]
 -                 [:a.link {:href (str "/community/" (:xt/id community)
--                                      "/channel/" (:xt/id chan))}
--                  (:chan/title chan)])])
+-                                      "/channel/" (:xt/id c))}
+-                  (:channel/title c)])])
 +       [:.mt-4.flex.justify-between.leading-none
 +        (if active
-+          [:span.font-bold (:chan/title chan)]
++          [:span.font-bold (:channel/title c)]
 +          [:a.link {:href href}
-+           (:chan/title chan)])
++           (:channel/title c)])
 +        (when (contains? roles :admin)
 +          [:button.opacity-50.hover:opacity-100.flex.items-center
 +           {:hx-delete href
-+            :hx-confirm (str "Delete " (:chan/title chan) "?")
++            :hx-confirm (str "Delete " (:channel/title c) "?")
 +            :hx-target "closest div"
 +            :hx-swap "outerHTML"
 +            :_ (when active
@@ -283,12 +276,12 @@ fully functional:
 +  [:<>])
 +
  (defn community [{:keys [biff/db user community] :as ctx}]
-   (let [member (some (fn [mem]
-                        (= (:xt/id community) (get-in mem [:mem/comm :xt/id])))
+   (let [member (some (fn [membership]
+                        (= (:xt/id community) (get-in membership [:membership/community :xt/id])))
 ;; ...
               ["/join" {:post join-community}]
               ["/channel" {:post new-channel}]
-              ["/channel/:chan-id" {:middleware [wrap-channel]}
+              ["/channel/:channel-id" {:middleware [wrap-channel]}
 -              ["" {:get channel-page}]]]]})
 +              ["" {:get channel-page
 +                   :delete delete-channel}]]]]})

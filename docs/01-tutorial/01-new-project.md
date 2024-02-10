@@ -2,7 +2,7 @@
 title: Start a new project
 ---
 
-[View the code for this section](https://github.com/jacobobryant/eelchat/commit/1110f0764b81ecfe1b088ee9d286c985d14b349b).
+[View the code for this section](https://github.com/jacobobryant/eelchat/commit/36cbd960304f2e0e6448ff9fcd989da5f1c76454).
 
 As with any Biff project, we'll need to run the new project script. We'll add a
 `tutorial` argument so that your project will be based on the same version of
@@ -74,11 +74,7 @@ To send emails instead of printing them to the console, add your API keys for Po
 [qtp1209549907-42] INFO com.biffweb.impl.middleware -  10ms 303 post /auth/send-link
 [qtp1209549907-44] INFO com.biffweb.impl.middleware -   4ms 200 get  /link-sent?email=hello@example.com
 [qtp1209549907-42] INFO com.biffweb.impl.middleware -   1ms 200 get  /css/main.css?t=1707102698000
-
-
 ```
-
-
 
 Open that link, and you should be signed in!
 
@@ -93,23 +89,22 @@ let's remove the `com.eelchat.worker` namespace. Remove it from `com.eelchat` fi
 ```diff
 ;; src/com/eelchat.clj
 ;; ...
-             [com.eelchat.email :as email]
-             [com.eelchat.app :as app]
              [com.eelchat.home :as home]
+             [com.eelchat.middleware :as mid]
+             [com.eelchat.ui :as ui]
 -            [com.eelchat.worker :as worker]
              [com.eelchat.schema :as schema]
              [clojure.test :as test]
              [clojure.tools.logging :as log]
 ;; ...
- (def modules
    [app/module
     (biff/authentication-module {})
     home/module
 -   schema/module
 -   worker/module])
 +   schema/module])
-
- (def routes [["" {:middleware [biff/wrap-site-defaults]}
+ 
+ (def routes [["" {:middleware [mid/wrap-site-defaults]}
                (keep :routes modules)]
 ```
 
@@ -180,4 +175,4 @@ If you played around with the starter app at all, you might already have some
 `:msg` documents or `:user/foo`/`:user/bar` attributes in your database. Let's
 clear out the database to ensure we don't have any non-schema-conforming
 documents. Hit `Ctrl-C` in your terminal to stop the app, then run
-`rm -r storage/xtdb/`. Afterward, start the app up again with `bb dev`.
+`rm -r storage/xtdb/`. Afterward, start the app up again with `clj -M:dev dev`.

@@ -23,7 +23,7 @@ done so already.
 Now you can create the droplet.
 
 > 2․ (Optional) If this is an important application, you may want to set up a
-> managed Postgres instance and edit config.edn to use that for XTDB's storage
+> managed Postgres instance and edit `config.env` to use that for XTDB's storage
 > backend instead of the filesystem. With the default standalone topology,
 > you'll need to handle backups yourself, and you can't use more than one
 > server.
@@ -32,22 +32,16 @@ We'll skip this. If you're deploying a Real Application with Real Users, you sho
 *at least* enable Digital Ocean's weekly filesystem backups when you create the droplet, and
 preferably use their managed Postgres offering.
 
-> 3․ Edit `config.edn` and set `:biff.tasks/server` to the domain you'd like to use
-> for your app. For now we'll assume you're using `example.com`. Also update
-> `:biff/base-url`. If you use main instead of master as your default branch,
-> update `:biff.tasks/deploy-cmd`.
+> 3. Edit `config.env` and set `DOMAIN` to the domain you'd like to use for your
+>    app. For now we'll assume you're using `example.com`.
 
 I'll use `eelchat.biffweb.com` for my domain. Replace that with whatever domain
 you're using:
 
 ```clojure
-;; config.edn
-{:prod {...
-        :biff/base-url "https://eelchat.biffweb.com"
-        ...}
- :dev {...}
- :tasks {...
-         :biff.tasks/server "eelchat.biffweb.com"}}
+# config.env
+DOMAIN=eelchat.biffweb.com
+...
 ```
 
 > 4․ Set an A record on example.com that points to your Ubuntu server.
@@ -124,10 +118,14 @@ Successfully received certificate.
 
 The entire process should take under 5 minutes. When it's done, run `reboot`.
 
-> 7․ (Optional) On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
-> This is required if you don't have `rsync` installed.
 
-This is the last step, so after we add the remote, we can go ahead and deploy our app:
+> 7. (Optional) On your local machine, run `git remote add prod ssh://app@example.com/home/app/repo.git`.
+>    This is required if you don't have `rsync` installed. If your default git
+>    branch is `main` instead of `master`, you'll also need to edit
+>    `:biff.tasks/deploy-cmd` in `resources/config.edn`.
+
+Most people won't need to do this, but we'll add the remote for demonstration
+anyway. After that, we can go ahead and deploy our app with `clj -M:dev deploy`:
 
 ```plaintext
 $ %%git remote add prod ssh://app@eelchat.biffweb.com/home/app/repo.git%%
@@ -136,11 +134,11 @@ $ %%git add .%%
 
 $ %%git commit -m "Add the landing page"%%
 
-$ %%bb deploy%%
+$ %%clj -M:dev deploy%%
 [...]
 ```
 
-After the command finishes, run `bb logs` and look for the `System started`
+After the command finishes, run `clj -M:dev logs` and look for the `System started`
 message. This part may take a minute or so. Once you see it, you can load the
 website in your web browser!
 
@@ -148,44 +146,29 @@ website in your web browser!
 
 At this stage, when you sign in to eelchat, it will still print the sign-in
 link to the console instead of emailing it to you. You can get the sign-in link
-for your production app by running `bb logs`.
+for your production app by running `clj -M:dev logs`.
 
 If you'd like to actually send the link via email (which you'll need to do at
 some point if you plan on having users), create a
 [Postmark](https://postmarkapp.com/) account. Once you have a Postmark API key
-and sending identity, add them to your `config.edn` and `secrets.env` files. 
+and sending identity, add them to `config.env`:
 
 ```clojure
-;; config.edn
-{:prod {...
-        :postmark/from "hello@example.com"
-        ...
-```
-
-```bash
-# secrets.env
+# config.env
+POSTMARK_FROM=hello@example.com
+POSTMARK_API_KEY=abc123
 ...
-export POSTMARK_API_KEY=...
 ```
 
 Then register your site with [reCAPTCHA](https://www.google.com/recaptcha/admin/). Select 
 v2 Invisible for the reCAPTCHA type. Add your domain and `localhost` to the
-allowed domains. Then add your credentials to `config.edn` and `secrets.env`:
+allowed domains. Then add your credentials to `config.env`:
 
 ```clojure
-;; config.edn
-{:prod {...
-        :recaptcha/site-key "..."
-        ...
-```
-
-```bash
-# secrets.env
+# config.env
+RECAPTCHA_SITE_KEY=abc123
+RECAPTCHA_SECRET_KEY=def456
 ...
-export RECAPTCHA_SECRET_KEY=...
 ```
 
-Then run `bb deploy; bb restart` to make the config change take effect.
-(Normally `bb deploy` would trigger a restart automatically; however, if you
-haven't made any new commits since the last deploy, `bb deploy` will upload
-your config files and then exit.)
+Then run `clj -M:dev deploy` to make the config changes take effect.
