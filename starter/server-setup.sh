@@ -78,7 +78,7 @@ chmod 440 /etc/sudoers.d/restart-app
 
 # Firewall
 ufw allow OpenSSH
-ufw enable
+ufw --force enable
 
 # Web dependencies
 apt-get -y install nginx
