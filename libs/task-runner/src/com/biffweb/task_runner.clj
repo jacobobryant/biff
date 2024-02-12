@@ -1,7 +1,7 @@
 (ns com.biffweb.task-runner
   (:require [com.biffweb.task-runner.lazy.clojure.string :as str]))
 
-(def ^:dynamic *tasks* {})
+(def tasks {})
 
 (defn- print-help [tasks]
   (let [col-width (apply max (mapv count (keys tasks)))]
@@ -33,7 +33,7 @@
     (println doc)))
 
 (defn run-task [task-name & args]
-  (let [task-fn (get *tasks* task-name)]
+  (let [task-fn (get tasks task-name)]
     (cond
       (nil? task-fn)
       (binding [*out* *err*]
@@ -53,6 +53,7 @@
    (let [tasks @(requiring-resolve (symbol tasks-sym))]
      (if (contains? #{"help" "--help" "-h" nil} task-name)
        (print-help tasks)
-       (binding [*tasks* tasks]
+       (do
+         (alter-var-root #'tasks (constantly tasks))
          (apply run-task task-name args)))
      (shutdown-agents))))

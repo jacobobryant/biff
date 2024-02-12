@@ -159,7 +159,9 @@
     (push-files-rsync ctx)
     (push-files-git ctx)))
 
-(defn- auto-soft-deploy [{:biff.tasks/keys [watch-dirs] :as ctx}]
+(defn- auto-soft-deploy [{:biff.tasks/keys [watch-dirs]
+                          :or {watch-dirs ["src" "dev" "resources" "test"]}
+                          :as ctx}]
   (run-task "soft-deploy")
   (apply beholder/watch
          (debounce (fn [_]
