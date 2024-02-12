@@ -108,9 +108,6 @@
 (defn- ssh-run [{:keys [biff.tasks/server]} & args]
   (apply shell "ssh" (str "root@" server) args))
 
-(defn- trench [{:keys [biff.nrepl/port] :as ctx} & args]
-  (apply ssh-run ctx "trench" "-p" port "-e" args))
-
 (defn- local-tailwind-path []
   (if (windows?)
     "bin/tailwindcss.exe"
@@ -349,13 +346,17 @@
 
    Does not refresh or restart, so there isn't any downtime."
   []
-  (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy] :as ctx} @config]
+  (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]
+         :keys [biff.nrepl/port]
+         :as ctx} @config]
     (with-ssh-agent ctx
       (run-task "css" "--minify")
       (push-files ctx)
-      (trench (or on-soft-deploy
-                  ;; backwards compatibility
-                  (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))))
+      (ssh-run ctx "trench"
+               "-p" port
+               "-e" (or on-soft-deploy
+                        ;; backwards compatibility
+                        (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))))
 
 (defn deploy
   "Pushes code to the server and restarts the app.
