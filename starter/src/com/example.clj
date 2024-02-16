@@ -2,6 +2,7 @@
   (:require [com.biffweb :as biff]
             [com.example.email :as email]
             [com.example.app :as app]
+            [com.example.refresh :as refresh]
             [com.example.home :as home]
             [com.example.middleware :as mid]
             [com.example.ui :as ui]
@@ -19,6 +20,7 @@
   [app/module
    (biff/authentication-module {})
    home/module
+   refresh/module
    schema/module
    worker/module])
 
@@ -39,7 +41,7 @@
 
 (defn on-save [ctx]
   (biff/add-libs)
-  (biff/eval-files! ctx)
+  (refresh/handle-eval-result! ctx (biff/eval-files! ctx))
   (generate-assets! ctx)
   (biff/catchall (require 'com.example-test))
   (test/run-all-tests #"com.example.*-test"))
@@ -57,6 +59,7 @@
    :biff.beholder/on-save #'on-save
    :biff.middleware/on-error #'ui/on-error
    :biff.xtdb/tx-fns biff/tx-fns
+   :biff/dev-clients (atom #{})
    :com.example/chat-clients (atom #{})})
 
 (defonce system (atom {}))
@@ -91,3 +94,22 @@
     (log/info "stopping:" (str f))
     (f))
   (tn-repl/refresh :after `start))
+
+
+;;; Pieces:
+;; - insert htmx snippet into body
+;; - handle websocket connection request
+;; - watch files and send websocket message
+
+;; stuff that needs to be modified:
+;; - add a callback inside on-save
+;; - add a module
+;; - add a snippet to base-html (or add middleware?)
+;; - add ws client atom to system map
+
+;; should this be a component?
+;; - can set ws atom
+;; - can add middleware to inject htmx snippet
+;; - can add module for the callback
+;; - can check :biff.refresh/enabled key
+;; - can set a callback for on-save (and also modify on-save)

@@ -2,6 +2,7 @@
   (:require [cheshire.core :as cheshire]
             [clojure.java.io :as io]
             [com.example.settings :as settings]
+            [com.example.refresh :as refresh]
             [com.biffweb :as biff]
             [ring.middleware.anti-forgery :as csrf]
             [ring.util.response :as ring-response]
@@ -23,7 +24,7 @@
     (str "/js/main.js?t=" last-modified)
     "/js/main.js"))
 
-(defn base [{:keys [::recaptcha] :as ctx} & body]
+(defn base [{:keys [::recaptcha biff/refresh-on-save] :as ctx} & body]
   (apply
    biff/base-html
    (-> ctx
@@ -42,6 +43,8 @@
                                        [:script {:src "https://www.google.com/recaptcha/api.js"
                                                  :async "async" :defer "defer"}])]
                                     head))))
+   (when refresh-on-save
+     (refresh/snippet ctx))
    body))
 
 (defn page [ctx & body]
