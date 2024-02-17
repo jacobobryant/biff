@@ -15,6 +15,7 @@
  :biff.middleware/secure        #profile {:dev false :default true}
  :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
  :biff/jwt-secret               #biff/secret JWT_SECRET
+ :biff.refresh/enabled          #profile {:dev true :default false}
 
  :postmark/api-key #biff/secret POSTMARK_API_KEY
  :postmark/from    #biff/env POSTMARK_FROM
