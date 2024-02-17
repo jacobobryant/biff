@@ -90,4 +90,5 @@
   (doseq [f (:biff/stop @system)]
     (log/info "stopping:" (str f))
     (f))
-  (tn-repl/refresh :after `start))
+  (tn-repl/refresh :after `start)
+  :done)

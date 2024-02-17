@@ -9,6 +9,7 @@
             [com.biffweb.impl.queues :as q]
             [com.biffweb.impl.rum :as brum]
             [com.biffweb.impl.time :as time]
+            [com.biffweb.impl.htmx-refresh :as htmx-refresh]
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.util.ns :as ns]
             [com.biffweb.impl.util.reload :as reload]
@@ -249,10 +250,18 @@
   (apply util/fix-print* body))
 
 (defn eval-files!
-  "Evaluates any modified files and their dependents via clojure.tools.namespace."
-  [{:keys [biff/eval-paths]
-    :or {eval-paths ["src"]}}]
-  (swap! reload/global-tracker reload/refresh eval-paths))
+  "Evaluates any modified files and their dependents via clojure.tools.namespace.
+
+   Returns the evaluation result. If set, `on-eval` is a sequence of 2-parameter
+   callback functions which will each be called with `ctx` and the evaluation
+   result."
+  [{:keys [biff/eval-paths biff.eval/on-eval]
+    :or {eval-paths ["src"]}
+    :as ctx}]
+  (let [result (swap! reload/global-tracker reload/refresh eval-paths)]
+    (doseq [f on-eval]
+      (f ctx result))
+    result))
 
 (defn add-libs
   "Loads new dependencies in deps.edn via tools.deps.alpha.
@@ -1048,6 +1057,17 @@
     :or {closed true}
     :as opts}]
   (misc/doc-schema opts))
+
+(defn use-htmx-refresh
+  "Refreshes the browser automatically when you save a file.
+
+   If `enabled` is true, wraps `handler` with middleware that will insert some
+   htmx websocket code into HTML responses. Adds a callback function to
+   (:biff.eval/on-eval ctx) that will send a refresh command via websocket (see
+   biff/eval-files!). If you have a compilation error, that will be displayed
+   instead of refreshing."
+  [{:keys [biff/handler biff.refresh/enabled] :as ctx}]
+  (htmx-refresh/use-htmx-refresh ctx))
 
 ;;;; Queues
 
