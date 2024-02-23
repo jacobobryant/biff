@@ -21,7 +21,7 @@
     ctx
     (let [;; Poor man's debouncer -- don't want to pull in core.async just for
           ;; this, and don't want to spend time figuring out how else to do it.
-          last-called (atom #inst "1970")
+          last-called (atom (java.util.Date.))
           watch (apply beholder/watch
                        (fn [{:keys [path]}]
                          (when (and (or (empty? exts)
