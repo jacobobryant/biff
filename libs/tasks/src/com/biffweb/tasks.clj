@@ -120,7 +120,7 @@
                   (str/includes? os-name "linux") "linux"
                   :else "macos")
         arch (case (System/getProperty "os.arch")
-               "amd64" "x64"
+               ("amd64" "x86_64") "x64"
                "arm64")]
     (str "tailwindcss-" os-type "-" arch (when (= os-type "windows") ".exe"))))
 
