@@ -26,4 +26,6 @@ RUN rm -r /usr/local/bin/tailwindcss src dev resources deps.edn
 EXPOSE 8080
 
 ENV BIFF_PROFILE=prod
+ENV HOST=0.0.0.0
+ENV PORT=8080
 CMD ["/usr/bin/java", "-XX:-OmitStackTraceInFastThrow", "-XX:+CrashOnOutOfMemoryError", "-jar", "app.jar"]

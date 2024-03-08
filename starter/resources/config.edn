@@ -1,9 +1,10 @@
 ;; See https://github.com/juxt/aero and https://biffweb.com/docs/api/utilities/#use-aero-config.
 ;; #biff/env and #biff/secret will load values from the environment and from config.env.
 {:biff/base-url #profile {:prod #join ["https://" #biff/env DOMAIN] :default "http://localhost:8080"}
- :biff/host     #profile {:dev "0.0.0.0"
-                          :default "localhost"}
- :biff/port     8080
+ :biff/host     #or [#biff/env "HOST"
+                     #profile {:dev "0.0.0.0"
+                               :default "localhost"}]
+ :biff/port     #or [#biff/env "PORT" 8080]
 
  :biff.xtdb/dir          "storage/xtdb"
  :biff.xtdb/topology     #keyword #or [#profile {:prod #biff/env "PROD_XTDB_TOPOLOGY"
