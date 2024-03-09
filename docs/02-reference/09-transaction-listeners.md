@@ -35,5 +35,5 @@ The value of `tx` looks like this:
 
 See also:
 
- - [`use-tx-listener`](/docs/api/xtdb/#use-tx-listener)
+ - [`use-xtdb-tx-listener`](/docs/api/xtdb/#use-xtdb-tx-listener)
  - [`xtdb.api/listen`](https://v1-docs.xtdb.com/clients/clojure/#\_listen)

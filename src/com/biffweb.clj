@@ -561,7 +561,7 @@
     :as options}]
   (bxt/start-node options))
 
-(defn use-xt
+(defn use-xtdb
   "A Biff component that starts an XTDB node.
 
   Sets :biff.xtdb/node on the system map. topology, kv-store, dir, opts and
@@ -576,7 +576,7 @@
     :as ctx}]
   (bxt/use-xt ctx))
 
-(defn use-tx-listener
+(defn use-xtdb-tx-listener
   "If on-tx or modules is provided, starts an XTDB transaction listener.
 
   modules:  A var containing a collection of module maps. Each module map may
@@ -590,8 +590,20 @@
   successfully indexed. on-tx receives the system map and the transaction, i.e.
   (on-tx ctx tx). tx is the transaction as returned by (xtdb.api/open-tx-log
   node tx-id true). on-tx will not be called concurrently: if a second
-  transaction is indexed while on-tx is still running, use-tx-listener will
+  transaction is indexed while on-tx is still running, use-xtdb-tx-listener will
   wait until it finishes before passing the second transaction."
+  [{:keys [biff/modules biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as ctx}]
+  (bxt/use-tx-listener ctx))
+
+(defn use-xt
+  "Deprecated. Renamed to use-xtdb."
+  [{:keys [biff/secret]
+    :biff.xtdb/keys [topology kv-store dir opts tx-fns]
+    :as ctx}]
+  (bxt/use-xt ctx))
+
+(defn use-tx-listener
+  "Deprecated. Renamed to use-xtdb-tx-listener."
   [{:keys [biff/modules biff/plugins biff/features biff.xtdb/on-tx biff.xtdb/node] :as ctx}]
   (bxt/use-tx-listener ctx))
 
@@ -709,7 +721,7 @@
   (bxt/save-tx-fns! node tx-fns))
 
 (def tx-fns
-  "A map of Biff-provided transaction functions. See use-xt and save-tx-fns!
+  "A map of Biff-provided transaction functions. See use-xtdb and save-tx-fns!
 
   Includes the following tx fns:
 

@@ -101,7 +101,7 @@ replace `biff/use-aero-config` with a custom component:
 
 (def components
   [use-custom-config
-   biff/use-xt
+   biff/use-xtdb
    ...])
 ```
 

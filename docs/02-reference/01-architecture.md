@@ -62,9 +62,9 @@ When your app starts, this system map is passed through a sequence of **componen
 (def components
   [biff/use-config
    biff/use-secrets
-   biff/use-xt
+   biff/use-xtdb
    biff/use-queues
-   biff/use-tx-listener
+   biff/use-xtdb-tx-listener
    biff/use-jetty
    biff/use-chime
    biff/use-beholder])
@@ -149,15 +149,15 @@ is stored, you can replace `biff/use-aero-config` with your own component:
 
 (def components
   [use-custom-config
-   biff/use-xt
+   biff/use-xtdb
    ...])
 ```
 
 If you'd like to modify one of Biff's default components beyond what its options
 allow, it's fine and recommended to copy the source code for the component into
-your own project. For example, the `biff/use-xt` component only supports using
+your own project. For example, the `biff/use-xtdb` component only supports using
 RocksDB, LMDB, and/or JDBC as the storage backend. If you want to use Kafka, you
-could copy the [`biff/use-xt`](/docs/api/xtdb#use-xt) source into your project
+could copy the [`biff/use-xtdb`](/docs/api/xtdb#use-xtdb) source into your project
 and make the needed changes.
 
 Biff also provides a single default module, `biff/authentication-module`, which
