@@ -283,14 +283,21 @@
       ((requiring-resolve (symbol (str main-ns) "-main"))))))
 
 (defn uberjar
-  "Compiles the app into an Uberjar."
-  []
+  "Compiles the app into an Uberjar.
+
+   Options:
+
+     --no-clean
+            Don't call the `clean` task before building the Uberjar."
+  [& args]
   (let [{:biff.tasks/keys [main-ns generate-assets-fn] :as ctx} @config
         class-dir "target/jar/classes"
         basis (clj-build/create-basis {:project "deps.edn"})
-        uber-file "target/jar/app.jar"]
-    (println "Cleaning...")
-    (run-task "clean")
+        uber-file "target/jar/app.jar"
+        no-clean (some #{"--no-clean"} args)]
+    (when-not no-clean
+      (println "Cleaning...")
+      (run-task "clean"))
     (println "Generating CSS...")
     (run-task "css" "--minify")
     (println "Calling" generate-assets-fn "...")
