@@ -4,6 +4,7 @@
 /config.edn
 /config.sh
 /config.env
+/node_modules
 /secrets.env
 /storage/
 /tailwindcss
@@ -12,3 +13,4 @@
 .clj-kondo/
 .lsp/
 .portal/
+.shadow-cljs/
