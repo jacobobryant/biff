@@ -63,9 +63,9 @@
 
 (def components
   [biff/use-aero-config
-   biff/use-xt
+   biff/use-xtdb
    biff/use-queues
-   biff/use-tx-listener
+   biff/use-xtdb-tx-listener
    biff/use-htmx-refresh
    biff/use-jetty
    biff/use-chime
