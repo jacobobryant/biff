@@ -80,7 +80,8 @@
         (update :biff/stop conj #(.close node)))))
 
 (defn assoc-db [{:keys [biff.xtdb/node] :as ctx}]
-  (assoc ctx :biff/db (xt/db node)))
+  (cond-> ctx
+    node (assoc :biff/db (xt/db node))))
 
 (defn merge-context [{:keys [biff/merge-context-fn]
                       :or {merge-context-fn assoc-db}
