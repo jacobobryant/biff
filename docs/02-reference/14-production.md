@@ -18,7 +18,8 @@ follow these steps (for example screenshots, see [the tutorial](https://biffweb.
    topology, you'll need to handle backups yourself, and you can't use more
    than one server.
 3. Edit `config.env` and set `DOMAIN` to the domain you'd like to use for your
-   app. For now we'll assume you're using `example.com`.
+   app. For now we'll assume you're using `example.com`. (If you haven't run `clj -M:dev dev` yet,
+   `config.env` won't exist. You can create it with `clj -M:dev generate-config`.)
 4. Set an A record on `example.com` that points to your Ubuntu server.
 5. Make sure you can ssh into the server, then run `scp server-setup.sh root@example.com:`.
 6. Run `ssh root@example.com`, then `bash server-setup.sh`. After it finishes, run `reboot`.

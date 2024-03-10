@@ -33,7 +33,8 @@ We'll skip this. If you're deploying a Real Application with Real Users, you sho
 preferably use their managed Postgres offering.
 
 > 3. Edit `config.env` and set `DOMAIN` to the domain you'd like to use for your
->    app. For now we'll assume you're using `example.com`.
+>    app. For now we'll assume you're using `example.com`. (If you haven't run `clj -M:dev dev` yet,
+>    `config.env` won't exist. You can create it with `clj -M:dev generate-config`.)
 
 I'll use `eelchat.biffweb.com` for my domain. Replace that with whatever domain
 you're using:
