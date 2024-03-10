@@ -35,7 +35,7 @@
        (update :base/head (fn [head]
                             (concat [[:link {:rel "stylesheet" :href (css-path)}]
                                      [:script {:src (js-path)}]
-                                     [:script {:src "https://unpkg.com/htmx.org@1.9.0"}]
+                                     [:script {:src "https://unpkg.com/htmx.org@1.9.10"}]
                                      [:script {:src "https://unpkg.com/htmx.org/dist/ext/ws.js"}]
                                      [:script {:src "https://unpkg.com/hyperscript.org@0.9.8"}]
                                      (when recaptcha
