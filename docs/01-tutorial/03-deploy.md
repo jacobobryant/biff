@@ -151,13 +151,13 @@ for your production app by running `clj -M:dev logs`.
 
 If you'd like to actually send the link via email (which you'll need to do at
 some point if you plan on having users), create a
-[Postmark](https://postmarkapp.com/) account. Once you have a Postmark API key
+[MailerSend](https://www.mailersend.com/) account. Once you have a MailerSend API key
 and sending identity, add them to `config.env`:
 
 ```clojure
 # config.env
-POSTMARK_FROM=hello@example.com
-POSTMARK_API_KEY=abc123
+MAILERSEND_FROM=hello@example.com
+MAILERSEND_API_KEY=abc123
 ...
 ```
 

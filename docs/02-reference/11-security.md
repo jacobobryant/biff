@@ -15,7 +15,7 @@ emails to your users and verifying the links and codes. UI and email templates
 are handled in your application code so that they can be easily customized.
 
 The starter project comes with code for sending emails with
-[Postmark](https://postmarkapp.com/). Until you add API keys for Postmark and
+[MailerSend](https://www.mailersend.com/). Until you add API keys for MailerSend and
 Recaptcha (which is used to protect your signin forms from bots), signin links
 and codes will be printed to the console instead of being emailed.
 

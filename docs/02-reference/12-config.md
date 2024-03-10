@@ -49,7 +49,7 @@ modify `resources/config.edn` or `config.env` during development, you'll need to
 Secrets should always be kept in the `config.env` file, which isn't checked into git:
 
 ```bash
-POSTMARK_API_KEY=abc123
+MAILERSEND_API_KEY=abc123
 ...
 ```
 
@@ -59,18 +59,17 @@ example, if your config and secrets files have the following contents:
 
 ```clojure
 # config.env
-POSTMARK_API_KEY=abc123
+MAILERSEND_API_KEY=abc123
 
 ;; config.edn
-{:postmark/api-key #biff/secret POSTMARK_API_KEY
-...
+{:mailersend/api-key #biff/secret MAILERSEND_API_KEY ...
 ```
 
 then the following handler would print `abc123` to the console:
 
 ```clojure
 (defn hello [{:keys [biff/secret] :as ctx}]
-  (println (secret :postmark/api-key))
+  (println (secret :mailersend/api-key))
   ...)
 
 (def module

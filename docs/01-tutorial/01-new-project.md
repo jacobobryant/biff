@@ -70,7 +70,7 @@ We received a request to sign up to My Application using this email address. Cli
 
 This link will expire in one hour. If you did not request this link, you can ignore this email.
 
-To send emails instead of printing them to the console, add your API keys for Postmark and Recaptcha to config.edn.
+To send emails instead of printing them to the console, add your API keys for MailerSend and Recaptcha to config.edn.
 [qtp1209549907-42] INFO com.biffweb.impl.middleware -  10ms 303 post /auth/send-link
 [qtp1209549907-44] INFO com.biffweb.impl.middleware -   4ms 200 get  /link-sent?email=hello@example.com
 [qtp1209549907-42] INFO com.biffweb.impl.middleware -   1ms 200 get  /css/main.css?t=1707102698000
