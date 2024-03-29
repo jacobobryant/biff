@@ -203,6 +203,15 @@
     (io/copy (:body (hato/get url {:as :stream :http-client {:redirect-policy :normal}})) dest)
     (.setExecutable dest true)))
 
+(defn- tailwind-installation-info []
+  (let [local-bin-installed (fs/exists? (local-tailwind-path))]
+    {:local-bin-installed local-bin-installed
+     :tailwind-cmd (cond
+                     (sh-success? "npm" "list" "tailwindcss") :npm
+                     (and (fs/which "tailwindcss")
+                          (not local-bin-installed)) :global-bin
+                     :else :local-bin)}))
+
 (defn css
   "Generates the target/resources/public/css/main.css file.
 
@@ -221,18 +230,13 @@
       and that will be used."
   [& tailwind-args]
   (let [{:biff.tasks/keys [css-output] :as ctx} @config
-        local-bin-installed (fs/exists? (local-tailwind-path))
-        tailwind-cmd (cond
-                       (sh-success? "npm" "list" "tailwindcss") :npm
-                       (and (fs/which "tailwindcss")
-                            (not local-bin-installed)) :global-bin
-                       :else :local-bin)]
+        {:keys [local-bin-installed tailwind-cmd]} (tailwind-installation-info)]
     (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
       (run-task "install-tailwind"))
     (when (= tailwind-cmd :local-bin)
-      ;; This normally will be handled by install-tailwind, but we set it here
-      ;; in case that function was interrupted. Assuming the download was
-      ;; incomplete, the 139 exit code handler will be triggered below.
+      ;; This normally will be handled by install-tailwind, but we set it here in case that function
+      ;; was interrupted. Assuming the download was incomplete, the 139 exit code (segfault) handler will be
+      ;; triggered below. I've also had a report of exit code 137 (sigkill) being triggered.
       (.setExecutable (io/file (local-tailwind-path)) true))
     (try
       (apply shell (concat (case tailwind-cmd
@@ -244,16 +248,16 @@
                             "-o" css-output]
                            tailwind-args))
       (catch Exception e
-        (when (and (= 139 (:babashka/exit (ex-data e)))
-                   (#{:local-bin :global-bin} tailwind-cmd))
+        (if (and (#{137 139} (:exit (ex-data e)))
+                 (#{:local-bin :global-bin} tailwind-cmd))
           (binding [*out* *err*]
             (println "It looks like your Tailwind installation is corrupted. Try deleting it and running this command again:")
             (println)
             (println "  rm" (if (= tailwind-cmd :local-bin)
                               (local-tailwind-path)
                               (str (fs/which "tailwindcss"))))
-            (println)))
-        (throw e)))))
+            (println))
+          (throw e))))))
 
 (defn dev
   "Starts the app locally.
@@ -278,6 +282,9 @@
         (run-task "generate-config"))
       (when (fs/exists? "package.json")
         (shell "npm install"))
+      (let [{:keys [local-bin-installed tailwind-cmd]} (tailwind-installation-info)]
+        (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
+          (run-task "install-tailwind")))
       (future (run-task "css" "--watch"))
       (spit ".nrepl-port" port)
       ((requiring-resolve (symbol (str main-ns) "-main"))))))
