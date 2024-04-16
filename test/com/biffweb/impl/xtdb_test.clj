@@ -78,8 +78,7 @@
            '({:db/doc-type :user,
               :baz "quux",
               :foo "eh",
-              :db/op :merge,
-              :xt/id nil}
+              :db/op :merge}
              [:xtdb.api/fn :biff/ensure-unique {:foo "eh"}])))))
 
 (deftest tx-unique
