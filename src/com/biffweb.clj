@@ -736,6 +736,24 @@
      [:xtdb.api/fn :biff/ensure-unique {:user/name \"example\"}]])"
   bxt/tx-fns)
 
+(defn test-xtdb-node
+  "Returns an in-memory node that's initialized with the given docs and with biff/tx-fns.
+
+   Each element of docs will be given a random UUID for :xt/id, unless you
+   supply one. The docs are inserted with :xtdb.api/put operations, i.e. they're
+   inserted verbatim without schema checking or any other biff/submit-tx
+   features.
+
+   Example:
+
+     (deftest my-test
+       (with-open [node (test-xtdb-node [{:user/email \"hello@example.com\"}
+                                         {:user/email \"there@example.com\"}])]
+         (let [db (xt/db node)]
+           ...)))"
+  [docs]
+  (bxt/test-node docs))
+
 ;;;; Rum
 
 (defn render

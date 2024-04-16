@@ -1,7 +1,7 @@
 (ns com.biffweb.impl.xtdb-test
   (:require [clojure.test :refer [deftest is]]
             [xtdb.api :as xt]
-            [com.biffweb :as biff]
+            [com.biffweb :as biff :refer [test-xtdb-node]]
             [malli.core :as malc]
             [malli.registry :as malr]))
 
@@ -28,23 +28,8 @@
 
 (def malli-opts {:registry (malr/composite-registry malc/default-registry schema)})
 
-(defn test-node [docs]
-  (let [node (xt/start-node {})]
-    (when (not-empty docs)
-      (xt/await-tx
-       node
-       (xt/submit-tx node
-         (vec
-          (concat
-           (for [d docs]
-             [::xt/put (merge {:xt/id (random-uuid)}
-                              d)])
-           (for [[k f] biff/tx-fns]
-             [::xt/put {:xt/id k :xt/fn f}]))))))
-    node))
-
 (deftest ensure-unique
-  (with-open [node (test-node [{:foo "bar"}])]
+  (with-open [node (test-xtdb-node [{:foo "bar"}])]
     (let [db (xt/db node)]
       (is (nil? (xt/with-tx
                   db
@@ -58,7 +43,7 @@
                     [::xt/fn :biff/ensure-unique {:foo "bar"}]]))))))
 
 (deftest tx-upsert
-  (with-open [node (test-node [{:xt/id :id/foo
+  (with-open [node (test-xtdb-node [{:xt/id :id/foo
                                 :foo "bar"}])]
     (is (= (biff/tx-xform-upsert
             {:biff/db (xt/db node)}
@@ -116,10 +101,10 @@
                  :user/email "bob@example.com"}])
 
 (deftest tx-default
-  (with-open [node (test-node (into test-docs
-                                    [{:xt/id :user/carol
-                                      :user/email "carol@example.com"
-                                      :user/foo "x"}]))]
+  (with-open [node (test-xtdb-node (into test-docs
+                                         [{:xt/id :user/carol
+                                           :user/email "carol@example.com"
+                                           :user/foo "x"}]))]
     (is (= (biff/biff-tx->xt
             (get-context node)
             [{:db/doc-type :user
@@ -144,7 +129,7 @@
               {:user/email "carol@example.com", :user/foo "x", :xt/id :user/carol}])))))
 
 (deftest tx-all
-  (with-open [node (test-node test-docs)]
+  (with-open [node (test-xtdb-node test-docs)]
     (is (= (biff/biff-tx->xt
             (get-context node)
             [{:db/doc-type :user
@@ -168,22 +153,22 @@
               {:user/email "bob@example.com", :xt/id :user/bob, :user/bar "baz"}])))))
 
 (deftest lookup
-  (with-open [node (test-node [{:xt/id :user/alice
-                                :user/email "alice@example.com"
-                                :user/foo "foo"}
-                               {:xt/id :user/bob
-                                :user/email "bob@example.com"
-                                :user/foo "foo"}
-                               {:xt/id :user/carol
-                                :user/email "bob@example.com"}
-                               {:xt/id :msg/a
-                                :msg/user :user/alice
-                                :msg/text "hello"
-                                :msg/sent-at #inst "1970"}
-                               {:xt/id :msg/b
-                                :msg/user :user/alice
-                                :msg/text "there"
-                                :msg/sent-at #inst "1971"}])]
+  (with-open [node (test-xtdb-node [{:xt/id :user/alice
+                                     :user/email "alice@example.com"
+                                     :user/foo "foo"}
+                                    {:xt/id :user/bob
+                                     :user/email "bob@example.com"
+                                     :user/foo "foo"}
+                                    {:xt/id :user/carol
+                                     :user/email "bob@example.com"}
+                                    {:xt/id :msg/a
+                                     :msg/user :user/alice
+                                     :msg/text "hello"
+                                     :msg/sent-at #inst "1970"}
+                                    {:xt/id :msg/b
+                                     :msg/user :user/alice
+                                     :msg/text "there"
+                                     :msg/sent-at #inst "1971"}])]
     (let [db (xt/db node)]
       (is (= :user/alice (biff/lookup-id db :user/email "alice@example.com")))
       (is (= '(:user/alice :user/bob) (sort (biff/lookup-id-all db :user/foo "foo"))))

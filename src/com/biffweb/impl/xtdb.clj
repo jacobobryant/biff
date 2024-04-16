@@ -434,3 +434,17 @@
                                  query
                                  (map :v kvs))))
           false)))})
+
+(defn test-node [docs]
+  (let [node (xt/start-node {})]
+    (xt/await-tx
+     node
+     (xt/submit-tx node
+       (vec
+        (concat
+         (for [d docs]
+           [::xt/put (merge {:xt/id (random-uuid)}
+                            d)])
+         (for [[k f] tx-fns]
+           [::xt/put {:xt/id k :xt/fn f}])))))
+    node))
