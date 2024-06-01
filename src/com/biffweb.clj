@@ -616,8 +616,8 @@
   "Convenience wrapper for xtdb.api/q.
 
   If the :find value is not a vector, results will be passed through
-  (map first ...). Also throws an exception if (count args) doesn't match
-  (count (:in query))."
+  (map first ...) after (vector ...)-ing the value. Also throws an exception if
+  (count args) doesn't match (count (:in query))."
   [db query & args]
   (apply bxt/q db query args))
 
