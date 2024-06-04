@@ -1462,10 +1462,7 @@
                  (pprint metadata)))))
 
 (comment
-  (let [resources-dir (io/file "/home/jacob/dev/platypub/themes/biffweb2/resources/com/biffweb/theme")]
+  (let [resources-dir (io/file "/home/jacob/dev/com.biffweb/resources")]
     (write-doc-data (str (io/file resources-dir "api.edn")))
     (io/copy (io/file "new-project.clj")
-             (io/file resources-dir "new-project.clj_"))
-    (print (sh "rsync" "-av" "--delete" "docs/" (str (io/file resources-dir "docs") "/")))
-    (print (sh "bb" "soft-deploy" :dir "/home/jacob/dev/platypub"))
-    ))
+             (io/file resources-dir "new-project.clj_"))))
