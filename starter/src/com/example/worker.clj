@@ -1,5 +1,6 @@
 (ns com.example.worker
   (:require [clojure.tools.logging :as log]
+            [clojure.string :as str]
             [com.biffweb :as biff :refer [q]]
             [xtdb.api :as xt]))
 
@@ -32,9 +33,38 @@
   (when-some [callback (:biff/callback job)]
     (callback job)))
 
+(defn index-n-users [{:biff.index/keys [docs db]}]
+  (let [tx (into []
+                 (keep (fn [{:keys [user/email]}]
+                         (when (and (some? email)
+                                    (empty? (xt/entity db email)))
+                           [::xt/put {:xt/id email}])))
+                 docs)]
+    (when (not-empty tx)
+      (conj tx [::xt/put {:xt/id :n-users
+                          :value (+ (:value (xt/entity db :n-users) 0) (count tx))}]))))
+
+(let [patterns [#"(?i)hello"
+                #"(?i)there"]]
+  (defn index-interesting-words [{:biff.index/keys [docs db]}]
+    (let [n-words (count (for [{:keys [msg/text]} docs
+                               :when text
+                               pattern patterns
+                               match (re-seq pattern text)]
+                           match))]
+      (when (< 0 n-words)
+        [[::xt/put {:xt/id :n-words
+                    :value (+ (:value (xt/entity db :n-words) 0) n-words)}]]))))
+
 (def module
   {:tasks [{:task #'print-usage
             :schedule #(every-n-minutes 5)}]
    :on-tx alert-new-user
    :queues [{:id :echo
-             :consumer #'echo-consumer}]})
+             :consumer #'echo-consumer}]
+   :indexes [{:id :n-users
+              :version 1
+              :indexer #'index-n-users}
+             {:id :n-interesting-words
+              :version 1
+              :indexer #'index-interesting-words}]})

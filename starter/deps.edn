@@ -5,6 +5,8 @@
         ring/ring-defaults                  {:mvn/version "0.3.4"}
         org.clojure/clojure                 {:mvn/version "1.11.1"}
 
+        com.xtdb/xtdb-lucene {:mvn/version "1.23.1"}
+
         ;; Notes on logging: https://gist.github.com/jacobobryant/76b7a08a07d5ef2cc076b048d078f1f3
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}
         org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}

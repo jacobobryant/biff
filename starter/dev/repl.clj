@@ -1,8 +1,12 @@
 (ns repl
   (:require [com.example :as main]
             [com.biffweb :as biff :refer [q]]
+            [clojure.stacktrace :as st]
             [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [xtdb.api :as xt]
+            [xtdb.tx :as tx])
+  [:import [java.io Closeable]])
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -84,3 +88,49 @@
   ;; Check the terminal for output.
   (biff/submit-job (get-context) :echo {:foo "bar"})
   (deref (biff/submit-job-for-result (get-context) :echo {:foo "bar"})))
+
+(defn empty-db [node]
+  (if (xt/latest-completed-tx node)
+    (xt/db node {::xt/tx {::xt/tx-id -1}})
+    (xt/db node)))
+
+;; TODO better name for this
+(defn indexes [{:keys [biff.xtdb/node biff/indexes biff.index/tx-metadata]}]
+  (if-some [node-id->tx-id (:latest-consistent-tx-ids @tx-metadata)]
+    (let [main-tx {::xt/tx-id (node-id->tx-id :biff.xtdb/node)}]
+      (xt/await-tx node main-tx)
+      (-> indexes
+          (update-vals (fn [{:keys [id node]}]
+                         (xt/db node {::xt/tx {::xt/tx-id (node-id->tx-id id)}})))
+          (assoc :biff/db (xt/db node {::xt/tx main-tx}))))
+    (-> indexes
+        (update-vals (comp empty-db :node))
+        (assoc :biff/db (empty-db node)))))
+
+
+(comment
+
+
+  (time
+   (let [{:keys [n-users n-interesting-words biff/db]} (indexes (get-context))]
+     [(xt/entity n-users :n-users)
+      (xt/entity n-interesting-words :n-words)]))
+
+  (let [{:keys [biff/db biff/indexes biff.index/tx-metadata] :as ctx} (get-context)]
+    (select-keys ctx [:biff/indexes :biff.index/tx-metadata])
+    [(q (xt/db (get-in ctx [:biff/indexes :n-users :node]))
+        '{:find (pull doc [*])
+          :where [[doc :xt/id]]})
+     (q db '{:find (pull doc [*])
+             :where [[doc :user/email]]})]
+    )
+
+  (let [{:keys [biff/db biff/indexes biff.index/tx-metadata] :as ctx} (get-context)]
+    [(q (xt/db (get-in ctx [:biff/indexes :n-interesting-words :node]))
+        '{:find (pull doc [*])
+          :where [[doc :xt/id]]})
+     (q db '{:find (pull doc [*])
+             :where [[doc :msg/text]]})]
+    )
+
+  )

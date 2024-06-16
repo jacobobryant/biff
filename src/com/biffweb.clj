@@ -542,6 +542,7 @@
 ;;;; XTDB
 
 (defn start-node
+  ;; TODO deprecate and move/copy doc string into use-xtdb
   "A higher-level version of xtdb.api/start-node.
 
   Calls xtdb.api/sync before returning the node.

@@ -1,14 +1,18 @@
 (ns com.biffweb.impl.xtdb
   (:require [better-cond.core :as b]
-            [com.biffweb.impl.util :as util]
+            [com.biffweb.impl.util :as util :refer [<<-]]
             [com.biffweb.impl.util.ns :as ns]
             [clojure.java.io :as io]
             [clojure.set :as set]
+            [clojure.stacktrace :as st]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
             [xtdb.api :as xt]
+            [xtdb.tx :as tx]
             [malli.error :as male]
-            [malli.core :as malc]))
+            [malli.core :as malc])
+  (:import [java.io Closeable]))
 
 (defn save-tx-fns! [node tx-fns]
   (let [db (xt/db node)]
@@ -22,17 +26,156 @@
                        [::xt/put new-doc])))]
       (xt/submit-tx node tx))))
 
-(defn start-node
-  [{:keys [topology dir opts jdbc-spec pool-opts kv-store tx-fns]
-    :or {kv-store :rocksdb}}]
+(defn put-docs [tx-ops]
+  (into []
+        (mapcat (fn [[op arg1 arg2]]
+                  (case op
+                    ::xt/put [arg1]
+                    ::xt/fn (put-docs (::xt/tx-ops arg2))
+                    nil))
+                tx-ops)))
+
+(defn ->index
+  {:xtdb.system/deps {:xtdb/secondary-indices :xtdb/secondary-indices}
+   :xtdb.system/before #{[:xtdb/tx-ingester]}}
+  [{:keys [xtdb/secondary-indices
+           biff/indexes
+           biff.index/tx-metadata]
+    :as ctx}]
+  (doseq [[_ {:keys [::xt/tx-id id node indexer version]}] indexes]
+    (tx/register-index!
+     secondary-indices
+     (or tx-id -1)
+     {:with-tx-ops? true}
+     (fn [{:keys [::xt/tx-id
+                  ::xt/tx-ops
+                  committing?]
+           :as opts}]
+       (let [db (delay (xt/db node))
+             tx (when committing?
+                  (try
+                    (let [tx (indexer (merge ctx
+                                             opts
+                                             {:biff.index/node node
+                                              :biff.index/db @db
+                                              :biff.index/docs (put-docs tx-ops)}))]
+                      (xt/with-tx @db tx)
+                      tx)
+                    (catch Exception e
+                      (log/error "Exception while indexing! After fixing the problem, you must re-index by incrementing the index version."
+                                 (pr-str {:biff.index/id id
+                                          :biff.index/version version
+                                          ::xt/tx-id tx-id}))
+                      (st/print-stack-trace e)
+                      [[::xt/put {:xt/id (random-uuid)
+                                  :biff.index/exception e
+                                  :biff.index/version version
+                                  ::xt/tx-id tx-id}]])))
+             tx (cond->> tx
+                  (or (not-empty tx) (zero? (mod tx-id 50)))
+                  (concat [[::xt/put {:xt/id :biff.index/metadata
+                                      :biff.index/version version
+                                      ::xt/tx-id tx-id}]]))
+             tx-result (if (not-empty tx)
+                         (xt/submit-tx node tx)
+                         (xt/entity @db :biff.index/metadata))]
+         (swap! tx-metadata
+                (fn [txm]
+                  (<<- (if (< tx-id (or (get-in txm [:latest-consistent-tx-ids :biff.xtdb/node])
+                                        (:max-indexed-tx-at-startup txm)
+                                        -1))
+                         txm)
+                       (let [txm (assoc-in txm [:main-tx-id->index-id->index-tx-id tx-id id] (::xt/tx-id tx-result))
+                             next-tx-ids (get-in txm [:main-tx-id->index-id->index-tx-id tx-id])])
+                       (if (< (count next-tx-ids) (count indexes))
+                         txm)
+                       (-> txm
+                           (assoc :latest-consistent-tx-ids (assoc next-tx-ids :biff.xtdb/node tx-id))
+                           (update :main-tx-id->index-id->index-tx-id dissoc tx-id)))))))))
+  (reify Closeable
+    (close [this]
+      (doseq [[_ {:keys [node]}] indexes]
+        (.close node)))))
+
+(defn verbose-sync [node-id node]
+  (let [done (atom false)]
+    (future
+      (loop []
+        (Thread/sleep 2000)
+        (when-not @done
+          (log/info node-id "indexed" (xt/latest-completed-tx node))
+          (recur))))
+    (xt/sync node)
+    (reset! done true)))
+
+(defn use-xt
+  [{:keys [biff/secret
+           biff/modules
+           biff/plugins
+           biff/features]
+    :biff.xtdb/keys [topology dir kv-store opts tx-fns]
+    :or {kv-store :rocksdb}
+    :as ctx}]
   (let [kv-store-fn (fn [basename]
                       {:kv-store {:xtdb/module (if (= kv-store :lmdb)
                                                  'xtdb.lmdb/->kv-store
                                                  'xtdb.rocksdb/->kv-store)
                                   :db-dir (io/file dir (str basename (when (= kv-store :lmdb)
                                                                        "-lmdb")))}})
+        jdbc-spec (into (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
+                        (keep (fn [k]
+                                (when-let [value (and secret (secret (keyword "biff.xtdb.jdbc"
+                                                                              (name k))))]
+                                  [k value])))
+                        [:password :jdbcUrl])
+        pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
+        modules (util/ctx->modules ctx)
+        indexes (for [{:keys [id version indexer] :as index} (mapcat :indexes modules)]
+                  (assoc index
+                         :db-dir (-> (str id)
+                                     (str/replace #"/" "_")
+                                     (str/replace #"[^a-zA-Z0-9-]+" ""))))
+        _ (doseq [[db-dir indexes] (group-by :db-dir indexes)
+                  :when (< 1 (count indexes))]
+            (throw (ex-info "Invalid indexes: multiple index IDs map to the same db-dir"
+                            {:ids (mapv :id indexes)
+                             :db-dir db-dir})))
+        indexes (into {} (for [{:keys [id db-dir] :as index} indexes
+                               ;; TODO persist + check index version etc
+                               :let [node (xt/start-node {})]]
+                           [id (assoc index :node node)]))
+        _ (run! (fn [[_ {:keys [id node]}]]
+                  (verbose-sync id node))
+                indexes)
+        ;; TODO query for indexing errors here
+        indexes (update-vals indexes (fn [{:keys [node] :as index}]
+                                       (merge index (xt/entity (xt/db node) :biff.index/metadata))))
+        max-indexed-tx-id (some->> (keep ::xt/tx-id indexes)
+                                   not-empty
+                                   (apply max))
+        tx-metadata (atom {:max-indexed-tx-id-at-startup
+                           max-indexed-tx-id
+
+                           :latest-consistent-tx-ids
+                           (when (= 1 (count (set (mapv ::xt/id (vals indexes)))))
+                             (assoc (update-vals indexes (comp ::xt/id xt/latest-completed-tx :node))
+                                    :biff.xtdb/node (::xt/id (first (vals indexes)))))
+
+                           :main-tx-id->index-id->index-tx-id
+                           (some->> (vals indexes)
+                                    (filterv ::xt/tx-id)
+                                    (sort-by ::xt/tx-id >)
+                                    (partition-by ::xt/tx-id)
+                                    first
+                                    (mapv (juxt :id (comp ::xt/tx-id xt/latest-completed-tx :node)))
+                                    (into {})
+                                    (hash-map max-indexed-tx-id))})
+        ctx (assoc ctx :biff/indexes indexes :biff.index/tx-metadata tx-metadata)
         node (xt/start-node
               (merge (case topology
+                       :memory
+                       {}
+
                        :standalone
                        {:xtdb/index-store    (kv-store-fn "index")
                         :xtdb/document-store (kv-store-fn "docs")
@@ -48,33 +191,11 @@
                                       :connection-pool :xtdb.jdbc/connection-pool}
                         :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
                                               :connection-pool :xtdb.jdbc/connection-pool}})
-                     opts))
-        f (future (xt/sync node))]
-    (while (not (realized? f))
-      (Thread/sleep 2000)
-      (when-some [indexed (xt/latest-completed-tx node)]
-        (log/info "Indexed" (pr-str indexed))))
+                     {::index ctx}
+                     opts))]
+    (verbose-sync :biff.xtdb/node node)
     (when (not-empty tx-fns)
       (save-tx-fns! node tx-fns))
-    node))
-
-(defn use-xt
-  [{:keys [biff/secret]
-    :biff.xtdb/keys [topology dir kv-store opts tx-fns]
-    :or {kv-store :rocksdb}
-    :as ctx}]
-  (let [node (start-node
-              {:topology topology
-               :dir dir
-               :kv-store kv-store
-               :opts opts
-               :jdbc-spec (into (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
-                                (keep (fn [k]
-                                        (when-let [value (and secret (secret (keyword "biff.xtdb.jdbc" (name k))))]
-                                          [k value])))
-                                [:password :jdbcUrl])
-               :pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
-               :tx-fns tx-fns})]
     (-> ctx
         (assoc :biff.xtdb/node node)
         (update :biff/stop conj #(.close node)))))
@@ -447,4 +568,46 @@
                             d)])
          (for [[k f] tx-fns]
            [::xt/put {:xt/id k :xt/fn f}])))))
+    node))
+
+;;;; Deprecated ================================================================
+
+(defn start-node
+  [{:keys [topology dir opts jdbc-spec pool-opts kv-store tx-fns indexes ctx]
+    :or {kv-store :rocksdb}}]
+  (let [kv-store-fn (fn [basename]
+                      {:kv-store {:xtdb/module (if (= kv-store :lmdb)
+                                                 'xtdb.lmdb/->kv-store
+                                                 'xtdb.rocksdb/->kv-store)
+                                  :db-dir (io/file dir (str basename (when (= kv-store :lmdb)
+                                                                       "-lmdb")))}})
+        node (xt/start-node
+              (merge (case topology
+                       :memory
+                       {}
+
+                       :standalone
+                       {:xtdb/index-store    (kv-store-fn "index")
+                        :xtdb/document-store (kv-store-fn "docs")
+                        :xtdb/tx-log         (kv-store-fn "tx-log")}
+
+                       :jdbc
+                       {:xtdb/index-store (kv-store-fn "index")
+                        :xtdb.jdbc/connection-pool {:dialect {:xtdb/module
+                                                              'xtdb.jdbc.psql/->dialect}
+                                                    :pool-opts pool-opts
+                                                    :db-spec jdbc-spec}
+                        :xtdb/tx-log {:xtdb/module 'xtdb.jdbc/->tx-log
+                                      :connection-pool :xtdb.jdbc/connection-pool}
+                        :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
+                                              :connection-pool :xtdb.jdbc/connection-pool}})
+                     opts))
+        f (future (xt/sync node))]
+    (Thread/sleep 5)
+    (while (not (realized? f))
+      (Thread/sleep 1000)
+      (when-some [indexed (xt/latest-completed-tx node)]
+        (log/info "Indexed" (pr-str indexed))))
+    (when (not-empty tx-fns)
+      (save-tx-fns! node tx-fns))
     node))
