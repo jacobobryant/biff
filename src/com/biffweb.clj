@@ -971,9 +971,10 @@
             modules.
 
   For example:
+
   (def module
     {:tasks [{:task (fn [ctx] (println \"hello there\"))
-              :schedule (iterate #(biff/add-seconds % 60) (java.util.Date.))}]})"
+              :schedule (fn [] (iterate #(biff/add-seconds % 60) (java.util.Date.)))}]})"
   [{:keys [biff/modules biff/plugins biff/features biff.chime/tasks] :as ctx}]
   (misc/use-chime ctx))
 
