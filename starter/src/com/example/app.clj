@@ -93,8 +93,8 @@
 
 (defn index-contents [ctx]
   (let [{:keys [n-interesting-words n-users]} (biff/index-snapshots ctx)
-        n-interesting-words (:value (xt/entity n-interesting-words :n-words))
-        n-users (:value (xt/entity n-users :n-users))]
+        n-interesting-words (:value (xt/entity n-interesting-words :n-words) 0)
+        n-users (:value (xt/entity n-users :n-users) 0)]
     ;; The refreshIndex event is sufficient for updating n-interesting-words,
     ;; but the 'every 2s' polling will catch updates for n-users.
     [:div#index {:hx-get "/app/index" :hx-trigger "refreshIndex, every 2s" :hx-swap "outerHTML"}
