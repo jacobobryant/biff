@@ -41,7 +41,7 @@
   (biff/render (bar-form {:value (:bar params)})))
 
 (defn message [{:msg/keys [text sent-at]}]
-  [:.mt-3 {:_ "init send newMessage to #message-header"}
+  [:.mt-3 {:_ "init send newMessage to #message-header then send refreshIndex to #index"}
    [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy HH:mm:ss")]
    [:div text]])
 
@@ -91,6 +91,15 @@
      [:div#messages
       (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
+(defn index-contents [ctx]
+  (let [{:keys [n-interesting-words n-users]} (biff/index-snapshots ctx)
+        n-interesting-words (:value (xt/entity n-interesting-words :n-words))
+        n-users (:value (xt/entity n-users :n-users))]
+    ;; The refreshIndex event is sufficient for updating n-interesting-words,
+    ;; but the 'every 2s' polling will catch updates for n-users.
+    [:div#index {:hx-get "/app/index" :hx-trigger "refreshIndex, every 2s" :hx-swap "outerHTML"}
+     "There are " n-users " users and " n-interesting-words " interesting words."]))
+
 (defn app [{:keys [session biff/db] :as ctx}]
   (let [{:user/keys [email foo bar]} (xt/entity db (:uid session))]
     (ui/page
@@ -102,6 +111,8 @@
        [:button.text-blue-500.hover:text-blue-800 {:type "submit"}
         "Sign out"])
       "."]
+     [:.h-6]
+     (index-contents ctx)
      [:.h-6]
      (biff/form
       {:action "/app/set-foo"}
@@ -148,6 +159,7 @@
             ["" {:get app}]
             ["/set-foo" {:post set-foo}]
             ["/set-bar" {:post set-bar}]
-            ["/chat" {:get ws-handler}]]
+            ["/chat" {:get ws-handler}]
+            ["/index" {:get index-contents}]]
    :api-routes [["/api/echo" {:post echo}]]
    :on-tx notify-clients})

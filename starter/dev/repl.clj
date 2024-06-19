@@ -2,7 +2,8 @@
   (:require [com.example :as main]
             [com.biffweb :as biff :refer [q]]
             [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [xtdb.api :as xt]))
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -83,4 +84,16 @@
 
   ;; Check the terminal for output.
   (biff/submit-job (get-context) :echo {:foo "bar"})
-  (deref (biff/submit-job-for-result (get-context) :echo {:foo "bar"})))
+  (deref (biff/submit-job-for-result (get-context) :echo {:foo "bar"}))
+
+  ;; Use this to debug your indexes
+  (biff/replay-indexer (get-context) :n-interesting-words 1)
+
+  ;; Query your index DBs. biff/index-snapshots makes sure they're all in a consistent state.
+  (let [{:keys [n-interesting-words n-users biff/db]} (biff/index-snapshots (get-context))]
+    {:n-interesting-words (q n-interesting-words
+                             '{:find (pull doc [*])
+                               :where [[doc :xt/id]]})
+     :n-users             (q n-users
+                             '{:find (pull doc [*])
+                               :where [[doc :xt/id]]})}))
