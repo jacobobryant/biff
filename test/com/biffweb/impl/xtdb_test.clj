@@ -195,3 +195,12 @@
                               "alice@example.com")
                  (update :user/messages #(sort-by :msg/sent-at %)))))
       (is (#{:user/alice :user/bob} (biff/lookup-id db :user/foo "foo"))))))
+
+(deftest use-xt
+  (let [{:keys [biff.xtdb/node]
+         [stop-fn] :biff/stop} (biff/use-xt {:biff.xtdb/topology :memory})]
+    (try
+      (xt/await-tx node (xt/submit-tx node [[::xt/put {:xt/id :foo :message "hello"}]]))
+      (is (= "hello" (:message (xt/entity (xt/db node) :foo))))
+      (finally
+        (stop-fn)))))

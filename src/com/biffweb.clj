@@ -542,6 +542,7 @@
 ;;;; XTDB
 
 (defn start-node
+  ;; TODO deprecate and move/copy doc string into use-xtdb
   "A higher-level version of xtdb.api/start-node.
 
   Calls xtdb.api/sync before returning the node.
@@ -753,6 +754,33 @@
            ...)))"
   [docs]
   (bxt/test-node docs))
+
+(defn index-snapshots
+  "Returns a map of DB snapshots where the keys are index IDs or :biff/db.
+
+   :biff/db will be a snapshot of (:biff.xtdb/node ctx). All the other DB
+   snapshots (the index snapshots) will be consistent with the :biff/db value."
+  [{:keys [biff.xtdb/node biff/indexes biff.index/tx-metadata] :as ctx}]
+  (bxt/index-snapshots ctx))
+
+(defn replay-indexer
+  "Runs the given indexer on the given transaction and returns debug information.
+
+   index-id: the :id value for your index.
+   tx-id:    the ID for your main XTDB node's transaction that you'd like re-process.
+
+   Returns a map with the following keys:
+
+   :index-basis       - the value of (xt/db-basis db), where db is the value of
+                        :biff.index/db passed to your indexer.
+   :input-tx          - the transaction specified by tx-id.
+   :output-tx         - Optional. The return value of your indexer. Will only be
+                        present if the indexer doesn't throw an exception.
+   :indexer-exception - Optional. The exception thrown by your indexer, if there was one.
+   :with-tx-exception - Optional. The exception thrown by (xt/with-tx index-db output-tx), if there was one.
+                        with-tx is used to check for output-tx values that aren't valid XT transactions."
+  [{:keys [biff.xtdb/node biff/indexes] :as ctx} index-id tx-id]
+  (bxt/replay-indexer ctx index-id tx-id))
 
 ;;;; Rum
 

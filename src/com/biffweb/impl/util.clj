@@ -217,6 +217,12 @@
 (defn normalize-email [email]
   (some-> email str/trim str/lower-case not-empty))
 
+(defn ctx->modules [{:biff/keys [modules plugins features]}]
+  (some-> (or modules plugins features) deref))
+
+(defmacro <<- [& body]
+  `(->> ~@(reverse body)))
+
 ;;;; Deprecated
 
 (defn read-config [path]
