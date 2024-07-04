@@ -14,7 +14,7 @@ from clojure:temurin-17-tools-deps-bullseye
 ENV TAILWIND_VERSION=v3.2.4
 
 RUN apt-get update && apt-get install -y \
-  curl default-jre \
+  curl \
   && rm -rf /var/lib/apt/lists/*
 RUN curl -L -o /usr/local/bin/tailwindcss \
   https://github.com/tailwindlabs/tailwindcss/releases/download/$TAILWIND_VERSION/tailwindcss-linux-x64 \
