@@ -1,3 +1,10 @@
 {:tasks {dev (clojure "-M:dev")
          format (clojure "-M:format")
-         lint (shell "clj-kondo" "--lint" "src")}}
+         lint (shell "clj-kondo" "--lint" "src")
+         postgres (shell "docker" "run" "--rm"
+                         "-e" "POSTGRES_DB=main"
+                         "-e" "POSTGRES_USER=foo"
+                         "-e" "POSTGRES_PASSWORD=bar"
+                         "-p" "5432:5432"
+                         "-v" "/home/jacob/dev/biff/target/postgres:/var/lib/postgresql/data"
+                         "postgres")}}
