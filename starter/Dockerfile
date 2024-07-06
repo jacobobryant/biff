@@ -11,7 +11,7 @@
 
 # This is the base builder image, construct the jar file in this one
 # it uses alpine for a small image
-FROM clojure:temurin-22-tools-deps-alpine AS jre-build
+FROM clojure:temurin-21-tools-deps-alpine AS jre-build
 
 ENV TAILWIND_VERSION=v3.2.4
 
@@ -31,7 +31,7 @@ RUN clj -M:dev uberjar && cp target/jar/app.jar . && rm -r target
 
 # This stage (see multi-stage builds) is a bare Java container
 # copy over the uberjar from the builder image and run the application
-FROM eclipse-temurin:22-alpine
+FROM eclipse-temurin:21-alpine
 WORKDIR /app
 
 # Take the uberjar from the base image and put it in the final image
