@@ -9,7 +9,7 @@
 #   docker build -t your-app .
 #   docker run --rm -e BIFF_PROFILE=dev -v $PWD/config.env:/app/config.env your-app
 #
-from clojure:temurin-17-tools-deps-bullseye
+FROM clojure:temurin-17-tools-deps-bullseye
 
 ENV TAILWIND_VERSION=v3.2.4
 
