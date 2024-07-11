@@ -22,9 +22,11 @@
 ;;;; Util
 
 (defn pprint
-  "Alias of clojure.pprint/pprint"
-  [& args]
-  (apply util/pprint args))
+  "Alias of clojure.pprint/pprint. Sets *print-namespace-maps* to false."
+  ([object]
+   (util/pprint object nil))
+  ([object writer]
+   (util/pprint object writer)))
 
 (defonce system (atom nil))
 

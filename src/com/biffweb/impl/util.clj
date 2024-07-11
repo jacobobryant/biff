@@ -46,9 +46,11 @@
     (binding [*print-namespace-maps* false]
       (pp/pprint x))))
 
-(defn pprint [x]
+(defn pprint [object & [writer]]
   (binding [*print-namespace-maps* false]
-    (pp/pprint x))
+    (if writer
+      (pp/pprint object writer)
+      (pp/pprint object)))
   (flush))
 
 (defn base64-encode [bs]
