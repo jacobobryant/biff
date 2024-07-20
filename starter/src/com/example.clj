@@ -41,7 +41,6 @@
   (biff/add-libs)
   (biff/eval-files! ctx)
   (generate-assets! ctx)
-  (biff/catchall (require 'com.example-test))
   (test/run-all-tests #"com.example.*-test"))
 
 (def malli-opts

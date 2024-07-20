@@ -14,7 +14,7 @@
             [ring.adapter.jetty9 :as jetty]))
 
 (defn use-beholder [{:biff.beholder/keys [on-save exts paths enabled]
-                     :or {paths ["src" "resources"]
+                     :or {paths ["src" "resources" "test"]
                           enabled true}
                      :as ctx}]
   (if-not enabled

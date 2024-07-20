@@ -258,7 +258,7 @@
    callback functions which will each be called with `ctx` and the evaluation
    result."
   [{:keys [biff/eval-paths biff.eval/on-eval]
-    :or {eval-paths ["src"]}
+    :or {eval-paths ["src" "test"]}
     :as ctx}]
   (let [result (swap! reload/global-tracker reload/refresh eval-paths)]
     (doseq [f on-eval]
@@ -916,7 +916,7 @@
   exts:     If exts is non-empty, files that don't end in one of the extensions
             will be ignored."
   [{:biff.beholder/keys [on-save exts paths enabled]
-    :or {paths ["src" "resources"]
+    :or {paths ["src" "resources" "test"]
          enabled true}
     :as ctx}]
   (misc/use-beholder ctx))
