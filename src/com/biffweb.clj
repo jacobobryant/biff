@@ -308,15 +308,15 @@
   EXAMPLES
   ========
 
-  # secrets.env
+  # config.env
   S3_SECRET_KEY=\"your-secret-key\"
 
-  ;; config.edn
-  {:prod {:biff.s3/origin \"https://nyc3.digitaloceanspaces.com\"
-          :biff.s3/access-key \"your-access-key\"
-          :biff.s3/secret-key \"S3_SECRET_KEY\"
-          :biff.s3/bucket \"default-bucket\"
-          ...
+  ;; resources/config.edn
+  {:biff.s3/origin \"https://nyc3.digitaloceanspaces.com\"
+   :biff.s3/access-key \"your-access-key\"
+   :biff.s3/secret-key #biff/env \"S3_SECRET_KEY\"
+   :biff.s3/bucket \"default-bucket\"
+   ...
 
   ;; Put an object:
   (s3-request ctx {:method \"PUT\"
