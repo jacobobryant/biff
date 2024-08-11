@@ -14,26 +14,161 @@
             [malli.core :as malc])
   (:import [java.io Closeable]))
 
-(defn save-tx-fns! [node tx-fns]
-  (let [db (xt/db node)]
-    (when-some [tx (not-empty
-                    (vec
-                     (for [[k f] tx-fns
-                           :let [new-doc {:xt/id k
-                                          :xt/fn f}
-                                 old-doc (xt/entity db k)]
-                           :when (not= new-doc old-doc)]
-                       [::xt/put new-doc])))]
-      (xt/submit-tx node tx))))
+(defn verbose-sync [node-id node]
+  (let [done (atom false)]
+    (future
+      (loop []
+        (Thread/sleep 2000)
+        (when-not @done
+          (log/info node-id "indexed" (xt/latest-completed-tx node))
+          (recur))))
+    (xt/sync node)
+    (reset! done true)))
 
-(defn put-docs [tx-ops]
-  (into []
-        (mapcat (fn [[op arg1 arg2]]
-                  (case op
-                    ::xt/put [arg1]
-                    ::xt/fn (put-docs (::xt/tx-ops arg2))
-                    nil))
-                tx-ops)))
+(defn- tx-id-for [node t]
+  (get-in (xt/db-basis (xt/db node {::xt/tx-time t}))
+          [::xt/tx ::xt/tx-id]))
+
+(defn indexer-args [node {::xt/keys [tx-id tx-ops]}]
+  (let [prev-db (delay (xt/db node {::xt/tx {::xt/tx-id (dec tx-id)}}))]
+    (vec ((fn step [tx-ops]
+            (mapcat (fn [[op arg1 arg2]]
+                      (case op
+                        ::xt/put [#:biff.index{:op ::xt/put
+                                               :doc arg1}]
+                        ::xt/fn (step (::xt/tx-ops arg2))
+                        ::xt/delete [#:biff.index{:op ::xt/delete
+                                                  :doc (xt/entity @prev-db arg1)}]
+                        nil))
+                    tx-ops))
+          tx-ops))))
+
+(defn test-tx-log [node from to]
+  (let [from-tx-id (tx-id-for node from)]
+    (with-open [log (xt/open-tx-log node
+                                    (dec from-tx-id)
+                                    true)]
+      (->> (iterator-seq log)
+           (take-while #(< (compare (::xt/tx-time %) to) 0))
+           (mapv (fn [tx]
+                   (assoc tx :biff.index/args (indexer-args node tx))))))))
+
+(defn run-indexer [indexer index-args get-doc]
+  (reduce (fn [[index-tx id->doc] args]
+            (let [get-doc* (fn [id]
+                             (cond
+                               (contains? id->doc id) (get id->doc id)
+                               get-doc (get-doc id)))
+                  output-tx (indexer (assoc args :biff.index/get-doc get-doc*))]
+              [(into index-tx output-tx)
+               (into id->doc
+                     (map (fn [[op doc-or-id]]
+                            (case op
+                              ::xt/put [(:xt/id doc-or-id) doc-or-id]
+                              ::xt/delete [doc-or-id nil])))
+                     output-tx)]))
+          [[] {}]
+          index-args))
+
+(defn indexer-results [indexer tx-log-with-args & {:keys [limit] :or {limit 10}}]
+  (let [[results id->doc txes-processed]
+        (loop [results []
+               id->doc {}
+               txes-processed 0
+               [main-tx & remaining] tx-log-with-args]
+          (if (or (nil? main-tx) (<= limit (count results)))
+            [results id->doc txes-processed]
+            (let [[index-tx id->doc] (run-indexer indexer (:biff.index/args main-tx) id->doc)]
+              (recur (cond-> results
+                       (not-empty index-tx) (conj {:main-tx main-tx
+                                                   :index-tx index-tx}))
+                     id->doc
+                     (inc txes-processed)
+                     remaining))))]
+    {:results results
+     :all-docs (filterv some? (vals id->doc))
+     :txes-processed txes-processed}))
+
+(defn start-index-node [{:biff.xtdb/keys [dir kv-store]} index-id]
+  (let [db-dir (-> (str index-id)
+                   (str/replace #"/" "_")
+                   (str/replace #"[^a-zA-Z0-9-]+" ""))
+        kv-store-fn (fn [basename]
+                      {:kv-store {:xtdb/module (if (= kv-store :lmdb)
+                                                 'xtdb.lmdb/->kv-store
+                                                 'xtdb.rocksdb/->kv-store)
+                                  :db-dir (io/file dir (str basename (when (= kv-store :lmdb)
+                                                                       "-lmdb")))}})]
+    (xt/start-node
+     {:xtdb/index-store    (kv-store-fn (str "biff-indexes/" db-dir "/index"))
+      :xtdb/document-store (kv-store-fn (str "biff-indexes/" db-dir "/docs"))
+      :xtdb/tx-log         (kv-store-fn (str "biff-indexes/" db-dir "/tx-log"))})))
+
+(defn prepare-index! [{:biff.xtdb/keys [node] :as ctx}
+                      {:keys [id indexer version]}]
+  (<<- (with-open [index-node (start-index-node ctx id)])
+       (let [_ (com.biffweb.impl.xtdb/verbose-sync id index-node)
+             index-db (xt/db index-node)
+             index-meta (xt/entity index-db :biff.index/metadata)])
+       (if (and (some? index-meta)
+                (not= (:biff.index/version index-meta) version))
+         ::bad-version)
+       (with-open [log (xt/open-tx-log node (::xt/tx-id index-meta) true)])
+       (reduce (fn [[index-tx id->doc get-doc committed-at-ms latest-tx]
+                    input-tx]
+                 (<<- (let [get-doc* (fn [id]
+                                       (if (contains? id->doc id)
+                                         (get id->doc id)
+                                         (get-doc id)))
+                            [tx new-id->doc] (run-indexer indexer
+                                                          (indexer-args node input-tx)
+                                                          get-doc*)
+                            index-tx (into index-tx tx)
+                            now-ms (inst-ms (java.util.Date.))
+                            commit (or (<= 1000 (count index-tx))
+                                       (< (* 1000 10) (- now-ms committed-at-ms))
+                                       (= (::xt/tx-id input-tx) (::xt/tx-id latest-tx)))])
+                      (if-not commit
+                        [index-tx
+                         (merge id->doc new-id->doc)
+                         get-doc
+                         committed-at-ms
+                         latest-tx])
+                      (let [index-tx (conj index-tx [::xt/put {:xt/id :biff.index/metadata
+                                                               :biff.index/version version
+                                                               ::xt/tx-id (::xt/tx-id input-tx)}])
+                            _ (xt/await-tx index-node (xt/submit-tx index-node index-tx))
+                            _ (log/info "Indexed" id "up to" (select-keys input-tx [::xt/tx-id ::xt/tx-time]))
+                            index-db (xt/db index-node)])
+                                   [[]
+                                    {}
+                                    (memoize #(xt/entity index-db %))
+                                    now-ms
+                                    (xt/latest-submitted-tx node)]))
+                            [[]
+                             {}
+                             (memoize #(xt/entity index-db %))
+                             (inst-ms (java.util.Date.))
+                             (xt/latest-submitted-tx node)]
+                            (iterator-seq log)))
+  (log/info "Finished indexing" id))
+
+(defn rollback [node tx-id]
+  (let [txes (with-open [log (xt/open-tx-log node tx-id true)]
+               (doall (iterator-seq log)))
+        doc-ids (->> txes
+                     (mapcat #(indexer-args node %))
+                     (mapv (comp :xt/id :biff.index/doc))
+                     distinct)
+        db (xt/db node {::xt/tx {::xt/tx-id tx-id}})
+        tx (mapv (fn [id]
+                   (if-some [doc (xt/entity db id)]
+                     [::xt/put doc]
+                     [::xt/delete id]))
+                 doc-ids)]
+    (->> tx
+         (partition-all 1000)
+         (run! #(xt/submit-tx node %)))))
 
 (defn ->index
   {:xtdb.system/deps {:xtdb/secondary-indices :xtdb/secondary-indices}
@@ -55,15 +190,20 @@
                   committing?]
            :as new-main-tx}]
        (when-not (and abort-on-error @aborted)
-         (let [db (delay (xt/db node))
+         (let [db (delay (do
+                           (when-some [tx (xt/latest-submitted-tx node)]
+                             (xt/await-tx node tx))
+                           (xt/db node)))
                tx (when committing?
                     (try
-                      (let [tx (indexer (merge new-main-tx
-                                               {:biff.index/db @db
-                                                :biff.index/docs (put-docs tx-ops)}))]
-                        (xt/with-tx @db tx)
+                      (let [get-doc (memoize #(xt/entity @db %))
+                            [tx _] (run-indexer indexer new-main-tx get-doc)]
+                        ;; TODO get rid of this to speed things up?
+                        (when (not-empty tx)
+                          (xt/with-tx @db tx))
                         tx)
                       (catch Exception e
+                        ;; TODO include message + ex-data on the exception?
                         (log/error e
                                    (str "Exception while indexing! You can debug by calling "
                                         "(biff/replay-indexer (get-context) " index-id " " main-tx-id ") from the REPL. "
@@ -79,7 +219,7 @@
                     ;; Even if we don't have any new index data to store, still record ::xt/tx-id every once in a while
                     ;; so we don't have to iterate through a potentially large part of the transaction log on every
                     ;; startup.
-                    (or (not-empty tx) (zero? (mod main-tx-id 500)))
+                    (or (not-empty tx) (zero? (mod main-tx-id 1000)))
                     (concat [[::xt/put {:xt/id :biff.index/metadata
                                         :biff.index/version version
                                         ::xt/tx-id main-tx-id}]]))
@@ -132,8 +272,9 @@
                    (xt/db index-node {::xt/tx {::xt/tx-id index-tx-id}})
                    (empty-db index-node))
         ret (try
-              (let [tx (indexer (merge tx {:biff.index/db index-db
-                                           :biff.index/docs (put-docs (::xt/tx-ops tx))}))]
+              (let [[tx _] (run-indexer indexer
+                                        (indexer-args index-node tx)
+                                        (memoize #(xt/entity index-db %)))]
                 (try
                   (xt/with-tx index-db tx)
                   {:output-tx tx}
@@ -143,16 +284,17 @@
                 {:with-tx-exception e}))]
     (merge {:index-basis (xt/db-basis index-db) :input-tx tx} ret)))
 
-(defn verbose-sync [node-id node]
-  (let [done (atom false)]
-    (future
-      (loop []
-        (Thread/sleep 2000)
-        (when-not @done
-          (log/info node-id "indexed" (xt/latest-completed-tx node))
-          (recur))))
-    (xt/sync node)
-    (reset! done true)))
+(defn save-tx-fns! [node tx-fns]
+  (let [db (xt/db node)]
+    (when-some [tx (not-empty
+                    (vec
+                     (for [[k f] tx-fns
+                           :let [new-doc {:xt/id k
+                                          :xt/fn f}
+                                 old-doc (xt/entity db k)]
+                           :when (not= new-doc old-doc)]
+                       [::xt/put new-doc])))]
+      (xt/submit-tx node tx))))
 
 (defn use-xt
   [{:keys [biff/secret

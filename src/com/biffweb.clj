@@ -782,6 +782,14 @@
   [{:keys [biff.xtdb/node biff/indexes] :as ctx} index-id tx-id]
   (bxt/replay-indexer ctx index-id tx-id))
 
+;; TODO write docstrings
+(def test-tx-log bxt/test-tx-log)
+(def indexer-args bxt/indexer-args)
+(def run-indexer bxt/run-indexer)
+(def indexer-results bxt/indexer-results)
+(def prepare-index! bxt/prepare-index!)
+(def rollback bxt/rollback)
+
 ;;;; Rum
 
 (defn render
