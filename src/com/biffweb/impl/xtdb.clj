@@ -176,7 +176,7 @@
   [{:keys [xtdb/secondary-indices
            biff/indexes
            biff.index/tx-metadata]
-    :as ctx}]
+    main-node :biff.xtdb/node}]
   (doseq [[_ {indexed-main-tx-id ::xt/tx-id
               index-id :id
               :keys [node indexer version abort-on-error]}] indexes
@@ -197,7 +197,9 @@
                tx (when committing?
                     (try
                       (let [get-doc (memoize #(xt/entity @db %))
-                            [tx _] (run-indexer indexer new-main-tx get-doc)]
+                            [tx _] (run-indexer indexer
+                                                (indexer-args main-node new-main-tx)
+                                                get-doc)]
                         ;; TODO get rid of this to speed things up?
                         (when (not-empty tx)
                           (xt/with-tx @db tx))
