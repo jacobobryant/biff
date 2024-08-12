@@ -249,14 +249,17 @@
     (xt/db node {::xt/tx {::xt/tx-id -1}})
     (xt/db node)))
 
+(defn- await-db [node tx-id]
+  (let [basis {::xt/tx-id tx-id}]
+    (xt/await-tx node basis)
+    (xt/db node {::xt/tx basis})))
+
 (defn index-snapshots [{:keys [biff.xtdb/node biff/indexes biff.index/tx-metadata]}]
   (if-some [node-id->tx-id (:latest-consistent-tx-ids @tx-metadata)]
-    (let [main-tx {::xt/tx-id (node-id->tx-id :biff.xtdb/node)}]
-      (xt/await-tx node main-tx)
-      (-> indexes
-          (update-vals (fn [{:keys [id node]}]
-                         (xt/db node {::xt/tx {::xt/tx-id (node-id->tx-id id)}})))
-          (assoc :biff/db (xt/db node {::xt/tx main-tx}))))
+    (-> indexes
+        (update-vals (fn [{:keys [id node]}]
+                       (await-db node (node-id->tx-id id))))
+        (assoc :biff/db (await-db node (node-id->tx-id :biff.xtdb/node))))
     (-> indexes
         (update-vals (comp empty-db :node))
         (assoc :biff/db (empty-db node)))))
