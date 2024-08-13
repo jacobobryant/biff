@@ -140,17 +140,17 @@
                             _ (xt/await-tx index-node (xt/submit-tx index-node index-tx))
                             _ (log/info "Indexed" id "up to" (select-keys input-tx [::xt/tx-id ::xt/tx-time]))
                             index-db (xt/db index-node)])
-                                   [[]
-                                    {}
-                                    (memoize #(xt/entity index-db %))
-                                    now-ms
-                                    (xt/latest-submitted-tx node)]))
-                            [[]
-                             {}
-                             (memoize #(xt/entity index-db %))
-                             (inst-ms (java.util.Date.))
-                             (xt/latest-submitted-tx node)]
-                            (iterator-seq log)))
+                      [[]
+                       {}
+                       (memoize #(xt/entity index-db %))
+                       now-ms
+                       (xt/latest-submitted-tx node)]))
+               [[]
+                {}
+                (memoize #(xt/entity index-db %))
+                (inst-ms (java.util.Date.))
+                (xt/latest-submitted-tx node)]
+               (iterator-seq log)))
   (log/info "Finished indexing" id))
 
 (defn rollback [node tx-id]
