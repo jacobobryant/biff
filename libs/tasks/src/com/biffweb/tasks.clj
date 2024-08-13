@@ -106,7 +106,7 @@
     (.encodeToString (java.util.Base64/getEncoder) buffer)))
 
 (defn- ssh-run [{:keys [biff.tasks/server]} & args]
-  (apply shell "ssh" (str "root@" server) args))
+  (apply shell "ssh" (str "app@" server) args))
 
 (defn- local-tailwind-path []
   (if (windows?)
@@ -350,7 +350,7 @@
 (defn restart
   "Restarts the app process via `systemctl restart app` (on the server)."
   []
-  (ssh-run @config "systemctl reset-failed app.service; systemctl restart app"))
+  (ssh-run @config "sudo systemctl reset-failed app.service; sudo systemctl restart app"))
 
 (defn soft-deploy
   "Pushes code to the server and evaluates changed files.
@@ -400,7 +400,7 @@
   (let [{:keys [biff.tasks/server biff.nrepl/port]} @config]
     (println "Connect to nrepl port" port)
     (spit ".nrepl-port" port)
-    (shell "ssh" "-NL" (str port ":localhost:" port) (str "root@" server))))
+    (shell "ssh" "-NL" (str port ":localhost:" port) (str "app@" server))))
 
 (defn prod-dev
   "Runs the soft-deploy task whenever a file is modified. Also runs prod-repl and logs."
