@@ -14,7 +14,8 @@
             [com.biffweb.impl.util.ns :as ns]
             [com.biffweb.impl.util.reload :as reload]
             [com.biffweb.impl.util.s3 :as s3]
-            [com.biffweb.impl.xtdb :as bxt]))
+            [com.biffweb.impl.xtdb :as bxt]
+            [com.biffweb.impl.xtdb.index :as biff.xt.index]))
 
 ;;;; Util
 
@@ -336,6 +337,11 @@
                    body]
     :as ctx} & {:as opts}]
   (s3/s3-request (merge ctx (ns/select-ns-as opts nil 'biff.s3))))
+
+(defmacro <<-
+  ;; TODO write docstring
+  [& body]
+  `(->> ~@(reverse body)))
 
 ;;;; Middleware
 
@@ -761,7 +767,7 @@
    :biff/db will be a snapshot of (:biff.xtdb/node ctx). All the other DB
    snapshots (the index snapshots) will be consistent with the :biff/db value."
   [{:keys [biff.xtdb/node biff/indexes biff.index/tx-metadata] :as ctx}]
-  (bxt/index-snapshots ctx))
+  (biff.xt.index/index-snapshots ctx))
 
 (defn replay-indexer
   "Runs the given indexer on the given transaction and returns debug information.
@@ -780,15 +786,15 @@
    :with-tx-exception - Optional. The exception thrown by (xt/with-tx index-db output-tx), if there was one.
                         with-tx is used to check for output-tx values that aren't valid XT transactions."
   [{:keys [biff.xtdb/node biff/indexes] :as ctx} index-id tx-id]
-  (bxt/replay-indexer ctx index-id tx-id))
+  (biff.xt.index/replay-indexer ctx index-id tx-id))
 
 ;; TODO write docstrings
-(def test-tx-log bxt/test-tx-log)
-(def indexer-args bxt/indexer-args)
-(def run-indexer bxt/run-indexer)
-(def indexer-results bxt/indexer-results)
-(def prepare-index! bxt/prepare-index!)
-(def rollback bxt/rollback)
+(def test-tx-log biff.xt.index/test-tx-log)
+(def indexer-args biff.xt.index/indexer-args)
+(def run-indexer biff.xt.index/run-indexer)
+(def indexer-results biff.xt.index/indexer-results)
+(def prepare-index! biff.xt.index/prepare-index!)
+(def rollback biff.xt.index/rollback)
 
 ;;;; Rum
 
