@@ -256,7 +256,9 @@
 
    Returns the evaluation result. If set, `on-eval` is a sequence of 2-parameter
    callback functions which will each be called with `ctx` and the evaluation
-   result."
+   result.
+
+   Any directories in eval-paths that aren't on the classpath will be ignored."
   [{:keys [biff/eval-paths biff.eval/on-eval]
     :or {eval-paths ["src" "test"]}
     :as ctx}]
