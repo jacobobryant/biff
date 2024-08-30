@@ -2,6 +2,7 @@
 ;; and is licensed under the EPL version 1.0 (or any later version).
 (ns com.biffweb.impl.util.reload
   (:require [clojure.repl :as repl]
+            [clojure.string :as str]
             [clojure.tools.namespace.dir :as dir]
             [clojure.tools.namespace.reload :as reload]
             clojure.tools.namespace.repl
@@ -25,7 +26,8 @@
     :ok))
 
 (defn refresh [tracker directories]
-  (let [new-tracker (apply dir/scan tracker directories)
+  (let [directories (filterv (set (str/split (System/getProperty "java.class.path") #":")) directories)
+        new-tracker (apply dir/scan tracker directories)
         new-tracker (remove-disabled new-tracker)]
     (print-pending-reloads new-tracker)
     (let [new-tracker (reload/track-reload (assoc new-tracker ::track/unload []))]
