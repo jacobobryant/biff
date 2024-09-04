@@ -4,6 +4,7 @@
         cider/cider-nrepl              {:mvn/version "0.45.0"}
         clj-http/clj-http              {:mvn/version "3.12.3"}
         com.nextjournal/beholder       {:mvn/version "1.0.2"}
+        com.taoensso/nippy             {:mvn/version "3.4.2"}
         com.xtdb/xtdb-core             {:mvn/version "1.23.1"}
         com.xtdb/xtdb-jdbc             {:mvn/version "1.23.1"}
         com.xtdb/xtdb-rocksdb          {:mvn/version "1.23.1"}

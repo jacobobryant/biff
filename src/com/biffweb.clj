@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]
+            [com.biffweb.impl.index :as biff.index]
             [com.biffweb.impl.middleware :as middle]
             [com.biffweb.impl.misc :as misc]
             [com.biffweb.impl.queues :as q]
@@ -795,6 +796,11 @@
 (def indexer-results biff.xt.index/indexer-results)
 (def prepare-index! biff.xt.index/prepare-index!)
 (def rollback biff.xt.index/rollback)
+
+;;;; Indexes
+
+(defn use-indexes [ctx]
+  (biff.index/use-indexes ctx))
 
 ;;;; Rum
 
