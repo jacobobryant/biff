@@ -87,11 +87,10 @@
                [main-tx & remaining] tx-log-with-args]
           (if (or (nil? main-tx) (<= limit (count results)))
             [results id->doc txes-processed]
-            (let [[index-tx id->doc] (run-indexer indexer (:biff.index/args main-tx) id->doc)]
+            (let [[index-tx new-id->doc] (run-indexer indexer (:biff.index/args main-tx) id->doc)]
               (recur (cond-> results
-                       (not-empty index-tx) (conj {:main-tx main-tx
-                                                   :index-tx index-tx}))
-                     id->doc
+                       (not-empty index-tx) (conj {:main-tx main-tx :index-tx index-tx}))
+                     (merge id->doc new-id->doc)
                      (inc txes-processed)
                      remaining))))]
     {:results results
