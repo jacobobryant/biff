@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [com.biffweb :as biff]
             [com.biffweb.impl.index :as biff.index]
+            [clojure.tools.logging :as log]
             [xtdb.api :as xt])
   (:import (org.rocksdb RocksDB ColumnFamilyHandle)
            (java.nio.file Files Paths)
@@ -14,14 +15,20 @@
 (defn rocks-put [{:biff.index/keys [rocksdb indexes]} index-id _key value]
   (biff.index/rocks-put rocksdb (get-in indexes [index-id :biff.index/handle]) _key value))
 
+(defn indexer [{:biff.index/keys [doc op index-get]}]
+  {(:xt/id doc) (when (= ::xt/put op)
+                  doc)
+   :n-docs ((if (= ::xt/put op)
+              inc
+              dec)
+            (or (index-get :n-docs) 0))})
+
 (defn modules [foo-version bar-version]
   (delay [{:indexes [{:id :foo
-                      :indexer (fn [{:biff.index/keys [doc op]}]
-                                 {"test" "foo"})
+                      :indexer indexer
                       :version foo-version}
                      {:id :bar
-                      :indexer (fn [{:biff.index/keys [doc op]}]
-                                 {"test" "bar"})
+                      :indexer indexer
                       :version bar-version}]}]))
 
 (defn create-temp-dir! []
@@ -64,3 +71,93 @@
             (run! #(%) (reverse (:biff/stop ctx))))))
       (finally
         (close-tmp-dir!)))))
+
+(defrecord BiffSystem []
+  java.io.Closeable
+  (close [this]
+    (doseq [f (:biff/stop this)]
+      (log/info "stopping:" (str f))
+      (f))))
+
+(defn start! [system components]
+  (map->BiffSystem
+   (reduce (fn [system component]
+             (log/info "starting:" (str component))
+             (component system))
+           system
+           components)))
+
+(defn submit-await [node tx]
+  (xt/await-tx node (xt/submit-tx node tx)))
+
+(deftest ->xtdb-index
+  (with-open [system (start! {:biff.xtdb/topology :memory
+                              :biff.index/dir :tmp
+                              :biff/modules (modules 0 0)}
+                             [biff/use-xtdb])]
+    (let [{:keys [biff.xtdb/node biff.index/snapshot-data]} system]
+      (submit-await node [[::xt/put {:xt/id :a}]])
+      (is (= 1 (rocks-get system :foo :n-docs)))
+      (is (= 1 (rocks-get system :bar :n-docs)))
+      (is (= {:biff.index/version 0
+              ::xt/tx-id 0}
+             (rocks-get system :foo :biff.index/metadata)))
+      (is (= 0 (:latest-snapshotted-tx-id @snapshot-data)))
+      (is (= 0 (:latest-tx-id @snapshot-data)))
+      (is (= #{:snapshot :read-options :n-clients}
+             (set (keys (get @snapshot-data 0)))))
+      (submit-await node [[::xt/put {:xt/id :b}]])
+      (is (= 1 (:latest-snapshotted-tx-id @snapshot-data)))
+      (is (= 1 (:latest-tx-id @snapshot-data)))
+      (is (= #{:latest-snapshotted-tx-id
+               :latest-tx-id
+               1}
+             (set (keys @snapshot-data)))))))
+
+(defn snapshotted-tx-ids [snapshot-data]
+  (set (keys (dissoc snapshot-data :latest-tx-id :latest-snapshotted-tx-id))))
+
+(deftest read-snapshots
+  (with-open [system (start! {:biff.xtdb/topology :memory
+                              :biff.index/dir :tmp
+                              :biff/modules (modules 0 0)}
+                             [biff/use-xtdb])]
+    (let [{:keys [biff.xtdb/node biff.index/snapshot-data]} system]
+      (submit-await node [[::xt/put {:xt/id :a :value 1}]])
+      (with-open [snapshots (biff/read-snapshots system)]
+        (is (= 1 (get-in @snapshot-data [0 :n-clients])))
+        (with-open [snapshots (biff/read-snapshots system)]
+          (is (= 2 (get-in @snapshot-data [0 :n-clients]))))
+        (is (= 1 (get-in @snapshot-data [0 :n-clients])))
+
+        (is (= {:xt/id :a :value 1} (xt/entity snapshots :a)))
+        (is (= 1 (biff/index-get snapshots :foo :n-docs)))
+        (submit-await node [[::xt/put {:xt/id :a :value 2}]])
+        (is (= {:xt/id :a :value 1} (xt/entity snapshots :a)))
+        (is (= 1 (biff/index-get snapshots :foo :n-docs)))
+        (is (= #{0 1} (snapshotted-tx-ids @snapshot-data)))
+
+        (with-open [snapshots (biff/read-snapshots system)]
+          (is (= {:xt/id :a :value 2} (xt/entity snapshots :a)))
+          (is (= 2 (biff/index-get snapshots :foo :n-docs))))
+        (is (= #{0 1} (snapshotted-tx-ids @snapshot-data))))
+      (is (= #{1} (snapshotted-tx-ids @snapshot-data)))
+      (submit-await node [[::xt/put {:xt/id :a :value 3}]])
+      (is (= #{2} (snapshotted-tx-ids @snapshot-data))))))
+
+(deftest index-get-many
+  (with-open [system (start! {:biff.xtdb/topology :memory
+                              :biff.index/dir :tmp
+                              :biff/modules (modules 0 0)}
+                             [biff/use-xtdb])]
+    (let [{:keys [biff.xtdb/node biff.index/snapshot-data]} system]
+      (submit-await node [[::xt/put {:xt/id :a :value 1}]])
+      (submit-await node [[::xt/put {:xt/id :b :value 2}]])
+      (with-open [snapshots (biff/read-snapshots system)]
+        (is (= [{:xt/id :a :value 1}
+                {:xt/id :b :value 2}
+                2]
+               (biff/index-get-many snapshots :foo [:a :b :n-docs])))
+        (is (= [{:xt/id :a :value 1}
+                {:xt/id :a :value 1}]
+               (biff/index-get-many snapshots [[:foo :a] [:bar :a]])))))))

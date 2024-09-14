@@ -16,7 +16,8 @@
             [com.biffweb.impl.util.reload :as reload]
             [com.biffweb.impl.util.s3 :as s3]
             [com.biffweb.impl.xtdb :as bxt]
-            [com.biffweb.impl.xtdb.index :as biff.xt.index]))
+            [com.biffweb.impl.xtdb.index :as biff.xt.index]
+            [com.biffweb.protocols :as biff.proto]))
 
 ;;;; Util
 
@@ -796,6 +797,17 @@
 (def indexer-results biff.xt.index/indexer-results)
 (def prepare-index! biff.xt.index/prepare-index!)
 (def rollback biff.xt.index/rollback)
+
+(defn index-get [snapshots index-id k]
+  (biff.proto/index-get snapshots index-id k))
+
+(defn index-get-many
+  ([snapshots index-id ks]
+   (biff.proto/index-get-many snapshots index-id ks))
+  ([snapshots index-id-key-pairs]
+   (biff.proto/index-get-many snapshots index-id-key-pairs)))
+
+(def read-snapshots biff.index/read-snapshots)
 
 ;;;; Indexes
 

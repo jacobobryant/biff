@@ -3,6 +3,7 @@
             [clojure.tools.logging :as log]
             [com.biffweb.impl.util :as biff.util :refer [<<-]]
             [com.biffweb.impl.util.ns :as biff.util.ns]
+            [com.biffweb.protocols :as biff.proto]
             [taoensso.nippy :as nippy]
             [xtdb.api :as xt]
             [xtdb.tx :as xt.tx]
@@ -10,6 +11,7 @@
   (:import java.util.Map
            java.util.HashMap
            java.util.function.Function
+           java.util.ArrayList
            (java.io Closeable File)
            (java.nio.file Files Path)
            (java.nio.file.attribute FileAttribute)
@@ -19,9 +21,10 @@
            (org.rocksdb BlockBasedTableConfig Checkpoint CompressionType FlushOptions LRUCache
                         DBOptions Options ReadOptions RocksDB RocksIterator
                         WriteBatchWithIndex WriteBatch WriteOptions Statistics StatsLevel
-                        ColumnFamilyOptions ColumnFamilyDescriptor ColumnFamilyHandle BloomFilter)))
+                        ColumnFamilyOptions ColumnFamilyDescriptor ColumnFamilyHandle BloomFilter)
+           (xtdb.api IXtdbDatasource)))
 
-(defn key->bytes
+(defn- key->bytes
   "Converts k to a stable byte representation.
 
    Supports the most common scalar types. Vectors are the only supported collection type. Instead of
@@ -52,7 +55,8 @@
                                            (let [_bytes (key->bytes x)
                                                  cnt (count _bytes)]
                                              (when (< 255 cnt)
-                                               (throw (ex-info "Vectors elements index keys can't have an encoded size of greater than 255 bytes."
+                                               (throw (ex-info (str "Vectors elements index keys can't have an encoded"
+                                                                    " size of greater than 255 bytes.")
                                                                {:element x
                                                                 :n-bytes cnt})))
                                              (cons cnt _bytes)))
@@ -121,45 +125,89 @@
                   :biff.index/indexes indexes
                   :biff.index/snapshot-data (atom {})))))
 
-(defn xtdb-indexer-args [db tx]
-  nil)
-
-(defn run-indexer [indexer args get-doc]
-  nil)
-
-#_(log/error e
-                                              (str "Exception while indexing! You can reproduce the exception by calling "
-                                                   "(biff/run-indexer (get-context) " (pr-str indexer-args) " "
-                                                   (pr-str @accessed-docs)
-                                                   main-tx-id ") from the REPL. "
-                                                   "After fixing the problem, you should re-index by incrementing the index version and "
-                                                   "refreshing/restarting your app.")
-                                              (pr-str {:biff.index/id index-id
-                                                       :biff.index/version version
-                                                       :biff.index/get-doc-values @accessed-docs
-                                                       ;::xt/tx-id main-tx-id
-                                                       }))
-
 (defn- with-cache [f m]
   (fn [k]
     (if (contains? m k)
       (get m k)
       (f k))))
 
-#_(defn ->xtdb-index
+(defn- xtdb-indexer-args [db-provider {::xt/keys [tx-id tx-ops]}]
+  (let [prev-db (delay (xt/db db-provider {::xt/tx {::xt/tx-id (dec tx-id)}}))
+        [args _] (->> tx-ops
+                      ((fn step [tx-ops]
+                         (mapcat (fn [[op arg1 arg2]]
+                                   (case op
+                                     ::xt/put [#:biff.index{:op ::xt/put
+                                                            :doc arg1}]
+                                     ::xt/fn (step (::xt/tx-ops arg2))
+                                     ::xt/delete [#:biff.index{:op ::xt/delete
+                                                               :id arg1}]
+                                     nil))
+                                 tx-ops)))
+                      (reduce (fn [[args id->doc] {:biff.index/keys [op doc id] :as arg}]
+                                (case op
+                                  ::xt/put [(conj args arg) (assoc id->doc (:xt/id doc) doc)]
+                                  ::xt/delete [(conj args
+                                                     {:biff.index/op ::xt/delete
+                                                      :biff.index/doc (if (contains? id->doc id)
+                                                                        (id->doc id)
+                                                                        (xt/entity @prev-db id))})
+                                               (assoc id->doc id nil)]))
+                              [[] {}]))]
+    (vec args)))
+
+(defn- run-indexer [index-id indexer index-args index-get]
+  (second
+    (reduce (fn [[changes serialized-changes] args]
+              (try
+                (let [index-get* (fn [id]
+                                   (if (contains? changes id)
+                                     (get changes id)
+                                     (index-get id)))
+                      new-changes (indexer (assoc args :biff.index/index-get index-get*))
+                      _ (when-not (or (nil? new-changes) (map? new-changes))
+                          (throw (ex-info "Indexer return value must be either a map or nil"
+                                          {:biff.index/id index-id
+                                           :return-value new-changes})))]
+                  [(merge changes new-changes)
+                   (into serialized-changes
+                         (map (fn [[k v]]
+                                [(try
+                                   (key->bytes k)
+                                   (catch Exception e
+                                     (throw (ex-info "Couldn't serialize key from indexer"
+                                                     {:biff.index/id index-id
+                                                      :key k}
+                                                     e))))
+                                 (try
+                                   (nippy/freeze v)
+                                   (catch Exception e
+                                     (throw (ex-info "Couldn't serialize value from indexer"
+                                                     {:biff.index/id index-id
+                                                      :key k
+                                                      :value v}
+                                                     e))))]))
+                         new-changes)])
+                (catch Exception e
+                  (throw (ex-info (str "Exception while indexing. After fixing the problem, "
+                                       "you should re-index by incrementing the index version and "
+                                       "refreshing/restarting your app.")
+                                  (merge {:biff.index/id index-id} args)
+                                  e)))))
+            [{} {}]
+            index-args)))
+
+(defn ->xtdb-index
   {:xtdb.system/deps {:xtdb/secondary-indices :xtdb/secondary-indices
                       :xtdb/query-engine :xtdb/query-engine}
    :xtdb.system/before #{[:xtdb/tx-ingester]}}
   [{:xtdb/keys [secondary-indices query-engine]
     :biff.index/keys [rocksdb indexes snapshot-data]}]
   (doseq [_ [nil]
-          :let [all-changes* (atom {})
-                
-                ]
+          :let [tx->index->changes (atom {})]
           [_ {indexed-tx-id ::xt/tx-id
               index-id :biff.index/id
               :biff.index/keys [indexer version abort-on-error handle]
-              :keys [node indexer version abort-on-error]
               :or {indexed-tx-id -1}}] indexes
           :let [aborted      (atom false)
                 committed-at (atom (Instant/now))]]
@@ -172,121 +220,146 @@
            :as tx}]
        (when-not (and abort-on-error @aborted)
          (let [changes (when committing?
-                         (let [get-doc      (memoize #(rocks-get rocksdb handle %))
+                         (let [index-get      (memoize #(rocks-get rocksdb handle %))
                                indexer-args (xtdb-indexer-args query-engine tx)]
                            (try
-                             (run-indexer indexer indexer-args get-doc)
+                             (run-indexer index-id indexer indexer-args index-get)
                              (catch Exception e
                                (log/error e)
                                (when abort-on-error
                                  (reset! aborted true))
                                nil))))
-               now (Instant/now)
                changes (when (or (not-empty changes)
                                  (< (inst-ms (.plusSeconds @committed-at 30))
-                                    (inst-ms now)))
-                         (merge changes
-                                {:biff.index/metadata {:biff.index/version version
-                                                       ::xt/tx-id current-tx-id}}))
-               all-changes (swap! all-changes* assoc index-id changes)
-               n-indexes (count (keep (fn [[id {:keys [::xt/tx-id]}]]
-                                        (when (< (or tx-id -1) current-tx-id)
-                                          id))
-                                      indexes))
-               
-               ]
-           (when (= n-indexes (count all-changes))
-             ;; TODO write to rocksdb
-             )
+                                    (inst-ms (Instant/now))))
+                         (assoc changes
+                                (key->bytes :biff.index/metadata)
+                                (nippy/freeze {:biff.index/version version
+                                               ::xt/tx-id current-tx-id})))
+               index->changes (get (swap! tx->index->changes assoc-in [current-tx-id index-id] changes)
+                                   current-tx-id)
+               current-tx-complete (= (count index->changes)
+                                      (count (filterv (fn [[_ {:keys [::xt/tx-id]}]]
+                                                        (< (or tx-id -1) current-tx-id))
+                                                      indexes)))
+               have-changes (boolean (some not-empty (vals index->changes)))]
+           (when current-tx-complete
+             (swap! tx->index->changes dissoc current-tx-id)
 
-           (swap! tx-metadata
-                  (fn [txm]
-                    (<<- (if (< main-tx-id (get txm :max-indexed-tx-at-startup -1))
-                           txm)
-                         (let [txm (assoc-in txm [:main-tx-id->index-id->index-tx-id main-tx-id index-id] index-tx-id)
-                               next-tx-ids (get-in txm [:main-tx-id->index-id->index-tx-id main-tx-id])])
-                         (if (< (count next-tx-ids) (count indexes))
-                           txm)
-                         (-> txm
-                             (assoc :latest-consistent-tx-ids (assoc next-tx-ids :biff.xtdb/node main-tx-id))
-                             (update :main-tx-id->index-id->index-tx-id dissoc main-tx-id))))))))))
+             (when-not have-changes
+               (swap! snapshot-data assoc :latest-tx-id current-tx-id))
 
-  )
+             (when have-changes
+               (with-open [batch         (WriteBatch.)
+                           write-options (WriteOptions.)]
+                 (doseq [[index-id changes] index->changes
+                         :let [handle (get-in indexes [index-id :biff.index/handle])]
+                         [k v] changes]
+                   (.put batch handle k v))
+                 (.write rocksdb write-options batch))
+               (let [snapshot          (.getSnapshot rocksdb)
+                     read-options      (doto (ReadOptions.) (.setSnapshot snapshot))
+                     old-snapshot-data @snapshot-data
+                     new-snapshot-data (swap! snapshot-data
+                                              (fn [snapshot-data]
+                                                (assoc snapshot-data
+                                                       current-tx-id {:snapshot snapshot
+                                                                      :read-options read-options
+                                                                      :n-clients 0}
+                                                       :latest-snapshotted-tx-id current-tx-id
+                                                       :latest-tx-id current-tx-id)))
+                     {:keys [n-clients snapshot read-options]} (get new-snapshot-data
+                                                                    (:latest-snapshotted-tx-id old-snapshot-data))]
+                 (when (= 0 n-clients)
+                   (.close read-options)
+                   (.releaseSnapshot rocksdb snapshot)
+                   (.close snapshot)
+                   (swap! snapshot-data dissoc (:latest-snapshotted-tx-id old-snapshot-data))))))))))))
+
+(defrecord Snapshots [xtdb rocksdb index-id->handle snapshot-data index-tx-id read-options]
+  biff.proto/IndexSnapshot
+  (index-get [_ index-id k]
+    (some-> (.get rocksdb
+                  (index-id->handle index-id)
+                  read-options
+                  (key->bytes k))
+            nippy/thaw))
+  (index-get-many [this index-id ks]
+    (biff.proto/index-get-many this (mapv vector (repeat index-id) ks)))
+  (index-get-many [_ index-id-key-pairs]
+    (mapv #(some-> % nippy/thaw)
+          (.multiGetAsList rocksdb
+                           read-options
+                           (ArrayList. (mapv (comp index-id->handle first) index-id-key-pairs))
+                           (ArrayList. (mapv (comp key->bytes second) index-id-key-pairs)))))
+
+
+
+
+  xt/PXtdbDatasource
+  (entity [_ eid]
+    (xt/entity xtdb eid))
+  (entity-tx [_ eid]
+    (xt/entity-tx xtdb eid))
+  (q* [_ query args]
+    (xt/q* xtdb query args))
+  (open-q* [_ query args]
+    (xt/open-q* xtdb query args))
+  (pull [_ query eid]
+    (xt/pull xtdb query eid))
+  (pull-many [_ query eids]
+    (xt/pull-many xtdb query eids))
+  (entity-history [_ eid sort-order]
+    (xt/entity-history xtdb eid sort-order))
+  (entity-history [_ eid sort-order opts]
+    (xt/entity-history xtdb eid sort-order opts))
+  (open-entity-history [_ eid sort-order]
+    (xt/open-entity-history xtdb eid sort-order))
+  (open-entity-history [_ eid sort-order opts]
+    (xt/open-entity-history xtdb eid sort-order opts))
+  (valid-time [_]
+    (xt/valid-time xtdb))
+  (transaction-time [_]
+    (xt/transaction-time xtdb))
+  (db-basis [_]
+    (xt/db-basis xtdb))
+  (with-tx [_ tx-ops]
+    (xt/with-tx xtdb tx-ops))
+
+  java.io.Closeable
+  (close [_]
+    (let [{:keys [latest-snapshotted-tx-id]
+           {:keys [n-clients snapshot read-options]} index-tx-id}
+          (swap! snapshot-data update-in [index-tx-id :n-clients] dec)]
+      (when (and (= 0 n-clients) (not= latest-snapshotted-tx-id index-tx-id))
+        (.close read-options)
+        (.releaseSnapshot rocksdb snapshot)
+        (.close snapshot)
+        (swap! snapshot-data dissoc index-tx-id)))
+    (.close xtdb)))
+
+(defn read-snapshots [{:keys [biff.index/rocksdb
+                              biff.index/indexes
+                              biff.index/snapshot-data
+                              biff.xtdb/node]}]
+  (let [{:keys [latest-tx-id
+                latest-snapshotted-tx-id]
+         :as snapshot-data'} (swap! snapshot-data
+                                    (fn [snapshot-data]
+                                      (update-in snapshot-data
+                                                 [(:latest-snapshotted-tx-id snapshot-data)
+                                                  :n-clients]
+                                                 inc)))
+        tx {::xt/tx-id latest-tx-id}]
+    (xt/await-tx node tx)
+    (Snapshots. (xt/open-db node {::xt/tx tx})
+                rocksdb
+                (update-vals indexes :biff.index/handle)
+                snapshot-data
+                latest-snapshotted-tx-id
+                (get-in snapshot-data' [latest-snapshotted-tx-id :read-options]))))
+
 
 ;; TODO write more functions:
 ;; - test-tx-log
-;; - indexer-results
 ;; - prepare-index!
-;; - ->xtdb-module-thing
-;; - `snapshots` fn for returning `get-doc` function or something + current XT snapshot
-;; - tooling to replace replay-indexer (serialize all the args maybe?)
-
-(comment
-
-  ;; need to close
-  (def cf-opts (.optimizeUniversalStyleCompaction (ColumnFamilyOptions.)))
-
-  (def cf-descriptors (java.util.ArrayList. [(ColumnFamilyDescriptor. RocksDB/DEFAULT_COLUMN_FAMILY cf-opts)
-                                             (ColumnFamilyDescriptor. (.getBytes "cf-1") cf-opts)
-                                             (ColumnFamilyDescriptor. (.getBytes "cf-2") cf-opts)]))
-
-  ;; need to close (before the db)
-  (def cf-handles (java.util.ArrayList.))
-
-  ;; need to close
-  (def db-options (.. (DBOptions.)
-                      (setCreateIfMissing true)
-                      (setCreateMissingColumnFamilies true)))
-
-
-  ;; need to close
-  (def db (RocksDB/open db-options "rocksdb-index-test" cf-descriptors cf-handles))
-
-  (def id->handle (into {}
-                        (map (fn [cf-handle]
-                               [(String. (.getName cf-handle)) cf-handle]))
-                        cf-handles))
-
-
-  (.put db (id->handle "cf-1") (.getBytes "foo") (.getBytes "bar"))
-  (String. (.get db (id->handle "cf-1") (.getBytes "foo")))
-  (.put db (id->handle "cf-2") (.getBytes "foo") (.getBytes "quux"))
-  (String. (.get db (id->handle "cf-2") (.getBytes "foo")))
-
-  (.dropColumnFamily db (id->handle "cf-1"))
-  (.close (id->handle "cf-1"))
-  (def new-handle (.createColumnFamily db (ColumnFamilyDescriptor. (.getBytes "cf-1") cf-opts)))
-  (def id->handle (assoc id->handle "cf-1" new-handle))
-
-
-  (with-open [batch (WriteBatch.)
-              write-options (WriteOptions.)]
-    (.put batch (id->handle "cf-1") (.getBytes "a") (.getBytes "b"))
-    (.put batch (id->handle "cf-1") (.getBytes "c") (.getBytes "d"))
-    (.write db write-options batch)
-    )
-  (String. (.get db (id->handle "cf-1") (.getBytes "a")))
-  (String. (.get db (id->handle "cf-1") (.getBytes "c")))
-
-  (mapv #(String. %) (.multiGetAsList db
-                                      (java.util.ArrayList. [(id->handle "cf-1") (id->handle "cf-1")])
-                                      (java.util.ArrayList. [(.getBytes "a") (.getBytes "c")])))
-
-  ;; need to close
-  (def snapshot (.getSnapshot db))
-  ;; need to close
-  (def read-options (doto (ReadOptions.) (.setSnapshot snapshot)))
-
-  (String. (.get db (id->handle "cf-1") (.getBytes "foo")))
-  (String. (.get db (id->handle "cf-1") read-options (.getBytes "foo")))
-  (.put db (id->handle "cf-1") (.getBytes "foo") (.getBytes "abc"))
-
-  (.close read-options)
-
-  (.releaseSnapshot db snapshot)
-
-  (.close snapshot)
-
-
-  )
-

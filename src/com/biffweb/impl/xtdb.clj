@@ -2,8 +2,8 @@
   (:require [better-cond.core :as b]
             [com.biffweb.impl.util :as util :refer [<<-]]
             [com.biffweb.impl.util.ns :as ns]
-            [com.biffweb.impl.xtdb.index :as biff.xt.index]
             [com.biffweb.impl.xtdb.util :as biff.xt.util]
+            [com.biffweb.impl.index :as biff.index]
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.stacktrace :as st]
@@ -36,7 +36,7 @@
                                   [k value])))
                         [:password :jdbcUrl])
         pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
-        ctx (biff.xt.index/start-indexes ctx)
+        ctx (biff.index/use-indexes ctx)
         node (xt/start-node
               (merge (case topology
                        :memory
@@ -56,7 +56,7 @@
                                       :connection-pool :xtdb.jdbc/connection-pool}
                         :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
                                               :connection-pool :xtdb.jdbc/connection-pool}})
-                     {::biff.xt.index/index ctx}
+                     {::biff.index/xtdb-index ctx}
                      opts))]
     (biff.xt.util/verbose-sync :biff.xtdb/node node)
     (when (not-empty tx-fns)
