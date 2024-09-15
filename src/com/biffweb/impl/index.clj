@@ -157,45 +157,43 @@
     (vec args)))
 
 (defn- run-indexer [index-id indexer index-args index-get]
-  (second
-    (reduce (fn [[changes serialized-changes] args]
-              (try
-                (let [index-get* (fn [id]
-                                   (if (contains? changes id)
-                                     (get changes id)
-                                     (index-get id)))
-                      new-changes (indexer (assoc args :biff.index/index-get index-get*))
-                      _ (when-not (or (nil? new-changes) (map? new-changes))
-                          (throw (ex-info "Indexer return value must be either a map or nil"
-                                          {:biff.index/id index-id
-                                           :return-value new-changes})))]
-                  [(merge changes new-changes)
-                   (into serialized-changes
-                         (map (fn [[k v]]
-                                [(try
-                                   (key->bytes k)
-                                   (catch Exception e
-                                     (throw (ex-info "Couldn't serialize key from indexer"
-                                                     {:biff.index/id index-id
-                                                      :key k}
-                                                     e))))
-                                 (try
-                                   (nippy/freeze v)
-                                   (catch Exception e
-                                     (throw (ex-info "Couldn't serialize value from indexer"
-                                                     {:biff.index/id index-id
-                                                      :key k
-                                                      :value v}
-                                                     e))))]))
-                         new-changes)])
-                (catch Exception e
-                  (throw (ex-info (str "Exception while indexing. After fixing the problem, "
-                                       "you should re-index by incrementing the index version and "
-                                       "refreshing/restarting your app.")
-                                  (merge {:biff.index/id index-id} args)
-                                  e)))))
-            [{} {}]
-            index-args)))
+  (reduce (fn [changes args]
+            (try
+              (let [index-get* (fn [id]
+                                 (if (contains? changes id)
+                                   (get changes id)
+                                   (index-get id)))
+                    new-changes (indexer (assoc args :biff.index/index-get index-get*))
+                    _ (when-not (or (nil? new-changes) (map? new-changes))
+                        (throw (ex-info "Indexer return value must be either a map or nil"
+                                        {:biff.index/id index-id
+                                         :return-value new-changes})))]
+                (doseq [[k v] new-changes]
+                  (try
+                    (key->bytes k)
+                    (catch Exception e
+                      (throw (ex-info "Couldn't serialize key from indexer"
+                                      {:biff.index/id index-id
+                                       :key k}
+                                      e))))
+                  (try
+                    (nippy/freeze v)
+                    (catch Exception e
+                      (throw (ex-info "Couldn't serialize value from indexer"
+                                      {:biff.index/id index-id
+                                       :key k
+                                       :value v}
+                                      e)))))
+                (merge changes new-changes))
+              (catch Exception e
+                ;; TODO don't show this message during prepare-indexes!
+                (throw (ex-info (str "Exception while indexing. After fixing the problem, "
+                                     "you should re-index by incrementing the index version and "
+                                     "refreshing/restarting your app.")
+                                (merge {:biff.index/id index-id} args)
+                                e)))))
+          {}
+          index-args))
 
 (defn ->xtdb-index
   {:xtdb.system/deps {:xtdb/secondary-indices :xtdb/secondary-indices
@@ -207,8 +205,9 @@
           :let [tx->index->changes (atom {})]
           [_ {indexed-tx-id ::xt/tx-id
               index-id :biff.index/id
-              :biff.index/keys [indexer version abort-on-error handle]
+              :biff.index/keys [indexer version abort-on-error handle prepare]
               :or {indexed-tx-id -1}}] indexes
+          :when (not prepare)
           :let [aborted      (atom false)
                 committed-at (atom (Instant/now))]]
     (xt.tx/register-index!
@@ -233,14 +232,15 @@
                                  (< (inst-ms (.plusSeconds @committed-at 30))
                                     (inst-ms (Instant/now))))
                          (assoc changes
-                                (key->bytes :biff.index/metadata)
-                                (nippy/freeze {:biff.index/version version
-                                               ::xt/tx-id current-tx-id})))
+                                :biff.index/metadata
+                                {:biff.index/version version
+                                 ::xt/tx-id current-tx-id}))
                index->changes (get (swap! tx->index->changes assoc-in [current-tx-id index-id] changes)
                                    current-tx-id)
                current-tx-complete (= (count index->changes)
-                                      (count (filterv (fn [[_ {:keys [::xt/tx-id]}]]
-                                                        (< (or tx-id -1) current-tx-id))
+                                      (count (filterv (fn [[_ {:keys [::xt/tx-id biff.index/prepare]}]]
+                                                        (and (< (or tx-id -1) current-tx-id)
+                                                             (not prepare)))
                                                       indexes)))
                have-changes (boolean (some not-empty (vals index->changes)))]
            (when current-tx-complete
@@ -255,7 +255,9 @@
                  (doseq [[index-id changes] index->changes
                          :let [handle (get-in indexes [index-id :biff.index/handle])]
                          [k v] changes]
-                   (.put batch handle k v))
+                   (if (some? v)
+                     (.put batch handle (key->bytes k) (nippy/freeze v))
+                     (.delete batch handle (key->bytes k))))
                  (.write rocksdb write-options batch))
                (let [snapshot          (.getSnapshot rocksdb)
                      read-options      (doto (ReadOptions.) (.setSnapshot snapshot))
@@ -292,9 +294,6 @@
                            read-options
                            (ArrayList. (mapv (comp index-id->handle first) index-id-key-pairs))
                            (ArrayList. (mapv (comp key->bytes second) index-id-key-pairs)))))
-
-
-
 
   xt/PXtdbDatasource
   (entity [_ eid]
@@ -359,7 +358,88 @@
                 latest-snapshotted-tx-id
                 (get-in snapshot-data' [latest-snapshotted-tx-id :read-options]))))
 
+(defn- tx-id-for [node t]
+  (get-in (xt/db-basis (xt/db node {::xt/tx-time t}))
+          [::xt/tx ::xt/tx-id]))
 
-;; TODO write more functions:
-;; - test-tx-log
-;; - prepare-index!
+(defn test-tx-log [node from to]
+  (let [from-tx-id (tx-id-for node from)]
+    (with-open [log (xt/open-tx-log node
+                                    (dec from-tx-id)
+                                    true)]
+      (->> (iterator-seq log)
+           (take-while #(< (compare (::xt/tx-time %) to) 0))
+           (mapv (fn [tx]
+                   (assoc tx :biff.index/args (xtdb-indexer-args node tx))))))))
+
+(defn indexer-results [indexer tx-log-with-args & {:keys [limit] :or {limit 10}}]
+  (let [[results changes txes-processed]
+        (loop [results []
+               changes {}
+               txes-processed 0
+               [main-tx & remaining] tx-log-with-args]
+          (if (or (nil? main-tx) (<= limit (count results)))
+            [results changes txes-processed]
+            (let [new-changes (run-indexer indexer (:biff.index/args main-tx) changes)]
+              (recur (cond-> results
+                       (not-empty new-changes) (conj {:main-tx main-tx :changes new-changes}))
+                     (merge changes new-changes)
+                     (inc txes-processed)
+                     remaining))))]
+    {:results results
+     :all-docs (filterv some? (vals changes))
+     :txes-processed txes-processed}))
+
+
+(defn prepare-indexes! [{:biff.xtdb/keys [node]
+                         :biff.index/keys [indexes rocksdb]
+                         :as ctx}]
+  (<<- (let [indexes (filterv :biff.index/prepare (vals indexes))])
+       (when (not-empty indexes))
+       (let [lowest-tx-id              (apply min (mapv #(::xt/tx-id % -1) indexes))
+             latest-tx                 (xt/latest-submitted-tx node)
+             committed-at              (atom (Instant/now))
+             index->changes            (atom {})])
+       (with-open [log (xt/open-tx-log node lowest-tx-id true)])
+       (doseq [input-tx (iterator-seq log)])
+       (let [indexes (filterv (fn [{:keys [::xt/tx-id]}]
+                                (< (or tx-id -1) (::xt/tx-id input-tx)))
+                              indexes)])
+       (do (doseq [{:biff.index/keys [id indexer handle version]} indexes
+                   :let [args        (xtdb-indexer-args node input-tx)
+                         changes     (get @index->changes id)
+                         index-get   (memoize #(rocks-get rocksdb handle %))
+                         index-get'  (fn [k]
+                                       (if (contains? changes k)
+                                         (get changes k)
+                                         (index-get k)))
+                         new-changes (run-indexer id indexer args index-get')]]
+             (swap! index->changes update id merge new-changes)))
+       (when (or (<= 1000 (apply + (mapv count (vals @index->changes))))
+                 (< (inst-ms (.plusSeconds @committed-at 30))
+                    (inst-ms (Instant/now)))
+                 (= (::xt/tx-id input-tx) (::xt/tx-id latest-tx)))
+         (with-open [batch         (WriteBatch.)
+                     write-options (WriteOptions.)]
+           (doseq [{:biff.index/keys [id handle version]} indexes
+                   :let [_ (.put batch
+                                 handle
+                                 (key->bytes :biff.index/metadata)
+                                 (nippy/freeze {:biff.index/version version
+                                                ::xt/tx-id (::xt/tx-id input-tx)}))
+                         changes (get @index->changes id)]
+                   [k v] changes]
+             (if (some? v)
+               (.put batch handle (key->bytes k) (nippy/freeze v))
+               (.delete batch handle (key->bytes k))))
+           (.write rocksdb write-options batch))
+         (reset! index->changes {})
+         (log/info "Prepared indexes up to" (select-keys input-tx [::xt/tx-id ::xt/tx-time]))))
+  (log/info "Finished preparing indexes"))
+
+;; TODO
+;; - test prepare-indexes!
+;; - make prepare-indexes! stop when :biff/stop is called
+;; - make read-snapshots work when there haven't been any transactions yet
+;; - replace :biff.index/index-get with an IndexSnapshot object
+;; - test deletes
