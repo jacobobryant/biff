@@ -76,11 +76,12 @@
      [:button.btn {:type "submit"}
       "Sign in"]])
    (when-some [error (:error params)]
-     [:.h-1]
-     [:.text-sm.text-red-600
-      (case error
-        "incorrect-email" "Incorrect email address. Try again."
-        "There was an error.")])))
+     [:<>
+       [:.h-1]
+       [:.text-sm.text-red-600
+        (case error
+          "incorrect-email" "Incorrect email address. Try again."
+          "There was an error.")]])))
 
 (defn signin-page [{:keys [recaptcha/site-key params] :as ctx}]
   (ui/page
@@ -144,11 +145,12 @@
              {:type "submit"})
       "Sign in"]])
    (when-some [error (:error params)]
-     [:.h-1]
-     [:.text-sm.text-red-600
-      (case error
-        "invalid-code" "Invalid code."
-        "There was an error.")])
+     [:<>
+       [:.h-1]
+       [:.text-sm.text-red-600
+        (case error
+          "invalid-code" "Invalid code."
+          "There was an error.")]])
    [:.h-3]
    (biff/form
     {:action "/auth/send-code"
