@@ -16,7 +16,8 @@
     (if (some? (:uid session))
       (handler ctx)
       {:status 303
-       :headers {"location" "/signin?error=not-signed-in"}})))
+       :headers {"location" "/signin?error=not-signed-in"}
+       :session (dissoc session :uid)})))
 
 ;; Stick this function somewhere in your middleware stack below if you want to
 ;; inspect what things look like before/after certain middleware fns run.
