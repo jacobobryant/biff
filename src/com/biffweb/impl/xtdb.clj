@@ -30,40 +30,42 @@
 (defn use-xt [{:keys [biff/secret]
                :biff.xtdb/keys [topology opts tx-fns]
                :as ctx}]
-  (let [jdbc-spec (into (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
-                        (keep (fn [k]
-                                (when-let [value (and secret (secret (keyword "biff.xtdb.jdbc" (name k))))]
-                                  [k value])))
-                        [:password :jdbcUrl])
-        pool-opts (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
-        ctx (biff.index/use-indexes ctx)
-        node (xt/start-node
-              (merge (case topology
-                       :memory
-                       {}
+  (let [jdbc-spec    (into (ns/select-ns-as ctx 'biff.xtdb.jdbc nil)
+                           (keep (fn [k]
+                                   (when-let [value (and secret (secret (keyword "biff.xtdb.jdbc" (name k))))]
+                                     [k value])))
+                           [:password :jdbcUrl])
+        pool-opts    (ns/select-ns-as ctx 'biff.xtdb.jdbc-pool nil)
+        ctx          (biff.index/use-indexes ctx)
+        node         (xt/start-node
+                      (merge (case topology
+                               :memory
+                               {}
 
-                       :standalone
-                       {:xtdb/index-store    (biff.xt.util/kv-store ctx "index")
-                        :xtdb/document-store (biff.xt.util/kv-store ctx "docs")
-                        :xtdb/tx-log         (biff.xt.util/kv-store ctx "tx-log")}
+                               :standalone
+                               {:xtdb/index-store    (biff.xt.util/kv-store ctx "index")
+                                :xtdb/document-store (biff.xt.util/kv-store ctx "docs")
+                                :xtdb/tx-log         (biff.xt.util/kv-store ctx "tx-log")}
 
-                       :jdbc
-                       {:xtdb/index-store (biff.xt.util/kv-store ctx "index")
-                        :xtdb.jdbc/connection-pool {:dialect {:xtdb/module 'xtdb.jdbc.psql/->dialect}
-                                                    :pool-opts pool-opts
-                                                    :db-spec jdbc-spec}
-                        :xtdb/tx-log {:xtdb/module 'xtdb.jdbc/->tx-log
-                                      :connection-pool :xtdb.jdbc/connection-pool}
-                        :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
-                                              :connection-pool :xtdb.jdbc/connection-pool}})
-                     {::biff.index/xtdb-index ctx}
-                     opts))]
+                               :jdbc
+                               {:xtdb/index-store (biff.xt.util/kv-store ctx "index")
+                                :xtdb.jdbc/connection-pool {:dialect {:xtdb/module 'xtdb.jdbc.psql/->dialect}
+                                                            :pool-opts pool-opts
+                                                            :db-spec jdbc-spec}
+                                :xtdb/tx-log {:xtdb/module 'xtdb.jdbc/->tx-log
+                                              :connection-pool :xtdb.jdbc/connection-pool}
+                                :xtdb/document-store {:xtdb/module 'xtdb.jdbc/->document-store
+                                                      :connection-pool :xtdb.jdbc/connection-pool}})
+                             {::biff.index/xtdb-index ctx}
+                             opts))
+        ctx          (assoc ctx :biff.xtdb/node node)
+        stop-prepare (biff.index/prepare-indexes! ctx)]
     (biff.xt.util/verbose-sync :biff.xtdb/node node)
     (when (not-empty tx-fns)
       (save-tx-fns! node tx-fns))
-    (-> ctx
-        (assoc :biff.xtdb/node node)
-        (update :biff/stop conj #(.close node)))))
+    (update ctx :biff/stop conj (fn []
+                                  (stop-prepare)
+                                  (.close node)))))
 
 (defn assoc-db [{:keys [biff.xtdb/node] :as ctx}]
   (cond-> ctx

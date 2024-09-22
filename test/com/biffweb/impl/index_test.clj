@@ -23,14 +23,27 @@
               dec)
             (or (index-get :n-docs) 0))})
 
-(defn modules [foo-version bar-version]
+(defn modules [foo-version bar-version & {:keys [prepare]}]
   (delay [{:indexes [{:id :foo
                       :indexer indexer
-                      :version foo-version}
+                      :version foo-version
+                      :prepare prepare}
                      {:id :bar
                       :indexer indexer
-                      :version bar-version}]}]))
+                      :version bar-version
+                      :prepare prepare}]}]))
 
+(defrecord TempDir [path]
+  java.io.Closeable
+  (close [_]
+    (run! io/delete-file (reverse (file-seq (io/file path))))))
+
+;; make this inherit from File or something?
+(defn make-temp-dir []
+  (let [tmp-dir (str (Files/createTempDirectory "biff-test" (into-array FileAttribute [])))]
+    (TempDir. tmp-dir)))
+
+;; todo remove
 (defn create-temp-dir! []
   (let [tmp-dir (str (Files/createTempDirectory "biff-test" (into-array FileAttribute [])))]
     [tmp-dir #(run! io/delete-file (reverse (file-seq (io/file tmp-dir))))]))
@@ -112,7 +125,10 @@
       (is (= #{:latest-snapshotted-tx-id
                :latest-tx-id
                1}
-             (set (keys @snapshot-data)))))))
+             (set (keys @snapshot-data))))
+      (is (= {:xt/id :a} (rocks-get system :foo :a)))
+      (submit-await node [[::xt/delete :a]])
+      (is (= nil (rocks-get system :foo :a))))))
 
 (defn snapshotted-tx-ids [snapshot-data]
   (set (keys (dissoc snapshot-data :latest-tx-id :latest-snapshotted-tx-id))))
@@ -150,7 +166,7 @@
                               :biff.index/dir :tmp
                               :biff/modules (modules 0 0)}
                              [biff/use-xtdb])]
-    (let [{:keys [biff.xtdb/node biff.index/snapshot-data]} system]
+    (let [{:keys [biff.xtdb/node]} system]
       (submit-await node [[::xt/put {:xt/id :a :value 1}]])
       (submit-await node [[::xt/put {:xt/id :b :value 2}]])
       (with-open [snapshots (biff/read-snapshots system)]
@@ -161,3 +177,53 @@
         (is (= [{:xt/id :a :value 1}
                 {:xt/id :a :value 1}]
                (biff/index-get-many snapshots [[:foo :a] [:bar :a]])))))))
+
+(deftest prepare-indexes!
+  (with-open [dir (make-temp-dir)]
+    (with-open [system (start! {:biff.xtdb/topology :standalone
+                                :biff.xtdb/dir (:path dir)}
+                               [biff/use-xtdb])]
+
+      (let [{:keys [biff.xtdb/node]} system]
+        (submit-await node [[::xt/put {:xt/id :a :value 1}]])
+        (submit-await node [[::xt/put {:xt/id :b :value 2}]])))
+    (with-open [system (start! {:biff.xtdb/topology :standalone
+                                :biff.xtdb/dir (:path dir)
+                                :biff.index/dir :tmp
+                                :biff.index/sync-prepare true
+                                :biff/modules (modules 0 0 {:prepare true})}
+                               [biff/use-xtdb])]
+      (let [index (biff/read-index system)]
+        (is (= [{:xt/id :a :value 1}
+                {:xt/id :b :value 2}
+                2]
+               (biff/index-get-many index :foo [:a :b :n-docs])))
+        (is (= [{:xt/id :a :value 1}
+                {:xt/id :b :value 2}
+                2]
+               (biff/index-get-many index :bar [:a :b :n-docs])))))))
+
+(deftest test-tx-log
+  (with-open [node (xt/start-node {})]
+    (xt/submit-tx node [[::xt/put {:xt/id :a}]
+                        [::xt/put {:xt/id :b}]])
+    (xt/submit-tx node [[::xt/delete :a]
+                        [::xt/delete :non-existent-key]])
+    (xt/sync node)
+    (is (= [#:biff.index{:op :xtdb.api/put, :doc #:xt{:id :a}}
+            #:biff.index{:op :xtdb.api/put, :doc #:xt{:id :b}}
+            #:biff.index{:op :xtdb.api/delete, :doc #:xt{:id :a}}]
+           (mapcat :biff.index/args (biff/test-tx-log node nil nil))))))
+
+(deftest indexer-results
+  (with-open [node (xt/start-node {})]
+    (xt/submit-tx node [[::xt/put {:xt/id :a}]
+                        [::xt/put {:xt/id :b}]])
+    (xt/submit-tx node [[::xt/delete :a]
+                        [::xt/delete :non-existent-key]])
+    (xt/sync node)
+    (let [{:keys [results changes txes-processed]}
+          (biff/indexer-results indexer (biff/test-tx-log node nil nil))]
+      (is (= 2 txes-processed))
+      (is (= {:a nil, :n-docs 1, :b #:xt{:id :b}} changes))
+      (is (= 2 (count results))))))

@@ -791,23 +791,12 @@
   (biff.xt.index/replay-indexer ctx index-id tx-id))
 
 ;; TODO write docstrings
-(def test-tx-log biff.xt.index/test-tx-log)
-(def indexer-args biff.xt.index/indexer-args)
-(def run-indexer biff.xt.index/run-indexer)
-(def indexer-results biff.xt.index/indexer-results)
-(def prepare-index! biff.xt.index/prepare-index!)
-(def rollback biff.xt.index/rollback)
-
-(defn index-get [snapshots index-id k]
-  (biff.proto/index-get snapshots index-id k))
-
-(defn index-get-many
-  ([snapshots index-id ks]
-   (biff.proto/index-get-many snapshots index-id ks))
-  ([snapshots index-id-key-pairs]
-   (biff.proto/index-get-many snapshots index-id-key-pairs)))
-
+(def test-tx-log biff.index/test-tx-log)
+(def indexer-results biff.index/indexer-results)
+(def index-get biff.proto/index-get)
+(def index-get-many biff.proto/index-get-many)
 (def read-snapshots biff.index/read-snapshots)
+(def read-index biff.index/read-index)
 
 ;;;; Indexes
 
