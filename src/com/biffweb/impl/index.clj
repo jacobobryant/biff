@@ -428,59 +428,63 @@
                remaining)))))
 
 (defn prepare-indexes! [{:biff.xtdb/keys [node]
-                         :biff.index/keys [indexes rocksdb sync-prepare]
-                         :as ctx}]
+                         :biff.index/keys [indexes rocksdb sync-prepare]}]
   (let [continue (atom true)
-        done     (promise)]
-    (future
-      (<<- (let [indexes (filterv :biff.index/prepare (vals indexes))])
-           (when (not-empty indexes))
-           (let [lowest-tx-id              (apply min (mapv #(::xt/tx-id % -1) indexes))
-                 latest-tx                 (xt/latest-submitted-tx node)
-                 committed-at              (atom (Instant/now))
-                 index->changes            (atom {})])
-           (with-open [log (xt/open-tx-log node lowest-tx-id true)])
-           (doseq [input-tx (iterator-seq log)])
-           (when @continue)
-           (let [indexes (filterv (fn [{:keys [::xt/tx-id]}]
-                                    (< (or tx-id -1) (::xt/tx-id input-tx)))
-                                  indexes)])
-           (do (doseq [{:biff.index/keys [id indexer handle version]} indexes
-                       :let [input       (xtdb-indexer-input node input-tx)
-                             changes     (get @index->changes id)
-                             index-get   (memoize #(rocks-get rocksdb handle %))
-                             index-get'  (fn [k]
-                                           (if (contains? changes k)
-                                             (get changes k)
-                                             (index-get k)))
-                             new-changes (run-indexer id indexer input index-get')]]
-                 (swap! index->changes update id merge new-changes)))
-           (when (or (<= 1000 (apply + (mapv count (vals @index->changes))))
-                     (< (inst-ms (.plusSeconds @committed-at 30))
-                        (inst-ms (Instant/now)))
-                     (= (::xt/tx-id input-tx) (::xt/tx-id latest-tx)))
-             (with-open [batch         (WriteBatch.)
-                         write-options (WriteOptions.)]
-               (doseq [{:biff.index/keys [id handle version]} indexes
-                       :let [_ (.put batch
-                                     handle
-                                     (key->bytes :biff.index/metadata)
-                                     (nippy/freeze {:biff.index/version version
-                                                    ::xt/tx-id (::xt/tx-id input-tx)}))
-                             changes (get @index->changes id)]
-                       [k v] changes]
-                 (if (some? v)
-                   (.put batch handle (key->bytes k) (nippy/freeze v))
-                   (.delete batch handle (key->bytes k))))
-               (.write rocksdb write-options batch))
-             (reset! index->changes {})
-             (log/info "Prepared indexes up to" (select-keys input-tx [::xt/tx-id ::xt/tx-time]))))
-      (when @continue
-        (log/info "Finished preparing indexes"))
-      (deliver done nil))
+        fut (future
+              (try
+                (<<- (let [indexes (filterv :biff.index/prepare (vals indexes))])
+                     (when (not-empty indexes))
+                     (let [lowest-tx-id              (apply min (mapv #(::xt/tx-id % -1) indexes))
+                           latest-tx                 (xt/latest-submitted-tx node)
+                           committed-at              (atom (Instant/now))
+                           index->changes            (atom {})])
+                     (with-open [log (xt/open-tx-log node lowest-tx-id true)])
+                     (doseq [input-tx (iterator-seq log)])
+                     (when @continue)
+                     (let [indexes (filterv (fn [{:keys [::xt/tx-id]}]
+                                              (< (or tx-id -1) (::xt/tx-id input-tx)))
+                                            indexes)])
+                     (do (doseq [{:biff.index/keys [id indexer handle version]} indexes
+                                 :let [input       (xtdb-indexer-input node input-tx)
+                                       changes     (get @index->changes id)
+                                       index-get   (memoize #(rocks-get rocksdb handle %))
+                                       index-get'  (fn [k]
+                                                     (if (contains? changes k)
+                                                       (get changes k)
+                                                       (index-get k)))
+                                       new-changes (run-indexer id indexer input index-get')]]
+                           (swap! index->changes update id merge new-changes)))
+                     (when (or (<= 1000 (apply + (mapv count (vals @index->changes))))
+                               (< (inst-ms (.plusSeconds @committed-at 30))
+                                  (inst-ms (Instant/now)))
+                               (= (::xt/tx-id input-tx) (::xt/tx-id latest-tx)))
+                       (with-open [batch         (WriteBatch.)
+                                   write-options (WriteOptions.)]
+                         (doseq [{:biff.index/keys [id handle version]} indexes
+                                 :let [_ (.put batch
+                                               handle
+                                               (key->bytes :biff.index/metadata)
+                                               (nippy/freeze {:biff.index/version version
+                                                              ::xt/tx-id (::xt/tx-id input-tx)}))
+                                       changes (get @index->changes id)]
+                                 [k v] changes]
+                           (if (some? v)
+                             (.put batch handle (key->bytes k) (nippy/freeze v))
+                             (.delete batch handle (key->bytes k))))
+                         (.write rocksdb write-options batch))
+                       (reset! index->changes {})
+                       (log/info "Prepared indexes up to" (select-keys input-tx [::xt/tx-id ::xt/tx-time]))))
+                (catch Exception e
+                  (reset! continue false)
+                  (if sync-prepare
+                    (throw e)
+                    (log/error e))))
+              (when @continue
+                (log/info "Finished preparing indexes")))]
     (when sync-prepare
       ;; For testing
-      @done)
+      @fut)
     (fn stop-fn []
       (reset! continue false)
-      @done)))
+      (try @fut (catch Exception _))
+      nil)))
