@@ -133,29 +133,29 @@
 (defn snapshotted-tx-ids [snapshot-data]
   (set (keys (dissoc snapshot-data :latest-tx-id :latest-snapshotted-tx-id))))
 
-(deftest read-snapshots
+(deftest open-db-with-index
   (with-open [system (start! {:biff.xtdb/topology :memory
                               :biff.index/dir :tmp
                               :biff/modules (modules 0 0)}
                              [biff/use-xtdb])]
     (let [{:keys [biff.xtdb/node biff.index/snapshot-data]} system]
       (submit-await node [[::xt/put {:xt/id :a :value 1}]])
-      (with-open [snapshots (biff/read-snapshots system)]
+      (with-open [db (biff/open-db-with-index system)]
         (is (= 1 (get-in @snapshot-data [0 :n-clients])))
-        (with-open [snapshots (biff/read-snapshots system)]
+        (with-open [db (biff/open-db-with-index system)]
           (is (= 2 (get-in @snapshot-data [0 :n-clients]))))
         (is (= 1 (get-in @snapshot-data [0 :n-clients])))
 
-        (is (= {:xt/id :a :value 1} (xt/entity snapshots :a)))
-        (is (= 1 (biff/index-get snapshots :foo :n-docs)))
+        (is (= {:xt/id :a :value 1} (xt/entity db :a)))
+        (is (= 1 (biff/index-get db :foo :n-docs)))
         (submit-await node [[::xt/put {:xt/id :a :value 2}]])
-        (is (= {:xt/id :a :value 1} (xt/entity snapshots :a)))
-        (is (= 1 (biff/index-get snapshots :foo :n-docs)))
+        (is (= {:xt/id :a :value 1} (xt/entity db :a)))
+        (is (= 1 (biff/index-get db :foo :n-docs)))
         (is (= #{0 1} (snapshotted-tx-ids @snapshot-data)))
 
-        (with-open [snapshots (biff/read-snapshots system)]
-          (is (= {:xt/id :a :value 2} (xt/entity snapshots :a)))
-          (is (= 2 (biff/index-get snapshots :foo :n-docs))))
+        (with-open [db (biff/open-db-with-index system)]
+          (is (= {:xt/id :a :value 2} (xt/entity db :a)))
+          (is (= 2 (biff/index-get db :foo :n-docs))))
         (is (= #{0 1} (snapshotted-tx-ids @snapshot-data))))
       (is (= #{1} (snapshotted-tx-ids @snapshot-data)))
       (submit-await node [[::xt/put {:xt/id :a :value 3}]])
@@ -169,14 +169,14 @@
     (let [{:keys [biff.xtdb/node]} system]
       (submit-await node [[::xt/put {:xt/id :a :value 1}]])
       (submit-await node [[::xt/put {:xt/id :b :value 2}]])
-      (with-open [snapshots (biff/read-snapshots system)]
+      (with-open [db (biff/open-db-with-index system)]
         (is (= [{:xt/id :a :value 1}
                 {:xt/id :b :value 2}
                 2]
-               (biff/index-get-many snapshots :foo [:a :b :n-docs])))
+               (biff/index-get-many db :foo [:a :b :n-docs])))
         (is (= [{:xt/id :a :value 1}
                 {:xt/id :a :value 1}]
-               (biff/index-get-many snapshots [[:foo :a] [:bar :a]])))))))
+               (biff/index-get-many db [[:foo :a] [:bar :a]])))))))
 
 (deftest prepare-indexes!
   (with-open [dir (make-temp-dir)]
@@ -192,18 +192,18 @@
                                 :biff.index/dir :tmp
                                 :biff.index/sync-prepare true
                                 :biff/modules (modules 0 0 {:prepare true})}
-                               [biff/use-xtdb])]
-      (let [index (biff/read-index system)]
-        (is (= [{:xt/id :a :value 1}
-                {:xt/id :b :value 2}
-                2]
-               (biff/index-get-many index :foo [:a :b :n-docs])))
-        (is (= [{:xt/id :a :value 1}
-                {:xt/id :b :value 2}
-                2]
-               (biff/index-get-many index :bar [:a :b :n-docs])))))))
+                               [biff/use-xtdb])
+                db (biff/open-db-with-index system)]
+      (is (= [{:xt/id :a :value 1}
+              {:xt/id :b :value 2}
+              2]
+             (biff/index-get-many db :foo [:a :b :n-docs])))
+      (is (= [{:xt/id :a :value 1}
+              {:xt/id :b :value 2}
+              2]
+             (biff/index-get-many db :bar [:a :b :n-docs]))))))
 
-(deftest test-tx-log
+(deftest indexer-input
   (with-open [node (xt/start-node {})]
     (xt/submit-tx node [[::xt/put {:xt/id :a}]
                         [::xt/put {:xt/id :b}]])
@@ -213,7 +213,7 @@
     (is (= [#:biff.index{:op :xtdb.api/put, :doc #:xt{:id :a}}
             #:biff.index{:op :xtdb.api/put, :doc #:xt{:id :b}}
             #:biff.index{:op :xtdb.api/delete, :doc #:xt{:id :a}}]
-           (mapcat :biff.index/args (biff/test-tx-log node nil nil))))))
+           (mapcat :biff.index/args (biff/indexer-input node nil nil))))))
 
 (deftest indexer-results
   (with-open [node (xt/start-node {})]
@@ -223,7 +223,7 @@
                         [::xt/delete :non-existent-key]])
     (xt/sync node)
     (let [{:keys [results changes txes-processed]}
-          (biff/indexer-results indexer (biff/test-tx-log node nil nil))]
+          (biff/indexer-results indexer (biff/indexer-input node nil nil))]
       (is (= 2 txes-processed))
       (is (= {:a nil, :n-docs 1, :b #:xt{:id :b}} changes))
       (is (= 2 (count results))))))

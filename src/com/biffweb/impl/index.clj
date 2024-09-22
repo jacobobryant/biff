@@ -294,40 +294,40 @@
                    (.close snapshot)
                    (swap! snapshot-data dissoc (:latest-snapshotted-tx-id old-snapshot-data))))))))))))
 
-(defrecord Index [rocksdb index-id->handle]
-  biff.proto/IndexSnapshot
+(defrecord IndexOnlyDatasource [rocksdb indexes read-options on-close]
+  biff.proto/IndexDatasource
   (index-get [_ index-id k]
-    (some-> (.get rocksdb
-                  (index-id->handle index-id)
-                  (key->bytes k))
-            nippy/thaw))
+    (let [{:biff.index/keys [handle prepare]} (get indexes index-id)]
+      (some-> (if (or prepare (not read-options))
+                (.get rocksdb handle (key->bytes k))
+                (.get rocksdb handle read-options (key->bytes k)))
+              nippy/thaw)))
   (index-get-many [this index-id ks]
     (biff.proto/index-get-many this (mapv vector (repeat index-id) ks)))
   (index-get-many [_ index-id-key-pairs]
-    (mapv #(some-> % nippy/thaw)
-          (.multiGetAsList rocksdb
-                           (ArrayList. (mapv (comp index-id->handle first) index-id-key-pairs))
-                           (ArrayList. (mapv (comp key->bytes second) index-id-key-pairs))))))
+    (let [handles (ArrayList. (mapv #(get-in indexes [(first %) :biff.index/handle]) index-id-key-pairs))
+          _keys   (ArrayList. (mapv (comp key->bytes second) index-id-key-pairs))
+          read-from-snapshot (and (not (some #(get-in indexes [% :biff.index/prepare])
+                                             (mapv first index-id-key-pairs)))
+                                  (some? read-options))]
+      (mapv #(some-> % nippy/thaw)
+            (if read-from-snapshot
+              (.multiGetAsList rocksdb read-options handles _keys)
+              (.multiGetAsList rocksdb handles _keys)))))
 
-(defn read-index [{:biff.index/keys [rocksdb indexes]}]
-  (Index. rocksdb (update-vals indexes :biff.index/handle)))
+  java.io.Closeable
+  (close [this]
+    (when on-close
+      (on-close this))))
 
-(defrecord Snapshots [xtdb rocksdb index-id->handle snapshot-data index-tx-id read-options]
-  biff.proto/IndexSnapshot
+(defrecord Datasource [xtdb index-db]
+  biff.proto/IndexDatasource
   (index-get [_ index-id k]
-    (some-> (.get rocksdb
-                  (index-id->handle index-id)
-                  read-options
-                  (key->bytes k))
-            nippy/thaw))
+    (biff.proto/index-get index-db index-id k))
   (index-get-many [this index-id ks]
-    (biff.proto/index-get-many this (mapv vector (repeat index-id) ks)))
+    (biff.proto/index-get-many index-db index-id ks))
   (index-get-many [_ index-id-key-pairs]
-    (mapv #(some-> % nippy/thaw)
-          (.multiGetAsList rocksdb
-                           read-options
-                           (ArrayList. (mapv (comp index-id->handle first) index-id-key-pairs))
-                           (ArrayList. (mapv (comp key->bytes second) index-id-key-pairs)))))
+    (biff.proto/index-get-many index-db index-id-key-pairs))
 
   xt/PXtdbDatasource
   (entity [_ eid]
@@ -361,20 +361,13 @@
 
   java.io.Closeable
   (close [_]
-    (let [{:keys [latest-snapshotted-tx-id]
-           {:keys [n-clients snapshot read-options]} index-tx-id}
-          (swap! snapshot-data update-in [index-tx-id :n-clients] dec)]
-      (when (and (= 0 n-clients) (not= latest-snapshotted-tx-id index-tx-id))
-        (.close read-options)
-        (.releaseSnapshot rocksdb snapshot)
-        (.close snapshot)
-        (swap! snapshot-data dissoc index-tx-id)))
+    (.close index-db)
     (.close xtdb)))
 
-(defn read-snapshots [{:keys [biff.index/rocksdb
-                              biff.index/indexes
-                              biff.index/snapshot-data
-                              biff.xtdb/node]}]
+(defn open-db-with-index [{:keys [biff.index/rocksdb
+                                  biff.index/indexes
+                                  biff.index/snapshot-data
+                                  biff.xtdb/node]}]
   (let [{:keys [latest-tx-id
                 latest-snapshotted-tx-id]
          :as snapshot-data'} (swap! snapshot-data
@@ -386,20 +379,28 @@
         tx {::xt/tx-id latest-tx-id}]
     (when (not= latest-tx-id -1)
       (xt/await-tx node tx))
-    (Snapshots. (if (= latest-tx-id -1)
-                  (xt/open-db node)
-                  (xt/open-db node {::xt/tx tx}))
-                rocksdb
-                (update-vals indexes :biff.index/handle)
-                snapshot-data
-                latest-snapshotted-tx-id
-                (get-in snapshot-data' [latest-snapshotted-tx-id :read-options]))))
+    (Datasource. (if (= latest-tx-id -1)
+                   (xt/open-db node)
+                   (xt/open-db node {::xt/tx tx}))
+                 (IndexOnlyDatasource.
+                  rocksdb
+                  indexes
+                  (get-in snapshot-data' [latest-snapshotted-tx-id :read-options])
+                  (fn close [_]
+                    (let [{new-latest-snapshotted-tx-id :latest-snapshotted-tx-id
+                           {:keys [n-clients snapshot read-options]} latest-snapshotted-tx-id}
+                          (swap! snapshot-data update-in [latest-snapshotted-tx-id :n-clients] dec)]
+                      (when (and (= 0 n-clients) (not= new-latest-snapshotted-tx-id latest-snapshotted-tx-id))
+                        (.close read-options)
+                        (.releaseSnapshot rocksdb snapshot)
+                        (.close snapshot)
+                        (swap! snapshot-data dissoc latest-snapshotted-tx-id))))))))
 
 (defn- tx-id-for [node t]
   (get-in (xt/db-basis (xt/db node {::xt/tx-time t}))
           [::xt/tx ::xt/tx-id]))
 
-(defn test-tx-log [node from to]
+(defn indexer-input [node from to]
   (with-open [log (xt/open-tx-log node
                                   (if from
                                     (dec (tx-id-for node from))
@@ -483,6 +484,3 @@
     (fn stop-fn []
       (reset! continue false)
       @done)))
-
-;; TODO
-;; - replace :biff.index/index-get with an IndexSnapshot object

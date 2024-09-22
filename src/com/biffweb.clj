@@ -570,6 +570,7 @@
     :as options}]
   (bxt/start-node options))
 
+;; TODO add documentation for index stuff
 (defn use-xtdb
   "A Biff component that starts an XTDB node.
 
@@ -763,40 +764,12 @@
   [docs]
   (bxt/test-node docs))
 
-(defn index-snapshots
-  "Returns a map of DB snapshots where the keys are index IDs or :biff/db.
-
-   :biff/db will be a snapshot of (:biff.xtdb/node ctx). All the other DB
-   snapshots (the index snapshots) will be consistent with the :biff/db value."
-  [{:keys [biff.xtdb/node biff/indexes biff.index/tx-metadata] :as ctx}]
-  (biff.xt.index/index-snapshots ctx))
-
-(defn replay-indexer
-  "Runs the given indexer on the given transaction and returns debug information.
-
-   index-id: the :id value for your index.
-   tx-id:    the ID for your main XTDB node's transaction that you'd like re-process.
-
-   Returns a map with the following keys:
-
-   :index-basis       - the value of (xt/db-basis db), where db is the value of
-                        :biff.index/db passed to your indexer.
-   :input-tx          - the transaction specified by tx-id.
-   :output-tx         - Optional. The return value of your indexer. Will only be
-                        present if the indexer doesn't throw an exception.
-   :indexer-exception - Optional. The exception thrown by your indexer, if there was one.
-   :with-tx-exception - Optional. The exception thrown by (xt/with-tx index-db output-tx), if there was one.
-                        with-tx is used to check for output-tx values that aren't valid XT transactions."
-  [{:keys [biff.xtdb/node biff/indexes] :as ctx} index-id tx-id]
-  (biff.xt.index/replay-indexer ctx index-id tx-id))
-
 ;; TODO write docstrings
-(def test-tx-log biff.index/test-tx-log)
+(def indexer-input biff.index/indexer-input)
 (def indexer-results biff.index/indexer-results)
 (def index-get biff.proto/index-get)
 (def index-get-many biff.proto/index-get-many)
-(def read-snapshots biff.index/read-snapshots)
-(def read-index biff.index/read-index)
+(def open-db-with-index biff.index/open-db-with-index)
 
 ;;;; Indexes
 
