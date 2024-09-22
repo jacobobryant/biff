@@ -213,7 +213,7 @@
     (is (= [#:biff.index{:op :xtdb.api/put, :doc #:xt{:id :a}}
             #:biff.index{:op :xtdb.api/put, :doc #:xt{:id :b}}
             #:biff.index{:op :xtdb.api/delete, :doc #:xt{:id :a}}]
-           (mapcat :biff.index/args (biff/indexer-input node nil nil))))))
+           (mapcat :biff.index/input (biff/indexer-input node nil nil))))))
 
 (deftest indexer-results
   (with-open [node (xt/start-node {})]

@@ -146,9 +146,9 @@
       (get m k)
       (f k))))
 
-(defn- xtdb-indexer-args [db-provider {::xt/keys [tx-id tx-ops]}]
+(defn- xtdb-indexer-input [db-provider {::xt/keys [tx-id tx-ops]}]
   (let [prev-db (delay (xt/db db-provider {::xt/tx {::xt/tx-id (dec tx-id)}}))
-        [args _] (->> tx-ops
+        [input _] (->> tx-ops
                       ((fn step [tx-ops]
                          (mapcat (fn [[op arg1 arg2]]
                                    (case op
@@ -159,27 +159,27 @@
                                                                :id arg1}]
                                      nil))
                                  tx-ops)))
-                      (reduce (fn [[args id->doc] {:biff.index/keys [op doc id] :as arg}]
+                      (reduce (fn [[input id->doc] {:biff.index/keys [op doc id] :as arg}]
                                 (case op
-                                  ::xt/put [(conj args arg) (assoc id->doc (:xt/id doc) doc)]
+                                  ::xt/put [(conj input arg) (assoc id->doc (:xt/id doc) doc)]
                                   ::xt/delete (let [doc (if (contains? id->doc id)
                                                           (id->doc id)
                                                           (xt/entity @prev-db id))]
-                                                [(cond-> args
+                                                [(cond-> input
                                                    doc (conj {:biff.index/op ::xt/delete
                                                               :biff.index/doc doc}))
                                                  (assoc id->doc id nil)])))
                               [[] {}]))]
-    (vec args)))
+    (vec input)))
 
-(defn- run-indexer [index-id indexer index-args index-get]
-  (reduce (fn [changes args]
+(defn- run-indexer [index-id indexer indexer-input index-get]
+  (reduce (fn [changes input]
             (try
               (let [index-get* (fn [id]
                                  (if (contains? changes id)
                                    (get changes id)
                                    (index-get id)))
-                    new-changes (indexer (assoc args :biff.index/index-get index-get*))
+                    new-changes (indexer (assoc input :biff.index/index-get index-get*))
                     _ (when-not (or (nil? new-changes) (map? new-changes))
                         (throw (ex-info "Indexer return value must be either a map or nil"
                                         {:biff.index/id index-id
@@ -206,10 +206,10 @@
                 (throw (ex-info (str "Exception while indexing. After fixing the problem, "
                                      "you should re-index by incrementing the index version and "
                                      "refreshing/restarting your app.")
-                                (merge {:biff.index/id index-id} args)
+                                (merge {:biff.index/id index-id} input)
                                 e)))))
           {}
-          index-args))
+          indexer-input))
 
 (defn ->xtdb-index
   {:xtdb.system/deps {:xtdb/secondary-indices :xtdb/secondary-indices
@@ -235,10 +235,10 @@
            :as tx}]
        (when-not (and abort-on-error @aborted)
          (let [changes (when committing?
-                         (let [index-get      (memoize #(rocks-get rocksdb handle %))
-                               indexer-args (xtdb-indexer-args query-engine tx)]
+                         (let [index-get     (memoize #(rocks-get rocksdb handle %))
+                               indexer-input (xtdb-indexer-input query-engine tx)]
                            (try
-                             (run-indexer index-id indexer indexer-args index-get)
+                             (run-indexer index-id indexer indexer-input index-get)
                              (catch Exception e
                                (log/error e)
                                (when abort-on-error
@@ -409,18 +409,18 @@
     (cond->> (iterator-seq log)
       (some? to) (take-while #(< (compare (::xt/tx-time %) to) 0))
       true (mapv (fn [tx]
-                   (assoc tx :biff.index/args (xtdb-indexer-args node tx)))))))
+                   (assoc tx :biff.index/input (xtdb-indexer-input node tx)))))))
 
-(defn indexer-results [indexer tx-log-with-args & {:keys [limit] :or {limit 10}}]
+(defn indexer-results [indexer tx-log-with-input & {:keys [limit] :or {limit 10}}]
   (loop [results []
          changes {}
          txes-processed 0
-         [main-tx & remaining] tx-log-with-args]
+         [main-tx & remaining] tx-log-with-input]
     (if (or (nil? main-tx) (<= limit (count results)))
       {:results results
        :changes changes
        :txes-processed txes-processed}
-      (let [new-changes (run-indexer nil indexer (:biff.index/args main-tx) changes)]
+      (let [new-changes (run-indexer nil indexer (:biff.index/input main-tx) changes)]
         (recur (cond-> results
                  (not-empty new-changes) (conj {:main-tx main-tx :changes new-changes}))
                (merge changes new-changes)
@@ -446,14 +446,14 @@
                                     (< (or tx-id -1) (::xt/tx-id input-tx)))
                                   indexes)])
            (do (doseq [{:biff.index/keys [id indexer handle version]} indexes
-                       :let [args        (xtdb-indexer-args node input-tx)
+                       :let [input       (xtdb-indexer-input node input-tx)
                              changes     (get @index->changes id)
                              index-get   (memoize #(rocks-get rocksdb handle %))
                              index-get'  (fn [k]
                                            (if (contains? changes k)
                                              (get changes k)
                                              (index-get k)))
-                             new-changes (run-indexer id indexer args index-get')]]
+                             new-changes (run-indexer id indexer input index-get')]]
                  (swap! index->changes update id merge new-changes)))
            (when (or (<= 1000 (apply + (mapv count (vals @index->changes))))
                      (< (inst-ms (.plusSeconds @committed-at 30))
