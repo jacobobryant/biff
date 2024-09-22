@@ -458,6 +458,7 @@
                                (< (inst-ms (.plusSeconds @committed-at 30))
                                   (inst-ms (Instant/now)))
                                (= (::xt/tx-id input-tx) (::xt/tx-id latest-tx)))
+                       (reset! committed-at (Instant/now))
                        (with-open [batch         (WriteBatch.)
                                    write-options (WriteOptions.)]
                          (doseq [{:biff.index/keys [id handle version]} indexes
@@ -488,3 +489,5 @@
       (reset! continue false)
       (try @fut (catch Exception _))
       nil)))
+
+;; TODO make exception str use pr-str or something
