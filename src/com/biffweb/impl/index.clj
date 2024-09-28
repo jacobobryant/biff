@@ -54,12 +54,15 @@
           (vector? k)         [7 (mapcat (fn [x]
                                            (let [_bytes (key->bytes x)
                                                  cnt (count _bytes)]
-                                             (when (< 255 cnt)
+                                             (when (< 65535 cnt)
                                                (throw (ex-info (str "Vectors elements index keys can't have an encoded"
-                                                                    " size of greater than 255 bytes.")
+                                                                    " size of greater than 65535 bytes.")
                                                                {:element x
                                                                 :n-bytes cnt})))
-                                             (cons cnt _bytes)))
+                                             (byte-array (concat (.. (ByteBuffer/allocate 2)
+                                                                     (putShort (+ cnt Short/MIN_VALUE))
+                                                                     array)
+                                                                 _bytes))))
                                          k)]
           :else (throw (ex-info (str "Type not supported for index keys: " (type k))
                                 {:key k})))]
