@@ -382,7 +382,8 @@
         tx {::xt/tx-id latest-tx-id}]
     (when (not= latest-tx-id -1)
       (xt/await-tx node tx))
-    (Datasource. (if (= latest-tx-id -1)
+    (Datasource. (if (or (= latest-tx-id -1)
+                         (every? :biff.index/prepare (vals indexes)))
                    (xt/open-db node)
                    (xt/open-db node {::xt/tx tx}))
                  (IndexOnlyDatasource.
