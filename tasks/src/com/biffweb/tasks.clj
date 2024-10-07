@@ -98,6 +98,14 @@
     "bin/tailwindcss.exe"
     "bin/tailwindcss"))
 
+(defn- local-bun-path []
+  (when-let [binary (fs/which "bun")] (str binary)))
+
+(defn- js-bundler-install-cmd []
+  (cond
+    (local-bun-path) "bun install"
+    :else            "npm install"))
+
 (defn tailwind-file []
   (let [os-name (str/lower-case (System/getProperty "os.name"))
         os-type (cond
@@ -142,7 +150,8 @@
   The logic for running and installing Tailwind is:
 
   1. If tailwindcss has been installed via npm, then `npx tailwindcss` will be
-     used.
+     used. If tailwindcss has been installed via bun, then `bunx tailwindcss` 
+     will be used.
 
   2. Otherwise, if the tailwindcss standalone binary has been downloaded to
      ./bin/, that will be used.
@@ -154,11 +163,12 @@
      and that will be used."
   [& args]
   (let [local-bin-installed (fs/exists? (local-tailwind-path))
-        tailwind-cmd (cond
-                       (sh-success? "npm" "list" "tailwindcss") :npm
-                       (and (fs/which "tailwindcss")
-                            (not local-bin-installed)) :global-bin
-                       :else :local-bin)]
+        tailwind-cmd 
+          (cond
+            (sh-success? "npm" "list" "tailwindcss")                 :npm
+            (sh-success? "bun pm ls | grep \"tailwindcss\"")         :bun
+            (and (fs/which "tailwindcss") (not local-bin-installed)) :global-bin
+            :else                                                    :local-bin)]
     (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
       (install-tailwind))
     (when (= tailwind-cmd :local-bin)
@@ -169,6 +179,7 @@
     (try
       (apply shell (concat (case tailwind-cmd
                              :npm        ["npx" "tailwindcss"]
+                             :bun        ["bunx" "tailwindcss"]
                              :global-bin [(str (fs/which "tailwindcss"))]
                              :local-bin  [(local-tailwind-path)])
                            ["-c" "resources/tailwind.config.js"
@@ -209,7 +220,7 @@
   (let [commands (filter some?
                          ["mkdir -p target/resources"
                           (when (fs/exists? "package.json")
-                            "npm install")
+                            (js-bundler-install-cmd))
                           "set -a"
                           (when (fs/exists? "secrets.env")
                             ". ./secrets.env")
@@ -278,7 +289,7 @@
   [& args]
   (io/make-parents "target/resources/_")
   (when (fs/exists? "package.json")
-    (shell "npm" "install"))
+    (shell (js-bundler-install-cmd)))
   (future-verbose (css "--watch"))
   (spit ".nrepl-port" "7888")
   (apply clojure {:extra-env (merge (secrets) {"BIFF_ENV" "dev"})}
