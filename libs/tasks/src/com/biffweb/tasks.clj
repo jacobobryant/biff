@@ -140,6 +140,7 @@
          (apply shell))))
 
 (defn- push-files-git [{:biff.tasks/keys [deploy-cmd
+                                          git-deploy-cmd
                                           deploy-from
                                           deploy-to
                                           deploy-untracked-files
@@ -149,15 +150,23 @@
       (apply shell "ssh" (str "app@" server) "mkdir" "-p" dirs))
     (doseq [file files]
       (shell "scp" file (str "app@" server ":" file))))
-  (if deploy-cmd
-    (apply shell deploy-cmd)
-    ;; For backwards compatibility
+  ;; deploy-cmd, deploy-from, and deploy-to are all deprecated (but still supported for backwards compatibility)
+  (if-some [git-deploy-cmd (or git-deploy-cmd deploy-cmd)]
+    (apply shell git-deploy-cmd)
     (shell "git" "push" deploy-to deploy-from)))
 
-(defn- push-files [ctx]
-  (if (fs/which "rsync")
-    (push-files-rsync ctx)
-    (push-files-git ctx)))
+(defn- push-files [{:keys [biff.tasks/deploy-with] :as ctx}]
+  (let [deploy-with (or deploy-with
+                        (if (fs/which "rsync")
+                          :rsync
+                          :git))]
+    (case deploy-with
+      :rsync (push-files-rsync ctx)
+      :git (push-files-git ctx)
+      (binding [*out* *err*]
+        (println "Unrecognized config option `:biff.tasks/deploy-with " deploy-with "`. Valid options are "
+                 ":rsync and :git")
+        (System/exit 2)))))
 
 (defn- auto-soft-deploy [{:biff.tasks/keys [watch-dirs]
                           :or {watch-dirs ["src" "dev" "resources" "test"]}
