@@ -1,3 +1,7 @@
+;; This file is deprecated and should not be modified except for bug fixes. It was used by default
+;; previously when Biff used Babashka tasks. Now we use plain clj for tasks by default instead, and
+;; this file remains only for backwards compatibility. See libs/tasks/src/com/biffweb/tasks.clj for
+;; the current task implementations.
 (ns com.biffweb.tasks
   (:require [babashka.curl :as curl]
             [babashka.fs :as fs]

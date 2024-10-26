@@ -108,6 +108,14 @@
 (defn- ssh-run [{:keys [biff.tasks/server]} & args]
   (apply shell "ssh" (str "app@" server) args))
 
+(defn- local-bun-path []
+  (some-> (fs/which "bun") str))
+
+(defn- install-js-deps-cmd []
+  (cond
+    (fs/exists? "bun.lockb") "bun install"
+    :else                    "npm install"))
+
 (defn- local-tailwind-path []
   (if (windows?)
     "bin/tailwindcss.exe"
@@ -212,22 +220,28 @@
     (io/copy (:body (hato/get url {:as :stream :http-client {:redirect-policy :normal}})) dest)
     (.setExecutable dest true)))
 
+(defn- bun-pkg-installed? [package-name]
+  (and (fs/which "bun")
+       (str/includes? (:out (sh/sh "bun" "pm" "ls"))
+                      package-name)))
+
 (defn- tailwind-installation-info []
   (let [local-bin-installed (fs/exists? (local-tailwind-path))]
     {:local-bin-installed local-bin-installed
-     :tailwind-cmd (cond
-                     (sh-success? "npm" "list" "tailwindcss") :npm
-                     (and (fs/which "tailwindcss")
-                          (not local-bin-installed)) :global-bin
-                     :else :local-bin)}))
+     :tailwind-cmd
+     (cond
+       (bun-pkg-installed? "tailwindcss")                       :bun
+       (sh-success? "npm" "list" "tailwindcss")                 :npm
+       (and (fs/which "tailwindcss") (not local-bin-installed)) :global-bin
+       :else                                                    :local-bin)}))
 
 (defn css
   "Generates the target/resources/public/css/main.css file.
 
    The logic for running and installing Tailwind is:
 
-   1. If tailwindcss has been installed via npm, then `npx tailwindcss` will be
-      used.
+   1. If tailwindcss has been installed via npm or bun, then that installation
+      will be used.
 
    2. Otherwise, if the tailwindcss standalone binary has been downloaded to
       ./bin/, that will be used.
@@ -250,6 +264,7 @@
     (try
       (apply shell (concat (case tailwind-cmd
                              :npm        ["npx" "tailwindcss"]
+                             :bun        ["bunx" "tailwindcss"]
                              :global-bin [(str (fs/which "tailwindcss"))]
                              :local-bin  [(local-tailwind-path)])
                            ["-c" "resources/tailwind.config.js"
@@ -290,7 +305,7 @@
       (when-not (fs/exists? "config.env")
         (run-task "generate-config"))
       (when (fs/exists? "package.json")
-        (shell "npm install"))
+        (shell (install-js-deps-cmd)))
       (let [{:keys [local-bin-installed tailwind-cmd]} (tailwind-installation-info)]
         (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
           (run-task "install-tailwind")))
