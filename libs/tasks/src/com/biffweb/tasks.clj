@@ -142,7 +142,7 @@
     (when (and (not (windows?)) (fs/exists? "config.env"))
       (fs/set-posix-file-permissions "config.env" "rw-------"))
     (->> (concat ["rsync" "--archive" "--verbose" "--relative" "--include='**.gitignore'"
-                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
+                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after" "--protocol=29"]
                  files
                  [(str "app@" server ":")])
          (apply shell))))
