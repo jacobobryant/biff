@@ -142,7 +142,7 @@
     (when (and (not (windows?)) (fs/exists? "config.env"))
       (fs/set-posix-file-permissions "config.env" "rw-------"))
     (->> (concat ["rsync" "--archive" "--verbose" "--relative" "--include='**.gitignore'"
-                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after"]
+                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after" "--protocol=29"]
                  files
                  [(str "app@" server ":")])
          (apply shell))))
@@ -198,18 +198,24 @@
 (defn install-tailwind
   "Downloads a Tailwind binary to bin/tailwindcss."
   [& [file]]
-  (let [{:biff.tasks/keys [tailwind-build]} @config
+  (let [{:biff.tasks/keys [tailwind-build tailwind-version]} @config
         [file inferred] (or (when file
                               [file false])
                             ;; Backwards compatibility.
                             (when tailwind-build
                               [(str "tailwindcss-" tailwind-build) false])
                             [(infer-tailwind-file) true])
-        url (str "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/"
+        url (str "https://github.com/tailwindlabs/tailwindcss/releases/"
+                 (if tailwind-version
+                   (str "download/" tailwind-version)
+                   "latest/download")
+                 "/"
                  file)
         dest (io/file (local-tailwind-path))]
     (io/make-parents dest)
-    (println "Downloading the latest version of " file "...")
+    (println "Downloading"
+             (or tailwind-version "the latest version")
+             "of" file "...")
     (when inferred
       (println "If that's the wrong file, run `clj -M:dev install-tailwind <correct file>`"))
     (println)
