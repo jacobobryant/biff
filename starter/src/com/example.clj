@@ -3,6 +3,7 @@
             [com.example.email :as email]
             [com.example.app :as app]
             [com.example.home :as home]
+            [com.example.lib.htmx-refresh :as lib.htmx-refresh]
             [com.example.middleware :as mid]
             [com.example.ui :as ui]
             [com.example.worker :as worker]
@@ -40,8 +41,9 @@
 
 (defn on-save [ctx]
   (biff/add-libs)
-  (biff/eval-files! ctx)
-  (generate-assets! ctx)
+  (let [refresh-result (biff/eval-files! ctx)]
+    (generate-assets! ctx)
+    (lib.htmx-refresh/send-refresh-command ctx refresh-result))
   (test/run-all-tests #"com.example.*-test"))
 
 (def malli-opts
@@ -66,7 +68,7 @@
    biff/use-xtdb
    biff/use-queues
    biff/use-xtdb-tx-listener
-   biff/use-htmx-refresh
+   lib.htmx-refresh/use-htmx-refresh
    biff/use-jetty
    biff/use-chime
    biff/use-beholder])

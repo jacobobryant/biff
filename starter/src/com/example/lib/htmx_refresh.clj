@@ -56,5 +56,4 @@
     ctx
     (-> ctx
         (assoc :biff.refresh/clients (atom #{}))
-        (update :biff/handler wrap-htmx-refresh)
-        (update :biff.eval/on-eval conj #'send-refresh-command))))
+        (update :biff/handler wrap-htmx-refresh))))
