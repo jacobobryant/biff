@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]
             [com.biffweb.impl.middleware :as middle]
@@ -213,7 +214,8 @@
   `(try
      ~@body
      (catch Exception e#
-       (st/print-stack-trace e#))))
+       (log/error e#)
+       nil)))
 
 (defmacro letd
   "Like let, but transparently wraps all bindings with delay.
