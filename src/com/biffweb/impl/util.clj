@@ -4,7 +4,6 @@
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
             [clojure.spec.alpha :as spec]
-            [clojure.stacktrace :as st]
             [clojure.string :as str]
             [clojure.tools.deps.alpha.repl :as deps-repl]
             [clojure.tools.logging :as log]
@@ -18,7 +17,8 @@
   `(try
      ~@body
      (catch Exception e#
-       (st/print-stack-trace e#))))
+       (log/error e#)
+       nil)))
 
 (defn start-system [system-atom init]
   (reset! system-atom (merge {:biff/stop '()} init))
