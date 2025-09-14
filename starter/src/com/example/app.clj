@@ -5,7 +5,7 @@
             [com.example.settings :as settings]
             [rum.core :as rum]
             [xtdb.api :as xt]
-            [ring.adapter.jetty9 :as jetty]
+            [ring.websocket :as ws]
             [cheshire.core :as cheshire]))
 
 (defn set-foo [{:keys [session params] :as ctx}]
@@ -54,7 +54,7 @@
                       [:div#messages {:hx-swap-oob "afterbegin"}
                        (message doc)])]
           ws @chat-clients]
-    (jetty/send! ws html)))
+    (ws/send ws html)))
 
 (defn send-message [{:keys [session] :as ctx} {:keys [text]}]
   (let [{:keys [text]} (cheshire/parse-string text true)]
@@ -124,12 +124,12 @@
   {:status 101
    :headers {"upgrade" "websocket"
              "connection" "upgrade"}
-   :ws {:on-connect (fn [ws]
-                      (swap! chat-clients conj ws))
-        :on-text (fn [ws text-message]
-                   (send-message ctx {:ws ws :text text-message}))
-        :on-close (fn [ws status-code reason]
-                    (swap! chat-clients disj ws))}})
+   ::ws/listener {:on-open (fn [ws]
+                             (swap! chat-clients conj ws))
+                  :on-message (fn [ws text-message]
+                                (send-message ctx {:ws ws :text text-message}))
+                  :on-close (fn [ws status-code reason]
+                              (swap! chat-clients disj ws))}})
 
 (def about-page
   (ui/page
