@@ -1,9 +1,6 @@
 {:paths ["src" "resources" "target/resources"]
- :deps {com.biffweb/biff                    {:local/root ".."}
-        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
-        metosin/muuntaja                    {:mvn/version "0.6.8"}
-        ring/ring-defaults                  {:mvn/version "0.3.4"}
-        org.clojure/clojure                 {:mvn/version "1.11.1"}
+ :deps {com.biffweb/biff           {:local/root ".."}
+        cheshire/cheshire          {:mvn/version "6.1.0"}
 
         ;; Notes on logging: https://gist.github.com/jacobobryant/76b7a08a07d5ef2cc076b048d078f1f3
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}

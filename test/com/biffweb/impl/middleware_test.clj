@@ -48,11 +48,10 @@
    (call param-handler ctx)))
 
 (deftest middleware
-  (is (= (call-with-headers param-handler {})
+  (is (= (update (call-with-headers param-handler {}) :headers dissoc "Set-Cookie")
          {:status 200,
           :headers
           {"Content-Type" "text/plain; charset=utf-8",
-           "X-XSS-Protection" "1; mode=block",
            "X-Frame-Options" "SAMEORIGIN",
            "X-Content-Type-Options" "nosniff",
            "Strict-Transport-Security" "max-age=31536000; includeSubDomains"},

@@ -15,6 +15,7 @@
 
  :biff.beholder/enabled         #profile {:dev true :default false}
  :biff.beholder/paths           ["src" "resources" "test"]
+ :biff.add-libs/aliases         #profile {:dev [:dev] :prod [:prod]}
  :biff/eval-paths               ["src" "test"]
  :biff.middleware/secure        #profile {:dev false :default true}
  :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET

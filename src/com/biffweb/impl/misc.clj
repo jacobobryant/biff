@@ -8,7 +8,6 @@
             [com.biffweb.impl.time :as time]
             [com.biffweb.impl.util :as util]
             [com.biffweb.impl.xtdb :as bxt]
-            [hawk.core :as hawk]
             [nextjournal.beholder :as beholder]
             [reitit.ring :as reitit-ring]
             [ring.adapter.jetty :as jetty]))
@@ -38,19 +37,10 @@
 (defn use-hawk [{:biff.hawk/keys [on-save exts paths]
                  :or {paths ["src" "resources"]}
                  :as ctx}]
-  (let [watch (hawk/watch!
-               [(merge {:paths paths
-                         ;; todo debounce this properly
-                        :handler (fn [{:keys [last-ran]
-                                       :or {last-ran 0}} _]
-                                   (when (< 500 (- (inst-ms (java.util.Date.)) last-ran))
-                                     (on-save ctx))
-                                   {:last-ran (inst-ms (java.util.Date.))})}
-                       (when exts
-                         {:filter (fn [_ {:keys [^java.io.File file]}]
-                                    (let [path (.getPath file)]
-                                      (some #(str/ends-with? path %) exts)))}))])]
-    (update ctx :biff/stop conj #(hawk/stop! watch))))
+  (use-beholder (merge {:biff.beholder/on-save on-save
+                        :biff.beholder/exts exts
+                        :biff.beholder/paths paths}
+                       ctx)))
 
 (defn reitit-handler [{:keys [router routes on-error]}]
   (let [make-error-handler (fn [status]

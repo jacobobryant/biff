@@ -155,6 +155,8 @@
                     handler)]
       (handler ctx))))
 
+;;; Deprecated
+
 (defn wrap-site-defaults [handler]
   (-> handler
       wrap-render-rum
@@ -186,8 +188,6 @@
 (defn use-wrap-ctx [{:keys [biff/handler] :as ctx}]
   (assoc ctx :biff/handler (fn [req]
                              (handler (merge (bxt/merge-context ctx) req)))))
-
-;;; Deprecated
 
 (defn wrap-ring-defaults
   "Deprecated"

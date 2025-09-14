@@ -268,13 +268,11 @@
     result))
 
 (defn add-libs
-  "Loads new dependencies in deps.edn via tools.deps.alpha.
+  "Loads new dependencies in deps.edn via clojure.repl.deps/sync-deps.
 
-  Ensures that a DynamicClassLoader is available so that this works even when
-  not evaluated from the repl. See
-  https://ask.clojure.org/index.php/10761/clj-behaves-different-in-the-repl-as-opposed-to-from-a-file"
-  []
-  (util/add-libs))
+   Only calls sync-deps if deps.edn has been modified. `args` are passed to `sync-deps`."
+  [& {:biff.add-libs/keys [aliases]}]
+  (util/add-libs {:aliases aliases}))
 
 (defn delete-old-files
   "Deletes files descended from the given directory that are older than a given threshold.
@@ -456,17 +454,23 @@
   (middle/wrap-ssl handler))
 
 (defn wrap-site-defaults
-  "A collection of middleware for website routes."
+  "Deprecated. Define this in your project instead.
+
+   A collection of middleware for website routes."
   [handler]
   (middle/wrap-site-defaults handler))
 
 (defn wrap-api-defaults
-  "A collection of middleware for API routes."
+  "Deprecated. Define this in your project instead.
+
+  A collection of middleware for API routes."
   [handler]
   (middle/wrap-api-defaults handler))
 
 (defn wrap-base-defaults
-  "A collection of middleware for website and API routes."
+  "Deprecated. Define this in your project instead.
+
+   A collection of middleware for website and API routes."
   [handler]
   (middle/wrap-base-defaults handler))
 

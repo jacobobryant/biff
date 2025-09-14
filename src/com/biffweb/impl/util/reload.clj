@@ -27,7 +27,7 @@
 
 (defn refresh [tracker directories]
   (let [directories (filterv (set (str/split (System/getProperty "java.class.path") #":")) directories)
-        new-tracker (apply dir/scan tracker directories)
+        new-tracker (dir/scan-dirs tracker directories)
         new-tracker (remove-disabled new-tracker)]
     (print-pending-reloads new-tracker)
     (let [new-tracker (reload/track-reload (assoc new-tracker ::track/unload []))]

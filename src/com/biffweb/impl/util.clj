@@ -6,12 +6,11 @@
             [clojure.spec.alpha :as spec]
             [clojure.stacktrace :as st]
             [clojure.string :as str]
-            [clojure.tools.deps.alpha.repl :as deps-repl]
+            [clojure.repl.deps :as repl-deps]
             [clojure.tools.logging :as log]
             [clojure.tools.namespace.repl :as tn-repl]
             [clojure.walk :as walk]
-            [com.biffweb.impl.time :as time])
-  (:import [clojure.lang DynamicClassLoader]))
+            [com.biffweb.impl.time :as time]))
 
 (defmacro catchall-verbose
   [& body]
@@ -35,16 +34,18 @@
     (f))
   (tn-repl/refresh :after after-refresh))
 
-(defn add-libs []
-  (let [cl (.getContextClassLoader (Thread/currentThread))]
-    (when-not (instance? DynamicClassLoader cl)
-      (.setContextClassLoader (Thread/currentThread) (DynamicClassLoader. cl))))
-  (deps-repl/add-libs (:deps (edn/read-string (slurp "deps.edn")))))
+(let [deps-last-modified (atom (.lastModified (io/file "deps.edn")))]
+  (defn add-libs [opts]
+    (let [last-modified (.lastModified (io/file "deps.edn"))]
+      (when (not= last-modified @deps-last-modified)
+        (reset! deps-last-modified last-modified)
+        (binding [*repl* true]
+          (repl-deps/sync-deps opts))))))
 
 (defn ppr-str [x]
   (with-out-str
-    (binding [*print-namespace-maps* false]
-      (pp/pprint x))))
+   (binding [*print-namespace-maps* false]
+     (pp/pprint x))))
 
 (defn pprint [object & [writer]]
   (binding [*print-namespace-maps* false]

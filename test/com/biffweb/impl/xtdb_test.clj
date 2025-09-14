@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is]]
             [xtdb.api :as xt]
             [com.biffweb :as biff :refer [test-xtdb-node]]
+            [com.biffweb.impl.xtdb :as impl]
             [malli.core :as malc]
             [malli.registry :as malr]))
 
@@ -195,3 +196,17 @@
                               "alice@example.com")
                  (update :user/messages #(sort-by :msg/sent-at %)))))
       (is (#{:user/alice :user/bob} (biff/lookup-id db :user/foo "foo"))))))
+
+(deftest apply-special-vals
+  (is (= (impl/apply-special-vals {:a 1
+                                   :b 2
+                                   :d #{1 2 3 4}
+                                   :e 5
+                                   :g 8}
+                                  {:b :db/dissoc
+                                   :c [:db/union 3]
+                                   :d [:db/difference 4]
+                                   :e [:db/add 2]
+                                   :f [:db/default 6]
+                                   :g [:db/default 7]})
+         {:a 1, :d #{1 3 2}, :e 7, :g 8, :c #{3}, :f 6})))

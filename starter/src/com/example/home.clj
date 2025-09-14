@@ -1,11 +1,8 @@
 (ns com.example.home
-  (:require [clj-http.client :as http]
-            [com.biffweb :as biff]
+  (:require [com.biffweb :as biff]
             [com.example.middleware :as mid]
             [com.example.ui :as ui]
-            [com.example.settings :as settings]
-            [rum.core :as rum]
-            [xtdb.api :as xt]))
+            [com.example.settings :as settings]))
 
 (def email-disabled-notice
   [:.text-sm.mt-3.bg-blue-100.rounded.p-2

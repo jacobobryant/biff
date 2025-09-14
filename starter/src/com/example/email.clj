@@ -1,7 +1,5 @@
 (ns com.example.email
-  (:require [camel-snake-kebab.core :as csk]
-            [camel-snake-kebab.extras :as cske]
-            [clj-http.client :as http]
+  (:require [clj-http.client :as http]
             [com.example.settings :as settings]
             [clojure.tools.logging :as log]
             [rum.core :as rum]))
