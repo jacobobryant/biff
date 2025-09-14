@@ -18,6 +18,8 @@ jobs:
     - name: Install Clojure CLI
       run: |
         sudo bash < <(curl -L -O https://download.clojure.org/install/linux-install-1.12.2.1565.sh)
+        ls /usr/local/bin
+        echo $PATH
 
     - name: Run tests
       run: /usr/local/bin/clj -M:test
