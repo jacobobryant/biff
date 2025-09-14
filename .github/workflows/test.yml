@@ -23,4 +23,4 @@ jobs:
         sudo ./linux-install-$version.sh
 
     - name: Run tests
-      run: /usr/local/bin/clj -M:test
+      run: clojure -M:test
