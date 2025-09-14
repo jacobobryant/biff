@@ -7,7 +7,6 @@
         com.xtdb/xtdb-core             {:mvn/version "1.23.1"}
         com.xtdb/xtdb-jdbc             {:mvn/version "1.23.1"}
         com.xtdb/xtdb-rocksdb          {:mvn/version "1.23.1"}
-        info.sunng/ring-jetty9-adapter {:mvn/version "0.17.2"}
         jarohen/chime                  {:mvn/version "0.3.3"}
         lambdaisland/uri               {:mvn/version "1.13.95"}
         metosin/malli                  {:mvn/version "0.16.1"}
@@ -21,6 +20,7 @@
         org.postgresql/postgresql      {:mvn/version "42.6.0"}
         refactor-nrepl/refactor-nrepl  {:mvn/version "3.6.0"}
         ring/ring-defaults             {:mvn/version "0.3.4"}
+        ring/ring-jetty-adapter        {:mvn/version "1.15.1"}
         rum/rum                        {:mvn/version "0.12.11"
                                         :exclusions [cljsjs/react cljsjs/react-dom]}
         com.biffweb/config             {:git/url "https://github.com/jacobobryant/biff"

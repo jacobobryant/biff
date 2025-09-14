@@ -11,7 +11,7 @@
             [hawk.core :as hawk]
             [nextjournal.beholder :as beholder]
             [reitit.ring :as reitit-ring]
-            [ring.adapter.jetty9 :as jetty]))
+            [ring.adapter.jetty :as jetty]))
 
 (defn use-beholder [{:biff.beholder/keys [on-save exts paths enabled]
                      :or {paths ["src" "resources" "test"]
@@ -76,10 +76,9 @@
                                   (handler (merge (bxt/merge-context ctx) req)))
                                 {:host host
                                  :port port
-                                 :join? false
-                                 :allow-null-path-info true})]
+                                 :join? false})]
     (log/info "Jetty running on" (str "http://" host ":" port))
-    (update ctx :biff/stop conj #(jetty/stop-server server))))
+    (update ctx :biff/stop conj #(.stop server))))
 
 (defn mailersend [{:keys [mailersend/api-key
                           mailersend/defaults]}
