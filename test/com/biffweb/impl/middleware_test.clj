@@ -52,6 +52,7 @@
          {:status 200,
           :headers
           {"Content-Type" "text/plain; charset=utf-8",
+           "Content-Length" "2"
            "X-Frame-Options" "SAMEORIGIN",
            "X-Content-Type-Options" "nosniff",
            "Strict-Transport-Security" "max-age=31536000; includeSubDomains"},

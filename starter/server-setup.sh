@@ -3,7 +3,7 @@ set -x
 set -e
 
 BIFF_PROFILE=${1:-prod}
-CLJ_VERSION=1.11.1.1165
+CLJ_VERSION=1.12.2.1565
 TRENCH_VERSION=0.4.0
 if [ $(uname -m) = "aarch64" ]; then
   ARCH=arm64
