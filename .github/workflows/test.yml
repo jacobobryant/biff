@@ -1,0 +1,26 @@
+name: Clojure Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Install Clojure CLI
+      run: |
+        version=1.12.2.1565
+        curl -L -O https://download.clojure.org/install/linux-install-$version.sh
+        chmod +x linux-install-$version.sh
+        sudo ./linux-install-$version.sh
+
+    - name: Run tests
+      run: clojure -M:test
