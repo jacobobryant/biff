@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [sync])
   (:require [com.biffweb.impl.util :as util :refer [resolve-optional]]))
 
+(def await-tx            (resolve-optional 'xtdb.api/await-tx))
 (def db                  (resolve-optional 'xtdb.api/db))
 (def entity              (resolve-optional 'xtdb.api/entity))
 (def latest-completed-tx (resolve-optional 'xtdb.api/latest-completed-tx))

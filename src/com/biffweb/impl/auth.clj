@@ -8,7 +8,7 @@
             ;;; above lines and replace them with the com.biffweb namespace:
             ;[com.biffweb :as biff]
             [clj-http.client :as http]
-            [xtdb.api :as xt]
+            [xtdb.api :as-alias xt]
             [com.biffweb.impl.xtdb.aliases :as xta]))
 
 ;; TODO migrate to xt2
