@@ -8,9 +8,10 @@
             ;;; above lines and replace them with the com.biffweb namespace:
             ;[com.biffweb :as biff]
             [clj-http.client :as http]
-            [clojure.string :as str]
-            [rum.core :as rum]
-            [xtdb.api :as xt]))
+            [xtdb.api :as xt]
+            [com.biffweb.impl.xtdb.aliases :as xta]))
+
+;; TODO migrate to xt2
 
 (defn passed-recaptcha? [{:keys [biff/secret biff.recaptcha/threshold params]
                           :or {threshold 0.5}}]
@@ -151,7 +152,7 @@
                                    path-params]
                             :as ctx}]
   (let [{:keys [success error email]} (verify-link ctx)
-        existing-user-id (when success (get-user-id (xt/db node) email))
+        existing-user-id (when success (get-user-id (xta/db node) email))
         token (:token (merge params path-params))]
     (when (and success (not existing-user-id))
       (bxt/submit-tx ctx (new-user-tx ctx email)))
@@ -170,7 +171,7 @@
                             invalid-link-path)}
      :session (cond-> session
                 success (assoc :uid (or existing-user-id
-                                        (get-user-id (xt/db node) email))))}))
+                                        (get-user-id (xta/db node) email))))}))
 
 (defn send-code-handler [{:keys [biff.auth/single-opt-in
                                  biff.auth/new-user-tx
@@ -226,7 +227,7 @@
       {:status 303
        :headers {"location" app-path}
        :session (assoc session :uid (or existing-user-id
-                                        (get-user-id (xt/db node) email)))}
+                                        (get-user-id (xta/db node) email)))}
       {:status 303
        :headers {"location" (str "/verify-code?error=invalid-code&email=" email)}})))
 

@@ -1,7 +1,5 @@
 (ns com.biffweb
   (:require [clojure.java.io :as io]
-            [clojure.stacktrace :as st]
-            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [com.biffweb.config :as config]
             [com.biffweb.impl.auth :as auth]

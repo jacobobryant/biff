@@ -1,0 +1,16 @@
+(ns com.biffweb.impl.xtdb.aliases
+  (:refer-clojure :exclude [sync])
+  (:require [com.biffweb.impl.util :as util :refer [resolve-optional]]))
+
+(def db                  (resolve-optional 'xtdb.api/db))
+(def entity              (resolve-optional 'xtdb.api/entity))
+(def latest-completed-tx (resolve-optional 'xtdb.api/latest-completed-tx))
+(def listen              (resolve-optional 'xtdb.api/listen))
+(def open-q              (resolve-optional 'xtdb.api/open-q))
+(def open-tx-log         (resolve-optional 'xtdb.api/open-tx-log))
+(def q                   (resolve-optional 'xtdb.api/q))
+(def start-node          (resolve-optional 'xtdb.api/start-node))
+(def submit-tx           (resolve-optional 'xtdb.api/submit-tx))
+(def sync                (resolve-optional 'xtdb.api/sync))
+(def tx-committed?       (resolve-optional 'xtdb.api/tx-committed?))
+(def with-tx             (resolve-optional 'xtdb.api/with-tx))

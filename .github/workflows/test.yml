@@ -22,5 +22,7 @@ jobs:
         chmod +x linux-install-$version.sh
         sudo ./linux-install-$version.sh
 
-    - name: Run tests
-      run: clojure -M:test
+    - name: Run main tests
+      run: clojure -M:test:test-main
+    - name: Run xtdb1 tests
+      run: clojure -M:test:test-xtdb1
