@@ -23,6 +23,6 @@ jobs:
         sudo ./linux-install-$version.sh
 
     - name: Run main tests
-      run: clojure -M:test:test-main
+      run: cd dev; clojure -M:test:test-main:test-xtdb2
     - name: Run xtdb1 tests
-      run: clojure -M:test:test-xtdb1
+      run: cd dev; clojure -Sdeps deps-dev.edn -M:test:test-xtdb1

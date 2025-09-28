@@ -1,0 +1,22 @@
+{:deps {com.biffweb/biff {:local/root ".."}
+        org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}
+ :aliases {:nrepl {:main-opts ["-m" "nrepl.cmdline" "-p" "7888"]}
+           :test {:extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+                  :main-opts ["-m" "cognitect.test-runner"]
+                  :exec-fn cognitect.test-runner.api/test}
+           :test-main {:extra-paths ["test/main"]
+                       :extra-deps {cheshire/cheshire {:mvn/version "6.1.0"}}}
+           :test-xtdb1 {:extra-paths ["test/xtdb1"]
+                        :deps {com.biffweb/biff {:local/root ".."
+                                                 :exclusions [com.xtdb/xtdb-api
+                                                              com.xtdb/xtdb-aws
+                                                              com.xtdb/xtdb-core]}}
+                        :extra-deps {com.xtdb/xtdb-core        {:mvn/version "1.24.5"}
+                                     com.xtdb/xtdb-jdbc        {:mvn/version "1.24.5"}
+                                     com.xtdb/xtdb-rocksdb     {:mvn/version "1.24.5"}
+                                     org.postgresql/postgresql {:mvn/version "42.7.7"}}}
+           :test-xtdb2 {:extra-paths ["test/xtdb2"]
+                        :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                                   "-Dio.netty.tryReflectionSetAccessible=true"]}
+           :format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.2"}}
+                    :main-opts ["-m" "cljfmt.main" "fix" "--indents" "cljfmt-indents.edn"]}}}

@@ -15,7 +15,7 @@
 (defmacro ensure-dep [& body]
   (if-not have-dep
     `(throw (UnsupportedOperationException.
-             "To call this function, you must add com.xtdb/xtdb-core v1.* to your dependencies."))
+             "To call this function, you must add com.xtdb/xtdb-core v1 to your dependencies."))
     `(do ~@body)))
 
 (defmacro <<- [& body]

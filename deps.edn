@@ -4,6 +4,9 @@
         cider/cider-nrepl             {:mvn/version "0.57.0"}
         clj-http/clj-http             {:mvn/version "3.13.1"}
         com.nextjournal/beholder      {:mvn/version "1.0.3"}
+        com.xtdb/xtdb-api             {:mvn/version "2.0.0"}
+        com.xtdb/xtdb-aws             {:mvn/version "2.0.0"}
+        com.xtdb/xtdb-core            {:mvn/version "2.0.0"}
         jarohen/chime                 {:mvn/version "0.3.3"}
         lambdaisland/uri              {:mvn/version "1.19.155"}
         metosin/malli                 {:mvn/version "0.19.1"}
@@ -17,20 +20,4 @@
         ring/ring-jetty-adapter       {:mvn/version "1.15.1"}
         rum/rum                       {:mvn/version "0.12.11"
                                        :exclusions [cljsjs/react cljsjs/react-dom]}
-        io.github.biffweb/config      {:git/tag "v1.0" :git/sha "cc7ba13"}}
- :aliases {:dev {:extra-paths ["test/main"]
-                 :extra-deps {org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}
-                              cheshire/cheshire {:mvn/version "6.1.0"}}
-                 :main-opts ["-m" "nrepl.cmdline"]}
-           :test {:extra-deps {org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}
-                               io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
-                  :main-opts ["-m" "cognitect.test-runner"]
-                  :exec-fn cognitect.test-runner.api/test}
-           :test-main {:extra-paths ["test/main"]}
-           :test-xtdb1 {:extra-paths ["test/xtdb1"]}
-           :format {:extra-deps {cljfmt/cljfmt {:mvn/version "0.8.2"}}
-                    :main-opts ["-m" "cljfmt.main" "fix" "--indents" "cljfmt-indents.edn"]}
-           :xtdb1 {:extra-deps {com.xtdb/xtdb-core        {:mvn/version "1.24.5"}
-                                com.xtdb/xtdb-jdbc        {:mvn/version "1.24.5"}
-                                com.xtdb/xtdb-rocksdb     {:mvn/version "1.24.5"}
-                                org.postgresql/postgresql {:mvn/version "42.7.7"}}}}}
+        io.github.biffweb/config      {:git/tag "v1.0" :git/sha "cc7ba13"}}}

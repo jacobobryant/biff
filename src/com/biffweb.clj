@@ -13,7 +13,8 @@
             [com.biffweb.impl.util.ns :as ns]
             [com.biffweb.impl.util.reload :as reload]
             [com.biffweb.impl.util.s3 :as s3]
-            [com.biffweb.impl.xtdb :as bxt]))
+            [com.biffweb.impl.xtdb :as bxt]
+            [com.biffweb.impl.xtdb2 :as xt2]))
 
 ;;;; Util
 
@@ -761,6 +762,104 @@
            ...)))"
   [docs]
   (bxt/test-node docs))
+
+;;;; XTDB 2
+
+(defn schema->table
+  "Returns the table name that will be used for schema.
+
+   Returns the :biff/table value from schema's malli properties if set.
+   Otherwise, if schema is a keyword, infers a name from that. Throws an exception if
+   no table name could be found/inferred.
+
+   It's recommended to set a table name explicitly with :biff/table.
+
+   Example:
+
+     ;; assuming this has been added to the default Malli registry:
+     (def schema
+       {:user [:map {:closed true
+                     :biff/table \"users\"}
+               [:xt/id :uuid]
+               [:user/email :string]]
+        ...})
+
+     (schema->table :user)
+     => \"users\""
+  [schema]
+  (xt2/schema->table schema))
+
+(defn where-clause
+  "Returns an SQL string that checks equality for the given keys.
+
+   Example:
+
+     (where-clause [:user/email :user/favorite-color])
+     => \"user$email = ? and user$favorite_color = ?\""
+  [kvs]
+  (xt2/where-clause kvs))
+
+(defn insert
+  "Returns SQL that inserts the given records into the table for schema.
+
+   Also validates records against the (Malli) schema. 
+
+   Example:
+
+     (xt2/insert :user {:xt/id (random-uuid) :user/email \"hello@example.com\"})
+     => [\"insert into users records ?\"
+         {:xt/id #uuid \"5e941fd0-ca10-40ac-9b84-932e56751703\",
+          :user/email \"hello@example.com\"}]"
+  [schema & records]
+  (apply xt2/insert schema records))
+
+(defn patch
+  "Like insert, but does a patch operation and doesn't enforce required keys
+   from schema."
+  [schema & records]
+  (apply xt2/patch schema records))
+
+(defn assert-unique
+  "Returns SQL to assert there is at most 1 record with the given key/values in
+   the table for schema..
+
+   Example:
+
+     (assert-unique :user {:user/email \"hello@example.com\"})
+     => [\"assert 1 >= (select count(*) from users where user$email = ?\"
+         \"hello@example.com\"]"
+  [schema kvs]
+  (xt2/assert-unique schema kvs))
+
+(defn select-where [schema kvs]
+  "Returns SQL for a `select *` from the table for schema for records with the
+   given key/values.
+
+   Example:
+
+     (select-where :user {:user/email \"hello@example.com\"})
+     => [\"select * from users where user$email = ?\" \"hello@example.com\"]"
+  (xt2/select-where schema kvs))
+
+(defn use-xtb2
+  "Start an XTDB node with some basic default configuration.
+
+   log:        one of #{:local :kafka} (default :local)
+   storage:    one of #{:local :remote} (default :local)
+   bucket,
+   endpoint,
+   access-key,
+   secret-key: S3 config used when storage is :remote. secret-key is accessed
+               via :biff/secret.
+
+   You can connect to the node with `psql -h localhost -p <port> -U xtdb xtdb`.
+   The port number will be printed to stdout."
+  [{:keys [biff/secret]
+    :biff.xtdb2/keys [storage log]
+    :biff.xtdb2.storage/keys [bucket endpoint access-key secret-key]
+    :or {storage :local log :local}
+    :as ctx}]
+  (xt2/use-xtdb2 ctx))
 
 ;;;; Rum
 
