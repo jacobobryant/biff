@@ -18,24 +18,22 @@
   (is (= (xt2/where-clause [:foo :foo/bar :foo.bar/baz :foo.bar/baz-quux])
          "foo = ? and foo$bar = ? and foo$bar$baz = ? and foo$bar$baz_quux = ?")))
 
-(deftest insert-patch
-  (is (= (xt2/insert user {:xt/id 1 :user/email "hello@example.com"})
-         ["insert into users records ?"
-          {:xt/id 1, :user/email "hello@example.com"}]))
+(deftest put-patch
+  (is (= (xt2/put user {:xt/id 1 :user/email "hello@example.com"})
+         [:put-docs "users" {:xt/id 1, :user/email "hello@example.com"}]))
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
                         #"Unable to infer a table name."
-                        (xt2/insert user-no-table {:xt/id 1 :user/email "hello@example.com"})))
-  (is (= (xt2/insert :any {:xt/id 1 :user/email "hello@example.com"})
-         ["insert into any records ?"
-          {:xt/id 1, :user/email "hello@example.com"}]))
+                        (xt2/put user-no-table {:xt/id 1 :user/email "hello@example.com"})))
+  (is (= (xt2/put :any {:xt/id 1 :user/email "hello@example.com"})
+         [:put-docs "any" {:xt/id 1, :user/email "hello@example.com"}]))
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
                         #"Record is missing an :xt/id value."
-                        (xt2/insert user {:user/email "hello@example.com"})))
+                        (xt2/put user {:user/email "hello@example.com"})))
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
                         #"Record doesn't match schema."
-                        (xt2/insert user {:xt/id 1})))
+                        (xt2/put user {:xt/id 1})))
   (is (= (xt2/patch user {:xt/id 1 :user/favorite-color :blue})
-         ["patch into users records ?" {:xt/id 1, :user/favorite-color :blue}])))
+         [:patch-docs "users" {:xt/id 1, :user/favorite-color :blue}])))
 
 (deftest assert-unique
   (is (= (xt2/assert-unique user {:user/email "hello@example.com"})

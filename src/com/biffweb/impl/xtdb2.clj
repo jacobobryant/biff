@@ -37,9 +37,7 @@
                       {:record record
                        :schema schema
                        :explain (malli.e/humanize (malli/explain schema record))}))))
-  (into [(str op " into " (schema->table schema) " records "
-              (str/join ", " (repeat (count records) "?")))]
-        records))
+  (into [op (schema->table schema)] records))
 
 (defn where-clause [ks]
   (ensure-dep
@@ -47,11 +45,11 @@
         (mapv #(str (xta/->normal-form-str %) " = ?"))
         (str/join " and "))))
 
-(defn insert [schema & records]
-  (write-records "insert" schema records))
+(defn put [schema & records]
+  (write-records :put-docs schema records))
 
 (defn patch [schema & records]
-  (write-records "patch" (malli.u/optional-keys schema) records))
+  (write-records :patch-docs (malli.u/optional-keys schema) records))
 
 (defn assert-unique [schema kvs]
   (into [(str "assert 1 >= (select count(*) from " (schema->table schema) " where "
