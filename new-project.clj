@@ -47,8 +47,9 @@
       s)))
 
 (defn -main
-  ([] (-main "release"))
-  ([branch]
+  ([] (-main "release" "starter"))
+  ([branch] (-main branch "starter"))
+  ([branch starter-dir]
    (let [ref->commit (fetch-refs)
          commit (ref->commit (str "refs/heads/" branch))
          _ (when-not commit
@@ -70,26 +71,28 @@
                   (io/file))
          main-ns (prompt "Enter main namespace (e.g. com.example): ")
          tmp (io/file dir "tmp")
-         starter (io/file tmp "biff" "starter")]
+         starter (io/file tmp "biff" starter-dir)]
      (io/make-parents (io/file tmp "_"))
      (sh "git" "clone" "--single-branch" "--branch" branch repo-url :dir tmp)
      (doseq [src (->> (file-seq starter)
                       (filter #(.isFile %)))
              :let [relative (-> (.getPath src)
                                 (str/replace #"\\" "/")
-                                (str/replace-first #".*?biff/starter/" "")
+                                (str/replace-first (re-pattern (str ".*?biff/" starter-dir "/"))
+                                                   "")
                                 (str/replace "com/example" (ns->path main-ns)))
                    dest (io/file dir relative)]]
        (io/make-parents dest)
-       (spit dest
-             (-> src
-                 slurp
-                 (str/replace "com.example" main-ns)
-                 (str/replace ":local/root \"..\"" (subs (pr-str coordinates)
-                                                         1
-                                                         (dec (count (pr-str coordinates)))))
-                 (str/replace "{:local/root \"../libs/tasks\"}"
-                              (pr-str (assoc coordinates :deps/root "libs/tasks"))))))
+       (binding [*print-namespace-maps* false]
+         (spit dest
+               (-> src
+                   slurp
+                   (str/replace "com.example" main-ns)
+                   (str/replace ":local/root \"..\"" (subs (pr-str coordinates)
+                                                           1
+                                                           (dec (count (pr-str coordinates)))))
+                   (str/replace "{:local/root \"../libs/tasks\"}"
+                                (pr-str (assoc coordinates :deps/root "libs/tasks")))))))
      (rmrf tmp)
      (io/make-parents dir "target/resources/_")
      (println)
