@@ -1,6 +1,13 @@
 {:paths ["src" "resources" "target/resources"]
- :deps {com.biffweb/biff           {:local/root ".."}
-        cheshire/cheshire          {:mvn/version "6.1.0"}
+ :deps {com.biffweb/biff   {:local/root ".."
+                            :exclusions [com.xtdb/xtdb-core
+                                         com.xtdb/xtdb-jdbc
+                                         com.xtdb/xtdb-rocksdb
+                                         org.postgresql/postgresql]}
+        com.xtdb/xtdb-api  {:mvn/version "2.x-20251024.124141-1"}
+        com.xtdb/xtdb-aws  {:mvn/version "2.x-20251024.124141-1"}
+        com.xtdb/xtdb-core {:mvn/version "2.x-20251024.124141-1"}
+        cheshire/cheshire  {:mvn/version "6.1.0"}
 
         ;; Notes on logging: https://gist.github.com/jacobobryant/76b7a08a07d5ef2cc076b048d078f1f3
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}
@@ -10,11 +17,19 @@
  :aliases
  {:dev {:extra-deps {com.biffweb/tasks {:local/root "../libs/tasks"}}
         :extra-paths ["dev" "test"]
-        :jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+        :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                   "-Dio.netty.tryReflectionSetAccessible=true"
+                   "-XX:-OmitStackTraceInFastThrow"
                    "-XX:+CrashOnOutOfMemoryError"
                    "-Dbiff.env.BIFF_PROFILE=dev"]
         :main-opts ["-m" "com.biffweb.task-runner" "tasks/tasks"]}
-  :prod {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"
+  :prod {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                   "-Dio.netty.tryReflectionSetAccessible=true"
+                    "-XX:-OmitStackTraceInFastThrow"
                     "-XX:+CrashOnOutOfMemoryError"
                     "-Dbiff.env.BIFF_PROFILE=prod"]
-         :main-opts ["-m" "com.example"]}}}
+         :main-opts ["-m" "com.example"]}}
+ :mvn/repos
+ {"central"            {:url "https://repo1.maven.org/maven2/"}
+  "clojars"            {:url "https://clojars.org/repo"}
+  "sonatype-snapshots" {:url "https://central.sonatype.com/repository/maven-snapshots/"}}}

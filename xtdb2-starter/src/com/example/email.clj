@@ -69,7 +69,7 @@
       (log/error (:body result)))
     success))
 
-(defn send-console [ctx form-params]
+(defn send-console [_ctx form-params]
   (println "TO:" (:to form-params))
   (println "SUBJECT:" (:subject form-params))
   (println)

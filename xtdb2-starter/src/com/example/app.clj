@@ -1,19 +1,20 @@
 (ns com.example.app
-  (:require [com.biffweb :as biff :refer [q]]
-            [com.example.middleware :as mid]
-            [com.example.ui :as ui]
-            [com.example.settings :as settings]
-            [rum.core :as rum]
-            [xtdb.api :as xt]
-            [ring.websocket :as ws]
-            [cheshire.core :as cheshire]))
+  (:require
+   [cheshire.core :as cheshire]
+   [com.biffweb :as biff]
+   [com.biffweb.experimental :as biffx]
+   [com.example.middleware :as mid]
+   [com.example.settings :as settings]
+   [com.example.ui :as ui]
+   [ring.websocket :as ws]
+   [rum.core :as rum]
+   [xtdb.api :as xt])
+  (:import
+   [java.time Instant]))
 
 (defn set-foo [{:keys [session params] :as ctx}]
-  (biff/submit-tx ctx
-    [{:db/op :update
-      :db/doc-type :user
-      :xt/id (:uid session)
-      :user/foo (:foo params)}])
+  (biffx/submit-tx ctx
+    [[:patch-docs :user {:xt/id (:uid session) :foo (:foo params)}]])
   {:status 303
    :headers {"location" "/app"}})
 
@@ -33,50 +34,41 @@
     "This demonstrates updating a value with HTMX."]))
 
 (defn set-bar [{:keys [session params] :as ctx}]
-  (biff/submit-tx ctx
-    [{:db/op :update
-      :db/doc-type :user
-      :xt/id (:uid session)
-      :user/bar (:bar params)}])
+  (biffx/submit-tx ctx
+    [[:patch-docs :user {:xt/id (:uid session) :bar (:bar params)}]])
   (biff/render (bar-form {:value (:bar params)})))
 
-(defn message [{:msg/keys [text sent-at]}]
+(defn message [{:keys [content sent-at]}]
   [:.mt-3 {:_ "init send newMessage to #message-header"}
-   [:.text-gray-600 (biff/format-date sent-at "dd MMM yyyy HH:mm:ss")]
-   [:div text]])
+   [:.text-gray-600 (biff/format-date (java.util.Date/from (.toInstant sent-at)) "dd MMM yyyy HH:mm:ss")]
+   [:div content]])
 
-(defn notify-clients [{:keys [com.example/chat-clients]} tx]
-  (doseq [[op & args] (::xt/tx-ops tx)
-          :when (= op ::xt/put)
-          :let [[doc] args]
-          :when (contains? doc :msg/text)
-          :let [html (rum/render-static-markup
-                      [:div#messages {:hx-swap-oob "afterbegin"}
-                       (message doc)])]
-          ws @chat-clients]
-    (ws/send ws html)))
+(defn notify-clients [{:keys [com.example/chat-clients]} record]
+  (when (= "msg" (:biff.xtdb/table record))
+    (let [html (rum/render-static-markup
+                [:div#messages {:hx-swap-oob "afterbegin"}
+                 (message record)])]
+      (doseq [ws @chat-clients]
+        (ws/send ws html)))))
 
 (defn send-message [{:keys [session] :as ctx} {:keys [text]}]
-  (let [{:keys [text]} (cheshire/parse-string text true)]
-    (biff/submit-tx ctx
-      [{:db/doc-type :msg
-        :msg/user (:uid session)
-        :msg/text text
-        :msg/sent-at :db/now}])))
+  (let [{:keys [content]} (cheshire/parse-string text true)]
+    (biffx/submit-tx ctx
+      [[:put-docs :msg {:xt/id (random-uuid)
+                        :user (:uid session)
+                        :content content
+                        :sent-at (Instant/now)}]])))
 
-(defn chat [{:keys [biff/db]}]
-  (let [messages (q db
-                    '{:find (pull msg [*])
-                      :in [t0]
-                      :where [[msg :msg/sent-at t]
-                              [(<= t0 t)]]}
-                    (biff/add-seconds (java.util.Date.) (* -60 10)))]
+(defn chat [{:keys [biff/node]}]
+  (let [messages (xt/q node
+                       ["select content, sent_at from msg where sent_at >= ?"
+                        (.minusSeconds (Instant/now) (* 60 10))])]
     [:div {:hx-ext "ws" :ws-connect "/app/chat"}
      [:form.mb-0 {:ws-send true
                   :_ "on submit set value of #message to ''"}
       [:label.block {:for "message"} "Write a message"]
       [:.h-1]
-      [:textarea.w-full#message {:name "text"}]
+      [:textarea.w-full#message {:name "content"}]
       [:.h-1]
       [:.text-sm.text-gray-600
        "Sign in with an incognito window to have a conversation with yourself."]
@@ -89,10 +81,11 @@
         "No messages yet."
         "Messages sent in the past 10 minutes:")]
      [:div#messages
-      (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
+      (map message (sort-by :sent-at #(compare %2 %1) messages))]]))
 
-(defn app [{:keys [session biff/db] :as ctx}]
-  (let [{:user/keys [email foo bar]} (xt/entity db (:uid session))]
+(defn app [{:keys [biff/node session] :as ctx}]
+  (let [[{:keys [email foo bar]}] (xt/q node ["select email, foo, bar from user where _id = ?"
+                                              (:uid session)])]
     (ui/page
      {}
      [:div "Signed in as " email ". "

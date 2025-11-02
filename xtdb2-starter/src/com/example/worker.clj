@@ -6,26 +6,24 @@
 (defn every-n-minutes [n]
   (iterate #(biff/add-seconds % (* 60 n)) (java.util.Date.)))
 
-(defn print-usage [{:keys [biff/db]}]
+(defn print-usage [{:keys [biff/node]}]
   ;; For a real app, you can have this run once per day and send you the output
   ;; in an email.
-  (let [n-users (nth (q db
-                        '{:find (count user)
-                          :where [[user :user/email]]})
-                     0
-                     0)]
+  (let [[{n-users :cnt}] (xt/q node "select count(*) as cnt from users")]
     (log/info "There are" n-users "users.")))
 
-(defn alert-new-user [{:keys [biff.xtdb/node]} tx]
-  (doseq [_ [nil]
-          :let [db-before (xt/db node {::xt/tx-id (dec (::xt/tx-id tx))})]
-          [op & args] (::xt/tx-ops tx)
-          :when (= op ::xt/put)
-          :let [[doc] args]
-          :when (and (contains? doc :user/email)
-                     (nil? (xt/entity db-before (:xt/id doc))))]
+(defn alert-new-user [{:keys [biff/node]} record]
+  (when (and (= (:biff.xtdb/table record) "user")
+             (-> (xt/q node
+                       ["select count(*) as cnt from user where _id = ?" (:xt/id record)]
+                       {:snapshot-time (.. (:xt/system-from record)
+                                           (toInstant)
+                                           (minusNanos 1))})
+                 first
+                 :cnt
+                 (= 0)))
     ;; You could send this as an email instead of printing.
-    (log/info "WOAH there's a new user")))
+    (log/info "WOAH there's a new user: " (pr-str record))))
 
 (defn echo-consumer [{:keys [biff/job] :as ctx}]
   (prn :echo job)

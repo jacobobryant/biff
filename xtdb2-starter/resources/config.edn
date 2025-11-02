@@ -7,11 +7,12 @@
                                :default "localhost"}]
  :biff/port     #long #or [#biff/env "PORT" 8080]
 
- :biff.xtdb/dir          "storage/xtdb"
- :biff.xtdb/topology     #keyword #or [#profile {:prod #biff/env "PROD_XTDB_TOPOLOGY"
-                                                 :default #biff/env "XTDB_TOPOLOGY"}
-                                       "standalone"]
- :biff.xtdb.jdbc/jdbcUrl #biff/secret "XTDB_JDBC_URL"
+ :biff.xtdb2/storage            #keyword #or [#profile {:prod #biff/env PROD_XTDB_STORAGE}
+                                              "local"]
+ :biff.xtdb2.storage/bucket     #biff/env XTDB_STORAGE_BUCKET
+ :biff.xtdb2.storage/endpoint   #biff/env XTDB_STORAGE_ENDPOINT
+ :biff.xtdb2.storage/access-key #biff/env XTDB_STORAGE_ACCESS_KEY
+ :biff.xtdb2.storage/secret-key #biff/secret XTDB_STORAGE_SECRET_KEY
 
  :biff.beholder/enabled         #profile {:dev true :default false}
  :biff.beholder/paths           ["src" "resources" "test"]

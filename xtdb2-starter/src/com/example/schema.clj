@@ -1,20 +1,22 @@
 (ns com.example.schema)
 
-(def schema
-  {:user/id :uuid
-   :user [:map {:closed true}
-          [:xt/id                     :user/id]
-          [:user/email                :string]
-          [:user/joined-at            inst?]
-          [:user/foo {:optional true} :string]
-          [:user/bar {:optional true} :string]]
+(def ? {:optional true})
 
-   :msg/id :uuid
+(def schema
+  {::string [:string {:max 1000}]
+
+   :user [:map {:closed true}
+          [:xt/id       :uuid]
+          [:email       ::string]
+          [:joined-at   inst?]
+          [:foo       ? ::string]
+          [:bar       ? ::string]]
+
    :msg [:map {:closed true}
-         [:xt/id       :msg/id]
-         [:msg/user    :user/id]
-         [:msg/text    :string]
-         [:msg/sent-at inst?]]})
+         [:xt/id   :uuid]
+         [:user    :uuid]
+         [:content [:string {:max 10000}]]
+         [:sent-at inst?]]})
 
 (def module
   {:schema schema})

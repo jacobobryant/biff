@@ -1,5 +1,7 @@
 (ns com.example
   (:require [com.biffweb :as biff]
+            [com.biffweb.experimental :as biffx]
+            [com.biffweb.experimental.auth :as biff-auth]
             [com.example.email :as email]
             [com.example.app :as app]
             [com.example.home :as home]
@@ -17,7 +19,7 @@
 
 (def modules
   [app/module
-   (biff/authentication-module {})
+   (biff-auth/module {})
    home/module
    schema/module
    worker/module])
@@ -32,7 +34,7 @@
 
 (def static-pages (apply biff/safe-merge (map :static modules)))
 
-(defn generate-assets! [ctx]
+(defn generate-assets! [_ctx]
   (biff/export-rum static-pages "target/resources/public")
   (biff/delete-old-files {:dir "target/resources/public"
                           :exts [".html"]}))
@@ -55,16 +57,16 @@
    :biff/malli-opts #'malli-opts
    :biff.beholder/on-save #'on-save
    :biff.middleware/on-error #'ui/on-error
-   :biff.xtdb/tx-fns biff/tx-fns
+   :biff.xtdb.listener/tables ["user" "msg"]
    :com.example/chat-clients (atom #{})})
 
 (defonce system (atom {}))
 
 (def components
   [biff/use-aero-config
-   biff/use-xtdb
+   biffx/use-xtdb2
    biff/use-queues
-   biff/use-xtdb-tx-listener
+   biffx/use-xtdb2-listener
    biff/use-htmx-refresh
    biff/use-jetty
    biff/use-chime

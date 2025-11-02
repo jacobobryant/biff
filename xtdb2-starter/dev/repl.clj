@@ -1,8 +1,11 @@
 (ns repl
-  (:require [com.example :as main]
-            [com.biffweb :as biff :refer [q]]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+  (:require
+   [com.biffweb :as biff]
+   [com.biffweb.experimental :as biffx]
+   [com.example :as main]
+   [xtdb.api :as xt])
+  (:import
+   [java.time Instant]))
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -28,10 +31,16 @@
   (biff/merge-context @main/system))
 
 (defn add-fixtures []
-  (biff/submit-tx (get-context)
-    (-> (io/resource "fixtures.edn")
-        slurp
-        edn/read-string)))
+  (let [user-id (random-uuid)]
+    (biffx/submit-tx (get-context)
+      [[:put-docs :user {:xt/id user-id
+                         :email "a@example.com"
+                         :foo "Some Value"
+                         :joined-at (Instant/now)}]
+       [:put-docs :msg {:xt/id (random-uuid)
+                        :user user-id
+                        :text "hello there"
+                        :sent-at (Instant/now)}]])))
 
 (defn check-config []
   (let [prod-config (biff/use-aero-config {:biff.config/profile "prod"})
@@ -58,26 +67,22 @@
   ;; main/components, :tasks, :queues, config.env, or deps.edn.
   (main/refresh)
 
-  ;; Call this in dev if you'd like to add some seed data to your database. If
-  ;; you edit the seed data (in resources/fixtures.edn), you can reset the
-  ;; database by running `rm -r storage/xtdb` (DON'T run that in prod),
+  ;; Call this in dev if you'd like to add some seed data to your database. If you edit the seed
+  ;; data, you can reset the database by running `rm -r storage/xtdb2` (DON'T run that in prod),
   ;; restarting your app, and calling add-fixtures again.
   (add-fixtures)
 
   ;; Query the database
-  (let [{:keys [biff/db] :as ctx} (get-context)]
-    (q db
-       '{:find (pull user [*])
-         :where [[user :user/email]]}))
+  (let [{:keys [biff/node]} (get-context)]
+    (xt/q node "select * from user"))
 
   ;; Update an existing user's email address
-  (let [{:keys [biff/db] :as ctx} (get-context)
-        user-id (biff/lookup-id db :user/email "hello@example.com")]
-    (biff/submit-tx ctx
-      [{:db/doc-type :user
-        :xt/id user-id
-        :db/op :update
-        :user/email "new.address@example.com"}]))
+  (let [{:keys [biff/node] :as ctx} (get-context)
+        [{user-id :xt/id}] (xt/q node ["select _id from user where email = ?"
+                                       "hello@example.com"])]
+    (biffx/submit-tx ctx
+      [[:patch-docs :user {:xt/id user-id
+                           :email "new.address@example.com"}]]))
 
   (sort (keys (get-context)))
 
