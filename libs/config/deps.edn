@@ -1,1 +1,2 @@
-{:deps {aero/aero {:mvn/version "1.1.6"}}}
+;; This lib has been moved to a separate repo.
+{:deps {io.github.biffweb/config {:git/tag "v1.0" :git/sha "cc7ba13"}}}

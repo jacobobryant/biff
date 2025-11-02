@@ -1,15 +1,18 @@
 (ns com.biffweb.impl.util
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.java.shell :as shell]
-            [clojure.pprint :as pp]
-            [clojure.spec.alpha :as spec]
-            [clojure.string :as str]
-            [clojure.repl.deps :as repl-deps]
-            [clojure.tools.logging :as log]
-            [clojure.tools.namespace.repl :as tn-repl]
-            [clojure.walk :as walk]
-            [com.biffweb.impl.time :as time]))
+  (:require
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
+   [clojure.java.shell :as shell]
+   [clojure.pprint :as pp]
+   [clojure.repl.deps :as repl-deps]
+   [clojure.spec.alpha :as spec]
+   [clojure.string :as str]
+   [clojure.tools.logging :as log]
+   [clojure.tools.namespace.repl :as tn-repl]
+   [clojure.walk :as walk]
+   [com.biffweb.impl.time :as time]) 
+  (:import
+   [java.io FileNotFoundException]))
 
 (defmacro catchall-verbose
   [& body]
@@ -219,6 +222,15 @@
 
 (defn normalize-email [email]
   (some-> email str/trim str/lower-case not-empty))
+
+(defn try-resolve [sym]
+  (try (requiring-resolve sym) (catch FileNotFoundException _)))
+
+(defn resolve-optional [sym]
+  (or (try-resolve sym)
+      (fn [& args]
+        (throw (UnsupportedOperationException.
+                (str sym " could not be resolved. You're missing an optional dependency."))))))
 
 ;;;; Deprecated
 

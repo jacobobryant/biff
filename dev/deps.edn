@@ -1,0 +1,27 @@
+{:deps {com.biffweb/biff {:local/root ".."}
+        org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}}
+ :aliases {:nrepl {:main-opts ["-m" "nrepl.cmdline" "-p" "7888"]}
+           :test {:extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+                  :main-opts ["-m" "cognitect.test-runner"]
+                  :exec-fn cognitect.test-runner.api/test}
+           :test-main {:extra-paths ["../test/main"]
+                       :extra-deps {cheshire/cheshire {:mvn/version "6.1.0"}}}
+           :test-xtdb1 {:extra-paths ["../test/xtdb1"]}
+           :test-xtdb2 {:extra-paths ["../test/xtdb2"]
+                        :deps {com.biffweb/biff       {:local/root ".."
+                                                       :exclusions [com.xtdb/xtdb-core
+                                                                    com.xtdb/xtdb-jdbc
+                                                                    com.xtdb/xtdb-rocksdb
+                                                                    org.postgresql/postgresql]}
+                               org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}
+                               com.xtdb/xtdb-api      {:mvn/version "2.x-20251024.124141-1"}
+                               com.xtdb/xtdb-aws      {:mvn/version "2.x-20251024.124141-1"}
+                               com.xtdb/xtdb-core     {:mvn/version "2.x-20251024.124141-1"}}
+                        :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                                   "-Dio.netty.tryReflectionSetAccessible=true"]}
+           :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.15.3"}}
+                    :main-opts ["-m" "cljfmt.main" "--project-root" ".." "fix"]}}
+ :mvn/repos
+ {"central"            {:url "https://repo1.maven.org/maven2/"}
+  "clojars"            {:url "https://clojars.org/repo"}
+  "sonatype-snapshots" {:url "https://central.sonatype.com/repository/maven-snapshots/"}}}

@@ -1,0 +1,3 @@
+{:align-form-columns? true
+ :align-map-columns? true
+ :extra-indents {submit-tx [[:inner 0]]}}

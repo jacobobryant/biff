@@ -85,7 +85,9 @@
              (-> src
                  slurp
                  (str/replace "com.example" main-ns)
-                 (str/replace "{:local/root \"..\"}" (pr-str coordinates))
+                 (str/replace ":local/root \"..\"" (subs (pr-str coordinates)
+                                                         1
+                                                         (dec (count (pr-str coordinates)))))
                  (str/replace "{:local/root \"../libs/tasks\"}"
                               (pr-str (assoc coordinates :deps/root "libs/tasks"))))))
      (rmrf tmp)
