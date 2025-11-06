@@ -6,18 +6,23 @@
 (defn use-xtdb2
   "Start an XTDB node with some basic default configuration.
 
-   log:        one of #{:local :kafka} (default :local)
-   storage:    one of #{:local :remote} (default :local)
+   Sets :biff/node (the XTDB node) and :biff/conn (a Hikari connection pool) on
+   ctx. :biff/conn should generally be used for querying and submitting
+   transactions.
+
+   log:           one of #{:local :kafka} (default :local)
+   storage:       one of #{:local :remote} (default :local)
    bucket,
    endpoint,
    access-key,
-   secret-key: S3 config used when storage is :remote. secret-key is accessed
-               via :biff/secret.
+   secret-key:    S3 config used when storage is :remote. secret-key is accessed
+                  via :biff/secret.
+   hikari-config: a HikariConfig object for configuring :biff/conn. Optional.
 
    You can connect to the node with `psql -h localhost -p <port> -U xtdb xtdb`.
    The port number will be printed to stdout."
   [{:keys [biff/secret]
-    :biff.xtdb2/keys [storage log]
+    :biff.xtdb2/keys [storage log hikari-config]
     :biff.xtdb2.storage/keys [bucket endpoint access-key secret-key]
     :or {storage :local log :local}
     :as ctx}]

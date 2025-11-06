@@ -1,12 +1,13 @@
 (ns com.biffweb.impl.xtdb2
   (:require
    [clojure.string :as str]
-   [com.biffweb.impl.util :as util]
    [com.biffweb.aliases.xtdb2 :as xta]
+   [com.biffweb.impl.util :as util]
    [malli.core :as malli]
    [malli.error :as malli.e]
    [malli.util :as malli.u])
   (:import
+   [com.zaxxer.hikari HikariConfig HikariDataSource]
    [java.util UUID]
    [java.util.concurrent LinkedBlockingQueue TimeUnit]))
 
@@ -62,6 +63,19 @@
                                           :credentials {:access-key access-key
                                                         :secret-key secret-key}}]
                           :local-disk-cache "storage/xtdb2/storage-cache"})]}))
+
+(defn use-xtdb2 [{:keys [biff.xtdb2/hikari-config] :as ctx}]
+  (ensure-dep
+   (let [node (xta/start-node (use-xtdb2-config ctx))
+         datasource (HikariDataSource.
+                     (doto (or hikari-config (HikariConfig.))
+                       (.setDataSource node)))]
+     (-> ctx
+         (assoc :biff/node node)
+         (assoc :biff/conn datasource)
+         (update :biff/stop conj (fn []
+                                   (.close datasource)
+                                   (.close node)))))))
 
 (defn all-system-times
   ([node]
@@ -147,13 +161,6 @@
     (-> ctx
         (assoc :biff.xtdb.listener/poll-now poll-now)
         (update :biff/stop conj stop-fn))))
-
-(defn use-xtdb2 [ctx]
-  (ensure-dep
-   (let [node (xta/start-node (use-xtdb2-config ctx))]
-     (-> ctx
-         (assoc :biff/node node)
-         (update :biff/stop conj #(.close node))))))
 
 (defn prefix-uuid [uuid-prefix uuid-rest]
   (UUID/fromString (str (subs (str uuid-prefix) 0 4)

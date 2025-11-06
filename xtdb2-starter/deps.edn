@@ -1,13 +1,14 @@
 {:paths ["src" "resources" "target/resources"]
- :deps {com.biffweb/biff   {:local/root ".."
-                            :exclusions [com.xtdb/xtdb-core
-                                         com.xtdb/xtdb-jdbc
-                                         com.xtdb/xtdb-rocksdb
-                                         org.postgresql/postgresql]}
-        com.xtdb/xtdb-api  {:mvn/version "2.x-20251024.124141-1"}
-        com.xtdb/xtdb-aws  {:mvn/version "2.x-20251024.124141-1"}
-        com.xtdb/xtdb-core {:mvn/version "2.x-20251024.124141-1"}
-        cheshire/cheshire  {:mvn/version "6.1.0"}
+ :deps {com.biffweb/biff    {:local/root ".."
+                             :exclusions [com.xtdb/xtdb-core
+                                          com.xtdb/xtdb-jdbc
+                                          com.xtdb/xtdb-rocksdb
+                                          org.postgresql/postgresql]}
+        com.xtdb/xtdb-api   {:mvn/version "2.x-SNAPSHOT"}
+        com.xtdb/xtdb-aws   {:mvn/version "2.x-SNAPSHOT"}
+        com.xtdb/xtdb-core  {:mvn/version "2.x-SNAPSHOT"}
+        com.zaxxer/HikariCP {:mvn/version "7.0.2"}
+        cheshire/cheshire   {:mvn/version "6.1.0"}
 
         ;; Notes on logging: https://gist.github.com/jacobobryant/76b7a08a07d5ef2cc076b048d078f1f3
         org.slf4j/slf4j-simple     {:mvn/version "2.0.0-alpha5"}
