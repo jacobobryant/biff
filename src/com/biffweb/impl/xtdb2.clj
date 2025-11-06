@@ -166,14 +166,25 @@
                 table (if (keyword? opts)
                         opts
                         (:into opts))
-                schema (cond-> (malli/schema table malli-opts)
-                         (= op :patch-docs) malli.u/optional-keys)]]
+                schema* (malli/schema table malli-opts)
+                schema (cond-> schema*
+                         (= op :patch-docs) malli.u/optional-keys)
+                optional-keys (into #{}
+                                    (comp (filter (comp :optional :properties val))
+                                          (map key))
+                                    (:keys (malli/ast schema*)))]]
     (doseq [record records]
       (when-not (some? (:xt/id record))
         (throw (ex-info "Record is missing an :xt/id value."
                         {:table table
                          :record record})))
-      (when-not (malli/validate schema record malli-opts)
+      (when-not (malli/validate schema
+                                (into {}
+                                      (remove (fn [[k v]]
+                                                (and (nil? v)
+                                                     (optional-keys k))))
+                                      record)
+                                malli-opts)
         (throw (ex-info "Record doesn't match schema."
                         {:table table
                          :record record
