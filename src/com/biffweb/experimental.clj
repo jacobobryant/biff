@@ -34,7 +34,10 @@
    The xt.txs table is polled once per second. `biffx/submit-tx` will trigger a poll immediately.
    When there's a new transaction, the given tables will be queried for records that have been
    put/patched in that transaction. Deleted records are not included. Any :on-tx functions
-   registered in :biff/modules will be called once per record as `(on-tx ctx record)`."
+   registered in :biff/modules will be called once per record as `(on-tx ctx record)`.
+
+   Records with a valid time range that doesn't intersect with the current time
+   (i.e. historical or future record updates) are not included."
   [{:keys [biff/node biff/modules biff.xtdb.listener/tables] :as ctx}]
   (xt2/use-xtdb2-listener ctx))
 
