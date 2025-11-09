@@ -127,17 +127,20 @@
   (get-in (xta/q node "select max(system_time) from xt.txs where committed = true")
           [0 :xt/column-1]))
 
-(defn use-xtdb2-listener [{:keys [biff/node biff/modules biff.xtdb.listener/tables] :as ctx}]
-  (let [continue (atom true)
+(defn use-xtdb2-listener [{:biff/keys [node conn modules]
+                           :keys [biff.xtdb.listener/tables]
+                           :as ctx}]
+  (let [conn (or conn node)
+        continue (atom true)
         done (promise)
         ;; Wait for system time to settle
         system-time (atom (loop [old-t nil
-                                 new-t (latest-system-time node)]
+                                 new-t (latest-system-time conn)]
                             (if (= old-t new-t)
                               new-t
                               (do
                                 (Thread/sleep 1000)
-                                (recur new-t (latest-system-time node))))))
+                                (recur new-t (latest-system-time conn))))))
         stop-fn (fn []
                   (reset! continue false)
                   (deref done 10000 nil))
@@ -151,10 +154,10 @@
            (let [listeners (not-empty (keep :on-tx @modules))
                  prev-t @system-time
                  latest-t (when listeners
-                            (latest-system-time node))]
+                            (latest-system-time conn))]
              (when (and listeners (not= prev-t latest-t))
                (reset! system-time latest-t)
-               (doseq [record (tx-log node {:after-inst prev-t :tables tables})
+               (doseq [record (tx-log conn {:after-inst prev-t :tables tables})
                        listener listeners]
                  (util/catchall-verbose (listener ctx record)))))))
         (deliver done nil)))
@@ -198,8 +201,9 @@
                          :explain (malli.e/humanize (malli/explain schema record))})))))
   true)
 
-(defn submit-tx [{:keys [biff/node biff.xtdb.listener/poll-now biff/malli-opts]} tx & [opts]]
+(defn submit-tx [{:biff/keys [node conn malli-opts]
+                  :keys [biff.xtdb.listener/poll-now]} tx & [opts]]
   (validate-tx tx @malli-opts)
-  (let [result (xta/submit-tx node tx opts)]
+  (let [result (xta/submit-tx (or conn node) tx opts)]
     (when poll-now (poll-now))
     result))
