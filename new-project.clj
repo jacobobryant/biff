@@ -48,7 +48,9 @@
 
 (defn -main
   ([] (-main "release" "starter"))
-  ([branch] (-main branch "starter"))
+  ([branch] (-main branch (if (= branch "xtdb2")
+                            "xtdb2-starter"
+                            "starter")))
   ([branch starter-dir]
    (let [ref->commit (fetch-refs)
          commit (ref->commit (str "refs/heads/" branch))
