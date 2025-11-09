@@ -102,7 +102,8 @@
   (xt2/prefix-uuid uuid-prefix uuid-rest))
 
 (defn tx-log
-  "Returns a lazy sequence of all historical records ordered by :xt/system-from.
+  "Returns a lazy sequence of all historical records for the current valid time, ordered by
+   :xt/system-from.
 
    tables:     a collection of tables (strings) to include in the results. If not supplied, `tx-log`
                will query for all tables in the 'public' table schema.
@@ -110,8 +111,8 @@
    after-inst: if supplied, only returns historical records with a :xt/system-from value greater
                than this.
 
-   Records also include :xt/system-from, :xt/system-to, :xt/valid-from, and :xt/valid-to keys, as
-   well as a :biff.xtdb/table key (a string)."
+   Records also include :xt/system-from and :xt/system-to keys, as well as a :biff.xtdb/table key (a
+   string)."
   [node & {:keys [tables after-inst] :as opts}]
   (xt2/tx-log node opts))
 

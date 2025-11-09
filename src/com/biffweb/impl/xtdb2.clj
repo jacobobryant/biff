@@ -113,7 +113,7 @@
                      (->> tables
                           (pmap (fn [table]
                                   (mapv #(assoc % :biff.xtdb/table table)
-                                        (xta/q node [(str "select *, _system_from, _system_to, _valid_from, _valid_to "
+                                        (xta/q node [(str "select *, _system_from, _system_to "
                                                           "from " table  " for all system_time "
                                                           "where _system_from >= ? "
                                                           "and _system_from <= ? "

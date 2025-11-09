@@ -16,7 +16,8 @@
                                org.slf4j/slf4j-simple {:mvn/version "2.0.0-alpha5"}
                                com.xtdb/xtdb-api      {:mvn/version "2.x-20251024.124141-1"}
                                com.xtdb/xtdb-aws      {:mvn/version "2.x-20251024.124141-1"}
-                               com.xtdb/xtdb-core     {:mvn/version "2.x-20251024.124141-1"}}
+                               com.xtdb/xtdb-core     {:mvn/version "2.x-20251024.124141-1"}
+                               com.zaxxer/HikariCP    {:mvn/version "7.0.2"}}
                         :jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                                    "-Dio.netty.tryReflectionSetAccessible=true"]}
            :format {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.15.3"}}
