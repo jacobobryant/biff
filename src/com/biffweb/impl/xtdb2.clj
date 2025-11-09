@@ -124,8 +124,9 @@
                           (sort-by :xt/system-from))))))))
 
 (defn latest-system-time [node]
-  (get-in (xta/q node "select max(system_time) from xt.txs where committed = true")
-          [0 :xt/column-1]))
+  (some-> (get-in (xta/q node "select max(system_time) from xt.txs where committed = true")
+                  [0 :xt/column-1])
+          (.toInstant)))
 
 (defn use-xtdb2-listener [{:biff/keys [node conn modules]
                            :keys [biff.xtdb.listener/tables]
@@ -134,6 +135,7 @@
         continue (atom true)
         done (promise)
         ;; Wait for system time to settle
+        _ (Thread/sleep 1000)
         system-time (atom (loop [old-t nil
                                  new-t (latest-system-time conn)]
                             (if (= old-t new-t)
