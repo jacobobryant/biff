@@ -34,8 +34,8 @@
     "This demonstrates updating a value with HTMX."]))
 
 (defn set-bar [{:keys [session params] :as ctx}]
-  (biffx/submit-tx ctx
-    [[:patch-docs :user {:xt/id (:uid session) :bar (:bar params)}]])
+  (time (biffx/submit-tx ctx
+    [[:patch-docs :user {:xt/id (:uid session) :bar (:bar params)}]]))
   (biff/render (bar-form {:value (:bar params)})))
 
 (defn message [{:keys [content sent-at]}]
@@ -59,8 +59,8 @@
                         :content content
                         :sent-at (Instant/now)}]])))
 
-(defn chat [{:keys [biff/node]}]
-  (let [messages (xt/q node
+(defn chat [{:keys [biff/conn]}]
+  (let [messages (xt/q conn
                        ["select content, sent_at from msg where sent_at >= ?"
                         (.minusSeconds (Instant/now) (* 60 10))])]
     [:div {:hx-ext "ws" :ws-connect "/app/chat"}
@@ -83,8 +83,8 @@
      [:div#messages
       (map message (sort-by :sent-at #(compare %2 %1) messages))]]))
 
-(defn app [{:keys [biff/node session] :as ctx}]
-  (let [[{:keys [email foo bar]}] (xt/q node ["select email, foo, bar from user where _id = ?"
+(defn app [{:keys [biff/conn session] :as ctx}]
+  (let [[{:keys [email foo bar]}] (xt/q conn ["select email, foo, bar from user where _id = ?"
                                               (:uid session)])]
     (ui/page
      {}

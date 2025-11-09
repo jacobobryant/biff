@@ -6,15 +6,15 @@
 (defn every-n-minutes [n]
   (iterate #(biff/add-seconds % (* 60 n)) (java.util.Date.)))
 
-(defn print-usage [{:keys [biff/node]}]
+(defn print-usage [{:keys [biff/conn]}]
   ;; For a real app, you can have this run once per day and send you the output
   ;; in an email.
-  (let [[{n-users :cnt}] (xt/q node "select count(*) as cnt from users")]
+  (let [[{n-users :cnt}] (xt/q conn "select count(*) as cnt from users")]
     (log/info "There are" n-users "users.")))
 
-(defn alert-new-user [{:keys [biff/node]} record]
+(defn alert-new-user [{:keys [biff/conn]} record]
   (when (and (= (:biff.xtdb/table record) "user")
-             (-> (xt/q node
+             (-> (xt/q conn
                        ["select count(*) as cnt from user where _id = ?" (:xt/id record)]
                        {:snapshot-time (.. (:xt/system-from record)
                                            (toInstant)
