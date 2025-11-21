@@ -14,7 +14,8 @@
 
 (defn set-foo [{:keys [session params] :as ctx}]
   (biffx/submit-tx ctx
-    [[:patch-docs :user {:xt/id (:uid session) :foo (:foo params)}]])
+    [[:patch-docs :user {:xt/id (:uid session)
+                         :user/foo (:foo params)}]])
   {:status 303
    :headers {"location" "/app"}})
 
@@ -35,10 +36,10 @@
 
 (defn set-bar [{:keys [session params] :as ctx}]
   (time (biffx/submit-tx ctx
-    [[:patch-docs :user {:xt/id (:uid session) :bar (:bar params)}]]))
+    [[:patch-docs :user {:xt/id (:uid session) :user/bar (:bar params)}]]))
   (biff/render (bar-form {:value (:bar params)})))
 
-(defn message [{:keys [content sent-at]}]
+(defn message [{:msg/keys [content sent-at]}]
   [:.mt-3 {:_ "init send newMessage to #message-header"}
    [:.text-gray-600 (biff/format-date (java.util.Date/from (.toInstant sent-at)) "dd MMM yyyy HH:mm:ss")]
    [:div content]])
@@ -55,14 +56,15 @@
   (let [{:keys [content]} (cheshire/parse-string text true)]
     (biffx/submit-tx ctx
       [[:put-docs :msg {:xt/id (random-uuid)
-                        :user (:uid session)
-                        :content content
-                        :sent-at (Instant/now)}]])))
+                        :msg/user (:uid session)
+                        :msg/content content
+                        :msg/sent-at (Instant/now)}]])))
 
 (defn chat [{:keys [biff/conn]}]
-  (let [messages (xt/q conn
-                       ["select content, sent_at from msg where sent_at >= ?"
-                        (.minusSeconds (Instant/now) (* 60 10))])]
+  (let [messages (biffx/q conn
+                          {:select [:msg/content :msg/sent-at]
+                           :from :msg
+                           :where [:>= :msg/sent-at (.minusSeconds (Instant/now) (* 60 10))]})]
     [:div {:hx-ext "ws" :ws-connect "/app/chat"}
      [:form.mb-0 {:ws-send true
                   :_ "on submit set value of #message to ''"}
@@ -81,11 +83,15 @@
         "No messages yet."
         "Messages sent in the past 10 minutes:")]
      [:div#messages
-      (map message (sort-by :sent-at #(compare %2 %1) messages))]]))
+      (map message (sort-by :msg/sent-at #(compare %2 %1) messages))]]))
 
 (defn app [{:keys [biff/conn session] :as ctx}]
-  (let [[{:keys [email foo bar]}] (xt/q conn ["select email, foo, bar from user where _id = ?"
-                                              (:uid session)])]
+  (let [[{:user/keys [email foo bar]}] (biffx/q conn
+                                                {:select [:user/email
+                                                          :user/foo
+                                                          :user/bar]
+                                                 :from :user
+                                                 :where [:= :xt/id (:uid session)]})]
     (ui/page
      {}
      [:div "Signed in as " email ". "

@@ -44,7 +44,9 @@
 (defn submit-tx
   "Same as xtdb.api/submit-tx, but calls `validate-tx` first.
 
-   Also triggers a transaction log poll if use-xtdb2-listener is in use."
+   Also triggers a transaction log poll if use-xtdb2-listener is in use.
+
+   TODO mention format-query"
   [& args]
   (apply xt2/submit-tx args))
 
@@ -61,15 +63,15 @@
   [tx malli-opts]
   (xt2/validate-tx tx malli-opts))
 
-(defn where-clause
-  "Returns an SQL string that checks equality for the given keys.
+(defn format-query
+  "TODO"
+  [query]
+  (xt2/format-query query))
 
-   Example:
-
-     (where-clause [:user/email :user/favorite-color])
-     => \"user$email = ? and user$favorite_color = ?\""
-  [kvs]
-  (xt2/where-clause kvs))
+(defn q
+  "TODO"
+  [& args]
+  (apply xt2/q args))
 
 (defn assert-unique
   "Returns SQL to assert there is at most 1 record with the given key/values in
@@ -82,15 +84,6 @@
          \"hello@example.com\"]"
   [schema kvs]
   (xt2/assert-unique schema kvs))
-
-(defn select-from-where [columns table kvs]
-  "Returns SQL for a basic `select ... from ... where ...` query.
-
-   Example:
-
-     (select-from-where [:xt/id :user/joined-at] \"user\" {:user/email \"hello@example.com\"})
-     => [\"select _id, user$joined_at from user where user$email = ?\" \"hello@example.com\"]"
-  (xt2/select-from-where columns table kvs))
 
 (defn prefix-uuid
   "Replaces the first two bytes in uuid-rest with those from uuid-prefix.

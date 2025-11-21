@@ -1,23 +1,24 @@
 {:paths ["src"]
- :deps {org.clojure/clojure           {:mvn/version "1.12.2"}
-        buddy/buddy-sign              {:mvn/version "3.6.1-359"}
-        cider/cider-nrepl             {:mvn/version "0.57.0"}
-        clj-http/clj-http             {:mvn/version "3.13.1"}
-        com.nextjournal/beholder      {:mvn/version "1.0.3"}
-        jarohen/chime                 {:mvn/version "0.3.3"}
-        lambdaisland/uri              {:mvn/version "1.19.155"}
-        metosin/malli                 {:mvn/version "0.19.1"}
-        metosin/muuntaja              {:mvn/version "0.6.11"}
-        metosin/reitit-ring           {:mvn/version "0.9.1"}
-        nrepl/nrepl                   {:mvn/version "1.4.0"}
-        org.clojure/tools.logging     {:mvn/version "1.3.0"}
-        org.clojure/tools.namespace   {:mvn/version "1.5.0"}
-        refactor-nrepl/refactor-nrepl {:mvn/version "3.11.0"}
-        ring/ring-defaults            {:mvn/version "0.7.0"}
-        ring/ring-jetty-adapter       {:mvn/version "1.15.1"}
-        rum/rum                       {:mvn/version "0.12.11"
-                                       :exclusions [cljsjs/react cljsjs/react-dom]}
-        io.github.biffweb/config      {:git/tag "v1.0" :git/sha "cc7ba13"}
+ :deps {org.clojure/clojure              {:mvn/version "1.12.2"}
+        buddy/buddy-sign                 {:mvn/version "3.6.1-359"}
+        cider/cider-nrepl                {:mvn/version "0.57.0"}
+        clj-http/clj-http                {:mvn/version "3.13.1"}
+        com.github.seancorfield/honeysql {:mvn/version "2.7.1350"}
+        com.nextjournal/beholder         {:mvn/version "1.0.3"}
+        jarohen/chime                    {:mvn/version "0.3.3"}
+        lambdaisland/uri                 {:mvn/version "1.19.155"}
+        metosin/malli                    {:mvn/version "0.19.1"}
+        metosin/muuntaja                 {:mvn/version "0.6.11"}
+        metosin/reitit-ring              {:mvn/version "0.9.1"}
+        nrepl/nrepl                      {:mvn/version "1.4.0"}
+        org.clojure/tools.logging        {:mvn/version "1.3.0"}
+        org.clojure/tools.namespace      {:mvn/version "1.5.0"}
+        refactor-nrepl/refactor-nrepl    {:mvn/version "3.11.0"}
+        ring/ring-defaults               {:mvn/version "0.7.0"}
+        ring/ring-jetty-adapter          {:mvn/version "1.15.1"}
+        rum/rum                          {:mvn/version "0.12.11"
+                                          :exclusions [cljsjs/react cljsjs/react-dom]}
+        io.github.biffweb/config         {:git/tag "v1.0" :git/sha "cc7ba13"}
 
         ;; XTDB 1 deps. See dev/deps.edn for XTDB 2 deps.
         com.xtdb/xtdb-core        {:mvn/version "1.24.5"}

@@ -1,8 +1,9 @@
 (ns com.biffweb.impl.xtdb2
   (:require
-   [clojure.string :as str]
+   [clojure.walk :as walk]
    [com.biffweb.aliases.xtdb2 :as xta]
    [com.biffweb.impl.util :as util]
+   [honey.sql :as hsql]
    [malli.core :as malli]
    [malli.error :as malli.e]
    [malli.util :as malli.u])
@@ -22,22 +23,26 @@
              "To call this function, you must add com.xtdb/xtdb-core v2 to your dependencies."))
     `(do ~@body)))
 
-(defn where-clause [ks]
-  (ensure-dep
-   (->> ks
-        (mapv #(str (xta/->normal-form-str %) " = ?"))
-        (str/join " and "))))
+(defn format-query [query]
+  (if (map? query)
+    (hsql/format
+     (walk/postwalk (fn [x]
+                      (cond-> x
+                        (qualified-keyword? x) xta/kw->normal-form-kw))
+                    query))
+    query))
+
+(defn q [node query & args]
+  (apply xta/q node (format-query query) args))
 
 (defn assert-unique [table kvs]
-  (into [(str "assert 1 >= (select count(*) from " table " where "
-              (where-clause (keys kvs)))]
-        (vals kvs)))
-
-(defn select-from-where [columns table kvs]
-  (into [(str "select " (str/join ", " (mapv xta/->normal-form-str columns))
-              " from " table
-              " where " (where-clause (keys kvs)))]
-        (vals kvs)))
+  (format-query
+   {:assert [:>= 1 {:select [[[:count '*]]]
+                    :from (symbol table)
+                    :where (into [:and]
+                                 (map (fn [[k v]]
+                                        [:= k v]))
+                                 kvs)}]}))
 
 (defn use-xtdb2-config [{:keys [biff/secret]
                          :biff.xtdb2/keys [storage log]
@@ -149,20 +154,19 @@
         queue (LinkedBlockingQueue. 1)
         poll-now #(.offer queue true)]
     (future
-      (do
-        (util/catchall-verbose
-         (while @continue
-           (.poll queue 1 TimeUnit/SECONDS)
-           (let [listeners (not-empty (keep :on-tx @modules))
-                 prev-t @system-time
-                 latest-t (when listeners
-                            (latest-system-time conn))]
-             (when (and listeners (not= prev-t latest-t))
-               (reset! system-time latest-t)
-               (doseq [record (tx-log conn {:after-inst prev-t :tables tables})
-                       listener listeners]
-                 (util/catchall-verbose (listener ctx record)))))))
-        (deliver done nil)))
+      (util/catchall-verbose
+       (while @continue
+         (.poll queue 1 TimeUnit/SECONDS)
+         (let [listeners (not-empty (keep :on-tx @modules))
+               prev-t @system-time
+               latest-t (when listeners
+                          (latest-system-time conn))]
+           (when (and listeners (not= prev-t latest-t))
+             (reset! system-time latest-t)
+             (doseq [record (tx-log conn {:after-inst prev-t :tables tables})
+                     listener listeners]
+               (util/catchall-verbose (listener ctx record)))))))
+      (deliver done nil))
     (-> ctx
         (assoc :biff.xtdb.listener/poll-now poll-now)
         (update :biff/stop conj stop-fn))))
@@ -184,28 +188,29 @@
                 optional-keys (into #{}
                                     (comp (filter (comp :optional :properties val))
                                           (map key))
-                                    (:keys (malli/ast schema*)))]]
-    (doseq [record records]
-      (when-not (some? (:xt/id record))
-        (throw (ex-info "Record is missing an :xt/id value."
-                        {:table table
-                         :record record})))
-      (when-not (malli/validate schema
-                                (into {}
-                                      (remove (fn [[k v]]
-                                                (and (nil? v)
-                                                     (optional-keys k))))
-                                      record)
-                                malli-opts)
-        (throw (ex-info "Record doesn't match schema."
-                        {:table table
-                         :record record
-                         :explain (malli.e/humanize (malli/explain schema record))})))))
+                                    (:keys (malli/ast schema*)))]
+          record records]
+    (when-not (some? (:xt/id record))
+      (throw (ex-info "Record is missing an :xt/id value."
+                      {:table table
+                       :record record})))
+    (when-not (malli/validate schema
+                              (into {}
+                                    (remove (fn [[k v]]
+                                              (and (nil? v)
+                                                   (optional-keys k))))
+                                    record)
+                              malli-opts)
+      (throw (ex-info "Record doesn't match schema."
+                      {:table table
+                       :record record
+                       :explain (malli.e/humanize (malli/explain schema record))}))))
   true)
 
 (defn submit-tx [{:biff/keys [node conn malli-opts]
-                  :keys [biff.xtdb.listener/poll-now]} tx & [opts]]
+                  :keys [biff.xtdb.listener/poll-now]} tx & args]
   (validate-tx tx @malli-opts)
-  (let [result (xta/submit-tx (or conn node) tx opts)]
+  (let [tx     (mapv format-query tx)
+        result (apply xta/submit-tx (or conn node) tx args)]
     (when poll-now (poll-now))
     result))

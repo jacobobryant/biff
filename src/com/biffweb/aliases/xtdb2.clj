@@ -6,3 +6,4 @@
 (def start-node        (resolve-optional 'xtdb.node/start-node))
 (def submit-tx         (resolve-optional 'xtdb.api/submit-tx))
 (def ->normal-form-str (resolve-optional 'xtdb.util/->normal-form-str))
+(def kw->normal-form-kw  (resolve-optional 'xtdb.util/kw->normal-form-kw))

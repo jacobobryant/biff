@@ -1,10 +1,7 @@
 (ns com.biffweb.experimental.auth
   (:require [com.biffweb :as biff]
             [com.biffweb.experimental :as biffx]
-            [clj-http.client :as http]
-            ;; This namespace is used instead of xtdb.api in case XTDB 2 is not on the classpath.
-            ;; If you're copying this file into your own project, you can change this to xtdb.api.
-            [com.biffweb.aliases.xtdb2 :as xt])
+            [clj-http.client :as http])
   (:import [java.util UUID]
            [java.time Instant]))
 
@@ -178,10 +175,11 @@
     (when success
       (biffx/submit-tx ctx
         (concat [[:put-docs :biff.auth/code
-                  {:xt/id           (uuid-from email)
-                   :code            code
-                   :created-at      (Instant/now)
-                   :failed-attempts 0}]]
+                  {:xt/id                          (uuid-from email)
+                   :biff.auth.code/email           email
+                   :biff.auth.code/code            code
+                   :biff.auth.code/created-at      (Instant/now)
+                   :biff.auth.code/failed-attempts 0}]]
                 (when (and single-opt-in (not user-id))
                   (new-user-tx ctx email)))))
     {:status  303
@@ -198,15 +196,20 @@
                             :as   ctx}]
   (let [email            (biff/normalize-email (:email params))
         code-id          (uuid-from email)
-        code             (first (xt/q node [(str "select code, created_at, failed_attempts "
-                                                 "from \"biff.auth\".code "
-                                                 "where _id = ?")
-                                            code-id]))
+
+        [{:biff.auth.code/keys [code created-at failed-attempts]}]
+        (biffx/q node
+                 {:select [:biff.auth.code/code
+                           :biff.auth.code/created-at
+                           :biff.auth.code/failed-attempts]
+                  :from 'biff.auth/code
+                  :where [:= :xt/id code-id]})
+
         success          (and (passed-recaptcha? ctx)
                               (some? code)
-                              (< (:failed-attempts code) 3)
-                              (not (biff/elapsed? (:created-at code) :now 3 :minutes))
-                              (= (:code params) (:code code)))
+                              (< failed-attempts 3)
+                              (not (biff/elapsed? created-at :now 3 :minutes))
+                              (= (:code params) code))
         existing-user-id (when success (get-user-id node email))
         tx               (cond
                            success
@@ -216,11 +219,11 @@
 
                            (and (not success)
                                 (some? code)
-                                (< (:failed-attempts code) 3))
-                           [[(str "update \"biff.auth\".code "
-                                  "set failed_attempts = failed_attempts + 1 "
-                                  "where _id = ?")
-                             code-id]])]
+                                (< failed-attempts 3))
+                           [{:update 'biff.auth/code
+                             :set {:biff.auth.code/failed-attempts
+                                   [:+ :biff.auth.code/failed-attempts 1]}
+                             :where [:= :xt/id code-id]}])]
     (biffx/submit-tx ctx tx)
     (if success
       {:status  303
@@ -238,13 +241,13 @@
 ;;; ----------------------------------------------------------------------------
 
 (defn new-user-tx [_ctx email]
-  [[:put-docs :user {:xt/id     (random-uuid)
-                     :email     email
-                     :joined-at (Instant/now)}]
-   ["assert 1 >= (select count(*) from user where email = ?)" email]])
+  [[:put-docs :user {:xt/id          (random-uuid)
+                     :user/email     email
+                     :user/joined-at (Instant/now)}]
+   (biffx/assert-unique :user {:user/email email})])
 
 (defn get-user-id [node email]
-  (-> (xt/q node ["select _id from user where email = ?" email])
+  (-> (biffx/q node {:select :xt/id :from :user :where [:= :user/email email]})
       first
       :xt/id))
 
@@ -262,13 +265,12 @@
     (handler (merge options ctx))))
 
 (defn module [options]
-  {:schema {:biff.auth.code/id :uuid
-            :biff.auth/code    [:map {:closed true}
-                                [:xt/id :biff.auth.code/id]
-                                [:biff.auth.code/email :string]
-                                [:biff.auth.code/code :string]
-                                [:biff.auth.code/created-at inst?]
-                                [:biff.auth.code/failed-attempts integer?]]}
+  {:schema {:biff.auth/code [:map {:closed true}
+                             [:xt/id                          :uuid]
+                             [:biff.auth.code/email           :string]
+                             [:biff.auth.code/code            :string]
+                             [:biff.auth.code/created-at      inst?]
+                             [:biff.auth.code/failed-attempts integer?]]}
    :routes [["/auth" {:middleware [[wrap-options (merge default-options options)]]}
              ["/send-link"          {:post send-link-handler}]
              ["/verify-link/:token" {:get verify-link-handler}]
