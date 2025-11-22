@@ -85,6 +85,7 @@
     new-system))
 
 (defn -main []
+  (java.util.TimeZone/setDefault (java.util.TimeZone/getTimeZone "UTC"))
   (let [{:keys [biff.nrepl/args]} (start)]
     (apply nrepl-cmd/-main args)))
 

@@ -1,9 +1,9 @@
 (ns com.biffweb.experimental.auth
   (:require [com.biffweb :as biff]
             [com.biffweb.experimental :as biffx]
-            [clj-http.client :as http])
-  (:import [java.util UUID]
-           [java.time Instant]))
+            [clj-http.client :as http]
+            [tick.core :as tick])
+  (:import [java.util UUID]))
 
 (defn passed-recaptcha? [{:keys [biff/secret biff.recaptcha/threshold params]
                           :or   {threshold 0.5}}]
@@ -178,7 +178,7 @@
                   {:xt/id                          (uuid-from email)
                    :biff.auth.code/email           email
                    :biff.auth.code/code            code
-                   :biff.auth.code/created-at      (Instant/now)
+                   :biff.auth.code/created-at      (tick/zoned-date-time)
                    :biff.auth.code/failed-attempts 0}]]
                 (when (and single-opt-in (not user-id))
                   (new-user-tx ctx email)))))
@@ -208,7 +208,7 @@
         success          (and (passed-recaptcha? ctx)
                               (some? code)
                               (< failed-attempts 3)
-                              (not (biff/elapsed? created-at :now 3 :minutes))
+                              (< (tick/between created-at (tick/zoned-date-time) :minutes) 3)
                               (= (:code params) code))
         existing-user-id (when success (get-user-id node email))
         tx               (cond
@@ -243,7 +243,7 @@
 (defn new-user-tx [_ctx email]
   [[:put-docs :user {:xt/id          (random-uuid)
                      :user/email     email
-                     :user/joined-at (Instant/now)}]
+                     :user/joined-at (tick/zoned-date-time)}]
    (biffx/assert-unique :user {:user/email email})])
 
 (defn get-user-id [node email]
@@ -265,11 +265,12 @@
     (handler (merge options ctx))))
 
 (defn module [options]
-  {:schema {:biff.auth/code [:map {:closed true}
+  {:schema {::zdt [:fn tick/zoned-date-time?]
+            :biff.auth/code [:map {:closed true}
                              [:xt/id                          :uuid]
                              [:biff.auth.code/email           :string]
                              [:biff.auth.code/code            :string]
-                             [:biff.auth.code/created-at      inst?]
+                             [:biff.auth.code/created-at      ::zdt]
                              [:biff.auth.code/failed-attempts integer?]]}
    :routes [["/auth" {:middleware [[wrap-options (merge default-options options)]]}
              ["/send-link"          {:post send-link-handler}]

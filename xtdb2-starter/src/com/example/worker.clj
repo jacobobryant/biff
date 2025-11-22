@@ -2,10 +2,11 @@
   (:require [clojure.tools.logging :as log]
             [com.biffweb :as biff :refer [q]]
             [com.biffweb.experimental :as biffx]
-            [xtdb.api :as xt]))
+            [xtdb.api :as xt]
+            [tick.core :as tick]))
 
 (defn every-n-minutes [n]
-  (iterate #(biff/add-seconds % (* 60 n)) (java.util.Date.)))
+  (iterate #(tick/>> % (tick/of-minutes n)) (tick/now)))
 
 (defn print-usage [{:keys [biff/conn]}]
   ;; For a real app, you can have this run once per day and send you the output
@@ -19,9 +20,8 @@
                           {:select [[[:count '*] :cnt]]
                            :from :user
                            :where [:= :xt/id (:xt/id record)]}
-                          {:snapshot-time (.. (:xt/system-from record)
-                                              (toInstant)
-                                              (minusNanos 1))})
+                          {:snapshot-time (tick/<< (:xt/system-from record)
+                                                   (tick/of-nanos 1))})
                  first
                  :cnt
                  (= 0)))

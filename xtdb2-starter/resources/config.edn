@@ -34,7 +34,6 @@
  :biff.nrepl/args ["--port" #ref [:biff.nrepl/port]
                    "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]
 
- :biff.system-properties/user.timezone                 "UTC"
  :biff.system-properties/clojure.tools.logging.factory "clojure.tools.logging.impl/slf4j-factory"
 
  :biff.tasks/server                 #biff/env DOMAIN

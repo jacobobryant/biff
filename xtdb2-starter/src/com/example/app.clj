@@ -8,9 +8,7 @@
    [com.example.ui :as ui]
    [ring.websocket :as ws]
    [rum.core :as rum]
-   [xtdb.api :as xt])
-  (:import
-   [java.time Instant]))
+   [tick.core :as tick]))
 
 (defn set-foo [{:keys [session params] :as ctx}]
   (biffx/submit-tx ctx
@@ -41,7 +39,7 @@
 
 (defn message [{:msg/keys [content sent-at]}]
   [:.mt-3 {:_ "init send newMessage to #message-header"}
-   [:.text-gray-600 (biff/format-date (java.util.Date/from (.toInstant sent-at)) "dd MMM yyyy HH:mm:ss")]
+   [:.text-gray-600 (tick/format "dd MMM yyyy HH:mm:ss" sent-at)]
    [:div content]])
 
 (defn notify-clients [{:keys [com.example/chat-clients]} record]
@@ -58,13 +56,14 @@
       [[:put-docs :msg {:xt/id (random-uuid)
                         :msg/user (:uid session)
                         :msg/content content
-                        :msg/sent-at (Instant/now)}]])))
+                        :msg/sent-at (tick/zoned-date-time)}]])))
 
 (defn chat [{:keys [biff/conn]}]
   (let [messages (biffx/q conn
                           {:select [:msg/content :msg/sent-at]
                            :from :msg
-                           :where [:>= :msg/sent-at (.minusSeconds (Instant/now) (* 60 10))]})]
+                           :where [:>= :msg/sent-at (tick/<< (tick/now)
+                                                             (tick/of-minutes 10))]})]
     [:div {:hx-ext "ws" :ws-connect "/app/chat"}
      [:form.mb-0 {:ws-send true
                   :_ "on submit set value of #message to ''"}
@@ -127,7 +126,7 @@
                              (swap! chat-clients conj ws))
                   :on-message (fn [ws text-message]
                                 (send-message ctx {:ws ws :text text-message}))
-                  :on-close (fn [ws status-code reason]
+                  :on-close (fn [ws _status-code _reason]
                               (swap! chat-clients disj ws))}})
 
 (def about-page

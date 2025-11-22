@@ -18,6 +18,7 @@
         ring/ring-jetty-adapter          {:mvn/version "1.15.1"}
         rum/rum                          {:mvn/version "0.12.11"
                                           :exclusions [cljsjs/react cljsjs/react-dom]}
+        tick/tick                        {:mvn/version "1.0"}
         io.github.biffweb/config         {:git/tag "v1.0" :git/sha "cc7ba13"}
 
         ;; XTDB 1 deps. See dev/deps.edn for XTDB 2 deps.
