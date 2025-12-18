@@ -23,13 +23,14 @@
              "To call this function, you must add com.xtdb/xtdb-core v2 to your dependencies."))
     `(do ~@body)))
 
-(defn format-query [query]
+(defn format-query [query & [opts]]
   (if (map? query)
     (hsql/format
      (walk/postwalk (fn [x]
                       (cond-> x
                         (qualified-keyword? x) xta/kw->normal-form-kw))
-                    query))
+                    query)
+     opts)
     query))
 
 (defn q [node query & args]

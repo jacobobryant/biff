@@ -65,8 +65,8 @@
 
 (defn format-query
   "TODO"
-  [query]
-  (xt2/format-query query))
+  [query & [opts]]
+  (xt2/format-query query opts))
 
 (defn q
   "TODO"
