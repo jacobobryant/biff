@@ -176,6 +176,49 @@
   (UUID/fromString (str (subs (str uuid-prefix) 0 4)
                         (subs (str uuid-rest) 4))))
 
+
+(comment
+  ;; maybe use code like this if we want to validate :update operations
+
+  optional-keys (into #{}
+                      (comp (filter (comp :optional :properties val))
+                            (map key))
+                      (:keys (malli/ast schema*)))
+
+  (into {}
+        (remove (fn [[k v]]
+                  (and (nil? v)
+                       (optional-keys k))))
+        record)
+  )
+
+(defn- optional-keys-ast [ast malli-opts]
+  (-> ast
+      (malli/from-ast malli-opts)
+      malli.u/optional-keys
+      malli/ast))
+
+(defn- optional-keys
+  "Similar to malli.util/optional-keys but recursive, in case schema is e.g. something like
+   [:and ... [:map ...]]"
+  [schema malli-opts]
+  (let [ast (-> schema
+                malli/deref-recursive
+                malli/ast)]
+    (malli/from-ast
+     ((fn step [ast]
+        (cond
+          (= (:type ast) :map)
+          (optional-keys-ast ast malli-opts)
+
+          (not-empty (:children ast))
+          (update ast :children #(mapv step %))
+
+          :else
+          ast))
+      ast)
+     malli-opts)))
+
 (defn validate-tx [tx malli-opts]
   (doseq [tx-op tx
           :when (#{:put-docs :patch-docs} (first tx-op))
@@ -183,25 +226,14 @@
                 table (if (keyword? opts)
                         opts
                         (:into opts))
-                schema* (malli/schema table malli-opts)
-                schema (cond-> schema*
-                         (= op :patch-docs) malli.u/optional-keys)
-                optional-keys (into #{}
-                                    (comp (filter (comp :optional :properties val))
-                                          (map key))
-                                    (:keys (malli/ast schema*)))]
+                schema (cond-> (malli/schema table malli-opts)
+                         (= op :patch-docs) (optional-keys malli-opts))]
           record records]
     (when-not (some? (:xt/id record))
       (throw (ex-info "Record is missing an :xt/id value."
                       {:table table
                        :record record})))
-    (when-not (malli/validate schema
-                              (into {}
-                                    (remove (fn [[k v]]
-                                              (and (nil? v)
-                                                   (optional-keys k))))
-                                    record)
-                              malli-opts)
+    (when-not (malli/validate schema record malli-opts)
       (throw (ex-info "Record doesn't match schema."
                       {:table table
                        :record record
