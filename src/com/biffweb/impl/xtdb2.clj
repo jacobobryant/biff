@@ -47,28 +47,34 @@
 
 (defn use-xtdb2-config [{:keys [biff/secret]
                          :biff.xtdb2/keys [storage log]
-                         :biff.xtdb2.storage/keys [bucket endpoint access-key secret-key]
-                         :or {storage :local log :local}}]
+                         :biff.xtdb2.storage/keys [bucket endpoint access-key secret-key max-cache-bytes]
+                         :biff.xtdb2.log/keys [topic epoch]
+                         :or {storage :local
+                              log :local
+                              epoch 0
+                              topic "xtdb-log"
+                              ;; 10 GB
+                              max-cache-bytes 10737418240}}]
   (let [secret-key (secret :biff.xtdb2.storage/secret-key)]
-    {:log [log
-           (case log
-             :local {:path "storage/xtdb2/log"}
-             :kafka {:bootstrap-servers "localhost:9092"
-                     :topic "xtdb-log"
-                     ;; The default prod config for Biff apps uses remote storage and
-                     ;; local log, so if kafka is being used, it'll probably be in the
-                     ;; context of migrating from a local log. So might as well bump this
-                     ;; pre-emptively.
-                     :epoch 1})]
-     :storage [storage
-               (case storage
-                 :local {:path "storage/xtdb2/storage"}
-                 :remote {:object-store [:s3
-                                         {:bucket bucket
-                                          :endpoint endpoint
-                                          :credentials {:access-key access-key
-                                                        :secret-key secret-key}}]
-                          :local-disk-cache "storage/xtdb2/storage-cache"})]}))
+    (merge
+     (when (= log :kafka)
+       {:log-clusters {:kafka-cluster [:kafka {:bootstrap-servers "localhost:9092"}]}})
+     (when (= storage :remote)
+       {:disk-cache (merge {:path "storage/xtdb2/storage-cache"}
+                           (when max-cache-bytes
+                             {:max-size-bytes max-cache-bytes}))})
+     {:log [log
+            (case log
+              :local {:path "storage/xtdb2/log" :epoch epoch}
+              :kafka {:cluster :kafka-cluster :topic topic :epoch epoch})]
+      :storage [storage
+                (case storage
+                  :local {:path "storage/xtdb2/storage"}
+                  :remote {:object-store [:s3
+                                          {:bucket bucket
+                                           :endpoint endpoint
+                                           :credentials {:access-key access-key
+                                                         :secret-key secret-key}}]})]})))
 
 (defn use-xtdb2 [{:keys [biff.xtdb2/hikari-config] :as ctx}]
   (ensure-dep
@@ -117,6 +123,7 @@
                    (let [start (first system-times)
                          end (last system-times)]
                      (->> tables
+                          ;; TODO do a union
                           (pmap (fn [table]
                                   (mapv #(assoc % :biff.xtdb/table table)
                                         (xta/q node [(str "select *, _system_from, _system_to "
@@ -175,7 +182,6 @@
 (defn prefix-uuid [uuid-prefix uuid-rest]
   (UUID/fromString (str (subs (str uuid-prefix) 0 4)
                         (subs (str uuid-rest) 4))))
-
 
 (comment
   ;; maybe use code like this if we want to validate :update operations
