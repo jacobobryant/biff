@@ -2,6 +2,10 @@
 
 A Clojure web framework for solo developers. See [biffweb.com](https://biffweb.com).
 
+## Biff 2 is in development
+
+See [the v2.x branch](https://github.com/jacobobryant/biff/tree/v2.x).
+
 ## Contributing
 
 Documentation source is located at [github.com/jacobobryant/biffweb.com](https://github.com/jacobobryant/biffweb.com),
