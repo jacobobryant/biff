@@ -11,7 +11,7 @@
  :biff.tasks/pom-license      {:name         "MIT"
                                :url          "https://opensource.org/license/mit"
                                :distribution "repo"}
- :biff.tasks/pom-scm          {:connection          "scm:git:git://github.com/jacobobryant/biff2.git"
-                               :developerConnection "scm:git:ssh://git@github.com/jacobobryant/biff2.git"
+ :biff.tasks/pom-scm          {:connection          "scm:git:git://github.com/jacobobryant/biff.git"
+                               :developerConnection "scm:git:ssh://git@github.com/jacobobryant/biff.git"
                                :tag                 "HEAD"
-                               :url                 "https://github.com/jacobobryant/biff2"}}
+                               :url                 "https://github.com/jacobobryant/biff"}}
