@@ -39,14 +39,19 @@
                 v)]
         [k v]))))
 
-(defmethod aero/reader 'biff/env
-  [{:keys [biff.aero/env]} _ value]
-  (not-empty (get env (str value))))
+(defn- register-reader-methods!
+  "We call this function right before parsing to ensure that Biff v1 hasn't
+   overwritten our multimethods with the old #biff/secret implementation."
+  []
+  (defmethod aero/reader 'biff/env
+    [{:keys [biff.aero/env]} _ value]
+    (not-empty (get env (str value))))
+  (defmethod aero/reader 'biff/secret
+    [opts _ value]
+    (when-some [value (aero/reader opts 'biff/env value)]
+      (biff.core/secret-delay value))))
 
-(defmethod aero/reader 'biff/secret
-  [opts _ value]
-  (when-some [value (aero/reader opts 'biff/env value)]
-    (biff.core/secret-delay value)))
+(register-reader-methods!)
 
 (defn- get-env []
   (reduce into
@@ -128,6 +133,7 @@
                             ;; For backwards compatibility
                             (get env "BIFF_ENV"))
                         keyword)
+        _       (register-reader-methods!)
         config  (aero/read-config (io/resource "config.edn")
                                   {:profile profile :biff.aero/env env})
         ctx     (merge ctx (remove-nil-values config))

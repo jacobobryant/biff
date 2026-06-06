@@ -1,5 +1,6 @@
 (ns com.biffweb.config-test
-  (:require [clojure.java.io :as io]
+  (:require [aero.core :as aero]
+            [clojure.java.io :as io]
             [clojure.test :refer [deftest is use-fixtures]]
             [com.biffweb.config :as biff.config]))
 
@@ -92,3 +93,24 @@
                    (constantly {"BIFF_ENV" "prod"})]
        (is (= "profile:prod"
               (:config-test/profile (biff.config/use-aero-config {})))))))
+
+(deftest use-aero-config-re-registers-reader-methods
+  (with-test-config-resource
+    #(with-redefs [com.biffweb.config/get-env
+                   (constantly {"CONFIG_TEST_FROM_ENV" "from env"
+                                "CONFIG_TEST_SECRET"   "super-secret"})]
+       (let [original-env    (get-method aero/reader 'biff/env)
+             original-secret (get-method aero/reader 'biff/secret)]
+         (try
+           (defmethod aero/reader 'biff/env
+             [_ _ _]
+             "old env")
+           (defmethod aero/reader 'biff/secret
+             [_ _ _]
+             "old secret")
+           (let [ctx (biff.config/use-aero-config {})]
+             (is (= "from env" (:config-test/from-env ctx)))
+             (is (= "super-secret" (force (:config-test/secret ctx)))))
+           (finally
+             (.addMethod ^clojure.lang.MultiFn aero/reader 'biff/env original-env)
+             (.addMethod ^clojure.lang.MultiFn aero/reader 'biff/secret original-secret)))))))

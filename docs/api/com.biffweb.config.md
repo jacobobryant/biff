@@ -20,7 +20,7 @@ keyword
 
 ### use-aero-config
 
-[view source](../../libs/config/src/com/biffweb/config.clj#L76)
+[view source](../../libs/config/src/com/biffweb/config.clj#L81)
 
 ```
 (use-aero-config {:biff.config/keys [profile], :as ctx})
