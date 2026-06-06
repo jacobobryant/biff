@@ -16,6 +16,16 @@ data/
 site/
 .firebase/
 .calva/
-.clj-kondo/
+.clj-kondo/.cache/
+**/.clj-kondo/.cache/
 .lsp/
 .portal/
+config.env
+libs/graph/linux-install.sh
+libs/sqlite/resources/schema.sql
+libs/sqlite/storage/
+repl.clj
+bin/tailwindcss
+bin/cljfmt
+bin/clj-kondo
+/libs/*/target/
