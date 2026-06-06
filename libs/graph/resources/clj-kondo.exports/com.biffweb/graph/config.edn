@@ -1,0 +1,1 @@
+{:lint-as {com.biffweb.graph/defresolver clojure.core/defn}}

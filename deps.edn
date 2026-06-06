@@ -1,0 +1,15 @@
+{:deps {com.biffweb/admin        {:local/root "libs/admin"}
+        com.biffweb/authenticate {:local/root "libs/authenticate"}
+        com.biffweb/background   {:local/root "libs/background"}
+        com.biffweb/config       {:local/root "libs/config"}
+        com.biffweb/core         {:local/root "libs/core"}
+        com.biffweb/datastar     {:local/root "libs/datastar"}
+        com.biffweb/fx           {:local/root "libs/fx"}
+        com.biffweb/graph        {:local/root "libs/graph"}
+        com.biffweb/ring         {:local/root "libs/ring"}
+        com.biffweb/sqlite       {:local/root "libs/sqlite"}}
+ :aliases
+ {:run {:extra-paths ["dev"]
+        :extra-deps  {com.biffweb/tasks    {:local/root "libs/tasks"}
+                      borkdude/rewrite-edn {:mvn/version "0.5.9"}}
+        :main-opts   ["-m" "tasks"]}}}

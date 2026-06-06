@@ -1,0 +1,4 @@
+{:paths ["src"]
+ :deps  {com.biffweb/run {:local/root ".."}}
+ :aliases
+ {:run {:main-opts ["-m" "demo-tasks"]}}}

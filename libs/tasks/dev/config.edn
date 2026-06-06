@@ -1,0 +1,2 @@
+#merge [#include "../../../dev/config.edn"
+        {:biff.tasks/lib-name "tasks"}]

@@ -1,0 +1,13 @@
+{:paths   ["src"]
+ :deps    {org.clojure/clojure     {:mvn/version "1.12.5"}
+           com.biffweb/fx          {:local/root "../fx"}
+           tick/tick               {:mvn/version "1.0.1"}
+           hato/hato               {:mvn/version "1.0.0"}
+           com.lambdaisland/hiccup {:mvn/version "0.14.67"}}
+ :aliases {:run  {:extra-paths ["test" "demo" "dev"]
+                  :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
+                  :main-opts   ["-m" "com.biffweb.tasks.lib"]}
+           :demo {:extra-paths ["demo"]
+                  :extra-deps  {ring/ring-jetty-adapter {:mvn/version "1.15.4"}
+                                ring/ring-defaults      {:mvn/version "0.7.0"}
+                                metosin/reitit-ring     {:mvn/version "0.10.1"}}}}}

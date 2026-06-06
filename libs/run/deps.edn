@@ -1,0 +1,4 @@
+{:paths   ["src"]
+ :aliases {:run {:extra-paths ["test" "dev"]
+                 :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
+                 :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

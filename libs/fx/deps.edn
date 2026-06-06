@@ -1,0 +1,6 @@
+{:paths   ["src" "resources"]
+ :deps    {org.clojure/clojure {:mvn/version "1.12.5"}
+           com.biffweb/core    {:local/root "../core"}}
+ :aliases {:run {:extra-paths ["test" "dev"]
+                 :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
+                 :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

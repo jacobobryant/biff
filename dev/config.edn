@@ -1,0 +1,17 @@
+{:biff.tasks/docs-namespaces  [com.biffweb.core
+                               com.biffweb.config]
+ :biff.tasks/group-name       "com.biffweb"
+ :biff.tasks/lib-name         "biff"
+ :biff.tasks/lib-version      "2.0.0-rc3"
+ :biff.tasks/monorepo         true
+ :biff.tasks/clojars-username #biff/env CLOJARS_USERNAME
+ :biff.tasks/clojars-secret   #biff/secret CLOJARS_PASSWORD
+ :biff.tasks/gpg-sign-key-id  #biff/env GPG_SIGN_KEY_ID
+ :biff.tasks/gpg-passphrase   #biff/secret GPG_PASSPHRASE
+ :biff.tasks/pom-license      {:name         "MIT"
+                               :url          "https://opensource.org/license/mit"
+                               :distribution "repo"}
+ :biff.tasks/pom-scm          {:connection          "scm:git:git://github.com/jacobobryant/biff2.git"
+                               :developerConnection "scm:git:ssh://git@github.com/jacobobryant/biff2.git"
+                               :tag                 "HEAD"
+                               :url                 "https://github.com/jacobobryant/biff2"}}

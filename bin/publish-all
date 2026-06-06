@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ ! -f "$root/config.env" ]; then
+  echo "Missing $root/config.env" >&2
+  exit 1
+fi
+
+source "$root/config.env"
+
+projects=(
+  "$root/libs/core"
+  #"$root/libs/fx"
+  #"$root/libs/cljrun"
+  #"$root/libs/config"
+  #"$root/libs/background"
+  #"$root/libs/admin"
+  #"$root/libs/authenticate"
+  #"$root/libs/datastar"
+  #"$root/libs/graph"
+  #"$root/libs/ring"
+  #"$root/libs/sqlite"
+  #"$root/libs/tasks"
+  #"$root"
+)
+
+for dir in "${projects[@]}"; do
+  (
+    cd "$dir"
+    clojure -M:run publish
+  )
+done
