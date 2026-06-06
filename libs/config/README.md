@@ -20,6 +20,12 @@ system properties, if set.
 com.biffweb/config {:mvn/version "2.0.0-rc3"}
 ```
 
+### Status
+
+This library will be a release candidate until all [the other Biff 2
+libraries](/README.md) have been released. Until then there could be breaking
+changes, but I don't anticipate any.
+
 ## API Reference
 
 [com.biffweb.config](/docs/api/com.biffweb.config.md)

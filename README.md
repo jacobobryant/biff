@@ -26,61 +26,9 @@ myself for manual testing.
 The libs all use `:local/root` dependencies so you can't actually add them as a
 dependency on your own project (I think?) until I explicitly publish them.
 
-### Resources
-
-TODO
-
-## Tutorial
-
-TODO. Might rewrite the old tutorial or might come up with something new.
-
-## Guide
-
-These will be "explanations" per the
-[grand unified theory of documentation](https://docs.divio.com/documentation-system/)
-definition. Relatively short and meant to (1) give you an overview of what
-things Biff covers, (2) the conceptual approach Biff takes toward each of those
-things, (3) links to other relevant documentation (howtos, reference, and
-library READMEs).
-
-TODO:
-
-- Architecture
-- Database
-- HTTP handlers
-- Frontend
-- Background work
-- Security
-- Operations
-- Code quality (tests/formatting/linting)
-
-## Howto
-
-TODO:
-
-- Use the REPL
-- Add DB schema
-- Add a page
-- Add an API route
-- Add a work pipeline
-- Customize the signin flow
-- Provision a server and deploy
-- Setup a sandboxed coding agent environment (with incus and/or docker
-  sandboxes)
-- Swap out the DB
-- Migrate from Biff v1
-
 ## Reference
 
 [API docs](/docs/api/)
-
-## Essays
-
-TODO
-
-## Community
-
-TODO
 
 ## Libraries
 
@@ -91,7 +39,7 @@ of the released libraries out in your own project, use a dependency like:
 com.biffweb/<lib> {:mvn/version "2.0.0-rc3"}
 ```
 
-Replacing `<lib>` with `core`, `fx`, etc. After all the libs are published, the
+Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
 `com.biffweb/biff` dependency will wrap all the individual libs (except for
 `com.biffweb/tasks` and `biff.run` since those are dev-only).
 
@@ -167,6 +115,58 @@ flowchart TD
   lib_tasks --> lib_core
   lib_tasks --> lib_run
 ```
+
+### Resources
+
+TODO
+
+## Tutorial
+
+TODO. Might rewrite the old tutorial or might come up with something new.
+
+## Guide
+
+These will be "explanations" per the
+[grand unified theory of documentation](https://docs.divio.com/documentation-system/)
+definition. Relatively short and meant to (1) give you an overview of what
+things Biff covers, (2) the conceptual approach Biff takes toward each of those
+things, (3) links to other relevant documentation (howtos, reference, and
+library READMEs).
+
+TODO:
+
+- Architecture
+- Database
+- HTTP handlers
+- Frontend
+- Background work
+- Security
+- Operations
+- Code quality (tests/formatting/linting)
+
+## Howto
+
+TODO:
+
+- Use the REPL
+- Add DB schema
+- Add a page
+- Add an API route
+- Add a work pipeline
+- Customize the signin flow
+- Provision a server and deploy
+- Setup a sandboxed coding agent environment (with incus and/or docker
+  sandboxes)
+- Swap out the DB
+- Migrate from Biff v1
+
+## Essays
+
+TODO
+
+## Community
+
+TODO
 
 ## AI
 
