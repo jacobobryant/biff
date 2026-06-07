@@ -12,9 +12,9 @@ source "$root/config.env"
 
 projects=(
   "$root/libs/core"
+  "$root/libs/config"
   #"$root/libs/fx"
   #"$root/libs/cljrun"
-  #"$root/libs/config"
   #"$root/libs/background"
   #"$root/libs/admin"
   #"$root/libs/authenticate"
