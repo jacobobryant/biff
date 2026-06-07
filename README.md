@@ -14,6 +14,9 @@ website](https://biffweb.com).
 ### Try it out
 
 ```bash
+git clone https://github.com/jacobobryant/biff
+cd biff
+git checkout v2.x
 cd demo
 clj -M:run dev
 ```

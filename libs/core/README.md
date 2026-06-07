@@ -40,6 +40,10 @@ changes, but I don't anticipate any.
 Try out [the demo app](demo/com/example.clj):
 
 ```
+$ git clone https://github.com/jacobobryant/biff
+$ cd biff
+$ git checkout v2.x
+$ cd libs/core/
 $ clj -A:demo
 user=> (require 'com.example)
 nil
