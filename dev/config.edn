@@ -1,5 +1,6 @@
 {:biff.tasks/docs-namespaces  [com.biffweb.core
-                               com.biffweb.config]
+                               com.biffweb.config
+                               com.biffweb.fx]
  :biff.tasks/group-name       "com.biffweb"
  :biff.tasks/lib-name         "biff"
  :biff.tasks/lib-version      "2.0.0-rc4"

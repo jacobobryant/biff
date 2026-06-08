@@ -13,7 +13,7 @@ source "$root/config.env"
 projects=(
   "$root/libs/core"
   "$root/libs/config"
-  #"$root/libs/fx"
+  "$root/libs/fx"
   #"$root/libs/cljrun"
   #"$root/libs/background"
   #"$root/libs/admin"

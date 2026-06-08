@@ -1,159 +1,193 @@
 (ns com.biffweb.fx.impl
-  "Implementation details for com.biffweb.fx. Do not use directly."
   (:require [clojure.walk :as walk]
             [com.biffweb.core :as biff.core])
-  (:import [java.security SecureRandom]
-           [java.time Instant]
-           [java.util Random]))
+  (:import [java.time Instant]
+           [java.util Random UUID]))
 
-(defn truncate-str [s n]
-  (if (<= (count s) n) s (str (subs s 0 (dec n)) "…")))
+(biff.core/register
+ {::state->fn       [:and
+                     [:map-of :keyword 'ifn?]
+                     [:map
+                      [:start 'ifn?]]]
+  ::state-fn-result [:or [:maybe 'map?] [:sequential [:maybe 'map?]]]})
 
-(defn truncate [data]
-  (walk/postwalk
-   (fn [data] (if (string? data) (truncate-str data 500) data))
-   data))
-
-(def default-fx-handlers
+(def ^:private default-fx-handlers
   {:biff.fx/http
-   (fn [_ctx request-or-requests]
+   (fn [_ctx input]
      (let [hato-request (requiring-resolve 'hato.client/request)
            http*        (fn [request]
                           (try
                             (-> (hato-request request)
-                                (assoc :url (:url request))
-                                (dissoc :http-client))
+                                (assoc :url (:url request)))
                             (catch Exception e
                               (if (get request :throw-exceptions true)
                                 (throw e)
                                 {:url       (:url request)
                                  :exception e}))))]
-       (if (map? request-or-requests)
-         (http* request-or-requests)
-         (mapv http* request-or-requests))))
+       (cond
+         (nil? hato-request)
+         (throw (ex-info (str "To use :biff.fx/http, you must add hato to your "
+                              "dependencies.")
+                         {}))
 
-   :biff.fx/slurp
-   (fn [_ctx & args]
-     (apply slurp args))
+         (map? input) (http* input)
+         (sequential? input) (mapv http* input)
+         :else (throw (ex-info "Invalid input type for :biff.fx/http"
+                               {:type (type input)})))))})
 
-   :biff.fx/spit
-   (fn [_ctx & args]
-     (apply spit args))
+(defn- truncate-str [s n]
+  (if (<= (count s) n) s (str (subs s 0 (dec n)) "…")))
 
-   :biff.fx/sleep
-   (fn [_ctx sleep-ms]
-     (Thread/sleep (long sleep-ms)))
+(defn- truncate [data]
+  (walk/postwalk
+   #(if (string? %) (truncate-str % 500) %)
+   data))
 
-   :biff.fx/temp-dir
-   (fn [_ctx & {:keys [prefix]}]
-     (let [dir (java.nio.file.Files/createTempDirectory
-                (or prefix "biff")
-                (into-array java.nio.file.attribute.FileAttribute []))]
-       (.toFile dir)))
+(defn- step [{:keys [machine-name state->fn handlers ctx]}
+             {:keys [state input trace]}]
+  (let [log-ctx     {:biff.fx/state        state
+                     :biff.fx/machine-name machine-name
+                     :biff.fx/trace        trace}
+        error!      (fn [message extra ex]
+                      (throw (ex-info message
+                                      (truncate (merge log-ctx extra))
+                                      ex)))
+        state-fn    (or (get state->fn state)
+                        (error! "Invalid state"
+                                {:biff.fx/available-states (keys state->fn)}
+                                nil))
+        injected    {:biff.fx/now  (Instant/now)
+                     :biff.fx/seed (.nextLong (Random.))}
+        state-input (merge ctx input injected)
+        result      (try
+                      (state-fn state-input)
+                      (catch Exception e
+                        (error! "State function threw an exception" injected e)))
+        _           (biff.core/validate {::state-fn-result result})
+        results     (if (sequential? result) result [result])]
+    (reduce
+     (fn [output result]
+       (let [effect-keys (filterv (fn [k]
+                                    (let [v (get result k)]
+                                      (and (vector? v)
+                                           (contains? handlers (first v)))))
+                                  (keys result))
+             output      (merge output
+                                (apply dissoc result effect-keys))]
+         (into output
+               (map (fn [k]
+                      (let [[handler-key & args] (get result k)
+                            handler              (get handlers handler-key)]
+                        [k
+                         (try
+                           (apply handler (merge ctx output) args)
+                           (catch Exception e
+                             (error! "Handler function threw an exception"
+                                     {:biff.fx/output       output
+                                      :biff.fx/handler-args args}
+                                     e)))])))
+               effect-keys)))
+     {}
+     results)))
 
-   :biff.fx/secure-random-int
-   (fn [_ctx n]
-     (.nextInt (SecureRandom.) n))})
+(defn machine [machine-name & {:as state->fn}]
+  (biff.core/validate {::state->fn state->fn})
+  (fn run
+    ([ctx state]
+     ((or (get state->fn state)
+          (throw (ex-info "Invalid state"
+                          {:biff.fx/state            state
+                           :biff.fx/machine-name     machine-name
+                           :biff.fx/available-states (keys state->fn)})))
+      ctx))
+    ([ctx]
+     (let [handlers (merge default-fx-handlers
+                           (:biff.fx/handlers ctx)
+                           (when-some [get-handlers (:biff.fx/get-handlers ctx)]
+                             (get-handlers)))
+           _        (biff.core/validate {:biff.fx/handlers handlers})
+           opts     {:machine-name machine-name
+                     :state->fn    state->fn
+                     :handlers     handlers
+                     :ctx          ctx}]
+       (loop [state :start
+              input {}
+              trace []]
+         (let [output (biff.core/validate
+                       (step opts
+                             {:state state
+                              :input input
+                              :trace trace}))]
+           (cond
+             (:biff.fx/next output)
+             (recur (:biff.fx/next output)
+                    output
+                    (conj trace output))
 
-(defn step [{:keys [state->transition-fn ctx state trace handlers]}]
-  (let [handled-fx-keys (set (keys handlers))
-        last-results    (->> (some-> trace peek :biff.fx/results)
-                             (mapv :biff.fx/fx-output)
-                             (filterv not-empty))
-        ctx             (assoc ctx
-                               :biff.fx/now (Instant/now)
-                               :biff.fx/seed (.nextLong (Random.))
-                               :biff.fx/results last-results)
-        t-fn            (or (get state->transition-fn state)
-                            (throw (ex-info "Invalid state" {:state state})))
-        result          (t-fn ctx)
-        results         (if (map? result) [result] result)
-        _               (biff.core/validate results)
-        results         (mapv
-                         (fn [m]
-                           (let [effect-entry? (fn [[_ v]]
-                                                 (and (vector? v)
-                                                      (seq v)
-                                                      (keyword? (first v))
-                                                      (contains? handled-fx-keys (first v))))
-                                 effect-keys   (set (map key (filter effect-entry? m)))
-                                 state-output  (apply dissoc m effect-keys)
-                                 fx-input      (select-keys m effect-keys)
-                                 ctx           (merge ctx state-output)
-                                 fx-output
-                                 (into {}
-                                       (map (fn [[k v]]
-                                              (let [handler-key  (first v)
-                                                    handler-args (rest v)
-                                                    handler-fn   (get handlers handler-key)]
-                                                [k (try
-                                                     (apply handler-fn ctx handler-args)
-                                                     (catch Exception e
-                                                       (throw
-                                                        (ex-info
-                                                         "Exception while running biff.fx effect"
-                                                         (truncate {:effect handler-key
-                                                                    :key    k
-                                                                    :input  (vec handler-args)})
-                                                         e))))])))
-                                       fx-input)]
-                             {:biff.fx/state-output state-output
-                              :biff.fx/fx-input     fx-input
-                              :biff.fx/fx-output    fx-output}))
-                         results)
-        trace           (conj trace {:biff.fx/state   state
-                                     :biff.fx/results results})
-        {:biff.fx/keys [state-output fx-output fx-input]}
-        (apply merge-with merge results)
-        next-state      (:biff.fx/next state-output)]
-    {:next-state   next-state
-     :ctx          (merge ctx fx-output state-output
-                          {:biff.fx/trace trace :biff.fx/fx-input fx-input})
-     :trace        trace
-     :state-output state-output
-     :fx-output    fx-output}))
+             (contains? output :biff.fx/return)
+             (:biff.fx/return output)
 
-(def all-methods
-  [:get :post :put :delete :head :options :trace :patch :connect])
+             :else output)))))))
 
-(defn safe-for-url? [s]
-  (boolean (re-matches #"[a-zA-Z0-9-_.+!*]+" s)))
+(defmacro defmachine [sym & args]
+  (let [machine-name (keyword (str *ns*) (str sym))]
+    `(def ~sym (machine ~machine-name ~@args))))
 
-(defn autogen-endpoint [ns* sym]
-  (let [href (str "/_biff/api/" ns* "/" sym)]
-    (doseq [segment [ns* sym]]
-      (assert (safe-for-url? (str segment))
-              (str "URL segment would contain invalid characters: " segment)))
-    href))
+(def ^:private handlers-for-modules
+  (memoize
+   (fn [modules]
+     (->> modules
+          (keep :biff.fx/handlers)
+          (apply merge {})))))
 
-(defn route*
-  [uri route-name machine-fn & {:as state->transition-fn}]
-  (let [machine* (machine-fn route-name state->transition-fn)]
-    [uri
-     (into {:name route-name}
-           (comp (filter state->transition-fn)
-                 (map (fn [method]
-                        [method machine*])))
-           all-methods)]))
+(defn module
+  []
+  {:biff.core/init
+   (fn [modules-var]
+     {:biff.fx/get-handlers
+      #(handlers-for-modules @modules-var)})})
 
-(defn wrap-result
-  [f]
-  (fn [ctx]
-    (f ctx (:biff.fx/result ctx))))
+(defn uuid [seed]
+  (let [rng       (Random. seed)
+        msb0      (.nextLong rng)
+        lsb0      (.nextLong rng)
+        ;; Set version to 4
+        msb       (-> msb0
+                      (bit-and 0xffffffffffff0fff)
+                      (bit-or  0x0000000000004000))
+        ;; Set RFC 4122 variant
+        lsb       (-> lsb0
+                      (bit-and 0x3fffffffffffffff)
+                      (bit-or  0x8000000000000000))
+        next-seed (.nextLong rng)]
+    [(UUID. msb lsb) next-seed]))
 
-(defn wrap-hiccup
-  [f]
-  (fn [& args]
-    (let [result (apply f args)]
-      (if (and (vector? result) (keyword? (first result)))
-        {:body result}
-        result))))
+(defn uuid4 [seed]
+  (let [rng       (Random. seed)
+        msb0      (.nextLong rng)
+        lsb0      (.nextLong rng)
+        ;; Set version to 4
+        msb       (-> msb0
+                      (bit-and (unchecked-long 0xffffffffffff0fff))
+                      (bit-or  (long 0x4000)))
+        ;; Set RFC 4122 variant
+        lsb       (-> lsb0
+                      (bit-and (unchecked-long 0x3fffffffffffffff))
+                      (bit-or  Long/MIN_VALUE))
+        next-seed (.nextLong rng)]
+    [(UUID. msb lsb) next-seed]))
 
-(defn wrap-methods
-  [params wrapper-fn]
-  (reduce (fn [m method]
-            (if (contains? m method)
-              (update m method wrapper-fn)
-              m))
-          params
-          all-methods))
+(defn uuid7 [seed instant]
+  (let [rng       (Random. seed)
+        ts        (bit-and (inst-ms instant) 0xffffffffffff)
+        rand-a    (bit-and (.nextInt rng) 0x0fff)
+        rand-b    (.nextLong rng)
+        msb       (unchecked-long
+                   (bit-or (bit-shift-left ts 16)
+                           (bit-shift-left 0x7 12)
+                           rand-a))
+        lsb       (-> rand-b
+                      (bit-and (unchecked-long 0x3fffffffffffffff))
+                      (bit-or Long/MIN_VALUE))
+        next-seed (.nextLong rng)]
+    [(UUID. msb lsb) next-seed]))
