@@ -1,6 +1,6 @@
 (ns com.biffweb.fx-test
   (:require [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is]]
             [com.biffweb.fx :as biff.fx])
   (:import [java.time Instant]
            [java.util UUID]))
@@ -21,10 +21,10 @@
                      :combined combined
                      :now?     (instance? Instant (:biff.fx/now ctx))
                      :seed?    (integer? (:biff.fx/seed ctx))}}))]
-    (is (= {:prefix "ctx"
+    (is (= {:prefix   "ctx"
             :combined "ctx-effect"
-            :now? true
-            :seed? true}
+            :now?     true
+            :seed?    true}
            (machine {:from-ctx "ctx"
                      :biff.fx/handlers
                      {:test/concat (fn [ctx suffix]
@@ -84,16 +84,16 @@
                         "…"))))
 
 (deftest module-collects-handlers-from-modules
-  (let [modules-var (atom [{:biff.fx/handlers {:test/a identity
+  (let [modules-var (atom [{:biff.fx/handlers {:test/a      identity
                                                :test/shared (constantly :first)}}
-                           {:biff.fx/handlers {:test/b str
+                           {:biff.fx/handlers {:test/b      str
                                                :test/shared (constantly :second)}}])
         init        ((:biff.core/init (biff.fx/module)) modules-var)]
     (is (= #{:test/a :test/b :test/shared}
            (set (keys ((:biff.fx/get-handlers init))))))
     (is (= :second
            ((get ((:biff.fx/get-handlers init)) :test/shared) nil)))
-    (swap! modules-var conj {:biff.fx/handlers {:test/c keyword
+    (swap! modules-var conj {:biff.fx/handlers {:test/c      keyword
                                                 :test/shared (constantly :third)}})
     (is (= #{:test/a :test/b :test/c :test/shared}
            (set (keys ((:biff.fx/get-handlers init))))))
@@ -112,7 +112,7 @@
     (is (= 2 (.variant uuid-a)))))
 
 (deftest uuid7-is-deterministic-and-rfc-compatible
-  (let [instant        (Instant/parse "2024-01-02T03:04:05Z")
+  (let [instant         (Instant/parse "2024-01-02T03:04:05Z")
         [uuid-a next-a] (biff.fx/uuid7 42 instant)
         [uuid-b next-b] (biff.fx/uuid7 42 instant)
         [uuid-c _]      (biff.fx/uuid7 43 instant)]

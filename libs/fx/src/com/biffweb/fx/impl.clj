@@ -120,9 +120,13 @@
                               :trace trace}))]
            (cond
              (:biff.fx/next output)
-             (recur (:biff.fx/next output)
-                    output
-                    (conj trace output))
+             (do
+               (assert (not (contains? output :biff.fx/return))
+                       (str "You can't set :biff.fx/next and :biff.fx/return "
+                            "at the same time."))
+               (recur (:biff.fx/next output)
+                      output
+                      (conj trace output)))
 
              (contains? output :biff.fx/return)
              (:biff.fx/return output)

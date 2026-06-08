@@ -117,7 +117,8 @@
    that state is transitioned to next. Otherwise the output is returned as the
    final return value. If you want the machine to return something other than a
    map, you can include `:biff.fx/return <value>` in the output, in which case
-   `<value>` will be the final return value.
+   `<value>` will be the final return value. It's invalid to set both
+   :biff.fx/next and :biff.fx/return in the same output map.
 
    To use the default :biff.fx/http handler, you must add Hato to your
    dependencies. The handler calls hato.client/request. It accepts either a

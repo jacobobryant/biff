@@ -123,7 +123,8 @@ If the state function includes `:biff.fx/next <state keyword>` in its output,
 that state is transitioned to next. Otherwise the output is returned as the
 final return value. If you want the machine to return something other than a
 map, you can include `:biff.fx/return <value>` in the output, in which case
-`<value>` will be the final return value.
+`<value>` will be the final return value. It's invalid to set both
+:biff.fx/next and :biff.fx/return in the same output map.
 
 To use the default :biff.fx/http handler, you must add Hato to your
 dependencies. The handler calls hato.client/request. It accepts either a
@@ -139,7 +140,7 @@ return {:url ..., :exception ...} if there is one.
 
 ### defmachine
 
-[view source](../../libs/fx/src/com/biffweb/fx.clj#L135)
+[view source](../../libs/fx/src/com/biffweb/fx.clj#L136)
 
 ```
 (defmachine sym & {:as state->fn})
@@ -152,7 +153,7 @@ See com.biffweb.fx/machine.
 
 ### module
 
-[view source](../../libs/fx/src/com/biffweb/fx.clj#L144)
+[view source](../../libs/fx/src/com/biffweb/fx.clj#L145)
 
 ```
 (module)
@@ -164,7 +165,7 @@ Includes an init function that sets :biff.fx/get-handlers on the system map.
 
 ### uuid4
 
-[view source](../../libs/fx/src/com/biffweb/fx.clj#L151)
+[view source](../../libs/fx/src/com/biffweb/fx.clj#L152)
 
 ```
 (uuid4 seed)
@@ -182,7 +183,7 @@ you passed to this function.
 
 ### uuid7
 
-[view source](../../libs/fx/src/com/biffweb/fx.clj#L164)
+[view source](../../libs/fx/src/com/biffweb/fx.clj#L165)
 
 ```
 (uuid7 seed instant)
