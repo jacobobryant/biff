@@ -96,7 +96,8 @@
                      :biff-auth-signin/created-at      now
                      :biff-auth-signin/failed-attempts 0
                      :biff-auth-signin/params          clean-p}]}
-         {:sent         [:biff.auth/send-email (merge defaults
+         {:email        email
+          :sent         [:biff.auth/send-email (merge defaults
                                                       {:template :signin-code
                                                        :to       email
                                                        :code     code})]
@@ -147,7 +148,9 @@
                      :biff-auth-signin/created-at      now
                      :biff-auth-signin/failed-attempts 0
                      :biff-auth-signin/params          clean-p}]}
-         {:sent         [:biff.auth/send-email (merge defaults
+         {:email        email
+          :state-token  state-token
+          :sent         [:biff.auth/send-email (merge defaults
                                                       {:template :signin-link
                                                        :to       email
                                                        :url      link-url})]

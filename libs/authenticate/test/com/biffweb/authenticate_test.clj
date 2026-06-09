@@ -138,6 +138,8 @@
         result      (backend/send-code-handler ctx)]
     (is (= 303 (:status result)))
     (is (str/includes? (get-in result [:headers "location"]) "verify=code"))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "email=test%40example.com"))
     (is (= 1 (count @sent-emails)))
     (is (= :signin-code (:template (first @sent-emails))))
     (is (= "test@example.com" (:to (first @sent-emails))))
@@ -212,6 +214,8 @@
         result      (backend/send-link-handler ctx)]
     (is (= 303 (:status result)))
     (is (str/includes? (get-in result [:headers "location"]) "verify=link"))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "email=test%40example.com"))
     (is (= 1 (count @sent-emails)))
     (is (= :signin-link (:template (first @sent-emails))))
     (is (= "test@example.com" (:to (first @sent-emails))))
