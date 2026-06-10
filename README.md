@@ -50,10 +50,10 @@ Released:
 
 - [biff.core](/libs/core/)
 - [biff.config](/libs/config/)
+- [biff.fx](/libs/fx/)
 
 Remaining (see [libs/](/libs/)):
 
-- biff.fx
 - biff.graph
 - biff.sqlite
 - biff.ring
