@@ -2,12 +2,17 @@
 
 Remove effects from your application logic with state machines.
 
-biff.fx lets you structure your code as a state machine where the states do pure
-computation (your application logic) and effects are executed during the
-transitions (HTTP requests, database queries, etc).
+biff.fx lets you split up a regular effectful function into a set of pure "state
+functions" where effects happen in the transitions between states. This allows
+you to unit test 100% of your application logic with plain `(is (= (f x) y))`
+tests. In my opinion, it also makes your code more readable (e.g. it's easier to
+skim the code and see what/where the effects are) albeit slightly more verbose.
 
-This makes your code more readable and testable since your application logic is
-contained entirely within pure functions.
+Functions that are purified with biff.fx don't look any different to callers;
+the pure state functions are still wrapped by a single effectful function. So
+it's easy to introduce biff.fx gradually to your codebase and see if you like
+it. If you want to use biff.fx in a library, consumers don't need to know you're
+using it.
 
 ### Dependency
 
@@ -84,6 +89,23 @@ Now you can write simple `(is (= (f x) y))` unit tests:
           :biff.fx/return 3})))
 ```
 
+For comparison, here's what `increment-file` would look like without the biff.fx
+treatment:
+
+```clojure
+(defn safe-slurp [path]
+  (let [file (io/file path)]
+    (when (.exists file)
+      (slurp file))))
+
+(defn increment-file [{:keys [path]}]
+  (let [content (safe-slurp path)
+        n       (or (some-> content parse-long) 0)
+        new-n   (inc n)]
+    (spit path (str new-n))
+    new-n))
+```
+
 ## Terms
 
 **Machine**: a function defined with `biff.fx/defmachine` or `biff.fx/machine`,
@@ -106,10 +128,11 @@ effect handler.
 
 ## Usage
 
-First you need to define a map containing all the effect handlers your
-application needs to perform, such as http requests, database
-queries/transactions, etc. These functions should be as simple as possible: take
-some input, execute an effect, return the output.
+First, pick a function from your application you'd like to purify (i.e. turn
+into a machine function), such as a POST request handler. Then, define define a
+map containing all the effect handlers that function needs to perform, such as
+http requests, database queries/transactions, etc. These functions should be as
+simple as possible: take some input, execute an effect, return the output.
 
 ```clojure
 (def handlers
@@ -118,7 +141,7 @@ some input, execute an effect, return the output.
    ...})
 ```
 
-You'll need to pass this handlers map to your machine functions under the
+You'll need to pass this handlers map to your machine function(s) under the
 `:biff.fx/handlers` key. A convenient way to do that is to insert that key into
 incoming Ring requests, and then your Ring handlers can be defined with
 `defmachine`.
@@ -141,7 +164,7 @@ incoming Ring requests, and then your Ring handlers can be defined with
      ...}))
 
 (def routes
-  ["/my-page" {:get my-ring-handler}])
+  ["/do-something" {:post my-ring-handler}])
 ```
 
 Each machine function defines its own set of states, which must include at least
