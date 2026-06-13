@@ -129,9 +129,9 @@ effect handler.
 ## Usage
 
 First, pick a function from your application you'd like to purify (i.e. turn
-into a machine function), such as a POST request handler. Then, define define a
-map containing all the effect handlers that function needs to perform, such as
-http requests, database queries/transactions, etc. These functions should be as
+into a machine function), such as a POST request handler. Then, define a map
+containing all the effect handlers that function needs to perform, such as http
+requests, database queries/transactions, etc. These functions should be as
 simple as possible: take some input, execute an effect, return the output.
 
 ```clojure
