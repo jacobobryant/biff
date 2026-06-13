@@ -1,6 +1,6 @@
 # biff.fx
 
-Remove effects from your application logic with state machines.
+Turn your functions into pure state machines.
 
 biff.fx lets you split up a regular effectful function into a set of pure "state
 functions" where effects happen in the transitions between states. This allows

@@ -1,5 +1,5 @@
 (ns com.biffweb.fx
-  "Remove effects from your application logic with state machines.
+  "Turn your functions into pure state machines.
 
    SCHEMA
 
