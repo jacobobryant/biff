@@ -1,16 +1,8 @@
 (ns com.biffweb.graph.tasks.errors
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [com.biffweb.graph :as graph]
-            [taoensso.telemere :as tel]))
-
-(defn- resolver [opts]
-  (graph/resolver
-   (merge {:id         ::resolver
-           :input      []
-           :output     []
-           :resolve-fn (fn [_ctx _input] {})}
-          opts)))
+            [taoensso.telemere :as tel])
+  (:import [java.io PushbackReader StringReader]))
 
 (defn- code [& lines]
   (str/join "\n" lines))
@@ -19,8 +11,7 @@
   [{:title "Invalid Query"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/query->ast [:*])")
-    :run   #(graph/query->ast [:*])}
+                 "(graph/query->ast [:*])")}
 
    {:title "Invalid Resolver"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -29,8 +20,7 @@
                  " {:id nil"
                  "  :input []"
                  "  :output []"
-                 "  :resolve-fn (fn [_ctx _input] {})})")
-    :run   #(resolver {:id nil})}
+                 "  :resolve-fn (fn [_ctx _input] {})})")}
 
    {:title "Invalid defresolver"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -38,11 +28,7 @@
                  "(graph/defresolver invalid-defresolver"
                  "  {:batch :not-boolean}"
                  "  [_ctx _input]"
-                 "  {})")
-    :run   #(eval '(com.biffweb.graph/defresolver invalid-defresolver
-                     {:batch :not-boolean}
-                     [_ctx _input]
-                     {}))}
+                 "  {})")}
 
    {:title "Resolver Returns Scalar For Join"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -54,11 +40,7 @@
                  "      :output [{:x [:y]}]"
                  "      :resolve-fn (fn [_ctx _input] {:x 1})})]))"
                  ""
-                 "(graph/query env [{:x [:y]}])")
-    :run   #(let [env (graph/new-env [(resolver {:output     [{:x [:y]}]
-                                                 :resolve-fn (fn [_ctx _input]
-                                                               {:x 1})})])]
-              (graph/query env [{:x [:y]}]))}
+                 "(graph/query env [{:x [:y]}])")}
 
    {:title "Resolver Returns Join For Scalar"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -70,11 +52,7 @@
                  "      :output [:x]"
                  "      :resolve-fn (fn [_ctx _input] {:x {:y 1}})})]))"
                  ""
-                 "(graph/query env [:x])")
-    :run   #(let [env (graph/new-env [(resolver {:output     [:x]
-                                                 :resolve-fn (fn [_ctx _input]
-                                                               {:x {:y 1}})})])]
-              (graph/query env [:x]))}
+                 "(graph/query env [:x])")}
 
    {:title "Resolver Returns Invalid Typed Data"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -87,11 +65,7 @@
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    {:biff.graph/id \"not-a-keyword\"})})]))"
                  ""
-                 "(graph/query env [:biff.graph/id])")
-    :run   #(let [env (graph/new-env [(resolver {:output     [:biff.graph/id]
-                                                 :resolve-fn (fn [_ctx _input]
-                                                               {:biff.graph/id "not-a-keyword"})})])]
-              (graph/query env [:biff.graph/id]))}
+                 "(graph/query env [:biff.graph/id])")}
 
    {:title "Conflicting Attribute Shapes In Env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -104,20 +78,14 @@
                  "  (graph/resolver"
                  "   {:id :example/join-x"
                  "    :output [{:x [:y]}]"
-                 "    :resolve-fn (fn [_ctx _input] {})})])")
-    :run   #(graph/new-env [(resolver {:id     ::scalar-x
-                                       :output [:x]})
-                            (resolver {:id     ::join-x
-                                       :output [{:x [:y]}]})])}
+                 "    :resolve-fn (fn [_ctx _input] {})})])")}
 
    {:title "Missing Resolver Keys"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/new-env"
                  " [{:biff.graph/id :example/bad"
-                 "   :biff.graph/resolve-fn (fn [_ctx] {})}])")
-    :run   #(graph/new-env [{:biff.graph/id         ::bad
-                             :biff.graph/resolve-fn (fn [_ctx] {})}])}
+                 "   :biff.graph/resolve-fn (fn [_ctx] {})}])")}
 
    {:title "Invalid Sequential Query Input"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -130,11 +98,7 @@
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    {:x [{:y 1}]})})]))"
                  ""
-                 "(graph/query env '({}) [{:x [:y]}])")
-    :run   #(let [env (graph/new-env [(resolver {:output     [{:x [:y]}]
-                                                 :resolve-fn (fn [_ctx _input]
-                                                               {:x [{:y 1}]})})])]
-              (graph/query env '({}) [{:x [:y]}]))}
+                 "(graph/query env '({}) [{:x [:y]}])")}
 
    {:title "Invalid get-env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -142,11 +106,7 @@
                  "(graph/query {:biff.graph/attr->resolvers {}"
                  "              :biff.graph/attr->shape {}"
                  "              :biff.graph/get-env :not-a-function}"
-                 "             [])")
-    :run   #(graph/query {:biff.graph/attr->resolvers {}
-                          :biff.graph/attr->shape     {}
-                          :biff.graph/get-env         :not-a-function}
-                         [])}
+                 "             [])")}
 
    {:title "Invalid Resolver Map In Env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -156,13 +116,7 @@
                  "                    :biff.graph/output-ast {:x {:kind :scalar}}"
                  "                    :biff.graph/resolve-fn (fn [_ctx] {})}]}"
                  "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
-                 "             [:x])")
-    :run   #(graph/query {:biff.graph/attr->resolvers
-                          {:x [{:biff.graph/id         ::bad
-                                :biff.graph/output-ast {:x {:kind :scalar}}
-                                :biff.graph/resolve-fn (fn [_ctx] {})}]}
-                          :biff.graph/attr->shape {:x {:kind :scalar}}}
-                         [:x])}
+                 "             [:x])")}
 
    {:title "Conflicting Join Cardinalities"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -178,56 +132,63 @@
                  "                          {:y 1}"
                  "                          [{:y 2}])})})]))"
                  ""
-                 "(graph/query env [{:id 1} {:id 2}] [{:x [:y]}])")
-    :run   #(let [env (graph/new-env [(resolver {:input      [:id]
-                                                 :output     [{:x [:y]}]
-                                                 :resolve-fn (fn [_ctx {:keys [id]}]
-                                                               {:x (if (= id 1)
-                                                                     {:y 1}
-                                                                     [{:y 2}])})})])]
-              (graph/query env [{:id 1} {:id 2}] [{:x [:y]}]))}
+                 "(graph/query env [{:id 1} {:id 2}] [{:x [:y]}])")}
 
    {:title "Invalid Query In graph/query"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/query {} [:*])")
-    :run   #(graph/query {} [:*])}
+                 "(graph/query {} [:*])")}
 
    {:title "Invalid Query Input"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/query {} :invalid-input [:x])")
-    :run   #(graph/query {} :invalid-input [:x])}
+                 "(graph/query {} :invalid-input [:x])")}
 
    {:title "Missing Env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/query {} [:x])")
-    :run   #(graph/query {} [:x])}
+                 "(graph/query {} [:x])")}
 
    {:title "Conflicting Query Shape"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
                  "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
-                 "             [{:x [:y]}])")
-    :run   #(graph/query {:biff.graph/attr->resolvers {}
-                          :biff.graph/attr->shape     {:x {:kind :scalar}}}
-                         [{:x [:y]}])}
+                 "             [{:x [:y]}])")}
 
    {:title "Unresolved Required Attribute"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
                  "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
-                 "             [:x])")
-    :run   #(graph/query {:biff.graph/attr->resolvers {}
-                          :biff.graph/attr->shape     {:x {:kind :scalar}}}
-                         [:x])}])
+                 "             [:x])")}])
+
+(def ^:private eof (Object.))
+
+(defn- read-forms [s]
+  (with-open [reader (PushbackReader. (StringReader. s))]
+    (loop [forms []]
+      (let [form (read {:eof eof} reader)]
+        (if (identical? eof form)
+          forms
+          (recur (conj forms form)))))))
+
+(defn- eval-code [s]
+  (let [ns-sym (symbol (str "com.biffweb.graph.tasks.errors.examples." (gensym)))
+        ns     (create-ns ns-sym)]
+    (try
+      (binding [*ns* ns]
+        (refer 'clojure.core)
+        (reduce (fn [_ form]
+                  (eval form))
+                nil
+                (read-forms s)))
+      (finally
+        (remove-ns ns-sym)))))
 
 (defn- trim-task-frames [s]
   (->> (str/split-lines s)
-       (reduce (fn [{:keys [root-stack? trimming? lines] :as state} line]
+       (reduce (fn [{:keys [root-stack? trimming?] :as state} line]
                  (cond
                    (= line "Root stack trace:")
                    (-> state
@@ -275,9 +236,9 @@
                %))
        (str/join "\n")))
 
-(defn- formatted-error [title f]
+(defn- formatted-error [title code]
   (try
-    (f)
+    (eval-code code)
     "No exception thrown."
     (catch Throwable t
       (-> ((tel/format-signal-fn {})
@@ -292,13 +253,13 @@
           trim-task-frames
           wrap-root-lines))))
 
-(defn- markdown-for [{:keys [title code run]}]
+(defn- markdown-for [{:keys [title code]}]
   (str "## " title "\n\n"
        "```clojure\n"
        code
        "\n```\n\n"
        "```\n"
-       (formatted-error title run)
+       (formatted-error title code)
        "\n```\n"))
 
 (defn error-examples []

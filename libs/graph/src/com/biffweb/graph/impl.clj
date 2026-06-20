@@ -118,35 +118,43 @@
        (or (not (sequential? value))
            (every? (complement map?) value))))
 
-(defn- select-output-value [value attr {:keys [kind children wildcard]}]
+(defn- select-output-value [value
+                            attr
+                            {:keys [kind children wildcard]}
+                            resolver-id]
   (case kind
     :join (assert (join-value? value)
-                  (str attr " was declared as a join but value is a scalar"))
+                  (str resolver-id " declared " attr
+                       " as a join but value is a scalar"))
     :scalar (assert (scalar-value? value)
-                    (str attr " was declared as a scalar but value is a map")))
+                    (str resolver-id " declared " attr
+                         " as a scalar but value is a join")))
   (cond
     (or (= kind :scalar) wildcard)
     value
 
     (sequential? value)
-    (mapv #(select-output (or % {}) children) value)
+    (mapv #(select-output (or % {}) children resolver-id) value)
 
     :else
-    (select-output value children)))
+    (select-output value children resolver-id)))
 
-(defn select-output [output output-ast]
+(defn select-output [output output-ast resolver-id]
   (if (sequential? output)
-    (mapv #(select-output % output-ast) output)
+    (mapv #(select-output % output-ast resolver-id) output)
     (into {}
           (keep (fn [[attr attr-ast]]
                   (when (contains? output attr)
-                    [attr (select-output-value (get output attr) attr attr-ast)])))
+                    [attr (select-output-value (get output attr)
+                                               attr
+                                               attr-ast
+                                               resolver-id)])))
           output-ast)))
 
-(defn wrap-select-output [{:biff.graph/keys [resolve-fn output-ast] :as resolver}]
+(defn wrap-select-output [{:biff.graph/keys [id resolve-fn output-ast] :as resolver}]
   (let [resolve-fn (fn [ctx]
                      (-> (resolve-fn ctx)
-                         (select-output output-ast)))]
+                         (select-output output-ast id)))]
     (assoc resolver :biff.graph/resolve-fn resolve-fn)))
 
 (defn wrap-validate [resolver]
