@@ -60,15 +60,15 @@
            :input      []
            :output     []
            :resolve-fn (fn [_ctx _input] {})}
-         opts)))
+          opts)))
 
 (deftest query->ast-validates-query-test
   (is (= (error-summary #(graph/query->ast [:*]))
          {:class   'java.lang.AssertionError
-          :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\" \"invalid type\" \"unknown error\" \"invalid type\"]]"
+          :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\"]]"
           :data    nil
           :causes  [{:class   'java.lang.AssertionError
-                     :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\" \"invalid type\" \"unknown error\" \"invalid type\"]]"
+                     :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\"]]"
                      :data    nil}]
           :stack   [{:fn   'com.biffweb.graph.impl/query->ast
                      :file "impl.clj"}
@@ -273,10 +273,10 @@
 (deftest query-validates-query-test
   (is (= (error-summary #(graph/query {} [:*]))
          {:class   'java.lang.AssertionError
-          :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\" \"invalid type\" \"unknown error\" \"invalid type\"]]"
+          :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\"]]"
           :data    nil
           :causes  [{:class   'java.lang.AssertionError
-                     :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\" \"invalid type\" \"unknown error\" \"invalid type\"]]"
+                     :message "`:biff.graph/query [:*]` is invalid: [[\"should not be :*\"]]"
                      :data    nil}]
           :stack   [{:fn   'com.biffweb.graph.impl/query
                      :file "impl.clj"}
@@ -286,10 +286,10 @@
 (deftest query-validates-input-test
   (is (= (error-summary #(graph/query {} :invalid-input [:x]))
          {:class   'java.lang.AssertionError
-          :message "`:biff.graph/input :invalid-input` is invalid: [\"invalid type\" \"should be a map\"]"
+          :message "`:biff.graph/input :invalid-input` is invalid: invalid type"
           :data    nil
           :causes  [{:class   'java.lang.AssertionError
-                     :message "`:biff.graph/input :invalid-input` is invalid: [\"invalid type\" \"should be a map\"]"
+                     :message "`:biff.graph/input :invalid-input` is invalid: invalid type"
                      :data    nil}]
           :stack   [{:fn   'com.biffweb.graph.impl/query
                      :file "impl.clj"}

@@ -18,7 +18,9 @@
   (throw (AssertionError. (str/join "" message-parts))))
 
 (defn- humanize-explanation [explanation]
-  (let [message (malli.e/humanize explanation)]
+  (let [message (-> explanation
+                    (update :errors #(take 1 %))
+                    malli.e/humanize)]
     (cond
       (malli/validate [:tuple :string] message) (first message)
       (string? message) message
