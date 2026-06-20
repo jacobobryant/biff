@@ -293,10 +293,10 @@
                                    resolver-id (keyword "com.biffweb.sqlite"
                                                         (str (name table-key) "-resolver"))]]
        (biff.graph/resolver
-        {:id      resolver-id
-         :input   [pk-key]
-         :output  output
-         :batch   true
+        {:id         resolver-id
+         :input      [pk-key]
+         :output     output
+         :batch      true
          :resolve-fn (fn [ctx inputs]
                        (let [ids         (mapv pk-key inputs)
                              results     (execute ctx {:select :*

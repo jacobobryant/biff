@@ -7,7 +7,7 @@
 - [uuid7](#uuid7)
 
 ```
-Remove effects from your application logic with state machines.
+Turn your functions into pure state machines.
 
 SCHEMA
 

@@ -628,13 +628,13 @@
           ctx  {:biff.sqlite/read-pool  *read-pool*
                 :biff.sqlite/write-conn *write-conn*
                 :biff.sqlite/columns    cols}
-	          env  (biff.graph/new-env (biff.sqlite/make-resolvers ctx))]
-	      (is (= {:article/title  "Post"
-	              :article/author {:user/name "Alice"}}
-	             (biff.graph/query (merge ctx env)
-	                               {:article/id "a1"}
-	                               [:article/title
-	                                {:article/author [:user/name]}]))))))
+          env  (biff.graph/new-env (biff.sqlite/make-resolvers ctx))]
+      (is (= {:article/title  "Post"
+              :article/author {:user/name "Alice"}}
+             (biff.graph/query (merge ctx env)
+                               {:article/id "a1"}
+                               [:article/title
+                                {:article/author [:user/name]}]))))))
 
 (deftest make-resolvers-nil-values-test
   (testing "resolver does not return keys with nil values"

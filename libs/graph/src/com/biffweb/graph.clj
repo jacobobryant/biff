@@ -21,10 +21,10 @@
                                [:biff.graph/output-ast]
                                [:biff.graph/resolve-fn]
                                [:biff.graph/batch {:optional true}]]
-  :biff.graph/attr->resolvers  [:map-of :keyword [:sequential :biff.graph/resolver]]
-  :biff.graph/attr->shape      [:map-of :keyword [:map
-                                                  [:kind [:enum :scalar :join]]
-                                                  [:wildcard {:optional true} :boolean]]]
+  :biff.graph/attr->resolvers [:map-of :keyword [:sequential :biff.graph/resolver]]
+  :biff.graph/attr->shape     [:map-of :keyword [:map
+                                                 [:kind [:enum :scalar :join]]
+                                                 [:wildcard {:optional true} :boolean]]]
   :biff.graph/cache           [:fn #(or (instance? clojure.lang.IAtom %)
                                         (instance? clojure.lang.Volatile %))]
   :biff.graph/get-env         'ifn?
