@@ -152,14 +152,12 @@
       (profile! ctx route-id #(handler ctx)))))
 
 (defn wrap-resolver-profiling
-  "Middleware function for biff.graph/build-index.
-   Wraps a resolver's :resolve function with tufte profiling."
   [resolver]
-  (let [id           (:id resolver)
-        orig-resolve (:resolve resolver)]
-    (assoc resolver :resolve
-           (fn [ctx input]
-             (profile! ctx (str id) #(orig-resolve ctx input))))))
+  (let [id         (:biff.graph/id resolver)
+        resolve-fn (:biff.graph/resolve-fn resolver)]
+    (assoc resolver :biff.graph/resolve-fn
+           (fn [ctx]
+             (profile! ctx (str id) #(resolve-fn ctx))))))
 
 ;; ============================================================
 ;; Usage metrics

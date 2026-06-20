@@ -14,6 +14,7 @@
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [com.biffweb.core :as biff.core]
+   [com.biffweb.graph :as biff.graph]
    [com.biffweb.sqlite.impl.authorize :as authorize]
    [com.biffweb.sqlite.impl.execute :as exec]
    [com.biffweb.sqlite.impl.litestream :as litestream]
@@ -291,26 +292,27 @@
                                                             join-mappings)))
                                    resolver-id (keyword "com.biffweb.sqlite"
                                                         (str (name table-key) "-resolver"))]]
-       {:id      resolver-id
-        :input   [pk-key]
-        :output  output
-        :batch   true
-        :resolve (fn [ctx inputs]
-                   (let [ids         (mapv pk-key inputs)
-                         results     (execute ctx {:select :*
-                                                   :from   table-key
-                                                   :where  [:in pk-key ids]})
-                         process-row (fn [row]
-                                       (let [row (dissoc row pk-key)
-                                             row (reduce
-                                                  (fn [row {:keys [join-key col-key ref-key]}]
-                                                    (let [ref-val (get row col-key)]
-                                                      (cond-> row
-                                                        (some? ref-val) (assoc join-key {ref-key ref-val}))))
-                                                  row
-                                                  join-mappings)]
-                                         (into {} (filter (fn [[_ v]] (some? v))) row)))
-                         id->result  (into {} (map (juxt pk-key process-row)) results)]
-                     (mapv (fn [input]
-                             (get id->result (get input pk-key) {}))
-                           inputs)))}))))
+       (biff.graph/resolver
+        {:id      resolver-id
+         :input   [pk-key]
+         :output  output
+         :batch   true
+         :resolve-fn (fn [ctx inputs]
+                       (let [ids         (mapv pk-key inputs)
+                             results     (execute ctx {:select :*
+                                                       :from   table-key
+                                                       :where  [:in pk-key ids]})
+                             process-row (fn [row]
+                                           (let [row (dissoc row pk-key)
+                                                 row (reduce
+                                                      (fn [row {:keys [join-key col-key ref-key]}]
+                                                        (let [ref-val (get row col-key)]
+                                                          (cond-> row
+                                                            (some? ref-val) (assoc join-key {ref-key ref-val}))))
+                                                      row
+                                                      join-mappings)]
+                                             (into {} (filter (fn [[_ v]] (some? v))) row)))
+                             id->result  (into {} (map (juxt pk-key process-row)) results)]
+                         (mapv (fn [input]
+                                 (get id->result (get input pk-key) {}))
+                               inputs)))})))))

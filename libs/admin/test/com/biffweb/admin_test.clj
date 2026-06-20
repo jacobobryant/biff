@@ -84,18 +84,21 @@
 
 (deftest wrap-resolver-profiling-test
   (testing "wraps resolver resolve function"
-    (let [resolver {:id      :test/resolver
-                    :resolve (fn [_ctx input] {:result (:value input)})}
+    (let [resolver {:biff.graph/id         :test/resolver
+                    :biff.graph/resolve-fn (fn [{:biff.graph/keys [input]}]
+                                             {:result (:value input)})}
           wrapped  (admin/wrap-resolver-profiling resolver)]
-      (is (= :test/resolver (:id wrapped)))
-      (is (fn? (:resolve wrapped)))))
+      (is (= :test/resolver (:biff.graph/id wrapped)))
+      (is (fn? (:biff.graph/resolve-fn wrapped)))))
 
   (testing "wrapped resolver returns correct result"
-    (let [resolver {:id      :test/resolver
-                    :resolve (fn [_ctx input] {:result (:value input)})}
+    (let [resolver {:biff.graph/id         :test/resolver
+                    :biff.graph/resolve-fn (fn [{:biff.graph/keys [input]}]
+                                             {:result (:value input)})}
           wrapped  (admin/wrap-resolver-profiling resolver)
-          ctx      {:biff.admin/pstats (atom nil)}
-          result   ((:resolve wrapped) ctx {:value 42})]
+          ctx      {:biff.admin/pstats (atom nil)
+                    :biff.graph/input  {:value 42}}
+          result   ((:biff.graph/resolve-fn wrapped) ctx)]
       (is (= {:result 42} result)))))
 
 (deftest flush-pstats-test

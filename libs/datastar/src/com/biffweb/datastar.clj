@@ -143,7 +143,9 @@
       (.unlock ^ReentrantLock lock))))
 
 (defn- attach-tab-id [req]
-  (assoc req :biff.datastar/tab-id (get-in req [:biff.datastar/signals :tabId])))
+  (into req
+        (filter (comp some? val))
+        {:biff.datastar/tab-id (get-in req [:biff.datastar/signals :tabId])}))
 
 (defn- response-map [response]
   (when-not (map? response)

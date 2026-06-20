@@ -550,23 +550,22 @@
 (deftest make-resolvers-shape-test
   (testing "returns one resolver per table with correct structure"
     (let [resolvers (biff.sqlite/make-resolvers {:biff.sqlite/columns resolver-columns})
-          by-id     (into {} (map (juxt :id identity)) resolvers)]
+          by-id     (into {} (map (juxt :biff.graph/id identity)) resolvers)]
       (is (= 2 (count resolvers)))
-      ;; User resolver
       (let [r (by-id :com.biffweb.sqlite/user-resolver)]
         (is (some? r))
-        (is (= [:user/id] (:input r)))
-        (is (= true (:batch r)))
-        (is (every? #{:user/name :user/joined-at} (:output r)))
-        (is (not (contains? (set (:output r)) :user/id))))
-      ;; Post resolver
+        (is (= #{:user/id} (set (keys (:biff.graph/input-ast r)))))
+        (is (= true (:biff.graph/batch r)))
+        (is (every? #{:user/name :user/joined-at}
+                    (keys (:biff.graph/output-ast r))))
+        (is (not (contains? (:biff.graph/output-ast r) :user/id))))
       (let [r (by-id :com.biffweb.sqlite/post-resolver)]
         (is (some? r))
-        (is (= [:post/id] (:input r)))
-        (is (= true (:batch r)))
-        (is (contains? (set (:output r)) :post/title))
-        (is (contains? (set (:output r)) :post/author-id))
-        (is (contains? (set (:output r)) {:post/author [:user/id]}))))))
+        (is (= #{:post/id} (set (keys (:biff.graph/input-ast r)))))
+        (is (= true (:biff.graph/batch r)))
+        (is (contains? (:biff.graph/output-ast r) :post/title))
+        (is (contains? (:biff.graph/output-ast r) :post/author-id))
+        (is (contains? (:biff.graph/output-ast r) :post/author))))))
 
 (deftest make-resolvers-batch-resolve-test
   (testing "batch resolve returns correct data and join keys"
@@ -577,8 +576,9 @@
                          :biff.sqlite/write-conn *write-conn*
                          :biff.sqlite/columns    resolver-columns}
           resolvers     (biff.sqlite/make-resolvers ctx)
-          post-resolver (first (filter #(= :com.biffweb.sqlite/post-resolver (:id %)) resolvers))
-          results       ((:resolve post-resolver) ctx [{:post/id "p1"} {:post/id "p2"}])]
+          post-resolver (first (filter #(= :com.biffweb.sqlite/post-resolver (:biff.graph/id %)) resolvers))
+          results       ((:biff.graph/resolve-fn post-resolver)
+                         (assoc ctx :biff.graph/input [{:post/id "p1"} {:post/id "p2"}]))]
       (is (= 2 (count results)))
       (is (= "Hello" (:post/title (first results))))
       (is (= "World" (:post/title (second results))))
@@ -593,8 +593,9 @@
                          :biff.sqlite/write-conn *write-conn*
                          :biff.sqlite/columns    resolver-columns}
           resolvers     (biff.sqlite/make-resolvers ctx)
-          user-resolver (first (filter #(= :com.biffweb.sqlite/user-resolver (:id %)) resolvers))
-          results       ((:resolve user-resolver) ctx [{:user/id "u1"} {:user/id "nonexistent"}])]
+          user-resolver (first (filter #(= :com.biffweb.sqlite/user-resolver (:biff.graph/id %)) resolvers))
+          results       ((:biff.graph/resolve-fn user-resolver)
+                         (assoc ctx :biff.graph/input [{:user/id "u1"} {:user/id "nonexistent"}]))]
       (is (= 2 (count results)))
       (is (= "Alice" (:user/name (first results))))
       (is (= {} (second results))))))
@@ -612,7 +613,7 @@
                      {:biff.sqlite/columns {:item/id    {:type :text :primary-key true}
                                             :item/label {:type :text}}})
           r         (first resolvers)]
-      (is (= [:item/label] (:output r))))))
+      (is (= #{:item/label} (set (keys (:biff.graph/output-ast r))))))))
 
 (deftest make-resolvers-graph-join-test
   (testing "generated ref joins work with biff.graph"
@@ -627,13 +628,13 @@
           ctx  {:biff.sqlite/read-pool  *read-pool*
                 :biff.sqlite/write-conn *write-conn*
                 :biff.sqlite/columns    cols}
-          idx  (biff.graph/build-index (biff.sqlite/make-resolvers ctx))]
-      (is (= {:article/title  "Post"
-              :article/author {:user/name "Alice"}}
-             (biff.graph/query (assoc ctx :biff.graph/index idx)
-                               {:article/id "a1"}
-                               [:article/title
-                                {:article/author [:user/name]}]))))))
+	          env  (biff.graph/new-env (biff.sqlite/make-resolvers ctx))]
+	      (is (= {:article/title  "Post"
+	              :article/author {:user/name "Alice"}}
+	             (biff.graph/query (merge ctx env)
+	                               {:article/id "a1"}
+	                               [:article/title
+	                                {:article/author [:user/name]}]))))))
 
 (deftest make-resolvers-nil-values-test
   (testing "resolver does not return keys with nil values"
@@ -648,12 +649,11 @@
                      :biff.sqlite/columns    cols}
           resolvers (biff.sqlite/make-resolvers ctx)
           r         (first resolvers)
-          results   ((:resolve r) ctx [{:entry/id "e1"} {:entry/id "e2"}])]
-      ;; e1 has all nil values, so result should have no keys (just empty from id->result)
+          results   ((:biff.graph/resolve-fn r)
+                     (assoc ctx :biff.graph/input [{:entry/id "e1"} {:entry/id "e2"}]))]
       (is (not (contains? (first results) :entry/title)))
       (is (not (contains? (first results) :entry/author-id)))
       (is (not (contains? (first results) :entry/author)))
-      ;; e2 has values, so all keys present
       (is (= "Hello" (:entry/title (second results))))
       (is (= "u1" (:entry/author-id (second results))))
       (is (= {:user/id "u1"} (:entry/author (second results)))))))

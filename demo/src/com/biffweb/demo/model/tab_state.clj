@@ -1,5 +1,6 @@
 (ns com.biffweb.demo.model.tab-state
-  (:require [com.biffweb.sqlite :as biff.sqlite]))
+  (:require [com.biffweb.graph :as biff.graph]
+            [com.biffweb.sqlite :as biff.sqlite]))
 
 (def ui-state-fields
   [:todo/filter :todo/show-archived])
@@ -12,13 +13,13 @@
   (when (and (:uid session) tab-id)
     (str (:uid session) ":" tab-id)))
 
-(defn tab-state-id
+(biff.graph/defresolver tab-state-id
   {:output [:tab-state/id]}
   [ctx _]
   (when-some [id (tab-state-key ctx)]
     {:tab-state/id id}))
 
-(defn tab-state
+(biff.graph/defresolver tab-state
   {:output [{:session/tab-state ui-state-fields}]}
   [ctx _]
   (when-some [id (tab-state-key ctx)]
@@ -32,4 +33,4 @@
       {:session/tab-state (merge default-ui-state (or data {}))})))
 
 (def module
-  {:biff.graph/resolvers [#'tab-state-id #'tab-state]})
+  {:biff.graph/resolvers [tab-state-id tab-state]})
