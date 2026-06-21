@@ -153,6 +153,9 @@
      A map of Malli schemas. Can be used to define schema without modifying the
      global registry by calling biff.core/register.
 
+   :error-data
+     Data that will be serialized into the error message.
+
    For convenience, m can be a sequence of maps instead of a single map."
   {:arglists '([m & {:keys [required extra-schema]}])}
   [& args]

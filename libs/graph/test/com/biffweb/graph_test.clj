@@ -49,6 +49,48 @@
   (is (= {:user/friends [{:user/name "Bob"}]}
          (graph/query env {:user/id 1} [{:user/friends [:user/name]}]))))
 
+(deftest nested-input-test
+  (let [env (graph/new-env
+             [(graph/resolver
+               {:id         :test/nested
+                :input      [{:x [:y]}]
+                :output     [:z]
+                :resolve-fn (fn [_ctx {:keys [x]}]
+                              {:z (if (sequential? x)
+                                    (mapv :y x)
+                                    (:y x))})})])]
+    (is (= {:x {:y 1}}
+           (graph/query env {:x {:y 1 :extra 2}} [{:x [:y]}])))
+    (is (= {:x [{:y 1} {:y 2}]}
+           (graph/query env {:x [{:y 1 :extra 2} {:y 2}]} [{:x [:y]}])))
+    (is (= {:z 1}
+           (graph/query env {:x {:y 1 :extra 2}} [:z])))
+    (is (= {:z [1 2]}
+           (graph/query env {:x [{:y 1 :extra 2} {:y 2}]} [:z])))))
+
+(deftest invalid-input-shape-test
+  (let [env (graph/new-env
+             [(graph/resolver
+               {:id         :test/join
+                :output     [{:x [:y]}]
+                :resolve-fn (fn [_ctx _input] {})})
+              (graph/resolver
+               {:id         :test/scalar
+                :output     [:z]
+                :resolve-fn (fn [_ctx _input] {})})])]
+    (is (thrown-with-msg?
+         AssertionError
+         #"Input attr :x is a join but value is a scalar"
+         (graph/query env {:x 1} [:z])))
+    (is (thrown-with-msg?
+         AssertionError
+         #"Input attr :z is a scalar but value is a join"
+         (graph/query env {:z {:a 1}} [:z])))
+    (is (thrown-with-msg?
+         AssertionError
+         #"Input attr :z is a scalar but value is a join"
+         (graph/query env {:x {:z {:a 1}}} [{:x [:y]}])))))
+
 (deftest derived-query-test
   (is (= {:user/greeting "Hi Alice"}
          (graph/query env {:user/id 1} [:user/greeting]))))

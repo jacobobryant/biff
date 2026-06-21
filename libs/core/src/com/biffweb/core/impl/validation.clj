@@ -1,5 +1,6 @@
 (ns com.biffweb.core.impl.validation
   (:require [clojure.string :as str]
+            [clojure.pprint :as pprint]
             [malli.core :as malli]
             [malli.error :as malli.e]
             [malli.registry :as malli.r]))
@@ -35,17 +36,27 @@
 (defn- value-str [x]
   (truncate-str (pr-str x) 50))
 
-(defn- validate-map [m {:keys [required biff-registry malli-registry]}]
-  (when-some [missing (not-empty (remove #(contains? m %) required))]
-    (assertion-error "Missing required key"
-                     (when (< 1 (count missing)) "s")
-                     ": "
-                     (str/join ", " (mapv pr-str missing))))
-  (doseq [[k v] (select-keys m (keys biff-registry))
-          :when (not (malli/validate k v {:registry malli-registry}))
-          :let  [explanation (malli/explain k v {:registry malli-registry})
-                 message     (humanize-explanation explanation)]]
-    (assertion-error "`" (pr-str k) " " (value-str v) "` is invalid: " message)))
+(defn pprint-str [x]
+  (str/trim
+   (with-out-str
+    (binding [*print-namespace-maps* false]
+      (pprint/pprint x)))))
+
+(defn- validate-map [m {:keys [required biff-registry malli-registry error-data]}]
+  (let [error-data-str (when error-data
+                         (str "\n" (pprint-str error-data)))]
+    (when-some [missing (not-empty (remove #(contains? m %) required))]
+      (assertion-error "Missing required key"
+                       (when (< 1 (count missing)) "s")
+                       ": "
+                       (str/join ", " (mapv pr-str missing))
+                       error-data-str))
+    (doseq [[k v] (select-keys m (keys biff-registry))
+            :when (not (malli/validate k v {:registry malli-registry}))
+            :let  [explanation (malli/explain k v {:registry malli-registry})
+                   message     (humanize-explanation explanation)]]
+      (assertion-error "`" (pr-str k) " " (value-str v) "` is invalid: " message
+                       error-data-str))))
 
 (defn validate*
   [m-or-seq & {:keys [extra-schema] :as opts}]

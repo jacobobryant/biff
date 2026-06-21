@@ -22,6 +22,14 @@
                  "  :output []"
                  "  :resolve-fn (fn [_ctx _input] {})})")}
 
+   {:title "Invalid Resolver Query"
+    :code  (code "(require '[com.biffweb.graph :as graph])"
+                 ""
+                 "(graph/resolver"
+                 " {:id :example/x"
+                 "  :output [:*]"
+                 "  :resolve-fn (fn [_ctx _input] {})})")}
+
    {:title "Invalid defresolver"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
@@ -100,11 +108,23 @@
                  ""
                  "(graph/query env '({}) [{:x [:y]}])")}
 
+   {:title "Conflicting Query Input Shape"
+    :code  (code "(require '[com.biffweb.graph :as graph])"
+                 ""
+                 "(def env"
+                 "  (graph/new-env"
+                 "   [(graph/resolver"
+                 "     {:id :example/x"
+                 "      :output [{:x [:y]} :z]"
+                 "      :resolve-fn (fn [_ctx _input] {})})]))"
+                 ""
+                 "(graph/query env {:x 1} [:z])")}
+
    {:title "Invalid get-env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
-                 "              :biff.graph/attr->shape {}"
+                 "              :biff.graph/attr->shape-info {}"
                  "              :biff.graph/get-env :not-a-function}"
                  "             [])")}
 
@@ -115,7 +135,10 @@
                  "              {:x [{:biff.graph/id :example/bad"
                  "                    :biff.graph/output-ast {:x {:kind :scalar}}"
                  "                    :biff.graph/resolve-fn (fn [_ctx] {})}]}"
-                 "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
+                 "              :biff.graph/attr->shape-info"
+                 "              {:x {:biff.graph/id :example/bad"
+                 "                   :biff.graph/attr :x"
+                 "                   :biff.graph/attr-shape {:kind :scalar}}}}"
                  "             [:x])")}
 
    {:title "Conflicting Join Cardinalities"
@@ -124,13 +147,19 @@
                  "(def env"
                  "  (graph/new-env"
                  "   [(graph/resolver"
-                 "     {:id :example/x"
+                 "     {:id :example/x-one"
                  "      :input [:id]"
                  "      :output [{:x [:y]}]"
                  "      :resolve-fn (fn [_ctx {:keys [id]}]"
-                 "                    {:x (if (= id 1)"
-                 "                          {:y 1}"
-                 "                          [{:y 2}])})})]))"
+                 "                    (when (= id 1)"
+                 "                      {:x {:y 1}}))})"
+                 "    (graph/resolver"
+                 "     {:id :example/x-many"
+                 "      :input [:id]"
+                 "      :output [{:x [:y]}]"
+                 "      :resolve-fn (fn [_ctx {:keys [id]}]"
+                 "                    (when (= id 2)"
+                 "                      {:x [{:y 2}]}))})]))"
                  ""
                  "(graph/query env [{:id 1} {:id 2}] [{:x [:y]}])")}
 
@@ -153,14 +182,18 @@
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
-                 "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
+                 "              :biff.graph/attr->shape-info"
+                 "              {:x {:biff.graph/attr :x"
+                 "                   :biff.graph/attr-shape {:kind :scalar}}}}"
                  "             [{:x [:y]}])")}
 
    {:title "Unresolved Required Attribute"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
-                 "              :biff.graph/attr->shape {:x {:kind :scalar}}}"
+                 "              :biff.graph/attr->shape-info"
+                 "              {:x {:biff.graph/attr :x"
+                 "                   :biff.graph/attr-shape {:kind :scalar}}}}"
                  "             [:x])")}])
 
 (def ^:private eof (Object.))
@@ -174,7 +207,7 @@
           (recur (conj forms form)))))))
 
 (defn- eval-code [s]
-  (let [ns-sym (symbol (str "com.biffweb.graph.tasks.errors.examples." (gensym)))
+  (let [ns-sym (symbol (str "com.biffweb.graph.error-example." (gensym)))
         ns     (create-ns ns-sym)]
     (try
       (binding [*ns* ns]

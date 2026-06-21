@@ -79,8 +79,18 @@
   (fn [ctx]
     (f ctx (:biff.graph/input ctx))))
 
+(defn- validate-resolver [m]
+  (biff.core/validate m {:required   [:biff.graph/id
+                                      :biff.graph/input-ast
+                                      :biff.graph/output-ast
+                                      :biff.graph/resolve-fn]
+                         :error-data (select-keys m [:biff.graph/id])}))
+
 (defn resolver [{:keys [id input output batch resolve-fn]}]
-  (biff.core/validate
+  (biff.core/validate {:biff.graph/input-query  (or input [])
+                       :biff.graph/output-query (or output [])}
+                      {:error-data {:biff.graph/id id}})
+  (validate-resolver
    {:biff.graph/id         id
     :biff.graph/input-ast  (query->ast (or input []))
     :biff.graph/output-ast (query->ast (or output []))
@@ -157,10 +167,12 @@
                          (select-output output-ast id)))]
     (assoc resolver :biff.graph/resolve-fn resolve-fn)))
 
-(defn wrap-validate [resolver]
-  (update resolver :biff.graph/resolve-fn (fn [f]
-                                            (fn [input]
-                                              (biff.core/validate (f input))))))
+(defn wrap-validate-output [{:biff.graph/keys [id resolve-fn] :as resolver}]
+  (assoc resolver
+         :biff.graph/resolve-fn
+         (fn [ctx]
+           (biff.core/validate (resolve-fn ctx)
+                               {:error-data {:biff.graph/id id}}))))
 
 (defn- update-cache! [cache f & args]
   (if (instance? clojure.lang.Volatile cache)
@@ -212,36 +224,43 @@
        (map (fn [[attr info]]
               [attr (select-keys info [:kind :wildcard])]))))
 
-(defn attr-shapes [query-asts]
-  (into {}
-        (mapcat ast-seq)
-        query-asts))
+(defn- shape-info [resolvers]
+  (for [resolver     resolvers
+        query-ast    [(:biff.graph/input-ast resolver)
+                      (:biff.graph/output-ast resolver)]
+        [attr shape] (ast-seq query-ast)]
+    {:biff.graph/attr       attr
+     :biff.graph/attr-shape shape
+     :biff.graph/id         (:biff.graph/id resolver)}))
 
-(defn validate-query [attr->shape query-ast]
-  (doseq [[attr shape] (ast-seq query-ast)]
-    (assert (= shape (get attr->shape attr))
-            (str attr " has conflicting shapes: "
-                 (pr-str shape)
-                 ", "
-                 (pr-str (get attr->shape attr))))))
+(defn validate-query [{:biff.graph/keys [id query-ast attr->shape-info]}]
+  (doseq [[attr shape] (ast-seq query-ast)
+          :let         [{expected-shape :biff.graph/attr-shape
+                         source-id      :biff.graph/id}
+                        (get attr->shape-info attr)]]
+    (assert (= shape expected-shape)
+            (str "Got conflicting attr shapes for " attr ": "
+                 (pr-str shape) " (from " (or id "query") "), "
+                 (pr-str expected-shape) " (from " source-id ")"))))
 
 (defn new-env [resolvers & {:keys [middleware]}]
-  (let [middleware  (into [wrap-cache
-                           wrap-validate
-                           wrap-select-output]
-                          middleware)
-        resolvers   (biff.core/validate
-                     (mapv (apply comp middleware) resolvers)
-                     {:required [:biff.graph/id
-                                 :biff.graph/output-ast
-                                 :biff.graph/resolve-fn]})
-        all-queries (into []
-                          (mapcat (juxt :biff.graph/input-ast
-                                        :biff.graph/output-ast))
-                          resolvers)
-        attr->shape (attr-shapes all-queries)]
-    (run! #(validate-query attr->shape %) all-queries)
-    {:biff.graph/attr->shape attr->shape
+  (run! validate-resolver resolvers)
+  (let [middleware       (into [wrap-cache
+                                wrap-validate-output
+                                wrap-select-output]
+                               middleware)
+        resolvers        (mapv (apply comp middleware) resolvers)
+        _                (run! validate-resolver resolvers)
+        attr->shape-info (into {}
+                               (map (juxt :biff.graph/attr identity))
+                               (shape-info resolvers))]
+    (doseq [r         resolvers
+            query-key [:biff.graph/input-ast :biff.graph/output-ast]]
+      (validate-query {:biff.graph/id               (:biff.graph/id r)
+                       :biff.graph/query-ast        (get r query-key)
+                       :biff.graph/attr->shape-info attr->shape-info}))
+    {:biff.graph/attr->shape-info
+     attr->shape-info
 
      :biff.graph/attr->resolvers
      (->> (for [r    resolvers
@@ -279,10 +298,10 @@
                                                       (:biff.graph/input-ast resolver)
                                                       (conj resolving-attrs attr))
 
-                [valid-idxs valid-inputs]
-                (->> (mapv vector unresolved-idxs inputs)
-                     (filterv (comp not ::unresolved second))
-                     (apply mapv vector))
+                valid-pairs         (->> (mapv vector unresolved-idxs inputs)
+                                         (filterv (comp not ::unresolved second)))
+                valid-idxs          (mapv first valid-pairs)
+                valid-inputs        (mapv second valid-pairs)
 
                 {:biff.graph/keys [batch resolve-fn]}
                 resolver
@@ -311,16 +330,18 @@
            [0 []]
            sizes)))
 
-(defn resolve-joins [ctx join-values query-ast]
-  (let [all-maps?        (every? (some-fn map? nil?) join-values)
-        all-seqs?        (every? (some-fn sequential? nil?) join-values)
-        _                (when-not (or all-maps? all-seqs?)
-                           (throw (ex-info "Got conflicting cardinalities" {})))
+(defn resolve-joins [ctx join-values attr children-ast]
+  (assert (every? some? join-values)
+          "Join values cannot be nil. Use {} or [] instead.")
+  (let [all-maps?        (every? map? join-values)
+        all-seqs?        (every? sequential? join-values)
+        _                (assert (or all-maps? all-seqs?)
+                                 (str "Got conflicting cardinalities for " attr))
         value-sizes      (when all-seqs? (mapv count join-values))
         flat-join-values (if all-maps?
                            join-values
                            (into [] (mapcat identity) join-values))
-        flat-results     (resolve-entities ctx flat-join-values query-ast #{})]
+        flat-results     (resolve-entities ctx flat-join-values children-ast #{})]
     (if all-maps?
       (mapv (fn [result]
               (if (::unresolved result)
@@ -333,6 +354,27 @@
                 results))
             (partition-by-sizes flat-results value-sizes)))))
 
+(defn- validate-input-value [attr->shape-info attr value]
+  (when-some [{:biff.graph/keys [attr-shape]} (get attr->shape-info attr)]
+    (case (:kind attr-shape)
+      :join (assert (join-value? value)
+                    (str "Input attr " attr " is a join but value is a scalar"))
+      :scalar (assert (scalar-value? value)
+                      (str "Input attr " attr " is a scalar but value is a join")))))
+
+(defn validate-input [attr->shape-info input]
+  (letfn [(visit [entity]
+            (when (map? entity)
+              (doseq [[attr value] entity]
+                (validate-input-value attr->shape-info attr value)
+                (cond
+                  (map? value)
+                  (visit value)
+
+                  (sequential? value)
+                  (run! visit value)))))]
+    (run! visit input)))
+
 (defn resolve-entities [ctx input query-ast resolving-attrs]
   (reduce (fn [results [attr attr-ast]]
             (let [values (resolve-attr ctx
@@ -342,7 +384,7 @@
                   values (if (or (= (:kind attr-ast) :scalar)
                                  (:wildcard attr-ast))
                            values
-                           (resolve-joins ctx values (:children attr-ast)))]
+                           (resolve-joins ctx values attr (:children attr-ast)))]
               (mapv (fn [result value]
                       (cond
                         (not= value ::unresolved)
@@ -372,12 +414,15 @@
                                  (when get-env (get-env))
                                  {:biff.graph/cache (volatile! {})})
          _                (biff.core/validate ctx {:required [:biff.graph/attr->resolvers
-                                                              :biff.graph/attr->shape]})
+                                                              :biff.graph/attr->shape-info]})
          query-ast        (query->ast query*)
-         _                (validate-query (:biff.graph/attr->shape ctx)
-                                          query-ast)
+         _                (validate-query
+                           {:biff.graph/attr->shape-info (:biff.graph/attr->shape-info ctx)
+                            :biff.graph/query-ast        query-ast})
          sequential-input (sequential? input)
          input            (if sequential-input input [input])
+         _                (validate-input (:biff.graph/attr->shape-info ctx)
+                                          input)
          resolving-attrs  #{}
          results          (resolve-entities ctx input query-ast resolving-attrs)]
      (doseq [entity results
