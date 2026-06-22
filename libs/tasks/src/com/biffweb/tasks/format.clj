@@ -31,7 +31,8 @@
   (merge
    {:align-form-columns? true
     :align-map-columns?  true
-    :extra-aligned-forms {'let #{0}}}
+    :extra-aligned-forms {'let #{0}}
+    :blank-lines-separate-alignment? true}
    (project-config)))
 
 (defn- write-config-file! [config]

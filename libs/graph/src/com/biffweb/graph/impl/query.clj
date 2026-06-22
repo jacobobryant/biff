@@ -83,13 +83,13 @@
 (defn resolve-joins [ctx join-values attr children-ast]
   (assert (every? some? join-values)
           "Join values cannot be nil. Use {} or [] instead.")
-  (let [all-maps?        (every? map? join-values)
-        all-seqs?        (every? sequential? join-values)
+  (let [all-maps? (every? map? join-values)
+        all-seqs? (every? sequential? join-values)
+        _         (assert (or all-maps? all-seqs?)
+                          (str "Got conflicting cardinalities for " attr
+                               ". The value should either always be a "
+                               "map or always be a sequence of maps."))
 
-        _                (assert (or all-maps? all-seqs?)
-                                 (str "Got conflicting cardinalities for " attr
-                                      ". The value should either always be a "
-                                      "map or always be a sequence of maps."))
         value-sizes      (when all-seqs? (mapv count join-values))
         flat-join-values (if all-maps?
                            join-values

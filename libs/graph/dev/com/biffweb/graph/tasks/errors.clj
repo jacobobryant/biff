@@ -120,6 +120,19 @@
                  ""
                  "(graph/query env {:x 1} [:z])")}
 
+   {:title "Resolver Throws Exception"
+    :code  (code "(require '[com.biffweb.graph :as graph])"
+                 ""
+                 "(def env"
+                 "  (graph/new-env"
+                 "   [(graph/resolver"
+                 "     {:id :example/a"
+                 "      :output [:a]"
+                 "      :resolve-fn (fn [_ctx _input]"
+                 "                    (throw (ex-info \"Boom\" {:detail 1})))})]))"
+                 ""
+                 "(graph/query env [:a])")}
+
    {:title "Invalid get-env"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
@@ -184,7 +197,8 @@
                  "(graph/query {:biff.graph/attr->resolvers {}"
                  "              :biff.graph/attr->shape-info"
                  "              {:x {:biff.graph/attr :x"
-                 "                   :biff.graph/attr-shape {:kind :scalar}}}}"
+                 "                   :biff.graph/attr-shape {:kind :scalar}"
+                 "                   :biff.graph/id :example/x}}}"
                  "             [{:x [:y]}])")}
 
    {:title "Unresolved Required Attribute"
@@ -286,14 +300,30 @@
           trim-task-frames
           wrap-root-lines))))
 
+(defn- split-root-stack-trace [s]
+  (let [lines          (str/split-lines s)
+        [body stack]   (split-with #(not= "Root stack trace:" %) lines)
+        formatted-body (str/join "\n" (reverse (drop-while str/blank? (reverse body))))]
+    (if (seq stack)
+      [formatted-body (str/join "\n" stack)]
+      [s nil])))
+
 (defn- markdown-for [{:keys [title code]}]
-  (str "## " title "\n\n"
-       "```clojure\n"
-       code
-       "\n```\n\n"
-       "```\n"
-       (formatted-error title code)
-       "\n```\n"))
+  (let [[body stack] (split-root-stack-trace (formatted-error title code))]
+    (str "## " title "\n\n"
+         "```clojure\n"
+         code
+         "\n```\n\n"
+         "```\n"
+         body
+         "\n```\n"
+         (when stack
+           (str "\n<details>\n"
+                "<summary>Root stack trace</summary>\n\n"
+                "```\n"
+                stack
+                "\n```\n"
+                "</details>\n")))))
 
 (defn error-examples []
   (let [file (io/file "docs/error-examples.md")]
