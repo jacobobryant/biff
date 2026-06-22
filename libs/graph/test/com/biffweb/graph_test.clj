@@ -1,5 +1,5 @@
 (ns com.biffweb.graph-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [com.biffweb.graph :as graph]))
 
 (graph/defresolver user-by-id
@@ -47,7 +47,9 @@
 
 (deftest nested-query-test
   (is (= {:user/friends [{:user/name "Bob"}]}
-         (graph/query env {:user/id 1} [{:user/friends [:user/name]}]))))
+         (graph/query env {:user/id 1} [{:user/friends [:user/name]}])))
+  (is (= {:user/friends []}
+         (graph/query env {:user/id 2} [{:user/friends [:user/name]}]))))
 
 (deftest nested-input-test
   (let [env (graph/new-env
@@ -67,6 +69,35 @@
            (graph/query env {:x {:y 1 :extra 2}} [:z])))
     (is (= {:z [1 2]}
            (graph/query env {:x [{:y 1 :extra 2} {:y 2}]} [:z])))))
+
+(deftest unresolved-join-test
+  (let [calls (atom [])
+        env   (graph/new-env
+               [(graph/resolver
+                 {:id         :test/x
+                  :input      [:missing]
+                  :output     [{:x [:y]}]
+                  :resolve-fn (fn [_ctx _input]
+                                {:x {:y 1}})})
+                (graph/resolver
+                 {:id         :test/z
+                  :output     [:z]
+                  :resolve-fn (fn [_ctx _input]
+                                (swap! calls conj :z)
+                                {:z 1})})])]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Entity could not be fully resolved"
+         (graph/query env [{:x [:y]}])))
+    (is (= {:z 1}
+           (graph/query env [[:? {:x [:y]}] :z])))
+    (is (= [:z] @calls))
+    (reset! calls [])
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"Entity could not be fully resolved"
+         (graph/query env [{:x [:y]} :z])))
+    (is (= [] @calls))))
 
 (deftest invalid-input-shape-test
   (let [env (graph/new-env
@@ -90,6 +121,59 @@
          AssertionError
          #"Input attr :z is a scalar but value is a join"
          (graph/query env {:x {:z {:a 1}}} [{:x [:y]}])))))
+
+(deftest resolver-exception-test
+  (testing "top-level resolver exception"
+    (let [env (graph/new-env
+               [(graph/resolver
+                 {:id         :test/a
+                  :output     [:a]
+                  :resolve-fn (fn [_ctx _input]
+                                (throw (ex-info "boom" {:x 1})))})])
+          ex  (try
+                (graph/query env [:a])
+                nil
+                (catch clojure.lang.ExceptionInfo e
+                  e))]
+      (is (= "Resolver :test/a threw an exception"
+             (ex-message ex)))
+      (is (= {:biff.graph/trace [{:resolving :query
+                                  :path      [:a]}
+                                 {:resolving :test/a}]
+              :biff.graph/input {}}
+             (ex-data ex)))
+      (is (= "boom" (ex-message (ex-cause ex))))))
+  (testing "nested resolver input exception"
+    (let [env (graph/new-env
+               [(graph/resolver
+                 {:id         :test/b
+                  :output     [{:b [:seed]}]
+                  :resolve-fn (fn [_ctx _input] {})})
+                (graph/resolver
+                 {:id         :test/d
+                  :input      [:g]
+                  :output     [{:d [:ok]}]
+                  :resolve-fn (fn [_ctx _input] {})})
+                (graph/resolver
+                 {:id         :test/g
+                  :output     [:g]
+                  :resolve-fn (fn [_ctx _input]
+                                (throw (ex-info "nested boom" {})))})])
+          ex  (try
+                (graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])
+                nil
+                (catch clojure.lang.ExceptionInfo e
+                  e))]
+      (is (= "Resolver :test/g threw an exception"
+             (ex-message ex)))
+      (is (= {:biff.graph/trace [{:resolving :query
+                                  :path      [:b :d]}
+                                 {:resolving :test/d
+                                  :path      [:g]}
+                                 {:resolving :test/g}]
+              :biff.graph/input {}}
+             (ex-data ex)))
+      (is (= "nested boom" (ex-message (ex-cause ex)))))))
 
 (deftest derived-query-test
   (is (= {:user/greeting "Hi Alice"}
