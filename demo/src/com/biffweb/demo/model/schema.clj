@@ -3,8 +3,8 @@
             [com.biffweb.sqlite :as biff.sqlite]))
 
 (def columns
-  {:tab-state/data   {:type :edn}
-   :tab-state/id     {:type :text :primary-key true}
+  {:tab-state/data {:type :edn}
+   :tab-state/id   {:type :text :primary-key true}
 
    :todo/archived    {:type :boolean :required true :index true}
    :todo/archived-at {:type :inst}
@@ -15,9 +15,9 @@
    :todo/updated-at  {:type :inst :required true :index true}
    :todo/user-id     {:type :uuid :required true :ref :user/id :index true}
 
-   :user/email       {:type :text :required true :unique true}
-   :user/id          {:type :uuid :primary-key true}
-   :user/joined-at   {:type :inst :required true :index true}})
+   :user/email     {:type :text :required true :unique true}
+   :user/id        {:type :uuid :primary-key true}
+   :user/joined-at {:type :inst :required true :index true}})
 
 (defn only-fields-edited? [before after fields]
   (= (apply dissoc before fields)

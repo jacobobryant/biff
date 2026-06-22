@@ -39,8 +39,8 @@
 (defn pprint-str [x]
   (str/trim
    (with-out-str
-    (binding [*print-namespace-maps* false]
-      (pprint/pprint x)))))
+     (binding [*print-namespace-maps* false]
+       (pprint/pprint x)))))
 
 (defn- validate-map [m {:keys [required biff-registry malli-registry error-data]}]
   (let [error-data-str (when error-data
