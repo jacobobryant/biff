@@ -85,19 +85,60 @@
                   :resolve-fn (fn [_ctx _input]
                                 (swap! calls conj :z)
                                 {:z 1})})])]
-    (is (thrown-with-msg?
-         clojure.lang.ExceptionInfo
-         #"Entity could not be fully resolved"
-         (graph/query env [{:x [:y]}])))
+    (let [ex (try
+               (graph/query env [{:x [:y]}])
+               nil
+               (catch clojure.lang.ExceptionInfo e
+                 e))]
+      (is (= "Could not resolve :missing"
+             (ex-message ex)))
+      (is (= {:biff.graph/trace [{:resolving :query
+                                  :path      [:x]}
+                                 {:resolving :test/x
+                                  :path      [:missing]}]}
+             (ex-data ex))))
     (is (= {:z 1}
            (graph/query env [[:? {:x [:y]}] :z])))
     (is (= [:z] @calls))
     (reset! calls [])
-    (is (thrown-with-msg?
-         clojure.lang.ExceptionInfo
-         #"Entity could not be fully resolved"
-         (graph/query env [{:x [:y]} :z])))
+    (let [ex (try
+               (graph/query env [{:x [:y]} :z])
+               nil
+               (catch clojure.lang.ExceptionInfo e
+                 e))]
+      (is (= "Could not resolve :missing"
+             (ex-message ex)))
+      (is (= {:biff.graph/trace [{:resolving :query
+                                  :path      [:x]}
+                                 {:resolving :test/x
+                                  :path      [:missing]}]}
+             (ex-data ex))))
     (is (= [] @calls))))
+
+(deftest nested-unresolved-trace-test
+  (let [env (graph/new-env
+             [(graph/resolver
+               {:id         :test/b
+                :output     [{:b [:seed]}]
+                :resolve-fn (fn [_ctx _input] {})})
+              (graph/resolver
+               {:id         :test/d
+                :input      [:g]
+                :output     [{:d [:ok]}]
+                :resolve-fn (fn [_ctx _input]
+                              {:d {:ok true}})})])
+        ex  (try
+              (graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])
+              nil
+              (catch clojure.lang.ExceptionInfo e
+                e))]
+    (is (= "Could not resolve :g"
+           (ex-message ex)))
+    (is (= {:biff.graph/trace [{:resolving :query
+                                :path      [:b :d]}
+                               {:resolving :test/d
+                                :path      [:g]}]}
+           (ex-data ex)))))
 
 (deftest invalid-input-shape-test
   (let [env (graph/new-env

@@ -208,7 +208,25 @@
                  "              :biff.graph/attr->shape-info"
                  "              {:x {:biff.graph/attr :x"
                  "                   :biff.graph/attr-shape {:kind :scalar}}}}"
-                 "             [:x])")}])
+                 "             [:x])")}
+
+   {:title "Nested Unresolved Required Attribute"
+    :code  (code "(require '[com.biffweb.graph :as graph])"
+                 ""
+                 "(def env"
+                 "  (graph/new-env"
+                 "   [(graph/resolver"
+                 "     {:id :example/b"
+                 "      :output [{:b [:seed]}]"
+                 "      :resolve-fn (fn [_ctx _input] {})})"
+                 "    (graph/resolver"
+                 "     {:id :example/d"
+                 "      :input [:g]"
+                 "      :output [{:d [:ok]}]"
+                 "      :resolve-fn (fn [_ctx _input]"
+                 "                    {:d {:ok true}})})]))"
+                 ""
+                 "(graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])")}])
 
 (def ^:private eof (Object.))
 
