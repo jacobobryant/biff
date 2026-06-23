@@ -39,7 +39,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc5"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc6"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
