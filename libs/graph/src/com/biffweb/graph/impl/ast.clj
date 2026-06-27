@@ -7,15 +7,18 @@
    {:registry
     {"query"       [:vector [:ref "query-item"]]
      "query-item"  [:orn
-                    [:required [:ref "query-item*"]]
-                    [:optional [:tuple [:= :?] [:ref "query-item*"]]]]
+                    [:required-or-join [:ref "query-item*"]]
+                    [:optional-scalar [:tuple [:= :?] [:ref "attr"]]]]
      "query-item*" [:orn
                     [:scalar [:ref "attr"]]
                     [:join [:and
                             [:map-of
-                             [:ref "attr"]
+                             [:ref "join-key"]
                              [:ref "subquery"]]
                             [:fn #(= 1 (count %))]]]]
+     "join-key"    [:orn
+                    [:required [:ref "attr"]]
+                    [:optional [:tuple [:= :?] [:ref "attr"]]]]
      "attr"        [:and :keyword [:not [:= :*]]]
      "subquery"    [:orn
                     [:wildcard [:= [:*]]]
@@ -50,8 +53,10 @@
 (defn- parsed-query-item->ast
   [query-item]
   (let [[query-item optional] (case (:key query-item)
-                                :required [(:value query-item)]
-                                :optional [(second (:value query-item)) true])]
+                                :required-or-join [(:value query-item) nil]
+                                :optional-scalar [{:key :scalar
+                                                   :value (second (:value query-item))}
+                                                  true])]
     (case (:key query-item)
       :scalar
       [(:value query-item) (into {:kind :scalar}
@@ -59,7 +64,10 @@
                                  {:optional optional})]
 
       :join
-      (let [[attr parsed-subquery]      (first (:value query-item))
+      (let [[parsed-attr parsed-subquery] (first (:value query-item))
+            [attr optional]              (case (:key parsed-attr)
+                                           :required [(:value parsed-attr) optional]
+                                           :optional [(second (:value parsed-attr)) true])
             {:keys [wildcard children]} (parsed-subquery->ast parsed-subquery)]
         [attr (into {:kind :join}
                     (filter val)

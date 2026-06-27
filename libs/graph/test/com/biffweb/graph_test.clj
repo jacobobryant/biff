@@ -98,8 +98,12 @@
                                   :path      [:missing]}]}
              (ex-data ex))))
     (is (= {:z 1}
-           (graph/query env [[:? {:x [:y]}] :z])))
+           (graph/query env [{[:? :x] [:y]} :z])))
     (is (= [:z] @calls))
+    (is (thrown-with-msg?
+         AssertionError
+         #"invalid"
+         (graph/query env [[:? {:x [:y]}] :z])))
     (reset! calls [])
     (let [ex (try
                (graph/query env [{:x [:y]} :z])
