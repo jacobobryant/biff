@@ -8,6 +8,9 @@
           :let         [{expected-shape :biff.graph/attr-shape
                          source-id      :biff.graph/id}
                         (get attr->shape-info attr)]]
+    (assert expected-shape
+            (str "No resolver declares output for `" attr "` requested by "
+                 (or id "query")))
     (assert (= shape expected-shape)
             (str "Got conflicting attr shapes for `" attr "`: "
                  (pr-str shape) " (from " (or id "query") "), "
@@ -26,9 +29,7 @@
            (every? (some-fn map? nil?) value))))
 
 (defn scalar-value? [value]
-  (and (not (map? value))
-       (or (not (sequential? value))
-           (every? (complement map?) value))))
+  (not (join-value? value)))
 
 (defn- validate-input-value [attr->shape-info attr value]
   (when-some [{:biff.graph/keys [attr-shape]} (get attr->shape-info attr)]

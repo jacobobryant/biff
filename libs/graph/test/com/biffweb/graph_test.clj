@@ -163,6 +163,16 @@
          #"Input attr :z is a scalar but value is a join"
          (graph/query env {:x {:z {:a 1}}} [{:x [:y]}])))))
 
+(deftest scalar-hiccup-output-test
+  (let [env (graph/new-env
+             [(graph/resolver
+               {:id         :test/view
+                :output     [:view]
+                :resolve-fn (fn [_ctx _input]
+                              {:view [:div {:class "notice"} "Hello"]})})])]
+    (is (= {:view [:div {:class "notice"} "Hello"]}
+           (graph/query env [:view])))))
+
 (deftest resolver-exception-test
   (testing "top-level resolver exception"
     (let [env (graph/new-env
