@@ -28,31 +28,31 @@
   [_ctx {:user/keys [name]}]
   {:user/greeting (str "Hi " name)})
 
-(def env
-  (graph/new-env [user-by-id
+(def ctx
+  (graph/new-ctx [user-by-id
                   current-user
                   user-friends
                   greeting]))
 
-(deftest query-with-explicit-env-test
+(deftest query-with-explicit-ctx-test
   (is (= {:user/name  "Alice"
           :user/email "alice@example.com"}
-         (graph/query env {:user/id 1} [:user/name :user/email]))))
+         (graph/query ctx {:user/id 1} [:user/name :user/email]))))
 
-(deftest query-with-get-env-test
+(deftest query-with-get-ctx-test
   (is (= {:user/id 2 :user/name "Bob"}
-         (graph/query {:biff.graph/get-env (fn [] env)
+         (graph/query {:biff.graph/get-ctx (fn [] ctx)
                        :current-user-id    2}
                       [:user/id :user/name]))))
 
 (deftest nested-query-test
   (is (= {:user/friends [{:user/name "Bob"}]}
-         (graph/query env {:user/id 1} [{:user/friends [:user/name]}])))
+         (graph/query ctx {:user/id 1} [{:user/friends [:user/name]}])))
   (is (= {:user/friends []}
-         (graph/query env {:user/id 2} [{:user/friends [:user/name]}]))))
+         (graph/query ctx {:user/id 2} [{:user/friends [:user/name]}]))))
 
 (deftest nested-input-test
-  (let [env (graph/new-env
+  (let [ctx (graph/new-ctx
              [(graph/resolver
                {:id         :test/nested
                 :input      [{:x [:y]}]
@@ -62,17 +62,17 @@
                                     (mapv :y x)
                                     (:y x))})})])]
     (is (= {:x {:y 1}}
-           (graph/query env {:x {:y 1 :extra 2}} [{:x [:y]}])))
+           (graph/query ctx {:x {:y 1 :extra 2}} [{:x [:y]}])))
     (is (= {:x [{:y 1} {:y 2}]}
-           (graph/query env {:x [{:y 1 :extra 2} {:y 2}]} [{:x [:y]}])))
+           (graph/query ctx {:x [{:y 1 :extra 2} {:y 2}]} [{:x [:y]}])))
     (is (= {:z 1}
-           (graph/query env {:x {:y 1 :extra 2}} [:z])))
+           (graph/query ctx {:x {:y 1 :extra 2}} [:z])))
     (is (= {:z [1 2]}
-           (graph/query env {:x [{:y 1 :extra 2} {:y 2}]} [:z])))))
+           (graph/query ctx {:x [{:y 1 :extra 2} {:y 2}]} [:z])))))
 
 (deftest unresolved-join-test
   (let [calls (atom [])
-        env   (graph/new-env
+        ctx   (graph/new-ctx
                [(graph/resolver
                  {:id         :test/x
                   :input      [:missing]
@@ -86,7 +86,7 @@
                                 (swap! calls conj :z)
                                 {:z 1})})])]
     (let [ex (try
-               (graph/query env [{:x [:y]}])
+               (graph/query ctx [{:x [:y]}])
                nil
                (catch clojure.lang.ExceptionInfo e
                  e))]
@@ -98,15 +98,15 @@
                                   :path      [:missing]}]}
              (ex-data ex))))
     (is (= {:z 1}
-           (graph/query env [{[:? :x] [:y]} :z])))
+           (graph/query ctx [{[:? :x] [:y]} :z])))
     (is (= [:z] @calls))
     (is (thrown-with-msg?
          AssertionError
          #"invalid"
-         (graph/query env [[:? {:x [:y]}] :z])))
+         (graph/query ctx [[:? {:x [:y]}] :z])))
     (reset! calls [])
     (let [ex (try
-               (graph/query env [{:x [:y]} :z])
+               (graph/query ctx [{:x [:y]} :z])
                nil
                (catch clojure.lang.ExceptionInfo e
                  e))]
@@ -120,7 +120,7 @@
     (is (= [] @calls))))
 
 (deftest nested-unresolved-trace-test
-  (let [env (graph/new-env
+  (let [ctx (graph/new-ctx
              [(graph/resolver
                {:id         :test/b
                 :output     [{:b [:seed]}]
@@ -132,7 +132,7 @@
                 :resolve-fn (fn [_ctx _input]
                               {:d {:ok true}})})])
         ex  (try
-              (graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])
+              (graph/query ctx {:b {:seed true}} [{:b [{:d [:ok]}]}])
               nil
               (catch clojure.lang.ExceptionInfo e
                 e))]
@@ -145,7 +145,7 @@
            (ex-data ex)))))
 
 (deftest invalid-input-shape-test
-  (let [env (graph/new-env
+  (let [ctx (graph/new-ctx
              [(graph/resolver
                {:id         :test/join
                 :output     [{:x [:y]}]
@@ -157,36 +157,36 @@
     (is (thrown-with-msg?
          AssertionError
          #"Input attr :x is a join but value is a scalar"
-         (graph/query env {:x 1} [:z])))
+         (graph/query ctx {:x 1} [:z])))
     (is (thrown-with-msg?
          AssertionError
          #"Input attr :z is a scalar but value is a join"
-         (graph/query env {:z {:a 1}} [:z])))
+         (graph/query ctx {:z {:a 1}} [:z])))
     (is (thrown-with-msg?
          AssertionError
          #"Input attr :z is a scalar but value is a join"
-         (graph/query env {:x {:z {:a 1}}} [{:x [:y]}])))))
+         (graph/query ctx {:x {:z {:a 1}}} [{:x [:y]}])))))
 
 (deftest scalar-hiccup-output-test
-  (let [env (graph/new-env
+  (let [ctx (graph/new-ctx
              [(graph/resolver
                {:id         :test/view
                 :output     [:view]
                 :resolve-fn (fn [_ctx _input]
                               {:view [:div {:class "notice"} "Hello"]})})])]
     (is (= {:view [:div {:class "notice"} "Hello"]}
-           (graph/query env [:view])))))
+           (graph/query ctx [:view])))))
 
 (deftest resolver-exception-test
   (testing "top-level resolver exception"
-    (let [env (graph/new-env
+    (let [ctx (graph/new-ctx
                [(graph/resolver
                  {:id         :test/a
                   :output     [:a]
                   :resolve-fn (fn [_ctx _input]
                                 (throw (ex-info "boom" {:x 1})))})])
           ex  (try
-                (graph/query env [:a])
+                (graph/query ctx [:a])
                 nil
                 (catch clojure.lang.ExceptionInfo e
                   e))]
@@ -199,7 +199,7 @@
              (ex-data ex)))
       (is (= "boom" (ex-message (ex-cause ex))))))
   (testing "nested resolver input exception"
-    (let [env (graph/new-env
+    (let [ctx (graph/new-ctx
                [(graph/resolver
                  {:id         :test/b
                   :output     [{:b [:seed]}]
@@ -215,7 +215,7 @@
                   :resolve-fn (fn [_ctx _input]
                                 (throw (ex-info "nested boom" {})))})])
           ex  (try
-                (graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])
+                (graph/query ctx {:b {:seed true}} [{:b [{:d [:ok]}]}])
                 nil
                 (catch clojure.lang.ExceptionInfo e
                   e))]
@@ -232,10 +232,10 @@
 
 (deftest derived-query-test
   (is (= {:user/greeting "Hi Alice"}
-         (graph/query env {:user/id 1} [:user/greeting]))))
+         (graph/query ctx {:user/id 1} [:user/greeting]))))
 
 (deftest dynamic-resolver-test
-  (let [env (graph/new-env
+  (let [ctx (graph/new-ctx
              [(graph/resolver
                {:id         :test/dynamic
                 :input      [:x]
@@ -243,11 +243,11 @@
                 :resolve-fn (fn [_ctx {:keys [x]}]
                               {:y (* x 2)})})])]
     (is (= {:y 10}
-           (graph/query env {:x 5} [:y])))))
+           (graph/query ctx {:x 5} [:y])))))
 
 (deftest batch-dynamic-resolver-test
   (let [calls (atom 0)
-        env   (graph/new-env
+        ctx   (graph/new-ctx
                [(graph/resolver
                  {:id         :test/batch
                   :input      [:x]
@@ -257,23 +257,23 @@
                                 (swap! calls inc)
                                 (mapv (fn [{:keys [x]}] {:y (* x 2)}) inputs))})])]
     (is (= [{:y 2} {:y 4}]
-           (graph/query env [{:x 1} {:x 2}] [:y])))
+           (graph/query ctx [{:x 1} {:x 2}] [:y])))
     (is (= 1 @calls))))
 
 (deftest module-test
   (let [modules-var (atom [{:biff.graph/resolvers [user-by-id]}])
-        get-env     (:biff.graph/get-env ((:biff.core/init (graph/module)) modules-var))
-        env-1       (get-env)
-        env-2       (get-env)]
+        get-ctx     (:biff.graph/get-ctx ((:biff.core/init (graph/module)) modules-var))
+        ctx-1       (get-ctx)
+        ctx-2       (get-ctx)]
     (is (= {:user/name "Alice"}
-           (graph/query {:biff.graph/get-env get-env} {:user/id 1} [:user/name])))
-    (is (identical? env-1 env-2))
+           (graph/query {:biff.graph/get-ctx get-ctx} {:user/id 1} [:user/name])))
+    (is (identical? ctx-1 ctx-2))
     (swap! modules-var conj {:biff.graph/middleware [(fn [resolver] resolver)]})
-    (is (not (identical? env-1 (get-env))))))
+    (is (not (identical? ctx-1 (get-ctx))))))
 
 (deftest fx-handler-test
   (is (= {:user/name "Alice"}
          ((:biff.graph.fx/query graph/fx-handlers)
-          env
+          ctx
           {:user/id 1}
           [:user/name]))))

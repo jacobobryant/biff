@@ -1,7 +1,8 @@
 (ns com.biffweb.graph
+  "TODO"
   (:require [com.biffweb.core :as biff.core]
             [com.biffweb.graph.impl.query :as impl.query]
-            [com.biffweb.graph.impl.env :as impl.env]
+            [com.biffweb.graph.impl.ctx :as impl.ctx]
             [com.biffweb.graph.impl.ast :as impl.ast]
             [com.biffweb.graph.impl.resolver :as impl.r]))
 
@@ -39,7 +40,7 @@
                                  [:biff.graph/attr-shape]]]
   :biff.graph/cache            [:fn #(or (instance? clojure.lang.IAtom %)
                                          (instance? clojure.lang.Volatile %))]
-  :biff.graph/get-env          'ifn?
+  :biff.graph/get-ctx          'ifn?
   :biff.graph/middleware       [:sequential 'ifn?]
   :biff.graph/resolvers        [:sequential :biff.graph/resolver]})
 
@@ -52,8 +53,8 @@
 (defmacro defresolver [sym opts & args]
   `(impl.r/defresolver ~sym ~opts ~@args))
 
-(defn new-env [resolvers & {:as opts}]
-  (impl.env/new-env resolvers opts))
+(defn new-ctx [resolvers & {:as opts}]
+  (impl.ctx/new-ctx resolvers opts))
 
 (defn query
   ([ctx query]
@@ -66,6 +67,6 @@
 
 (defn module []
   {:biff.core/init   (fn [modules-var]
-                       {:biff.graph/get-env #(impl.env/env-from-modules
+                       {:biff.graph/get-ctx #(impl.ctx/ctx-from-modules
                                               @modules-var)})
    :biff.fx/handlers fx-handlers})

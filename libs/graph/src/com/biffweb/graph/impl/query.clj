@@ -167,14 +167,14 @@
 (defn query
   ([ctx query*]
    (query ctx {} query*))
-  ([{:biff.graph/keys [get-env] :as ctx} input query*]
+  ([{:biff.graph/keys [get-ctx] :as ctx} input query*]
    (biff.core/validate {:biff.graph/query query*
                         :biff.graph/input input})
-   (let [;; (get-env) intentionally overrides ctx; if you want to set the env in
-         ;; ctx, don't set get-env.
+   (let [;; (get-ctx) intentionally overrides the incoming ctx; if you want to
+         ;; provide graph indexes directly, don't set get-ctx.
          ctx
          (-> (merge ctx
-                    (when get-env (get-env))
+                    (when get-ctx (get-ctx))
                     {:biff.graph/cache (volatile! {})
                      :biff.graph/trace [{:resolving :query}]})
              (biff.core/validate {:required [:biff.graph/attr->resolvers

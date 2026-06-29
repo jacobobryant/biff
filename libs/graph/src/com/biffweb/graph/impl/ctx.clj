@@ -1,4 +1,4 @@
-(ns com.biffweb.graph.impl.env
+(ns com.biffweb.graph.impl.ctx
   (:require
    [com.biffweb.core :as biff.core]
    [com.biffweb.graph.impl.ast :as impl.ast]
@@ -118,7 +118,7 @@
      :biff.graph/attr-shape shape
      :biff.graph/id         (:biff.graph/id resolver)}))
 
-(defn new-env [resolvers & {:keys [middleware]}]
+(defn new-ctx [resolvers & {:keys [middleware]}]
   (run! impl.v/validate-resolver resolvers)
   (let [middleware       (into [wrap-cache
                                 wrap-validate-output
@@ -147,8 +147,8 @@
                     (update acc attr (fnil conj []) r))
                   {}))}))
 
-(def env-from-modules
+(def ctx-from-modules
   (memoize
    (fn [modules]
-     (new-env (mapcat :biff.graph/resolvers modules)
+     (new-ctx (mapcat :biff.graph/resolvers modules)
               {:middleware (mapcat :biff.graph/middleware modules)}))))

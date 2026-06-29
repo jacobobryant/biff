@@ -41,44 +41,44 @@
    {:title "Resolver Returns Scalar For Join"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/x"
                  "      :output [{:x [:y]}]"
                  "      :resolve-fn (fn [_ctx _input] {:x 1})})]))"
                  ""
-                 "(graph/query env [{:x [:y]}])")}
+                 "(graph/query ctx [{:x [:y]}])")}
 
    {:title "Resolver Returns Join For Scalar"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/x"
                  "      :output [:x]"
                  "      :resolve-fn (fn [_ctx _input] {:x {:y 1}})})]))"
                  ""
-                 "(graph/query env [:x])")}
+                 "(graph/query ctx [:x])")}
 
    {:title "Resolver Returns Invalid Typed Data"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/id"
                  "      :output [:biff.graph/id]"
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    {:biff.graph/id \"not-a-keyword\"})})]))"
                  ""
-                 "(graph/query env [:biff.graph/id])")}
+                 "(graph/query ctx [:biff.graph/id])")}
 
-   {:title "Conflicting Attribute Shapes In Env"
+   {:title "Conflicting Attribute Shapes In Ctx"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/new-env"
+                 "(graph/new-ctx"
                  " [(graph/resolver"
                  "   {:id :example/scalar-x"
                  "    :output [:x]"
@@ -91,57 +91,57 @@
    {:title "Missing Resolver Keys"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(graph/new-env"
+                 "(graph/new-ctx"
                  " [{:biff.graph/id :example/bad"
                  "   :biff.graph/resolve-fn (fn [_ctx] {})}])")}
 
    {:title "Invalid Sequential Query Input"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/x"
                  "      :output [{:x [:y]}]"
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    {:x [{:y 1}]})})]))"
                  ""
-                 "(graph/query env '({}) [{:x [:y]}])")}
+                 "(graph/query ctx '({}) [{:x [:y]}])")}
 
    {:title "Conflicting Query Input Shape"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/x"
                  "      :output [{:x [:y]} :z]"
                  "      :resolve-fn (fn [_ctx _input] {})})]))"
                  ""
-                 "(graph/query env {:x 1} [:z])")}
+                 "(graph/query ctx {:x 1} [:z])")}
 
    {:title "Resolver Throws Exception"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/a"
                  "      :output [:a]"
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    (throw (ex-info \"Boom\" {:detail 1})))})]))"
                  ""
-                 "(graph/query env [:a])")}
+                 "(graph/query ctx [:a])")}
 
-   {:title "Invalid get-env"
+   {:title "Invalid get-ctx"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers {}"
                  "              :biff.graph/attr->shape-info {}"
-                 "              :biff.graph/get-env :not-a-function}"
+                 "              :biff.graph/get-ctx :not-a-function}"
                  "             [])")}
 
-   {:title "Invalid Resolver Map In Env"
+   {:title "Invalid Resolver Map In Ctx"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {:biff.graph/attr->resolvers"
@@ -157,8 +157,8 @@
    {:title "Conflicting Join Cardinalities"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/x-one"
                  "      :input [:id]"
@@ -174,7 +174,7 @@
                  "                    (when (= id 2)"
                  "                      {:x [{:y 2}]}))})]))"
                  ""
-                 "(graph/query env [{:id 1} {:id 2}] [{:x [:y]}])")}
+                 "(graph/query ctx [{:id 1} {:id 2}] [{:x [:y]}])")}
 
    {:title "Invalid Query In graph/query"
     :code  (code "(require '[com.biffweb.graph :as graph])"
@@ -186,7 +186,7 @@
                  ""
                  "(graph/query {} :invalid-input [:x])")}
 
-   {:title "Missing Env"
+   {:title "Missing Ctx"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
                  "(graph/query {} [:x])")}
@@ -213,8 +213,8 @@
    {:title "Nested Unresolved Required Attribute"
     :code  (code "(require '[com.biffweb.graph :as graph])"
                  ""
-                 "(def env"
-                 "  (graph/new-env"
+                 "(def ctx"
+                 "  (graph/new-ctx"
                  "   [(graph/resolver"
                  "     {:id :example/b"
                  "      :output [{:b [:seed]}]"
@@ -226,7 +226,7 @@
                  "      :resolve-fn (fn [_ctx _input]"
                  "                    {:d {:ok true}})})]))"
                  ""
-                 "(graph/query env {:b {:seed true}} [{:b [{:d [:ok]}]}])")}])
+                 "(graph/query ctx {:b {:seed true}} [{:b [{:d [:ok]}]}])")}])
 
 (def ^:private eof (Object.))
 
