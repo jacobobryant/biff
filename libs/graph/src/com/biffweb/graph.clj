@@ -1,5 +1,5 @@
 (ns com.biffweb.graph
-  "TODO"
+  "[View README](/libs/graph/)"
   (:require [com.biffweb.core :as biff.core]
             [com.biffweb.graph.impl.query :as impl.query]
             [com.biffweb.graph.impl.ctx :as impl.ctx]
@@ -47,7 +47,9 @@
 (defn query->ast [query]
   (impl.ast/query->ast query))
 
-(defn resolver [opts]
+(defn resolver
+  {:arglists '([{:keys [id input output batch resolve-fn]}])}
+  [opts]
   (impl.r/resolver opts))
 
 (defmacro defresolver [sym opts & args]

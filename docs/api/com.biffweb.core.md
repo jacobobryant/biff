@@ -1,12 +1,12 @@
 # com.biffweb.core reference
 
 - [Schema](#schema)
-  - [:biff.core/init](#biff-core-init)
-  - [:biff.core/stop](#biff-core-stop)
-  - [:biff.core/secret](#biff-core-secret)
-  - [:biff.core/kv-set](#biff-core-kv-set)
-  - [:biff.core/kv-get](#biff-core-kv-get)
-  - [:biff.core/kv-list](#biff-core-kv-list)
+  - [:biff.core/init](#biffcoreinit)
+  - [:biff.core/stop](#biffcorestop)
+  - [:biff.core/secret](#biffcoresecret)
+  - [:biff.core/kv-set](#biffcorekv-set)
+  - [:biff.core/kv-get](#biffcorekv-get)
+  - [:biff.core/kv-list](#biffcorekv-list)
 - [API](#api)
   - [start](#start)
   - [stop](#stop)

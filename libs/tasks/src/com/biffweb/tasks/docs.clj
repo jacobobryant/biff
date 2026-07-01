@@ -51,7 +51,7 @@
 (defn- anchor-id [name]
   (-> (str name)
       str/lower-case
-      (str/replace #"[^a-z0-9]+" "-")
+      (str/replace #"[^a-z0-9-]" "")
       (str/replace #"(^-+|-+$)" "")))
 
 (defn- heading-line [line]

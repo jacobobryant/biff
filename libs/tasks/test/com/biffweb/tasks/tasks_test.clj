@@ -139,7 +139,7 @@
               (tasks-docs/docs)))
           (is (= (str "# example.docs reference\n\n"
                       "- [Schema](#schema)\n"
-                      "  - [:example/value](#example-value)\n"
+                      "  - [:example/value](#examplevalue)\n"
                       "- [API](#api)\n"
                       "  - [beta](#beta)\n"
                       "  - [alpha](#alpha)\n\n"
