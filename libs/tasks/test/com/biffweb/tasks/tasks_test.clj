@@ -100,8 +100,11 @@
           output-file (io/file dir "docs/api/example.docs.md")]
       (write-file dir "src/example/docs.clj"
                   (str "(ns example.docs\n"
-                       "  \"Namespace summary\n"
-                       "     keeps extra indent\")\n\n"
+                       "  \"## Schema\n"
+                       "\n"
+                       "   ### :example/value\n"
+                       "\n"
+                       "   Namespace summary\")\n\n"
                        "(defn beta\n"
                        "  \"Beta doc\n"
                        "     second line\"\n"
@@ -115,7 +118,7 @@
             beta-var   (intern example-ns 'beta (fn [] nil))
             alpha-var  (intern example-ns 'alpha 1)]
         (alter-meta! example-ns assoc
-                     :doc "Namespace summary\n     keeps extra indent")
+                     :doc "## Schema\n\n   ### :example/value\n\n   Namespace summary")
         (alter-meta! beta-var assoc
                      :arglists '([])
                      :doc "Beta doc\n     second line"
@@ -134,13 +137,17 @@
                                              (is (= ns-sym sym)))
                           util/read-config (constantly {:biff.tasks/docs-namespaces [ns-sym]})]
               (tasks-docs/docs)))
-          (is (= (str "# example.docs\n\n"
-                      "- [beta](#beta)\n"
-                      "- [alpha](#alpha)\n\n"
-                      "```\n"
+          (is (= (str "# example.docs reference\n\n"
+                      "- [Schema](#schema)\n"
+                      "  - [:example/value](#example-value)\n"
+                      "- [API](#api)\n"
+                      "  - [beta](#beta)\n"
+                      "  - [alpha](#alpha)\n\n"
+                      "## Schema\n\n"
+                      "### :example/value\n\n"
                       "Namespace summary\n"
-                      "keeps extra indent\n"
-                      "```\n\n"
+                      "\n"
+                      "## API\n\n"
                       "### beta\n\n"
                       "[view source](../../src/example/docs.clj#L4)\n\n"
                       "```\n"

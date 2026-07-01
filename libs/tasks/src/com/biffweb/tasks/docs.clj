@@ -54,11 +54,23 @@
       (str/replace #"[^a-z0-9]+" "-")
       (str/replace #"(^-+|-+$)" "")))
 
-(defn- table-of-contents [documented-vars]
+(defn- heading-line [line]
+  (when-some [[_ hashes title] (re-matches #"^(#+)\s+(.+?)\s*$" line)]
+    {:level (count hashes)
+     :title title}))
+
+(defn- table-of-contents [markdown]
   (str/join
    "\n"
-   (for [{:keys [name]} documented-vars]
-     (str "- [" name "](#" (anchor-id name) ")"))))
+   (let [headings (keep heading-line (str/split-lines markdown))
+         min-level (apply min (map :level headings))]
+     (for [{:keys [level title]} headings]
+       (str (apply str (repeat (* 2 (- level min-level)) " "))
+            "- ["
+            title
+            "](#"
+            (anchor-id title)
+            ")")))))
 
 (defn render-arglist [fn-name arglist]
   (str "("
@@ -109,15 +121,17 @@
     (when-not ns-doc
       (throw (ex-info "Namespace is missing a docstring"
                       {:namespace ns-sym})))
-    (let [sections (concat
-                    [(str "# "
-                          ns-sym
-                          "\n\n"
-                          (table-of-contents vars)
-                          "\n\n```\n"
-                          (normalize-docstring ns-doc)
-                          "\n```")]
-                    (map #(var-section % source-link) vars))]
+    (let [body     (str/join "\n\n"
+                             (concat
+                              [(normalize-docstring ns-doc)
+                               "## API"]
+                              (map #(var-section % source-link) vars)))
+          sections [(str "# "
+                         ns-sym
+                         " reference"
+                         "\n\n"
+                         (table-of-contents body))
+                    body]]
       (io/make-parents output-file)
       (spit output-file (str (str/join "\n\n" sections) "\n"))
       (println "Generated" (.getPath output-file)))))
