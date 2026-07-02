@@ -30,8 +30,7 @@ changes, but I don't anticipate any.
 
 [com.biffweb.fx](/docs/api/com.biffweb.fx.md)
 
-In particular see the [machine](/docs/api/com.biffweb.fx.md#machine) docstring
-which is comprehensive.
+- [Machines](/docs/api/com.biffweb.fx.md#machines)
 
 ## Example
 
