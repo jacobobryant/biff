@@ -29,7 +29,7 @@
    programmatically. The query format is only used as input to `resolver` /
    `defresolver`; only the AST is actually stored with the returned resolver.
 
-   ### Grammer
+   ### Grammar
 
    Queries:
 
@@ -77,7 +77,7 @@
 
    ## Schema
 
-   ### `:biff.graph/resolver`
+   ### :biff.graph/resolver
 
    Map containing the keys:
 
@@ -87,11 +87,11 @@
    `:biff.graph/resolve-fn` | function or function var
    `:biff.graph/batch`      | boolean, optional
 
-   ### `:biff.graph/resolvers`
+   ### :biff.graph/resolvers
 
    `[:sequential :biff.graph/resolver]`
 
-   ### `:biff.graph/middleware`
+   ### :biff.graph/middleware
 
    `[:sequential ifn?]`
 
@@ -210,7 +210,7 @@
    Throws an exception if any required attributes couldn't be resolved.
 
      (query ctx {:user/id 1} [:user/email :user/joined-at])
-     => {:user/email "... ", :user/joined-at #inst "... "}"
+     => {:user/email \"...\", :user/joined-at #inst \"...\"}"
   ([ctx query]
    (impl.query/query ctx query))
   ([ctx input query]
