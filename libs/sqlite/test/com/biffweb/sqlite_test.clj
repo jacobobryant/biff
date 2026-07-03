@@ -628,7 +628,7 @@
           ctx  {:biff.sqlite/read-pool  *read-pool*
                 :biff.sqlite/write-conn *write-conn*
                 :biff.sqlite/columns    cols}
-          env  (biff.graph/new-env (biff.sqlite/make-resolvers ctx))]
+          env  (biff.graph/new-ctx (biff.sqlite/make-resolvers ctx))]
       (is (= {:article/title  "Post"
               :article/author {:user/name "Alice"}}
              (biff.graph/query (merge ctx env)
