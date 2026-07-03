@@ -31,10 +31,10 @@ Root stack trace:
   clojure.lang.RestFn/invoke at RestFn.java:413
   com.biffweb.graph.impl.ast$query__GT_ast/invokeStatic at ast.clj:80
   com.biffweb.graph.impl.ast$query__GT_ast/invoke at ast.clj:78
-  com.biffweb.graph$query__GT_ast/invokeStatic at graph.clj:48
-  com.biffweb.graph$query__GT_ast/invoke at graph.clj:47
-  com.biffweb.graph.error_example.G__12459$eval12956/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12459$eval12956/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query__GT_ast/invokeStatic at graph.clj:165
+  com.biffweb.graph$query__GT_ast/invoke at graph.clj:162
+  com.biffweb.graph.error_example.G__12464$eval12963/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12464$eval12963/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -81,10 +81,10 @@ Root stack trace:
   com.biffweb.graph.impl.validation$validate_resolver/invoke at validation.clj:19
   com.biffweb.graph.impl.resolver$resolver/invokeStatic at resolver.clj:16
   com.biffweb.graph.impl.resolver$resolver/invoke at resolver.clj:12
-  com.biffweb.graph$resolver/invokeStatic at graph.clj:51
-  com.biffweb.graph$resolver/invoke at graph.clj:50
-  com.biffweb.graph.error_example.G__12958$eval12961/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12958$eval12961/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$resolver/invokeStatic at graph.clj:176
+  com.biffweb.graph$resolver/invoke at graph.clj:167
+  com.biffweb.graph.error_example.G__12965$eval12968/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12965$eval12968/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -128,10 +128,10 @@ Root stack trace:
   clojure.lang.RestFn/invoke at RestFn.java:426
   com.biffweb.graph.impl.resolver$resolver/invokeStatic at resolver.clj:13
   com.biffweb.graph.impl.resolver$resolver/invoke at resolver.clj:12
-  com.biffweb.graph$resolver/invokeStatic at graph.clj:51
-  com.biffweb.graph$resolver/invoke at graph.clj:50
-  com.biffweb.graph.error_example.G__12965$eval12968/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12965$eval12968/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$resolver/invokeStatic at graph.clj:176
+  com.biffweb.graph$resolver/invoke at graph.clj:167
+  com.biffweb.graph.error_example.G__12972$eval12975/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12972$eval12975/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -175,8 +175,8 @@ Root stack trace:
   com.biffweb.core.impl.validation$validate_STAR_/invokeStatic at validation.clj:72
   com.biffweb.core.impl.validation$validate_STAR_/doInvoke at validation.clj:61
   clojure.lang.RestFn/invoke at RestFn.java:413
-  com.biffweb.graph.error_example.G__12972$fn__12975/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12972$fn__12975/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph.error_example.G__12979$fn__12982/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12979$fn__12982/invoke at NO_SOURCE_FILE:-1
   clojure.lang.AFn/applyToHelper at AFn.java:152
   clojure.lang.AFn/applyTo at AFn.java:144
   clojure.lang.Compiler$InvokeExpr/eval at Compiler.java:4222
@@ -220,7 +220,7 @@ Root: java.lang.AssertionError - Assert failed: :example/x declared :x as a
 Root stack trace:
   com.biffweb.graph.impl.ctx$select_output_value/invokeStatic at ctx.clj:27
   com.biffweb.graph.impl.ctx$select_output_value/invoke at ctx.clj:22
-  com.biffweb.graph.impl.ctx$select_output$fn__12688/invoke at ctx.clj:49
+  com.biffweb.graph.impl.ctx$select_output$fn__12694/invoke at ctx.clj:49
   clojure.core$keep$fn__8691$fn__8692/invoke at core.clj:7521
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
@@ -232,26 +232,26 @@ Root stack trace:
   clojure.core$into/invoke at core.clj:7033
   com.biffweb.graph.impl.ctx$select_output/invokeStatic at ctx.clj:46
   com.biffweb.graph.impl.ctx$select_output/invoke at ctx.clj:43
-  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12696/invoke at ctx.clj:58
-  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12701/invoke at ctx.clj:65
-  com.biffweb.graph.impl.ctx$wrap_cache$fn__12715/invoke at ctx.clj:109
-  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12600/invoke at query.clj:52
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602$fn__12603/invoke at query.clj:58
+  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12703/invoke at ctx.clj:58
+  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12708/invoke at ctx.clj:65
+  com.biffweb.graph.impl.ctx$wrap_cache$fn__12722/invoke at ctx.clj:109
+  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12606/invoke at query.clj:52
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608$fn__12609/invoke at query.clj:58
   clojure.core$mapv$fn__8569/invoke at core.clj:7063
   clojure.lang.PersistentVector/reduce at PersistentVector.java:418
   clojure.core$reduce/invokeStatic at core.clj:6968
   clojure.core$mapv/invokeStatic at core.clj:7054
   clojure.core$mapv/invoke at core.clj:7054
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602/invoke at query.clj:58
-  com.biffweb.graph.impl.query$resolve_attr$fn__12609/invoke at query.clj:72
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608/invoke at query.clj:58
+  com.biffweb.graph.impl.query$resolve_attr$fn__12615/invoke at query.clj:72
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
   com.biffweb.graph.impl.query$resolve_attr/invokeStatic at query.clj:72
   com.biffweb.graph.impl.query$resolve_attr/invoke at query.clj:25
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633$fn__12639/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639$fn__12645/invoke at query.clj:127
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639/invoke at query.clj:127
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
   clojure.core.protocols$fn__8260/invokeStatic at protocols.clj:74
@@ -265,10 +265,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__12980$eval12985/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12980$eval12985/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__12987$eval12992/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12987$eval12992/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -308,7 +308,7 @@ Root: java.lang.AssertionError - Assert failed: :example/x declared :x as a
 Root stack trace:
   com.biffweb.graph.impl.ctx$select_output_value/invokeStatic at ctx.clj:30
   com.biffweb.graph.impl.ctx$select_output_value/invoke at ctx.clj:22
-  com.biffweb.graph.impl.ctx$select_output$fn__12688/invoke at ctx.clj:49
+  com.biffweb.graph.impl.ctx$select_output$fn__12694/invoke at ctx.clj:49
   clojure.core$keep$fn__8691$fn__8692/invoke at core.clj:7521
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
@@ -320,26 +320,26 @@ Root stack trace:
   clojure.core$into/invoke at core.clj:7033
   com.biffweb.graph.impl.ctx$select_output/invokeStatic at ctx.clj:46
   com.biffweb.graph.impl.ctx$select_output/invoke at ctx.clj:43
-  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12696/invoke at ctx.clj:58
-  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12701/invoke at ctx.clj:65
-  com.biffweb.graph.impl.ctx$wrap_cache$fn__12715/invoke at ctx.clj:109
-  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12600/invoke at query.clj:52
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602$fn__12603/invoke at query.clj:58
+  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12703/invoke at ctx.clj:58
+  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12708/invoke at ctx.clj:65
+  com.biffweb.graph.impl.ctx$wrap_cache$fn__12722/invoke at ctx.clj:109
+  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12606/invoke at query.clj:52
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608$fn__12609/invoke at query.clj:58
   clojure.core$mapv$fn__8569/invoke at core.clj:7063
   clojure.lang.PersistentVector/reduce at PersistentVector.java:418
   clojure.core$reduce/invokeStatic at core.clj:6968
   clojure.core$mapv/invokeStatic at core.clj:7054
   clojure.core$mapv/invoke at core.clj:7054
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602/invoke at query.clj:58
-  com.biffweb.graph.impl.query$resolve_attr$fn__12609/invoke at query.clj:72
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608/invoke at query.clj:58
+  com.biffweb.graph.impl.query$resolve_attr$fn__12615/invoke at query.clj:72
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
   com.biffweb.graph.impl.query$resolve_attr/invokeStatic at query.clj:72
   com.biffweb.graph.impl.query$resolve_attr/invoke at query.clj:25
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633$fn__12639/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639$fn__12645/invoke at query.clj:127
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639/invoke at query.clj:127
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
   clojure.core.protocols$fn__8260/invokeStatic at protocols.clj:74
@@ -353,10 +353,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__12987$eval12992/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12987$eval12992/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__12994$eval12999/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__12994$eval12999/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -403,25 +403,25 @@ Root stack trace:
   com.biffweb.core.impl.validation$validate_STAR_/invokeStatic at validation.clj:72
   com.biffweb.core.impl.validation$validate_STAR_/doInvoke at validation.clj:61
   clojure.lang.RestFn/invoke at RestFn.java:426
-  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12701/invoke at ctx.clj:65
-  com.biffweb.graph.impl.ctx$wrap_cache$fn__12715/invoke at ctx.clj:109
-  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12600/invoke at query.clj:52
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602$fn__12603/invoke at query.clj:58
+  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12708/invoke at ctx.clj:65
+  com.biffweb.graph.impl.ctx$wrap_cache$fn__12722/invoke at ctx.clj:109
+  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12606/invoke at query.clj:52
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608$fn__12609/invoke at query.clj:58
   clojure.core$mapv$fn__8569/invoke at core.clj:7063
   clojure.lang.PersistentVector/reduce at PersistentVector.java:418
   clojure.core$reduce/invokeStatic at core.clj:6968
   clojure.core$mapv/invokeStatic at core.clj:7054
   clojure.core$mapv/invoke at core.clj:7054
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602/invoke at query.clj:58
-  com.biffweb.graph.impl.query$resolve_attr$fn__12609/invoke at query.clj:72
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608/invoke at query.clj:58
+  com.biffweb.graph.impl.query$resolve_attr$fn__12615/invoke at query.clj:72
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
   com.biffweb.graph.impl.query$resolve_attr/invokeStatic at query.clj:72
   com.biffweb.graph.impl.query$resolve_attr/invoke at query.clj:25
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633$fn__12639/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639$fn__12645/invoke at query.clj:127
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639/invoke at query.clj:127
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
   clojure.core.protocols$fn__8260/invokeStatic at protocols.clj:74
@@ -435,10 +435,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__12994$eval12999/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__12994$eval12999/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13001$eval13006/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13001$eval13006/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -483,11 +483,11 @@ Root stack trace:
   com.biffweb.graph.impl.ctx$new_ctx/invokeStatic at ctx.clj:135
   com.biffweb.graph.impl.ctx$new_ctx/doInvoke at ctx.clj:121
   clojure.lang.RestFn/invoke at RestFn.java:426
-  com.biffweb.graph$new_ctx/invokeStatic at graph.clj:57
-  com.biffweb.graph$new_ctx/doInvoke at graph.clj:56
+  com.biffweb.graph$new_ctx/invokeStatic at graph.clj:219
+  com.biffweb.graph$new_ctx/doInvoke at graph.clj:209
   clojure.lang.RestFn/invoke at RestFn.java:413
-  com.biffweb.graph.error_example.G__13001$eval13004/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13001$eval13004/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph.error_example.G__13008$eval13011/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13008$eval13011/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -538,11 +538,11 @@ Root stack trace:
   com.biffweb.graph.impl.ctx$new_ctx/invokeStatic at ctx.clj:122
   com.biffweb.graph.impl.ctx$new_ctx/doInvoke at ctx.clj:121
   clojure.lang.RestFn/invoke at RestFn.java:426
-  com.biffweb.graph$new_ctx/invokeStatic at graph.clj:57
-  com.biffweb.graph$new_ctx/doInvoke at graph.clj:56
+  com.biffweb.graph$new_ctx/invokeStatic at graph.clj:219
+  com.biffweb.graph$new_ctx/doInvoke at graph.clj:209
   clojure.lang.RestFn/invoke at RestFn.java:413
-  com.biffweb.graph.error_example.G__13010$eval13013/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13010$eval13013/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph.error_example.G__13017$eval13020/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13017$eval13020/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -602,7 +602,7 @@ Root: java.lang.AssertionError - Assert failed: Input attr :x is a join but
 Root stack trace:
   com.biffweb.graph.impl.validation$validate_input_value/invokeStatic at validation.clj:37
   com.biffweb.graph.impl.validation$validate_input_value/invoke at validation.clj:34
-  com.biffweb.graph.impl.validation$validate_input$visit__12553/invoke at validation.clj:46
+  com.biffweb.graph.impl.validation$validate_input$visit__12558/invoke at validation.clj:46
   clojure.core$run_BANG_$fn__8926/invoke at core.clj:7911
   clojure.lang.PersistentVector/reduce at PersistentVector.java:418
   clojure.core$reduce/invokeStatic at core.clj:6968
@@ -612,10 +612,10 @@ Root stack trace:
   com.biffweb.graph.impl.validation$validate_input/invoke at validation.clj:42
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:192
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:63
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13024$eval13029/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13024$eval13029/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:242
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13031$eval13036/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13031$eval13036/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -656,30 +656,30 @@ data: #:biff.graph{:trace [{:resolving :query, :path [:a]} {:resolving :example/
 
 ```
 Root stack trace:
-  com.biffweb.graph.error_example.G__13031$fn__13034/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13031$fn__13034/invoke at NO_SOURCE_FILE:0
-  com.biffweb.graph.impl.resolver$wrap_input$fn__12913/invoke at resolver.clj:10
-  com.biffweb.graph.impl.ctx$wrap_exception$fn__12672/invoke at ctx.clj:12
-  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12696/invoke at ctx.clj:57
-  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12701/invoke at ctx.clj:65
-  com.biffweb.graph.impl.ctx$wrap_cache$fn__12715/invoke at ctx.clj:109
-  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12600/invoke at query.clj:52
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602$fn__12603/invoke at query.clj:58
+  com.biffweb.graph.error_example.G__13038$fn__13041/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13038$fn__13041/invoke at NO_SOURCE_FILE:0
+  com.biffweb.graph.impl.resolver$wrap_input$fn__12920/invoke at resolver.clj:10
+  com.biffweb.graph.impl.ctx$wrap_exception$fn__12678/invoke at ctx.clj:12
+  com.biffweb.graph.impl.ctx$wrap_select_output$resolve_fn__12703/invoke at ctx.clj:57
+  com.biffweb.graph.impl.ctx$wrap_validate_output$fn__12708/invoke at ctx.clj:65
+  com.biffweb.graph.impl.ctx$wrap_cache$fn__12722/invoke at ctx.clj:109
+  com.biffweb.graph.impl.query$resolve_attr$resolve_fn__12606/invoke at query.clj:52
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608$fn__12609/invoke at query.clj:58
   clojure.core$mapv$fn__8569/invoke at core.clj:7063
   clojure.lang.PersistentVector/reduce at PersistentVector.java:418
   clojure.core$reduce/invokeStatic at core.clj:6968
   clojure.core$mapv/invokeStatic at core.clj:7054
   clojure.core$mapv/invoke at core.clj:7054
-  com.biffweb.graph.impl.query$resolve_attr$fn__12602/invoke at query.clj:58
-  com.biffweb.graph.impl.query$resolve_attr$fn__12609/invoke at query.clj:72
+  com.biffweb.graph.impl.query$resolve_attr$fn__12608/invoke at query.clj:58
+  com.biffweb.graph.impl.query$resolve_attr$fn__12615/invoke at query.clj:72
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
   com.biffweb.graph.impl.query$resolve_attr/invokeStatic at query.clj:72
   com.biffweb.graph.impl.query$resolve_attr/invoke at query.clj:25
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633$fn__12639/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639$fn__12645/invoke at query.clj:127
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633/invoke at query.clj:127
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639/invoke at query.clj:127
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
   clojure.core.protocols$fn__8260/invokeStatic at protocols.clj:74
@@ -693,10 +693,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13031$eval13036/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13031$eval13036/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13038$eval13043/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13038$eval13043/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -735,10 +735,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13038$eval13041/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13038$eval13041/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13045$eval13048/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13045$eval13048/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -789,10 +789,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13043$eval13046/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13043$eval13046/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13050$eval13053/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13050$eval13053/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -843,10 +843,10 @@ Root: java.lang.AssertionError - Assert failed: Got conflicting cardinalities
 Root stack trace:
   com.biffweb.graph.impl.query$resolve_joins/invokeStatic at query.clj:89
   com.biffweb.graph.impl.query$resolve_joins/invoke at query.clj:84
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633$fn__12642/invoke at query.clj:140
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639$fn__12648/invoke at query.clj:140
   com.biffweb.graph.impl.query$apply_indexed/invokeStatic at query.clj:10
   com.biffweb.graph.impl.query$apply_indexed/invoke at query.clj:7
-  com.biffweb.graph.impl.query$resolve_entities$fn__12633/invoke at query.clj:140
+  com.biffweb.graph.impl.query$resolve_entities$fn__12639/invoke at query.clj:140
   clojure.core.protocols$iterator_reduce_BANG_/invokeStatic at protocols.clj:42
   clojure.core.protocols$iter_reduce/invokeStatic at protocols.clj:52
   clojure.core.protocols$fn__8260/invokeStatic at protocols.clj:74
@@ -858,10 +858,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$resolve_entities/invoke at query.clj:108
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:195
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:63
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13050$eval13061/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13050$eval13061/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:242
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13057$eval13068/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13057$eval13068/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -903,10 +903,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13063$eval13066/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13063$eval13066/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13070$eval13073/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13070$eval13073/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -946,10 +946,10 @@ Root stack trace:
   clojure.lang.RestFn/invoke at RestFn.java:413
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:171
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:63
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13068$eval13071/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13068$eval13071/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:242
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13075$eval13078/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13075$eval13078/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -991,10 +991,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13073$eval13076/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13073$eval13076/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13080$eval13083/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13080$eval13083/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -1036,10 +1036,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13078$eval13081/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13078$eval13081/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13085$eval13088/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13085$eval13088/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -1077,10 +1077,10 @@ Root stack trace:
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:169
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:61
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13083$eval13086/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13083$eval13086/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:240
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13090$eval13093/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13090$eval13093/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236
@@ -1125,10 +1125,10 @@ data: #:biff.graph{:trace [{:resolving :query, :path [:b :d]} {:resolving :examp
 Root stack trace:
   com.biffweb.graph.impl.query$query/invokeStatic at query.clj:202
   com.biffweb.graph.impl.query$query/invoke at query.clj:167
-  com.biffweb.graph$query/invokeStatic at graph.clj:63
-  com.biffweb.graph$query/invoke at graph.clj:59
-  com.biffweb.graph.error_example.G__13088$eval13095/invokeStatic at NO_SOURCE_FILE:0
-  com.biffweb.graph.error_example.G__13088$eval13095/invoke at NO_SOURCE_FILE:-1
+  com.biffweb.graph$query/invokeStatic at graph.clj:242
+  com.biffweb.graph$query/invoke at graph.clj:221
+  com.biffweb.graph.error_example.G__13095$eval13102/invokeStatic at NO_SOURCE_FILE:0
+  com.biffweb.graph.error_example.G__13095$eval13102/invoke at NO_SOURCE_FILE:-1
   clojure.lang.Compiler/eval at Compiler.java:7757
   clojure.lang.Compiler/eval at Compiler.java:7712
   clojure.core$eval/invokeStatic at core.clj:3236

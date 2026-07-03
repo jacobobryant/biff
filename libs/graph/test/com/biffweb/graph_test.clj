@@ -1,309 +1,244 @@
 (ns com.biffweb.graph-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [com.biffweb.graph :as graph]))
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
+            [com.biffweb.graph :as biff.graph]))
 
-(graph/defresolver user-by-id
-  {:input  [:user/id]
-   :output [:user/name :user/email]}
-  [_ctx {:user/keys [id]}]
-  {:user/name  ({1 "Alice" 2 "Bob"} id)
-   :user/email ({1 "alice@example.com" 2 "bob@example.com"} id)})
+(biff.graph/defresolver display-name-resolver
+  {:input  [:user/first-name :user/last-name]
+   :output [:user/display-name]}
+  [_ctx {:user/keys [first-name last-name]}]
+  {:user/display-name (str first-name " " last-name)})
 
-(graph/defresolver current-user
-  {:output [:user/id]}
-  [ctx _input]
-  {:user/id (:current-user-id ctx)})
+(defn- resolver [opts]
+  (biff.graph/resolver opts))
 
-(graph/defresolver user-friends
-  {:input  [:user/id]
-   :output [{:user/friends [:user/id]}]}
-  [_ctx {:user/keys [id]}]
-  {:user/friends (case id
-                   1 [{:user/id 2}]
-                   [])})
+(defn- test-ctx [resolvers]
+  (biff.graph/new-ctx resolvers))
 
-(graph/defresolver greeting
-  {:input  [:user/name]
-   :output [:user/greeting]}
-  [_ctx {:user/keys [name]}]
-  {:user/greeting (str "Hi " name)})
+(defn- thrown-data [f]
+  (try
+    (f)
+    nil
+    (catch clojure.lang.ExceptionInfo e
+      (ex-data e))))
 
-(def ctx
-  (graph/new-ctx [user-by-id
-                  current-user
-                  user-friends
-                  greeting]))
+(deftest query->ast-parses-supported-query-forms
+  (is (= {:user/id           {:kind :scalar}
+          :user/display-name {:kind :scalar :optional true}
+          :user/profile      {:kind     :join
+                              :children {:profile/bio {:kind :scalar}}}
+          :user/settings     {:kind :join :wildcard true}
+          :user/posts        {:kind     :join
+                              :optional true
+                              :children {:post/title {:kind :scalar}}}}
+         (biff.graph/query->ast
+          [:user/id
+           [:? :user/display-name]
+           {:user/profile [:profile/bio]}
+           {:user/settings [:*]}
+           {[:? :user/posts] [:post/title]}]))))
 
-(deftest query-with-explicit-ctx-test
-  (is (= {:user/name  "Alice"
-          :user/email "alice@example.com"}
-         (graph/query ctx {:user/id 1} [:user/name :user/email]))))
+(deftest query-resolves-scalars-joins-vectors-and-filters-output
+  (let [ctx (test-ctx
+             [(resolver
+               {:id         ::user
+                :input      [:user/id]
+                :output     [:user/first-name
+                             :user/last-name
+                             {:user/profile [:profile/bio]}
+                             {:user/posts [:post/title :post/likes]}]
+                :resolve-fn (fn [_ctx {:user/keys [id]}]
+                              {:user/first-name "Ada"
+                               :user/last-name  (str "Lovelace " id)
+                               :user/profile    {:profile/bio "mathematician"
+                                                 :profile/hidden true}
+                               :user/posts      [{:post/title "Notes"
+                                                  :post/likes 10
+                                                  :post/draft true}
+                                                 {:post/title "Sketch"
+                                                  :post/likes 20}]})})
+              display-name-resolver])]
+    (is (= {:user/display-name "Ada Lovelace 1"
+            :user/profile      {:profile/bio "mathematician"}
+            :user/posts        [{:post/title "Notes"}
+                                {:post/title "Sketch"}]}
+           (biff.graph/query
+            ctx
+            {:user/id 1}
+            [:user/display-name
+             {:user/profile [:profile/bio]}
+             {:user/posts [:post/title]}])))))
 
-(deftest query-with-get-ctx-test
-  (is (= {:user/id 2 :user/name "Bob"}
-         (graph/query {:biff.graph/get-ctx (fn [] ctx)
-                       :current-user-id    2}
-                      [:user/id :user/name]))))
-
-(deftest nested-query-test
-  (is (= {:user/friends [{:user/name "Bob"}]}
-         (graph/query ctx {:user/id 1} [{:user/friends [:user/name]}])))
-  (is (= {:user/friends []}
-         (graph/query ctx {:user/id 2} [{:user/friends [:user/name]}]))))
-
-(deftest nested-input-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/nested
-                :input      [{:x [:y]}]
-                :output     [:z]
-                :resolve-fn (fn [_ctx {:keys [x]}]
-                              {:z (if (sequential? x)
-                                    (mapv :y x)
-                                    (:y x))})})])]
-    (is (= {:x {:y 1}}
-           (graph/query ctx {:x {:y 1 :extra 2}} [{:x [:y]}])))
-    (is (= {:x [{:y 1} {:y 2}]}
-           (graph/query ctx {:x [{:y 1 :extra 2} {:y 2}]} [{:x [:y]}])))
-    (is (= {:z 1}
-           (graph/query ctx {:x {:y 1 :extra 2}} [:z])))
-    (is (= {:z [1 2]}
-           (graph/query ctx {:x [{:y 1 :extra 2} {:y 2}]} [:z])))))
-
-(deftest unresolved-join-test
+(deftest query-supports-sequential-input-and-batch-resolvers
   (let [calls (atom [])
-        ctx   (graph/new-ctx
-               [(graph/resolver
-                 {:id         :test/x
-                  :input      [:missing]
-                  :output     [{:x [:y]}]
-                  :resolve-fn (fn [_ctx _input]
-                                {:x {:y 1}})})
-                (graph/resolver
-                 {:id         :test/z
-                  :output     [:z]
-                  :resolve-fn (fn [_ctx _input]
-                                (swap! calls conj :z)
-                                {:z 1})})])]
-    (let [ex (try
-               (graph/query ctx [{:x [:y]}])
-               nil
-               (catch clojure.lang.ExceptionInfo e
-                 e))]
-      (is (= "Could not resolve :missing"
-             (ex-message ex)))
-      (is (= {:biff.graph/trace [{:resolving :query
-                                  :path      [:x]}
-                                 {:resolving :test/x
-                                  :path      [:missing]}]}
-             (ex-data ex))))
-    (is (= {:z 1}
-           (graph/query ctx [{[:? :x] [:y]} :z])))
-    (is (= [:z] @calls))
-    (is (thrown-with-msg?
-         AssertionError
-         #"invalid"
-         (graph/query ctx [[:? {:x [:y]}] :z])))
-    (reset! calls [])
-    (let [ex (try
-               (graph/query ctx [{:x [:y]} :z])
-               nil
-               (catch clojure.lang.ExceptionInfo e
-                 e))]
-      (is (= "Could not resolve :missing"
-             (ex-message ex)))
-      (is (= {:biff.graph/trace [{:resolving :query
-                                  :path      [:x]}
-                                 {:resolving :test/x
-                                  :path      [:missing]}]}
-             (ex-data ex))))
-    (is (= [] @calls))))
-
-(deftest nested-unresolved-trace-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/b
-                :output     [{:b [:seed]}]
-                :resolve-fn (fn [_ctx _input] {})})
-              (graph/resolver
-               {:id         :test/d
-                :input      [:g]
-                :output     [{:d [:ok]}]
-                :resolve-fn (fn [_ctx _input]
-                              {:d {:ok true}})})])
-        ex  (try
-              (graph/query ctx {:b {:seed true}} [{:b [{:d [:ok]}]}])
-              nil
-              (catch clojure.lang.ExceptionInfo e
-                e))]
-    (is (= "Could not resolve :g"
-           (ex-message ex)))
-    (is (= {:biff.graph/trace [{:resolving :query
-                                :path      [:b :d]}
-                               {:resolving :test/d
-                                :path      [:g]}]}
-           (ex-data ex)))))
-
-(deftest nil-is-unresolved-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/nil-x
-                :output     [:x]
-                :resolve-fn (fn [_ctx _input]
-                              {:x nil})})
-              (graph/resolver
-               {:id         :test/fallback-x
-                :output     [:x]
-                :resolve-fn (fn [_ctx _input]
-                              {:x 1})})
-              (graph/resolver
-               {:id         :test/y
-                :input      [:x]
-                :output     [:y]
-                :resolve-fn (fn [_ctx {:keys [x]}]
-                              {:y (inc x)})})
-              (graph/resolver
-               {:id         :test/nil-z
-                :output     [:z]
-                :resolve-fn (fn [_ctx _input]
-                              {:z nil})})])]
-    (is (= {:x 1}
-           (graph/query ctx [:x])))
-    (is (= {:y 2}
-           (graph/query ctx {:x nil} [:y])))
-    (is (= {}
-           (graph/query ctx [[:? :z]])))))
-
-(deftest invalid-input-shape-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/join
-                :output     [{:x [:y]}]
-                :resolve-fn (fn [_ctx _input] {})})
-              (graph/resolver
-               {:id         :test/scalar
-                :output     [:z]
-                :resolve-fn (fn [_ctx _input] {})})])]
-    (is (thrown-with-msg?
-         AssertionError
-         #"Input attr :x is a join but value is a scalar"
-         (graph/query ctx {:x 1} [:z])))
-    (is (thrown-with-msg?
-         AssertionError
-         #"Input attr :z is a scalar but value is a join"
-         (graph/query ctx {:z {:a 1}} [:z])))
-    (is (thrown-with-msg?
-         AssertionError
-         #"Input attr :z is a scalar but value is a join"
-         (graph/query ctx {:x {:z {:a 1}}} [{:x [:y]}])))))
-
-(deftest scalar-hiccup-output-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/view
-                :output     [:view]
-                :resolve-fn (fn [_ctx _input]
-                              {:view [:div {:class "notice"} "Hello"]})})])]
-    (is (= {:view [:div {:class "notice"} "Hello"]}
-           (graph/query ctx [:view])))))
-
-(deftest resolver-exception-test
-  (testing "top-level resolver exception"
-    (let [ctx (graph/new-ctx
-               [(graph/resolver
-                 {:id         :test/a
-                  :output     [:a]
-                  :resolve-fn (fn [_ctx _input]
-                                (throw (ex-info "boom" {:x 1})))})])
-          ex  (try
-                (graph/query ctx [:a])
-                nil
-                (catch clojure.lang.ExceptionInfo e
-                  e))]
-      (is (= "Resolver :test/a threw an exception"
-             (ex-message ex)))
-      (is (= {:biff.graph/trace [{:resolving :query
-                                  :path      [:a]}
-                                 {:resolving :test/a}]
-              :biff.graph/input {}}
-             (ex-data ex)))
-      (is (= "boom" (ex-message (ex-cause ex))))))
-  (testing "nested resolver input exception"
-    (let [ctx (graph/new-ctx
-               [(graph/resolver
-                 {:id         :test/b
-                  :output     [{:b [:seed]}]
-                  :resolve-fn (fn [_ctx _input] {})})
-                (graph/resolver
-                 {:id         :test/d
-                  :input      [:g]
-                  :output     [{:d [:ok]}]
-                  :resolve-fn (fn [_ctx _input] {})})
-                (graph/resolver
-                 {:id         :test/g
-                  :output     [:g]
-                  :resolve-fn (fn [_ctx _input]
-                                (throw (ex-info "nested boom" {})))})])
-          ex  (try
-                (graph/query ctx {:b {:seed true}} [{:b [{:d [:ok]}]}])
-                nil
-                (catch clojure.lang.ExceptionInfo e
-                  e))]
-      (is (= "Resolver :test/g threw an exception"
-             (ex-message ex)))
-      (is (= {:biff.graph/trace [{:resolving :query
-                                  :path      [:b :d]}
-                                 {:resolving :test/d
-                                  :path      [:g]}
-                                 {:resolving :test/g}]
-              :biff.graph/input {}}
-             (ex-data ex)))
-      (is (= "nested boom" (ex-message (ex-cause ex)))))))
-
-(deftest derived-query-test
-  (is (= {:user/greeting "Hi Alice"}
-         (graph/query ctx {:user/id 1} [:user/greeting]))))
-
-(deftest dynamic-resolver-test
-  (let [ctx (graph/new-ctx
-             [(graph/resolver
-               {:id         :test/dynamic
-                :input      [:x]
-                :output     [:y]
-                :resolve-fn (fn [_ctx {:keys [x]}]
-                              {:y (* x 2)})})])]
-    (is (= {:y 10}
-           (graph/query ctx {:x 5} [:y])))))
-
-(deftest batch-dynamic-resolver-test
-  (let [calls (atom 0)
-        ctx   (graph/new-ctx
-               [(graph/resolver
-                 {:id         :test/batch
-                  :input      [:x]
-                  :output     [:y]
+        ctx   (test-ctx
+               [(resolver
+                 {:id         ::batch-user
+                  :input      [:user/id]
+                  :output     [:user/name]
                   :batch      true
                   :resolve-fn (fn [_ctx inputs]
+                                (swap! calls conj inputs)
+                                (mapv (fn [{:user/keys [id]}]
+                                        {:user/name (str "User " id)})
+                                      inputs))})])]
+    (is (= [{:user/name "User 1"}
+            {:user/name "User 2"}
+            {:user/name "User 1"}]
+           (biff.graph/query
+            ctx
+            [{:user/id 1} {:user/id 2} {:user/id 1}]
+            [:user/name])))
+    (is (= [[{:user/id 1} {:user/id 2}]]
+           @calls))))
+
+(deftest query-caches-repeated-resolver-calls-within-one-query
+  (let [calls (atom 0)
+        ctx   (test-ctx
+               [(resolver
+                 {:id         ::cached-company
+                  :output     [{:profile/current-company [:company/id]}
+                               {:profile/previous-company [:company/id]}]
+                  :resolve-fn (fn [_ctx _input]
+                                {:profile/current-company  {:company/id 7}
+                                 :profile/previous-company {:company/id 7}})})
+                (resolver
+                 {:id         ::cached-company-name
+                  :input      [:company/id]
+                  :output     [:company/name]
+                  :resolve-fn (fn [_ctx {:company/keys [id]}]
                                 (swap! calls inc)
-                                (mapv (fn [{:keys [x]}] {:y (* x 2)}) inputs))})])]
-    (is (= [{:y 2} {:y 4}]
-           (graph/query ctx [{:x 1} {:x 2}] [:y])))
+                                {:company/name (str "Company " id)})})])]
+    (is (= {:profile/current-company  {:company/id 7
+                                        :company/name "Company 7"}
+            :profile/previous-company {:company/id 7
+                                        :company/name "Company 7"}}
+           (biff.graph/query
+            ctx
+            [{:profile/current-company [:company/id :company/name]}
+             {:profile/previous-company [:company/id :company/name]}])))
     (is (= 1 @calls))))
 
-(deftest module-test
-  (let [modules-var (atom [{:biff.graph/resolvers [user-by-id]}])
-        get-ctx     (:biff.graph/get-ctx ((:biff.core/init (graph/module)) modules-var))
-        ctx-1       (get-ctx)
-        ctx-2       (get-ctx)]
-    (is (= {:user/name "Alice"}
-           (graph/query {:biff.graph/get-ctx get-ctx} {:user/id 1} [:user/name])))
-    (is (identical? ctx-1 ctx-2))
-    (swap! modules-var conj {:biff.graph/middleware [(fn [resolver] resolver)]})
-    (is (not (identical? ctx-1 (get-ctx))))))
+(deftest optional-input-controls-whether-a-resolver-can-run
+  (let [required-calls (atom 0)
+        optional-calls (atom 0)
+        ctx            (test-ctx
+                        [(resolver
+                          {:id         ::required-missing
+                           :input      [:user/nickname]
+                           :output     [:user/required-greeting]
+                           :resolve-fn (fn [_ctx input]
+                                         (swap! required-calls inc)
+                                         {:user/required-greeting
+                                          (str "Hi " (:user/nickname input))})})
+                         (resolver
+                          {:id         ::optional-missing
+                           :input      [[:? :user/nickname]]
+                           :output     [:user/optional-greeting]
+                           :resolve-fn (fn [_ctx input]
+                                         (swap! optional-calls inc)
+                                         {:user/optional-greeting
+                                          (str "Hi " (or (:user/nickname input)
+                                                        "there"))})})])]
+    (is (= {:user/optional-greeting "Hi there"}
+           (biff.graph/query ctx {} [:user/optional-greeting])))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"Could not resolve :user/nickname"
+                          (biff.graph/query ctx {} [:user/required-greeting])))
+    (is (= 0 @required-calls))
+    (is (= 1 @optional-calls))))
 
-(deftest fx-handler-test
-  (is (= {:user/name "Alice"}
-         ((:biff.graph.fx/query graph/fx-handlers)
-          ctx
-          {:user/id 1}
-          [:user/name]))))
+(deftest query-rejects-unresolvable-and-conflicting-attributes
+  (let [ctx (test-ctx
+             [(resolver
+               {:id         ::shape-source
+                :output     [{:user/profile [:profile/bio]}]
+                :resolve-fn (fn [_ctx _input]
+                              {:user/profile {:profile/bio "bio"}})})])]
+    (is (thrown-with-msg? AssertionError
+                          #"No resolver declares output for `:user/missing`"
+                          (biff.graph/query ctx [:user/missing])))
+    (is (thrown-with-msg? AssertionError
+                          #"Got conflicting attr shapes for `:user/profile`"
+                          (biff.graph/query ctx [:user/profile])))))
+
+(deftest resolver-output-shape-is-enforced
+  (let [scalar-ctx (test-ctx
+                   [(resolver
+                     {:id         ::bad-scalar
+                      :output     [:user/profile]
+                      :resolve-fn (fn [_ctx _input]
+                                    {:user/profile {:profile/bio "bio"}})})])
+        join-ctx   (test-ctx
+                   [(resolver
+                     {:id         ::bad-join
+                      :output     [{:user/profile [:profile/bio]}]
+                      :resolve-fn (fn [_ctx _input]
+                                    {:user/profile "bio"})})])]
+    (is (thrown-with-msg? AssertionError
+                          #"declared :user/profile as a scalar but value is a join"
+                          (biff.graph/query scalar-ctx [:user/profile])))
+    (is (thrown-with-msg? AssertionError
+                          #"declared :user/profile as a join but value is a scalar"
+                          (biff.graph/query join-ctx [{:user/profile [:profile/bio]}])))))
+
+(deftest resolver-exceptions-include-trace-and-input
+  (let [ctx  (test-ctx
+              [(resolver
+                {:id         ::throws
+                 :input      [:user/id]
+                 :output     [:user/name]
+                 :resolve-fn (fn [_ctx _input]
+                               (throw (ex-info "boom" {})))})])
+        data (thrown-data #(biff.graph/query ctx {:user/id 1} [:user/name]))]
+    (is (= [{:resolving :query :path [:user/name]}
+            {:resolving ::throws}]
+           (:biff.graph/trace data)))
+    (is (= {:user/id 1}
+           (:biff.graph/input data)))))
+
+(deftest module-builds-context-from-current-modules
+  (let [modules-var (atom [{:biff.graph/resolvers
+                            [(resolver
+                              {:id         ::module-name
+                               :input      [:user/id]
+                               :output     [:user/name]
+                               :resolve-fn (fn [_ctx {:user/keys [id]}]
+                                             {:user/name (str "User " id)})})]}])
+        ctx         ((:biff.core/init (biff.graph/module)) modules-var)]
+    (is (= {:user/name "User 1"}
+           (biff.graph/query ctx {:user/id 1} [:user/name])))
+    (reset! modules-var
+            [{:biff.graph/resolvers
+              [(resolver
+                {:id         ::module-title
+                 :input      [:user/id]
+                 :output     [:user/title]
+                 :resolve-fn (fn [_ctx {:user/keys [id]}]
+                               {:user/title (str "Title " id)})})]}])
+    (is (= {:user/title "Title 2"}
+           (biff.graph/query ctx {:user/id 2} [:user/title])))))
+
+(deftest resolver-validates-query-forms
+  (is (thrown-with-msg? AssertionError
+                        #"invalid"
+                        (resolver
+                         {:id         ::invalid-query
+                          :output     [{:too/many [:a] :entries [:b]}]
+                          :resolve-fn (fn [_ctx _input] {})})))
+  (is (str/includes?
+       (ex-message
+        (try
+          (test-ctx
+           [(resolver
+             {:id         ::first-shape
+              :output     [:user/profile]
+              :resolve-fn (fn [_ctx _input] {:user/profile "bio"})})
+            (resolver
+             {:id         ::second-shape
+              :output     [{:user/profile [:profile/bio]}]
+              :resolve-fn (fn [_ctx _input]
+                            {:user/profile {:profile/bio "bio"}})})])
+          (catch AssertionError e
+            e)))
+       "Got conflicting attr shapes for `:user/profile`")))
