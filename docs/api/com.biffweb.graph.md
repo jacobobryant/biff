@@ -5,6 +5,7 @@
   - [Grammar](#grammar)
 - [Writing resolvers](#writing-resolvers)
   - [Batch resolvers](#batch-resolvers)
+  - [Validation](#validation)
 - [Schema](#schema)
   - [:biff.graph/resolver](#biffgraphresolver)
   - [:biff.graph/resolvers](#biffgraphresolvers)
@@ -28,7 +29,7 @@ A query is a vector of attributes:
 - join attributes are described with a single-entry map, going from a keyword
 to a subquery: `{:foo [:bar]}`
 - Optional attributes (scalar or join) are described by wrapping them with a
-`[:? ...]`: `[:foo]`, `{[:? :foo] [:bar]}`
+`[:? ...]`: `[:? :foo]`, `{[:? :foo] [:bar]}`
 
 The value that a join attribute describes can be either a single map or a
 vector of maps. A join value _must_ be described by a join key: a scalar
@@ -82,15 +83,15 @@ included in the output query.
 Attributes in output queries do not need to be marked optional: all
 attributes in an output query are considered optional. When trying to resolve
 a particular attribute, the query engine will try all the resolvers which
-declare that attribute in the top level of its output query.
+declare that attribute in the top level of their output query.
 
 Input queries do need to have their attributes marked as optional when
 appropriate. The resolver will only be called if all its non-optional inputs
 can be resolved.
 
-In resolver output, attributes with nil values (`{:foo nil}`) are still
-considered resolved. Missing attributes should be omitted from the resolver
-output entirely (e.g. `(when-some [foo (maybe-get-foo)] {:foo foo})`).
+Attributes with nil values (`{:foo nil}`) are considered unresolved. If
+you're writing a resolver that you want to be called even if a particular
+attribute is nil, that attribute must be marked optional in the input query.
 
 `defresolver` does not auto-infer input or output queries as Pathom's
 `defresolver` does.
@@ -100,6 +101,12 @@ output entirely (e.g. `(when-some [foo (maybe-get-foo)] {:foo foo})`).
 Resolvers that are defined with `:batch true` receive their input and return
 their output as a vector of maps instead of a single map. You must ensure
 that the output vector has the same order as the input vector.
+
+### Validation
+
+When `*assert*` is true, biff.graph will pass the resolver output to
+`com.biffweb.core/validate`. Thus if you register your application's schema
+with `com.biffweb.core/register`, biff.graph will enforce that schema.
 
 ## Schema
 
@@ -133,7 +140,7 @@ Each middleware function takes and returns a `:biff.graph/resolver` map.
 
 ### query->ast
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L156)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L162)
 
 ```
 (query->ast query)
@@ -143,7 +150,7 @@ Returns the AST for the given query.
 
 ### resolver
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L161)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L167)
 
 ```
 (resolver {:keys [id input output batch resolve-fn]})
@@ -158,7 +165,7 @@ two arguments, (fn [ctx input] ...), that gets wrapped so that
 
 ### defresolver
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L172)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L178)
 
 ```
 (defresolver sym opts & args)
@@ -194,7 +201,7 @@ is passed as a second argument:
 
 ### new-ctx
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L203)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L209)
 
 ```
 (new-ctx resolvers & {:keys [middleware]})
@@ -210,7 +217,7 @@ See schema for :biff.graph/resolvers and :biff.graph/middleware.
 
 ### query
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L215)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L221)
 
 ```
 (query ctx query)
@@ -237,7 +244,7 @@ Throws an exception if any required attributes couldn't be resolved.
 
 ### fx-handlers
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L238)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L244)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -245,7 +252,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../libs/graph/src/com/biffweb/graph.clj#L242)
+[view source](../../libs/graph/src/com/biffweb/graph.clj#L248)
 
 ```
 (module)

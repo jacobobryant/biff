@@ -17,7 +17,7 @@ using it.
 ### Dependency
 
 ```clojure
-com.biffweb/fx {:mvn/version "2.0.0-rc6"}
+com.biffweb/fx {:mvn/version "2.0.0-rc7"}
 ```
 
 ### Status
