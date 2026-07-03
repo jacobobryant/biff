@@ -268,11 +268,8 @@ instead of one as is the case for regular biff.fx machines.
 
 ### biff.core integration
 
-The `com.biffweb.graph/module` function returns a [biff.core](../core/) module
-which (1) provides a `:biff.fx/handlers` map so you don't have to merge
-`fx-handlers` in explicitly, (2) collects `:biff.graph/resolvers` (a vector of
-resolvers) from the other modules and merges the result of
-`com.biffweb.graph/new-ctx` into the system map.
+If you include `(com.biffweb.graph/module)` in your modules, you can put your
+resolvers in a `:biff.graph/resolvers` vector on your other modules.
 
 If you register your application's schema with `com.biffweb.core/register`,
 biff.graph will ensure that resolver output conforms to that schema.
@@ -290,9 +287,9 @@ biff.graph will ensure that resolver output conforms to that schema.
 
 - It can make sense sometimes to write "global" resolvers that don't have an
   input query. For example, a background job might want to query for all the
-  users in the database who meet certain criteria. It can also be convenient
-  to write resolvers that return data from `ctx`, like a `:output {:session/user
-  [:user/id]}` resolver so you don't have to get the user ID from the session
+  users in the database who meet certain criteria. It can also be convenient to
+  write resolvers that return data from `ctx`, like a `:output [{:session/user
+  [:user/id]}]` resolver so you don't have to get the user ID from the session
   explicitly.
 
 - In that vein, for authorization I've been using "params" resolvers that take
