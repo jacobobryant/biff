@@ -50,7 +50,7 @@
                 :resolve-fn (fn [_ctx {:user/keys [id]}]
                               {:user/first-name "Ada"
                                :user/last-name  (str "Lovelace " id)
-                               :user/profile    {:profile/bio "mathematician"
+                               :user/profile    {:profile/bio    "mathematician"
                                                  :profile/hidden true}
                                :user/posts      [{:post/title "Notes"
                                                   :post/likes 10
@@ -109,10 +109,10 @@
                   :resolve-fn (fn [_ctx {:company/keys [id]}]
                                 (swap! calls inc)
                                 {:company/name (str "Company " id)})})])]
-    (is (= {:profile/current-company  {:company/id 7
-                                        :company/name "Company 7"}
-            :profile/previous-company {:company/id 7
-                                        :company/name "Company 7"}}
+    (is (= {:profile/current-company  {:company/id   7
+                                       :company/name "Company 7"}
+            :profile/previous-company {:company/id   7
+                                       :company/name "Company 7"}}
            (biff.graph/query
             ctx
             [{:profile/current-company [:company/id :company/name]}
@@ -139,7 +139,7 @@
                                          (swap! optional-calls inc)
                                          {:user/optional-greeting
                                           (str "Hi " (or (:user/nickname input)
-                                                        "there"))})})])]
+                                                         "there"))})})])]
     (is (= {:user/optional-greeting "Hi there"}
            (biff.graph/query ctx {} [:user/optional-greeting])))
     (is (thrown-with-msg? clojure.lang.ExceptionInfo
@@ -164,17 +164,17 @@
 
 (deftest resolver-output-shape-is-enforced
   (let [scalar-ctx (test-ctx
-                   [(resolver
-                     {:id         ::bad-scalar
-                      :output     [:user/profile]
-                      :resolve-fn (fn [_ctx _input]
-                                    {:user/profile {:profile/bio "bio"}})})])
+                    [(resolver
+                      {:id         ::bad-scalar
+                       :output     [:user/profile]
+                       :resolve-fn (fn [_ctx _input]
+                                     {:user/profile {:profile/bio "bio"}})})])
         join-ctx   (test-ctx
-                   [(resolver
-                     {:id         ::bad-join
-                      :output     [{:user/profile [:profile/bio]}]
-                      :resolve-fn (fn [_ctx _input]
-                                    {:user/profile "bio"})})])]
+                    [(resolver
+                      {:id         ::bad-join
+                       :output     [{:user/profile [:profile/bio]}]
+                       :resolve-fn (fn [_ctx _input]
+                                     {:user/profile "bio"})})])]
     (is (thrown-with-msg? AssertionError
                           #"declared :user/profile as a scalar but value is a join"
                           (biff.graph/query scalar-ctx [:user/profile])))
