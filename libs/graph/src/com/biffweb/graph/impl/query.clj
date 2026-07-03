@@ -27,8 +27,8 @@
   (assert (vector? entities))
   (if (contains? resolving-attrs attr)
     (vec (repeat (count entities) {::fail-trace trace}))
-    (loop [values                      (mapv #(if (contains? % attr)
-                                                (get % attr)
+    (loop [values                      (mapv #(if-some [value (get % attr)]
+                                                value
                                                 {::fail-trace trace})
                                              entities)
            [resolver & rest-resolvers] (get attr->resolvers attr)]

@@ -69,8 +69,8 @@ In this snippet:
 2. We define a derived-data resolver (`clean-post-title`) which takes a
    `:post/title` attribute and returns a version with emojis filtered out.
 
-3. We query our data model graph via `com.biffweb.graph/query`, without needing to
-   know which attributes come from the database and which are derived.
+3. We query our data model graph via `com.biffweb.graph/query`, without needing
+   to know which attributes come from the database and which are derived.
 
 ```clojure
 (require '[com.biffweb.graph :as biff.graph :refer [defresolver]])
@@ -273,6 +273,9 @@ which (1) provides a `:biff.fx/handlers` map so you don't have to merge
 `fx-handlers` in explicitly, (2) collects `:biff.graph/resolvers` (a vector of
 resolvers) from the other modules and merges the result of
 `com.biffweb.graph/new-ctx` into the system map.
+
+If you register your application's schema with `com.biffweb.core/register`,
+biff.graph will ensure that resolver output conforms to that schema.
 
 ## Tips
 

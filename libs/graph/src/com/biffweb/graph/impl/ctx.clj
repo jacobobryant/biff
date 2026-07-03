@@ -45,8 +45,8 @@
     (mapv #(select-output % output-ast resolver-id) output)
     (into {}
           (keep (fn [[attr attr-ast]]
-                  (when (contains? output attr)
-                    [attr (select-output-value (get output attr)
+                  (when-some [value (get output attr)]
+                    [attr (select-output-value value
                                                attr
                                                attr-ast
                                                resolver-id)])))

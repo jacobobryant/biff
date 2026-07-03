@@ -144,6 +144,36 @@
                                 :path      [:g]}]}
            (ex-data ex)))))
 
+(deftest nil-is-unresolved-test
+  (let [ctx (graph/new-ctx
+             [(graph/resolver
+               {:id         :test/nil-x
+                :output     [:x]
+                :resolve-fn (fn [_ctx _input]
+                              {:x nil})})
+              (graph/resolver
+               {:id         :test/fallback-x
+                :output     [:x]
+                :resolve-fn (fn [_ctx _input]
+                              {:x 1})})
+              (graph/resolver
+               {:id         :test/y
+                :input      [:x]
+                :output     [:y]
+                :resolve-fn (fn [_ctx {:keys [x]}]
+                              {:y (inc x)})})
+              (graph/resolver
+               {:id         :test/nil-z
+                :output     [:z]
+                :resolve-fn (fn [_ctx _input]
+                              {:z nil})})])]
+    (is (= {:x 1}
+           (graph/query ctx [:x])))
+    (is (= {:y 2}
+           (graph/query ctx {:x nil} [:y])))
+    (is (= {}
+           (graph/query ctx [[:? :z]])))))
+
 (deftest invalid-input-shape-test
   (let [ctx (graph/new-ctx
              [(graph/resolver
