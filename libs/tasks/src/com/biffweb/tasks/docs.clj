@@ -51,6 +51,7 @@
 (defn- anchor-id [name]
   (-> (str name)
       str/lower-case
+      (str/replace #"\s+" "-")
       (str/replace #"[^a-z0-9-]" "")
       (str/replace #"(^-+|-+$)" "")))
 
@@ -62,7 +63,7 @@
 (defn- table-of-contents [markdown]
   (str/join
    "\n"
-   (let [headings (keep heading-line (str/split-lines markdown))
+   (let [headings  (keep heading-line (str/split-lines markdown))
          min-level (apply min (map :level headings))]
      (for [{:keys [level title]} headings]
        (str (apply str (repeat (* 2 (- level min-level)) " "))

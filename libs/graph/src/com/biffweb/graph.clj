@@ -33,17 +33,24 @@
 
    Queries:
 
-   `query`       | `[query-item]`
-   `query-item`  | `attribute | join`
-   `attribute`   | `keyword | [:? keyword]` | `:*` is invalid as an attribute keyword
-   `join`        | `{attribute (query | wildcard)}`
-   `wildcard`    | `[:*]`
+   ```
+   query      = [query-item, ...]
+   query-item = attribute | join
+   attribute  = keyword | [:? keyword]
+   join       = {attribute (query | wildcard)}
+   wildcard   = [:*]
+   ```
 
    ASTs:
 
-   `ast`       | `{attribute opts}`
-   `attribute` | `keyword`
-   `opts`      | `{:kind (:scalar | :join), :optional boolean, :wildcard boolean, :children ast}`
+   ```
+   ast       = {attribute opts, ...}
+   attribute = keyword
+   opts      = {:kind     (:scalar | :join),
+                :optional boolean,
+                :wildcard boolean,
+                :children ast}
+   ```
 
    ## Writing resolvers
 
@@ -81,11 +88,17 @@
 
    Map containing the keys:
 
-   `:biff.graph/id`         | qualified keyword
-   `:biff.graph/input-ast`  | return value of `query->ast`
-   `:biff.graph/output-ast` | return value of `query->ast`
-   `:biff.graph/resolve-fn` | function or function var
-   `:biff.graph/batch`      | boolean, optional
+   ```
+   :biff.graph/id          ; qualified keyword
+   :biff.graph/input-ast   ; return value of query->ast
+   :biff.graph/output-ast  ; return value of query->ast
+   :biff.graph/resolve-fn  ; (fn [ctx])
+   :biff.graph/batch       ; boolean, optional
+   ```
+
+   Note that resolve-fn takes a single ctx parameter. Resolver input is passed
+   under :biff.graph/input (though `resolver` / `defresolver` accept functions
+   which take input as a second argument)
 
    ### :biff.graph/resolvers
 
@@ -146,7 +159,12 @@
   (impl.ast/query->ast query))
 
 (defn resolver
-  "Returns a resolver map conforming to the :biff.graph/resolver schema"
+  "Returns a resolver map conforming to the :biff.graph/resolver schema.
+
+   input and output are passed through query->ast. resolve-fn is a function of
+   two arguments, (fn [ctx input] ...), that gets wrapped so that
+   (:biff.graph/input ctx) is passed as the second argument (since
+   :biff.graph/resolve-fn needs to be a function of one argument)."
   {:arglists '([{:keys [id input output batch resolve-fn]}])}
   [opts]
   (impl.r/resolver opts))
@@ -167,7 +185,8 @@
 
    If the first form after the options map isn't a vector, it and the remaining
    forms will be passed to com.biffweb.fx/machine to generate a resolve
-   function:
+   function, with the state functions wrapped so that (:biff.graph/input ctx)
+   is passed as a second argument:
 
      (defresolver my-resolver
        {:input [:foo]
@@ -224,8 +243,8 @@
   "Returns a biff.core module.
 
    Includes :biff.fx/handlers. :biff.core/init collects :biff.graph/resolvers
-   and :biff.graph/middleware from other modules and returns keys needed for
-   `query`'s `ctx` map."
+   and :biff.graph/middleware from other modules and passes them to new-ctx, so
+   you can pass the system map as ctx to `query`."
   []
   {:biff.core/init   (fn [modules-var]
                        {:biff.graph/get-ctx #(impl.ctx/ctx-from-modules
