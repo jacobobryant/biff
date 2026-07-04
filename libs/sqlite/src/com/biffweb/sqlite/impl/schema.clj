@@ -22,43 +22,29 @@
     :edn     "BLOB"
     :blob    "BLOB"))
 
-(defn- index-sql [table-cols]
-  (keep (fn [col]
-          (when (:index col)
-            (let [table-name (sql-name (:table col))
-                  col-name   (sql-name (:id col))]
-              (str "CREATE INDEX idx_" table-name "_" col-name
-                   " ON " table-name "(" col-name ");"))))
-        table-cols))
+(defn- index-sql [col]
+  (when (:index col)
+    (let [table-name (sql-name (:table col))
+          col-name   (sql-name (:id col))]
+      (str "CREATE INDEX idx_" table-name "_" col-name
+           " ON " table-name "(" col-name ");"))))
 
-(defn- constraint-sql [columns]
-  (let [fk
-        (keep (fn [col]
-                (when-some [ref* (:ref col)]
-                  {:line (str "FOREIGN KEY(" (sql-name (:id col))
-                              ") REFERENCES " (sql-name (namespace ref*))
-                              "(" (sql-name ref*) ")")}))
-              columns)
+(defn- constraint-sql-defs [col]
+  (concat (when-some [ref* (:ref col)]
+            [{:line (str "FOREIGN KEY(" (sql-name (:id col))
+                         ") REFERENCES " (sql-name (namespace ref*))
+                         "(" (sql-name ref*) ")")}])
+          (when (:unique col)
+            [{:line (str "UNIQUE(" (sql-name (:id col)) ")")}])
+          (when-some [others (:unique-with col)]
+            (let [all-cols (into [(:id col)] others)]
+              [{:line (str "UNIQUE("
+                           (->> all-cols
+                                (mapv sql-name)
+                                (str/join ", "))
+                           ")")}]))))
 
-        uniq
-        (keep (fn [col]
-                (when (:unique col)
-                  {:line (str "UNIQUE(" (sql-name (:id col)) ")")}))
-              columns)
-
-        uniq-with
-        (keep (fn [col]
-                (when-some [others (:unique-with col)]
-                  (let [all-cols (into [(:id col)] others)]
-                    {:line (str "UNIQUE("
-                                (->> all-cols
-                                     (mapv sql-name)
-                                     (str/join ", "))
-                                ")")})))
-              columns)]
-    (concat fk uniq uniq-with)))
-
-(defn- column-sql [column]
+(defn- column-sql-def [column]
   (let [col-name (sql-name (:id column))
         col-type (sqlite-type (:type column))
         enum-map (:enum-values column)
@@ -81,8 +67,9 @@
 
 (defn- table-sql [{:keys [table columns]}]
   (let [table-name  (sql-name table)
-        col-defs    (mapv column-sql columns)
-        constraints (constraint-sql columns)
+        col-defs    (mapv column-sql-def columns)
+        constraints (->> (mapcat constraint-sql-defs columns)
+                         (sort-by :line))
         lines       (concat col-defs constraints)
         formatted   (map-indexed
                      (fn [i {:keys [line] comment* :comment}]
@@ -131,8 +118,7 @@
                             tables)]
     (mapv tables-by-key sorted-table-keys)))
 
-(defn- sort-columns
-  [table-cols]
+(defn- sort-columns [table-cols]
   (sort-by (fn [col]
              [(cond
                 (:primary-key col) 0
@@ -152,8 +138,9 @@
                              :columns (vec (sort-columns columns))}))
                     topo-sort-tables)]
     (str/join "\n\n"
-              (concat (table-sql tables)
-                      (index-sql tables)))))
+              (concat (mapv table-sql tables)
+                      (->> (mapcat :columns tables)
+                           (keep index-sql))))))
 
 (defn apply-schema!
   [{:biff.sqlite/keys [db-path
