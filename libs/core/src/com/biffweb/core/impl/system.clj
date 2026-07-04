@@ -3,6 +3,14 @@
             [clojure.tools.logging :as log]
             [com.biffweb.core.impl.validation :as impl.v]))
 
+(defn module []
+  {:biff.core/init
+   (fn [modules-var]
+     {:biff.core/on-tx
+      (fn [ctx]
+        (doseq [on-tx (keep :biff.core/on-tx @modules-var)]
+          (on-tx ctx)))})})
+
 (defn- safe-merge [& ms]
   (when-some [duplicate-keys (->> (mapcat keys ms)
                                   frequencies

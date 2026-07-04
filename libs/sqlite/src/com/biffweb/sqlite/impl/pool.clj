@@ -1,7 +1,7 @@
 (ns com.biffweb.sqlite.impl.pool
-  "Internal connection pool and write connection management."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [com.biffweb.sqlite.impl.defaults :as impl.defaults]
             [next.jdbc :as jdbc])
   (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
 
@@ -12,7 +12,6 @@
    "PRAGMA synchronous = NORMAL"])
 
 (defn start-read-pool
-  "Start a HikariCP read connection pool for SQLite at db-path."
   [db-path]
   (io/make-parents db-path)
   (HikariDataSource.
@@ -21,7 +20,6 @@
      (.setConnectionInitSql (str/join ";" pragmas)))))
 
 (defn start-write-conn
-  "Open a single long-lived JDBC connection for writes, initialized with pragmas."
   [db-path]
   (io/make-parents db-path)
   (let [ds   (jdbc/get-datasource {:jdbcUrl (str "jdbc:sqlite:" db-path)})
@@ -29,3 +27,17 @@
     (doseq [pragma pragmas]
       (jdbc/execute! conn [pragma]))
     conn))
+
+(defn use-conn
+  [ctx]
+  (let [{:biff.sqlite/keys [db-path] :as ctx}
+        (merge impl.defaults/defaults ctx)
+
+        read-pool  (start-read-pool db-path)
+        write-conn (start-write-conn db-path)]
+    (-> ctx
+        (assoc :biff.sqlite/read-pool read-pool
+               :biff.sqlite/write-conn write-conn)
+        (update :biff.core/stop conj (fn []
+                                       (.close write-conn)
+                                       (.close read-pool))))))

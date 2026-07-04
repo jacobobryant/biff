@@ -53,10 +53,10 @@
 (def signin-ns :biff.auth/signin)
 
 (defn- get-signin [config ctx email]
-  ((:biff.kv/get-value config) ctx signin-ns email))
+  ((:biff.core/kv-get config) ctx signin-ns email))
 
 (defn- put-signin! [config ctx email record]
-  ((:biff.kv/set-value config) ctx signin-ns email record))
+  ((:biff.core/kv-set config) ctx signin-ns email record))
 
 ;; =============================================================================
 ;; Atom store
@@ -113,7 +113,7 @@
    :biff.auth/code-signin-path "/signin"
    :biff.fx/handlers
    (merge (select-keys store-config [:biff.auth/get-user-id :biff.auth/create-user!
-                                     :biff.kv/get-value :biff.kv/set-value])
+                                     :biff.core/kv-get :biff.core/kv-set])
           {:biff.auth/verify-captcha (constantly {:success true})
            :biff.auth/send-email     (fn [_ _] send-result)
            :biff.auth/new-code       backend/new-code
@@ -189,7 +189,7 @@
    :biff.auth/link-signin-path "/signin"
    :biff.fx/handlers
    (merge (select-keys store-config [:biff.auth/get-user-id :biff.auth/create-user!
-                                     :biff.kv/get-value :biff.kv/set-value])
+                                     :biff.core/kv-get :biff.core/kv-set])
           {:biff.auth/verify-captcha (constantly {:success true})
            :biff.auth/send-email     (fn [_ _] send-result)
            :biff.auth/new-code       backend/new-code
@@ -248,7 +248,7 @@
    :biff.auth/code-signin-path    "/signin"
    :biff.fx/handlers
    (merge (select-keys store-config [:biff.auth/get-user-id :biff.auth/create-user!
-                                     :biff.kv/get-value :biff.kv/set-value])
+                                     :biff.core/kv-get :biff.core/kv-set])
           {:biff.auth/new-code       backend/new-code
            :biff.auth/new-link-token backend/new-link-token})})
 
@@ -340,7 +340,7 @@
      :biff.auth/link-signin-path    "/signin"
      :biff.fx/handlers
      (merge (select-keys store-config [:biff.auth/get-user-id :biff.auth/create-user!
-                                       :biff.kv/get-value :biff.kv/set-value])
+                                       :biff.core/kv-get :biff.core/kv-set])
             {:biff.auth/new-code       backend/new-code
              :biff.auth/new-link-token backend/new-link-token})}))
 
@@ -433,7 +433,7 @@
    :biff.auth/link-signin-path    "/signin"
    :biff.fx/handlers
    (merge (select-keys store-config [:biff.auth/get-user-id :biff.auth/create-user!
-                                     :biff.kv/get-value :biff.kv/set-value])
+                                     :biff.core/kv-get :biff.core/kv-set])
           {:biff.auth/new-code       backend/new-code
            :biff.auth/new-link-token backend/new-link-token})})
 
@@ -554,7 +554,7 @@
                                                    (middleware h arg))
                                                  (:post send-code-route)
                                                  (:middleware auth-route-data))
-        result                           (handler (merge (select-keys config [:biff.kv/get-value :biff.kv/set-value])
+        result                           (handler (merge (select-keys config [:biff.core/kv-get :biff.core/kv-set])
                                                          {:params             {:email "test@example.com"}
                                                           :biff.auth/app-name "Test App"}))]
     (is (= 303 (:status result)))
@@ -588,7 +588,7 @@
                                 (middleware h arg))
                               identity
                               (:middleware auth-route-data))
-        ctx           (handler (merge (select-keys config [:biff.kv/get-value :biff.kv/set-value])
+        ctx           (handler (merge (select-keys config [:biff.core/kv-get :biff.core/kv-set])
                                       {:params             {}
                                        :biff.auth/app-name "Test App"
                                        :system-marker      :present}))
@@ -615,8 +615,8 @@
                               (middleware h arg))
                             backend/send-code-handler
                             (:middleware auth-route-data))
-        result      (handler (merge (select-keys config [:biff.kv/get-value
-                                                         :biff.kv/set-value
+        result      (handler (merge (select-keys config [:biff.core/kv-get
+                                                         :biff.core/kv-set
                                                          :biff.auth/get-user-id
                                                          :biff.auth/create-user!])
                                     {:params {:email "test@example.com"}}))]
@@ -646,7 +646,7 @@
                         identity
                         (:middleware auth-route-data))
         ex      (try
-                  (handler (merge (select-keys config [:biff.kv/get-value :biff.kv/set-value])
+                  (handler (merge (select-keys config [:biff.core/kv-get :biff.core/kv-set])
                                   {:params             {}
                                    :biff.auth/app-name "Test App"}))
                   nil

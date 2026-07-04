@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
       - uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: latest

@@ -1,2 +1,3 @@
 #merge [#include "../../../dev/config.edn"
-        {:biff.tasks/lib-name "fx"}]
+        {:biff.tasks/lib-name        "fx"
+         :biff.tasks/docs-namespaces [com.biffweb.fx]}]

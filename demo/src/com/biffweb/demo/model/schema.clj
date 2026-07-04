@@ -53,11 +53,11 @@
 (def extra-init-sql [])
 
 (defn init [_modules-var]
-  {:biff.sqlite/columns        columns
-   :biff.sqlite/extra-init-sql extra-init-sql
+  {:biff.sqlite/extra-init-sql extra-init-sql
    :biff.sqlite/authorize      #'authorize})
 
 (def module
   {:biff.core/init       init
+   :biff.sqlite/columns  columns
    :biff.graph/resolvers (biff.sqlite/make-resolvers
                           {:biff.sqlite/columns columns})})

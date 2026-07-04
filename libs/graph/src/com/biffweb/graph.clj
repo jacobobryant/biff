@@ -1,120 +1,4 @@
 (ns com.biffweb.graph
-  "[View README](/libs/graph/)
-
-   ## Query format
-
-   A query is a vector of attributes:
-
-   - scalar attributes are described with a keyword: `:foo`
-   - join attributes are described with a single-entry map, going from a keyword
-   to a subquery: `{:foo [:bar]}`
-   - Optional attributes (scalar or join) are described by wrapping them with a
-   `[:? ...]`: `[:? :foo]`, `{[:? :foo] [:bar]}`
-
-   The value that a join attribute describes can be either a single map or a
-   vector of maps. A join value _must_ be described by a join key: a scalar
-   attribute cannot be used to describe a map or vector of maps. If you don't
-   want to enumerate the keys in a join value, you can use `[:*]` (wildcard) as
-   a join subquery, however this should be done sparingly (e.g. when describing
-   data from an external API where you cannot enumerate the keys).
-
-   Scalar values can be anything that isn't a join value.
-
-   Other features from EQL such as union queries and parameters are not
-   supported.
-
-   ### AST format
-
-   `query->ast` converts the query to a format that's easier to work with
-   programmatically. The query format is only used as input to `resolver` /
-   `defresolver`; only the AST is actually stored with the returned resolver.
-
-   ### Grammar
-
-   Queries:
-
-   ```
-   query      = [query-item, ...]
-   query-item = attribute | join
-   attribute  = keyword | [:? keyword]
-   join       = {attribute (query | wildcard)}
-   wildcard   = [:*]
-   ```
-
-   ASTs:
-
-   ```
-   ast       = {attribute opts, ...}
-   attribute = keyword
-   opts      = {:kind     (:scalar | :join),
-                :optional boolean,
-                :wildcard boolean,
-                :children ast}
-   ```
-
-   ## Writing resolvers
-
-   Resolvers must have an `:output` query, and they may have an `:input` query.
-   biff.graph is strict about the output query matching the data being returned:
-   if a join value is returned for a scalar attribute or vice versa, an
-   assertion error is thrown. biff.graph also filters out any keys that are not
-   included in the output query.
-
-   Attributes in output queries do not need to be marked optional: all
-   attributes in an output query are considered optional. When trying to resolve
-   a particular attribute, the query engine will try all the resolvers which
-   declare that attribute in the top level of their output query.
-
-   Input queries do need to have their attributes marked as optional when
-   appropriate. The resolver will only be called if all its non-optional inputs
-   can be resolved.
-
-   Attributes with nil values (`{:foo nil}`) are considered unresolved. If
-   you're writing a resolver that you want to be called even if a particular
-   attribute is nil, that attribute must be marked optional in the input query.
-
-   `defresolver` does not auto-infer input or output queries as Pathom's
-   `defresolver` does.
-
-   ### Batch resolvers
-
-   Resolvers that are defined with `:batch true` receive their input and return
-   their output as a vector of maps instead of a single map. You must ensure
-   that the output vector has the same order as the input vector.
-
-   ### Validation
-
-   When `*assert*` is true, biff.graph will pass the resolver output to
-   `com.biffweb.core/validate`. Thus if you register your application's schema
-   with `com.biffweb.core/register`, biff.graph will enforce that schema.
-
-   ## Schema
-
-   ### :biff.graph/resolver
-
-   Map containing the keys:
-
-   ```
-   :biff.graph/id          ; qualified keyword
-   :biff.graph/input-ast   ; return value of query->ast
-   :biff.graph/output-ast  ; return value of query->ast
-   :biff.graph/resolve-fn  ; (fn [ctx])
-   :biff.graph/batch       ; boolean, optional
-   ```
-
-   Note that resolve-fn takes a single ctx parameter. Resolver input is passed
-   under :biff.graph/input (though `resolver` / `defresolver` accept functions
-   which take input as a second argument)
-
-   ### :biff.graph/resolvers
-
-   `[:sequential :biff.graph/resolver]`
-
-   ### :biff.graph/middleware
-
-   `[:sequential ifn?]`
-
-   Each middleware function takes and returns a `:biff.graph/resolver` map."
   (:require [com.biffweb.core :as biff.core]
             [com.biffweb.graph.impl.query :as impl.query]
             [com.biffweb.graph.impl.ctx :as impl.ctx]
@@ -233,6 +117,9 @@
      which case `query` will return a vector of maps.
 
    Throws an exception if any required attributes couldn't be resolved.
+
+   Calls (:biff.core/wrap-read-tx ctx) if set so that resolvers get a consistent
+   view of the database.
 
      (query ctx {:user/id 1} [:user/email :user/joined-at])
      => {:user/email \"...\", :user/joined-at #inst \"...\"}"

@@ -5,6 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 for dir in "$root"/libs/*; do
   [ -d "$dir" ] || continue
+  [ -f "$dir/deps.edn" ] || continue
   (
     cd "$dir"
     clojure -M:run test

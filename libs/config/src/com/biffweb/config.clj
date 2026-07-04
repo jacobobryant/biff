@@ -1,16 +1,4 @@
 (ns com.biffweb.config
-  "[View README](/libs/config/)
-
-   ## Schema
-
-   ### :biff.config/profile
-
-   Keyword. The Aero `:profile` value. Intended for testing/development; see
-   [use-aero-config](#use-aero-config)..
-
-   ### :biff.config/system-properties
-
-   `{\"property\" \"value\", ...}`. See [use-aero-config](#use-aero-config)."
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
             [clojure.string :as str]

@@ -80,8 +80,8 @@
 
 (def ^:private required-runtime-handler-keys
   "Handler keys that must be present in the request ctx."
-  #{:biff.kv/get-value
-    :biff.kv/set-value})
+  #{:biff.core/kv-get
+    :biff.core/kv-set})
 
 (def ^:private default-options
   #:biff.auth{:app-path            "/app"

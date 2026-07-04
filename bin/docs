@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+for dir in "$root"/libs/*; do
+  [ -d "$dir" ] || continue
+  [ -f "$dir/dev/config.edn" ] || continue
+  grep -q ':biff.tasks/docs-namespaces' "$dir/dev/config.edn" || continue
+  (
+    cd "$dir"
+    clojure -M:run docs
+  )
+done

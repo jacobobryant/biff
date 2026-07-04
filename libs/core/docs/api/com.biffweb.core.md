@@ -1,81 +1,8 @@
-# com.biffweb.core reference
-
-- [Schema](#schema)
-  - [:biff.core/init](#biffcoreinit)
-  - [:biff.core/stop](#biffcorestop)
-  - [:biff.core/secret](#biffcoresecret)
-  - [:biff.core/kv-set](#biffcorekv-set)
-  - [:biff.core/kv-get](#biffcorekv-get)
-  - [:biff.core/kv-list](#biffcorekv-list)
-- [API](#api)
-  - [start](#start)
-  - [stop](#stop)
-  - [register](#register)
-  - [get-registry](#get-registry)
-  - [validate](#validate)
-  - [secret-delay](#secret-delay)
-
-[View README](/libs/core/)
-
-## Schema
-
-### :biff.core/init
-
-`(fn [modules-var]) => {...}`. See [start](#start).
-
-### :biff.core/stop
-
-`(fn []) => nil`. See [start](#start) and [stop](#stop).
-
-### :biff.core/secret
-
-A `Delay`-like value returned by [secret-delay](#secret-delay).
-Meant to be used as a schema value:
-
-```clojure
-(biff.core/register {:com.example/api-key :biff.core/secret})
-```
-
-### :biff.core/kv-set
-
-`(fn [ctx namespace key value]) => nil`
-
-Sets the given key in `namespace` to `value`. A nil value should delete the
-key, i.e. a call to `:biff.core/kv-list` should only return keys with non-nil
-values.
-
-- `namespace`: qualified keyword, e.g. `:com.example/things`. The keyword's
-  namespace should be owned by whatever library or application defines the
-  keyword.
-- `key`: string.
-- `value`: any Clojure value that can be round-tripped through `pr-str` ->
-`clojure.edn/read-string` without custom options.
-
-### :biff.core/kv-get
-
-`(fn [ctx namespace key]) => value`
-
-Returns the value for the given key in `namespace.` If `key` is unset,
-returns nil. See `:biff.core/kv-set`.
-
-### :biff.core/kv-list
-
-```
-(fn [ctx namespace])
-(fn [ctx namespace key-prefix]), => [key1, key2, ...]
-```
-
-Returns a sequence of sorted keys in the given namespace. See
-`:biff.core/kv-set`.
-
-- `key-prefix`: string. If set, returns only the keys beginning with this
-prefix.
-
-## API
+# com.biffweb.core API
 
 ### start
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L68)
+[view source](../../src/com/biffweb/core.clj#L19)
 
 ```
 (start modules-var components)
@@ -121,7 +48,7 @@ Uses biff.core/validate to ensure that keys in modules, keys returned by
 
 ### stop
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L110)
+[view source](../../src/com/biffweb/core.clj#L61)
 
 ```
 (stop system)
@@ -131,9 +58,24 @@ Stops a Biff application.
 Calls the :biff.core/stop functions from system in reverse order.
 ```
 
+### module
+
+[view source](../../src/com/biffweb/core.clj#L68)
+
+```
+(module)
+
+Returns a module that aggregates :biff.core/on-tx.
+
+Contains an init function which defines a :biff.core/on-tx function that
+calls :biff.core/on-tx from the other modules in a doseq. As such, on-tx
+functions should run quickly and do heavier work in a background thread if
+needed.
+```
+
 ### register
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L117)
+[view source](../../src/com/biffweb/core.clj#L78)
 
 ```
 (register schemas)
@@ -148,7 +90,7 @@ Registered schemas are used by biff.core/validate.
 
 ### get-registry
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L127)
+[view source](../../src/com/biffweb/core.clj#L88)
 
 ```
 (get-registry)
@@ -162,7 +104,7 @@ Returns all schemas that have been passed to biff.core/register.
 
 ### validate
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L136)
+[view source](../../src/com/biffweb/core.clj#L97)
 
 ```
 (validate m & {:keys [required extra-schema]})
@@ -190,7 +132,7 @@ For convenience, m can be a sequence of maps instead of a single map.
 
 ### secret-delay
 
-[view source](../../libs/core/src/com/biffweb/core.clj#L160)
+[view source](../../src/com/biffweb/core.clj#L121)
 
 ```
 (secret-delay x)

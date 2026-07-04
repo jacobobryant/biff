@@ -1,124 +1,118 @@
 (ns com.biffweb.sqlite.impl.coerce
-  "Internal type coercion between Clojure values and SQLite storage types."
-  (:require [com.biffweb.sqlite.impl.query :as query]
-            [com.biffweb.sqlite.impl.util :as util]
+  (:require [camel-snake-kebab.core :as csk]
+            [clojure.string :as str]
             [next.jdbc.result-set :as rs]
             [taoensso.nippy :as nippy])
   (:import [java.nio ByteBuffer]
            [java.time Instant]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.sql ResultSet ResultSetMetaData]))
 
-;; --- Read coercions (DB -> Clojure) ---
+;;;; read coercion -------------------------------------------------------------
 
-(defn bytes->uuid [^bytes ba]
-  (when ba
-    (let [bb (ByteBuffer/wrap ba)]
-      (UUID. (.getLong bb) (.getLong bb)))))
+(defn- column-names [^ResultSetMetaData rsmeta]
+  (mapv (fn [^Integer i]
+          (let [label (.getColumnLabel rsmeta i)]
+            (if (str/includes? label "/")
+              (keyword (csk/->kebab-case-string label))
+              (if-some [table (not-empty (.getTableName rsmeta i))]
+                (keyword (csk/->kebab-case-string table)
+                         (csk/->kebab-case-string label))
+                (keyword (csk/->kebab-case-string label))))))
+        (range 1 (inc (.getColumnCount rsmeta)))))
 
-(defn epoch-ms->inst [ms]
-  (when ms (Instant/ofEpochMilli ms)))
+;; Like rs/as-kebab-maps but preserves namespaces from qualified aliases
+;; (aliases with a "/" in them). This way, `SELECT ... AS 'foo/bar' FROM foo`
+;; produces a :foo/bar key instead of a :foo/foo/bar key, which is the default
+;; behavior.
+;;
+;; It's important that users be able to use qualified keywords as aliases so
+;; that coercing-column-reader can infer what the type of the column is supposed
+;; to be.
+(defn- as-qualified-alias-kebab-maps [^ResultSet rs _opts]
+  (let [rsmeta (.getMetaData rs)
+        cols   (column-names rsmeta)]
+    (rs/->MapResultSetBuilder rs rsmeta cols)))
 
-(defn int->bool [n]
-  (when (some? n)
-    (case n
-      0 false
-      1 true
-      (throw (ex-info "Invalid boolean value, expected 0 or 1" {:value n})))))
+(defn- bytes->uuid [^bytes ba]
+  (let [bb (ByteBuffer/wrap ba)]
+    (UUID. (.getLong bb) (.getLong bb))))
 
-(defn make-enum-reader [enum-map]
+(defn- epoch-ms->inst [ms]
+  (Instant/ofEpochMilli ms))
+
+(defn- int->bool [n]
+  (case n
+    0 false
+    1 true
+    (throw (ex-info "Invalid boolean value, expected 0 or 1" {:value n}))))
+
+(defn- make-enum-reader [enum-map]
   (fn [db-val]
-    (when (some? db-val)
-      (or (get enum-map db-val)
-          (throw (ex-info "Unknown enum value"
-                          {:value db-val :available-values enum-map}))))))
+    (or (get enum-map db-val)
+        (throw (ex-info "Invalid enum value"
+                        {:enum-value db-val :available (keys enum-map)})))))
 
-;; --- Write coercions (Clojure -> DB) ---
-
-(defn uuid->bytes [^UUID uuid]
-  (let [bb (ByteBuffer/allocate 16)]
-    (.putLong bb (.getMostSignificantBits uuid))
-    (.putLong bb (.getLeastSignificantBits uuid))
-    (.array bb)))
-
-(defn inst->epoch-ms [x]
-  (when x (.toEpochMilli ^Instant x)))
-
-(defn bool->int [b]
-  (if b 1 0))
-
-;; --- Coercion dispatch ---
-
-(defn thaw
-  "Temporary until Yakread's data is migrated to fast-freeze"
-  [bytes*]
-  (if (= [78 80 89] (take 3 bytes*))
-    (nippy/thaw bytes*)
-    (nippy/fast-thaw bytes*)))
-
-(defn build-all-read-coercions
-  "Build read coercions indexed by SQL column name strings.
-   Includes both 'table.column' and 'column' entries."
-  [columns]
+(defn- read-coercers [columns]
   (into {}
-        (keep (fn [{:keys [id enum-values] column-type :type}]
+        (keep (fn [[id {:keys [enum-values] column-type :type}]]
                 (when-some [coerce-fn (case column-type
                                         :uuid bytes->uuid
                                         :inst epoch-ms->inst
                                         :boolean int->bool
                                         :enum (make-enum-reader enum-values)
-                                        :edn thaw
+                                        :edn nippy/fast-thaw
                                         nil)]
                   [id coerce-fn])))
         columns))
 
-(defn build-enum-val->int
-  "Build a map from namespaced enum keywords to their integer DB values."
-  [columns]
-  (into {}
-        (mapcat (fn [col]
-                  (when-let [enum-map (:enum-values col)]
-                    (let [col-ns (str (namespace (:id col)) "." (name (:id col)))]
-                      (map (fn [[idx kw]]
-                             (when-not (and (keyword? kw)
-                                            (= col-ns (namespace kw)))
-                               (throw (ex-info (str "Enum values must be namespaced keywords "
-                                                    "with namespace matching the column. "
-                                                    "Expected namespace: " col-ns
-                                                    ", got: " (pr-str kw))
-                                               {:column (:id col) :value kw})))
-                             [kw idx])
-                           enum-map)))))
-        columns))
+(defn- coercing-column-reader [columns]
+  (let [col->coerce-fn (read-coercers columns)]
+    (fn [builder ^ResultSet rs ^Integer i]
+      (let [col-kw        (nth (:cols builder) (dec i))
+            coerce-fn     (get col->coerce-fn col-kw)
+            value         (.getObject rs i)
+            coerced-value (if (and coerce-fn (some? value))
+                            (coerce-fn value)
+                            value)]
+        (rs/read-column-by-index coerced-value (:rsmeta builder) i)))))
 
-(defn coerce-params
-  "Coerce SQL parameter values based on their types."
-  [enum-val->int params]
-  (mapv (fn [v]
-          (cond
-            (uuid? v)    (uuid->bytes v)
-            (inst? v)    (inst->epoch-ms v)
-            (boolean? v) (bool->int v)
-            (keyword? v) (if-let [n (get enum-val->int v)]
-                           n
-                           (throw (ex-info "Unknown enum keyword value"
-                                           {:value     v
-                                            :available (keys enum-val->int)})))
-            (map? v)     (nippy/fast-freeze v)
-            (vector? v)  (nippy/fast-freeze v)
-            (list? v)    (nippy/fast-freeze v)
-            (set? v)     (nippy/fast-freeze v)
-            :else        v))
-        params))
-
-(def memoized-coercions
-  "Memoized function that builds coercion data from a columns map.
-   Returns {:builder-fn ... :enum-val->int ... :normalized-columns ...}."
+(def builder-fn
   (memoize
    (fn [columns]
-     (let [cols           (util/normalize-columns columns)
-           read-coercions (build-all-read-coercions cols)
-           column-reader  (query/make-column-reader read-coercions)
-           enum-val->int  (build-enum-val->int cols)]
-       {:builder-fn         (rs/builder-adapter query/smart-kebab-maps column-reader)
-        :enum-val->int      enum-val->int
-        :normalized-columns cols}))))
+     (let [column-reader (coercing-column-reader columns)]
+       (rs/builder-adapter as-qualified-alias-kebab-maps column-reader)))))
+
+;;;; write coercion ------------------------------------------------------------
+
+(defn- uuid->bytes [^UUID uuid]
+  (let [bb (ByteBuffer/allocate 16)]
+    (.putLong bb (.getMostSignificantBits uuid))
+    (.putLong bb (.getLeastSignificantBits uuid))
+    (.array bb)))
+
+(defn- build-enum-val->int [columns]
+  (into {}
+        (comp (map val)
+              (mapcat :enum-values)
+              (map (fn [[k v]]
+                     [v k])))
+        columns))
+
+(def ^:private memo-build-enum-val->int (memoize build-enum-val->int))
+
+(defn coerce-params [columns params]
+  (let [enum-val->int (memo-build-enum-val->int columns)]
+    (mapv (fn [v]
+            (cond
+              (uuid? v)    (uuid->bytes v)
+              (inst? v)    (inst-ms v)
+              (boolean? v) (if v 1 0)
+              (keyword? v) (or (get enum-val->int v)
+                               (throw (ex-info
+                                       "Unknown enum keyword value"
+                                       {:value     v
+                                        :available (keys enum-val->int)})))
+              (coll? v)    (nippy/fast-freeze v)
+              :else        v))
+          params)))

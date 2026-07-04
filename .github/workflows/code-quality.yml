@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
       - uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: latest
@@ -20,5 +20,5 @@ jobs:
       - run: clojure -M:run lint
       - run: clojure -M:run format
       - run: git diff --quiet --exit-code
-      - run: clojure -M:run docs
-      - run: git diff --quiet --exit-code -- docs/api
+      - run: bin/docs
+      - run: git diff --quiet --exit-code -- libs/*/docs/api

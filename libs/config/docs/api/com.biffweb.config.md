@@ -1,29 +1,8 @@
-# com.biffweb.config reference
-
-- [Schema](#schema)
-  - [:biff.config/profile](#biffconfigprofile)
-  - [:biff.config/system-properties](#biffconfigsystem-properties)
-- [API](#api)
-  - [use-aero-config](#use-aero-config)
-
-[View README](/libs/config/)
-
-## Schema
-
-### :biff.config/profile
-
-Keyword. The Aero `:profile` value. Intended for testing/development; see
-[use-aero-config](#use-aero-config)..
-
-### :biff.config/system-properties
-
-`{"property" "value", ...}`. See [use-aero-config](#use-aero-config).
-
-## API
+# com.biffweb.config API
 
 ### use-aero-config
 
-[view source](../../libs/config/src/com/biffweb/config.clj#L80)
+[view source](../../src/com/biffweb/config.clj#L68)
 
 ```
 (use-aero-config {:biff.config/keys [profile], :as ctx})

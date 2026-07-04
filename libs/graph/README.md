@@ -32,7 +32,7 @@ your code when things go wrong&mdash;should hopefully be easier.
 ### Dependency
 
 ```clojure
-com.biffweb/graph {:mvn/version "2.0.0-rc7"}
+com.biffweb/graph {:mvn/version "2.0.0-rc8"}
 ```
 
 ### Status
@@ -41,9 +41,12 @@ This library will be a release candidate until all [the other Biff 2
 libraries](/README.md) have been released. Until then there could be breaking
 changes, but I don't anticipate any.
 
-## API Reference
+## Reference
 
-[com.biffweb.graph](/docs/api/com.biffweb.graph.md)
+- [Query format](docs/reference/query-format.md)
+- [Writing resolvers](docs/reference/writing-resolvers.md)
+- [Schema](docs/reference/schema.md)
+- [API](docs/api/com.biffweb.graph.md)
 
 ## Concepts
 
@@ -171,7 +174,7 @@ for sqlite (content warning: unedited AI code).
 Then you can define whatever additional resolvers you think would be helpful
 with `com.biffweb.graph/defresolver`. You can move logic from helper functions
 to resolvers gradually as needed. See [the reference
-docs](/docs/api/com.biffweb.graph.md) for more details about writing
+docs](docs/api/com.biffweb.graph.md) for more details about writing
 resolvers.
 
 Finally you pass your resolvers to `com.biffweb.graph/new-ctx` which does some

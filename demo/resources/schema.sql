@@ -2,10 +2,10 @@
 
 CREATE TABLE biff_sqlite_kv (
   id BLOB PRIMARY KEY NOT NULL,
-  key_ TEXT NOT NULL,
+  k TEXT NOT NULL,
   namespace TEXT NOT NULL,
-  value_ BLOB NOT NULL,
-  UNIQUE(namespace, key_)
+  v BLOB NOT NULL,
+  UNIQUE(namespace, k)
 ) STRICT;
 
 CREATE TABLE tab_state (
@@ -34,10 +34,10 @@ CREATE TABLE todo (
 
 CREATE INDEX idx_user_joined_at ON user(joined_at);
 
-CREATE INDEX idx_todo_updated_at ON todo(updated_at);
-
 CREATE INDEX idx_todo_archived ON todo(archived);
 
-CREATE INDEX idx_todo_user_id ON todo(user_id);
-
 CREATE INDEX idx_todo_created_at ON todo(created_at);
+
+CREATE INDEX idx_todo_updated_at ON todo(updated_at);
+
+CREATE INDEX idx_todo_user_id ON todo(user_id);

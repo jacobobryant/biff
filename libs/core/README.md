@@ -18,7 +18,7 @@ biff.core also contains:
 ### Dependency
 
 ```clojure
-com.biffweb/core {:mvn/version "2.0.0-rc7"}
+com.biffweb/core {:mvn/version "2.0.0-rc8"}
 ```
 
 ### Status
@@ -27,15 +27,7 @@ This library will be a release candidate until all [the other Biff 2
 libraries](/README.md) have been released. Until then there could be breaking
 changes, but I don't anticipate any.
 
-### Table of contents
-
-- [Get started](#get-started)
-- [API Reference](#api-reference)
-- [Concepts](#concepts)
-- [Usage](#usage)
-- [Tips](#tips)
-
-## Get started
+## Example
 
 Try out [the demo app](demo/com/example.clj):
 
@@ -57,14 +49,8 @@ com.example=> (start)
 
 ## API Reference
 
-[com.biffweb.core](/docs/api/com.biffweb.core.md)
-
-The namespace docstring contains specifications for all `:biff.core/*` keys.
-Some of those keys aren't actually used in this library and are only provided as
-interfaces for other Biff libraries. e.g. the `:biff.core/kv-*` key-value store
-functions are meant to be implemented for whatever database you're using so that
-other Biff libs can do simple data persistence without requiring a particular
-database.
+- [Schema](docs/reference/schema.md)
+- [API](docs/api/com.biffweb.core.md)
 
 ## Concepts
 

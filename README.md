@@ -29,17 +29,13 @@ myself for manual testing.
 The libs all use `:local/root` dependencies so you can't actually add them as a
 dependency on your own project (I think?) until I explicitly publish them.
 
-## Reference
-
-[API docs](/docs/api/)
-
 ## Libraries
 
 Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc7"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc8"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
@@ -52,10 +48,11 @@ Released:
 - [biff.config](/libs/config/)
 - [biff.fx](/libs/fx/)
 - [biff.graph](/libs/graph/)
+- [biff.sqlite](/libs/sqlite/)
+- [biff.xtdb](/libs/xtdb/)
 
 Remaining (see [libs/](/libs/)):
 
-- biff.sqlite
 - biff.ring
 - biff.datastar
 - biff.run
@@ -68,14 +65,12 @@ Remaining (see [libs/](/libs/)):
 And then I have a few more things to make that won't be/aren't yet in this repo:
 
 - sqlite starter app (this will be like the demo app but more blank. e.g. see
-  [biff-starter-sqlite](https://github.com/jacobobryant/biff-starter-sqlite) which is out
-  of date now but is, you know, blank)
-- biff.xtdb (this will be based on some older [Biff v1 XTDB
-  code](github.com/jacobobryant/biff/blob/xtdb2/src/com/biffweb/impl/xtdb2.clj))
+  [biff-starter-sqlite](https://github.com/jacobobryant/biff-starter-sqlite)
+  which is out of date now but is, you know, blank)
 - XTDB starter app
 
-I'll probably also add some additional database adapter libraries. Ones I have
-in mind:
+I might also add some additional database adapter libraries. Ones I have in
+mind:
 
 - XTDB v1 (to make migrating from Biff v1 easier)
 - Postgres
@@ -120,6 +115,8 @@ flowchart TD
 ```
 
 ### Resources
+
+- [How to write a Biff database adapter](/docs/db-adapters.md)
 
 TODO
 
@@ -171,14 +168,14 @@ TODO
 
 TODO
 
-## AI
+## LLMs
 
-I use AI to generate a rough draft of pretty much all the code I write, reading
-it thoroughly. Then I edit the code and write docs manually. I don't edit the
-tests much, but I do regenerate them after I write detailed docstrings which
-seems to work pretty well.
+I use LLMs to generate a rough draft of pretty much all the code I write,
+reading it thoroughly. I don't release code I haven't read or don't understand.
+Before releasing, I edit the code (sometimes a little, sometimes a lot) and
+write docs _almost always_ manually. I don't edit the tests much, but I do
+regenerate them after I write detailed docstrings which seems to work pretty
+well.
 
-> Biff documentation: 100% certified angus text.
-
-Biff is intended to be a good framework for both manual and agent-driven
+Biff is intended to be a good framework for both manual and LLM-assisted
 development.

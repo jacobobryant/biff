@@ -1,69 +1,20 @@
 (ns com.biffweb.core
-  "[View README](/libs/core/)
-
-   ## Schema
-
-   ### :biff.core/init
-
-   `(fn [modules-var]) => {...}`. See [start](#start).
-
-   ### :biff.core/stop
-
-   `(fn []) => nil`. See [start](#start) and [stop](#stop).
-
-   ### :biff.core/secret
-
-   A `Delay`-like value returned by [secret-delay](#secret-delay).
-   Meant to be used as a schema value:
-
-   ```clojure
-   (biff.core/register {:com.example/api-key :biff.core/secret})
-   ```
-
-   ### :biff.core/kv-set
-
-   `(fn [ctx namespace key value]) => nil`
-
-   Sets the given key in `namespace` to `value`. A nil value should delete the
-   key, i.e. a call to `:biff.core/kv-list` should only return keys with non-nil
-   values.
-
-   - `namespace`: qualified keyword, e.g. `:com.example/things`. The keyword's
-     namespace should be owned by whatever library or application defines the
-     keyword.
-   - `key`: string.
-   - `value`: any Clojure value that can be round-tripped through `pr-str` ->
-   `clojure.edn/read-string` without custom options.
-
-   ### :biff.core/kv-get
-
-   `(fn [ctx namespace key]) => value`
-
-   Returns the value for the given key in `namespace.` If `key` is unset,
-   returns nil. See `:biff.core/kv-set`.
-
-   ### :biff.core/kv-list
-
-   ```
-   (fn [ctx namespace])
-   (fn [ctx namespace key-prefix]), => [key1, key2, ...]
-   ```
-
-   Returns a sequence of sorted keys in the given namespace. See
-   `:biff.core/kv-set`.
-
-   - `key-prefix`: string. If set, returns only the keys beginning with this
-   prefix."
   (:require [com.biffweb.core.impl.system :as impl.sys]
             [com.biffweb.core.impl.secrets :as impl.sec]
             [com.biffweb.core.impl.validation :as impl.v]))
 
-(impl.v/register {:biff.core/init    'fn?
-                  :biff.core/stop    [:vector 'fn?]
-                  :biff.core/secret  [:fn delay?]
-                  :biff.core/kv-set  'fn?
-                  :biff.core/kv-get  'fn?
-                  :biff.core/kv-list 'fn?})
+(impl.v/register
+ {:biff.core/init         'fn?
+  :biff.core/stop         [:vector 'fn?]
+  :biff.core/secret       [:fn delay?]
+  :biff.core/kv-set       'fn?
+  :biff.core/kv-get       'fn?
+  :biff.core/kv-list      'fn?
+  :biff.core/kv-namespace 'qualified-keyword?
+  :biff.core/kv-key       'string?
+  :biff.core/kv-prefix    [:maybe 'string?]
+  :biff.core/wrap-read-tx 'ifn?
+  :biff.core/on-tx        'ifn?})
 
 (defn start
   "Starts a Biff application and returns the system map.
@@ -113,6 +64,16 @@
    Calls the :biff.core/stop functions from system in reverse order."
   [system]
   (impl.sys/stop system))
+
+(defn module
+  "Returns a module that aggregates :biff.core/on-tx.
+
+   Contains an init function which defines a :biff.core/on-tx function that
+   calls :biff.core/on-tx from the other modules in a doseq. As such, on-tx
+   functions should run quickly and do heavier work in a background thread if
+   needed."
+  []
+  (impl.sys/module))
 
 (defn register
   "Merges a map of Malli schemas into Biff's global schema registry.

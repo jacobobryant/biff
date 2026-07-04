@@ -91,7 +91,7 @@
           captcha-param    (:biff.auth/captcha-param ctx)
           clean-p          (clean-params original-params captcha-param)]
       (if (:success captcha-ok)
-        [{:_upsert [:biff.kv/set-value :biff.auth/signin email
+        [{:_upsert [:biff.core/kv-set :biff.auth/signin email
                     {:biff-auth-signin/code            code
                      :biff-auth-signin/created-at      now
                      :biff-auth-signin/failed-attempts 0
@@ -143,7 +143,7 @@
           link-url         (str base-url "/_biff/auth/verify-link/" payload)
           defaults         (default-link-email ctx {:url link-url})]
       (if (:success captcha-ok)
-        [{:_upsert [:biff.kv/set-value :biff.auth/signin email
+        [{:_upsert [:biff.core/kv-set :biff.auth/signin email
                     {:biff-auth-signin/code            token
                      :biff-auth-signin/created-at      now
                      :biff-auth-signin/failed-attempts 0
@@ -177,7 +177,7 @@
     (let [email (normalize-email (:email params))]
       {:email          email
        :submitted-code (:code params)
-       :signin-record  [:biff.kv/get-value :biff.auth/signin email]
+       :signin-record  [:biff.core/kv-get :biff.auth/signin email]
        :biff.fx/next   :check-code}))
 
   :check-code
@@ -196,12 +196,12 @@
              (= submitted-code code))
         {:email            email
          :saved-params     params
-         :_delete          [:biff.kv/set-value :biff.auth/signin email nil]
+         :_delete          [:biff.core/kv-set :biff.auth/signin email nil]
          :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
 
         (and signin-record (< failed-attempts max-attempts))
-        {:_inc    [:biff.kv/set-value :biff.auth/signin email
+        {:_inc    [:biff.core/kv-set :biff.auth/signin email
                    (update signin-record :biff-auth-signin/failed-attempts (fnil inc 0))]
          :status  303
          :headers {"location" (append-query-params code-signin-path
@@ -255,7 +255,7 @@
         state-valid?
         {:email           (normalize-email email)
          :submitted-token token
-         :signin-record   [:biff.kv/get-value :biff.auth/signin (normalize-email email)]
+         :signin-record   [:biff.core/kv-get :biff.auth/signin (normalize-email email)]
          :biff.fx/next    :check-token}
 
         :else
@@ -277,7 +277,7 @@
                (= submitted-token code))
         {:email            email
          :saved-params     params
-         :_delete          [:biff.kv/set-value :biff.auth/signin email nil]
+         :_delete          [:biff.core/kv-set :biff.auth/signin email nil]
          :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
         {:status  303
@@ -319,7 +319,7 @@
          :headers {"location" (append-query-params link-signin-path "error=invalid-link")}}
         {:email           email
          :submitted-token token
-         :signin-record   [:biff.kv/get-value :biff.auth/signin email]
+         :signin-record   [:biff.core/kv-get :biff.auth/signin email]
          :biff.fx/next    :check-token})))
 
   :check-token
@@ -335,7 +335,7 @@
                (= submitted-token code))
         {:email            email
          :saved-params     params
-         :_delete          [:biff.kv/set-value :biff.auth/signin email nil]
+         :_delete          [:biff.core/kv-set :biff.auth/signin email nil]
          :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
         {:status  303
