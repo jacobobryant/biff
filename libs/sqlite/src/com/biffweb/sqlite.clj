@@ -1,15 +1,4 @@
 (ns com.biffweb.sqlite
-  "SQLite integration for Biff: connection pooling, schema migrations, query execution,
-   and a built-in key/value store.
-
-   Public API:
-   - `module`              — Biff module exposing SQLite fx handlers.
-   - `use-sqlite`          — Biff component for schema migrations, connection pooling, and litestream replication.
-   - `execute`             — Execute SQL queries/statements with automatic type coercion and validation.
-   - `authorized-write`    — Execute INSERT/UPDATE/DELETE with authorization checks.
-   - `use-litestream`      — Biff component for litestream replication (called by use-sqlite automatically).
-   - `generate-schema-sql` — Generate the complete schema SQL string from column definitions.
-   - `make-resolvers`      — Create biff.inject resolvers for SQLite tables from column definitions."
   (:require
    [clojure.string :as str]
    [clojure.tools.logging :as log]

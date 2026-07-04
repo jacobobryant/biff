@@ -14,10 +14,4 @@
  :aliases
  {:run   {:extra-paths ["test" "dev"]
           :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
-          :main-opts   ["-m" "com.biffweb.tasks.lib"]}
-  :codox {:extra-deps {codox/codox {:mvn/version "0.10.8"}}
-          :exec-fn    codox.main/generate-docs
-          :exec-args  {:source-paths ["src"]
-                       :output-path  "target/doc"
-                       :source-uri   "https://github.com/jacobobryant/biff.sqlite/blob/{version}/{filepath}#L{line}"
-                       :namespaces   [com.biffweb.sqlite]}}}}
+          :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}
