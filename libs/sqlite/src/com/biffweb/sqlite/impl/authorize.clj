@@ -1,7 +1,8 @@
 (ns com.biffweb.sqlite.impl.authorize
   "Internal implementation for authorized write transactions.
    Generates diff data structures and manages transaction rollback."
-  (:require [com.biffweb.sqlite.impl.coerce :as coerce]
+  (:require [com.biffweb.sqlite.impl.execute :as exec]
+            [com.biffweb.sqlite.impl.coerce :as coerce]
             [com.biffweb.sqlite.impl.util :as util]
             [com.biffweb.sqlite.impl.validate :as validate]
             [honey.sql :as hsql]
@@ -208,3 +209,15 @@
             (throw (ex-info "Write rejected by authorization rules."
                             {:diff diff})))
           diff)))))
+
+(defn- run-on-tx! [ctx result]
+  (when-let [on-tx (:biff.sqlite/on-tx ctx)]
+    (on-tx ctx))
+  result)
+
+(defn authorized-write [ctx input]
+  (when-not (:biff.sqlite/authorize ctx)
+    (throw (ex-info "authorized-write requires :biff.sqlite/authorize in ctx."
+                    {})))
+  (locking exec/write-lock
+    (run-on-tx! ctx (authorized-write! ctx input))))

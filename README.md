@@ -68,8 +68,8 @@ Remaining (see [libs/](/libs/)):
 And then I have a few more things to make that won't be/aren't yet in this repo:
 
 - sqlite starter app (this will be like the demo app but more blank. e.g. see
-  [biff-starter-sqlite](https://github.com/jacobobryant/biff-starter-sqlite) which is out
-  of date now but is, you know, blank)
+  [biff-starter-sqlite](https://github.com/jacobobryant/biff-starter-sqlite)
+  which is out of date now but is, you know, blank)
 - biff.xtdb (this will be based on some older [Biff v1 XTDB
   code](github.com/jacobobryant/biff/blob/xtdb2/src/com/biffweb/impl/xtdb2.clj))
 - XTDB starter app

@@ -1,0 +1,36 @@
+(ns com.biffweb.sqlite.impl.system
+  (:require [com.biffweb.sqlite.impl.authorize :as authorize]
+            [com.biffweb.sqlite.impl.execute :as exec]
+            [com.biffweb.sqlite.impl.kv :as kv]
+            [com.biffweb.sqlite.impl.litestream :as litestream]
+            [com.biffweb.sqlite.impl.pool :as pool]
+            [com.biffweb.sqlite.impl.sqldef :as impl.sqldef]))
+
+(defn use-sqlite
+  [ctx]
+  (-> ctx
+      litestream/use-litestream
+      impl.sqldef/use-sqldef
+      pool/use-sqlite-conn))
+
+(def fx-handlers
+  {:biff.sqlite.fx/execute          exec/execute
+   :biff.sqlite.fx/authorized-write authorize/authorized-write})
+
+(defn module []
+  {:biff.fx/handlers    fx-handlers
+   :biff.sqlite/columns kv/columns
+
+   :biff.core/init
+   (fn [modules-var]
+     {:biff.core/kv-get    kv/get-value
+      :biff.core/kv-list   kv/list-keys
+      :biff.core/kv-set    kv/set-value
+      :biff.sqlite/columns (into {}
+                                 (mapcat :biff.sqlite/columns)
+                                 @modules-var)
+
+      :biff.sqlite/on-tx
+      (fn [ctx]
+        (doseq [on-tx (keep :biff.sqlite/on-tx @modules-var)]
+          (on-tx ctx)))})})

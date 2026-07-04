@@ -1,8 +1,5 @@
 (ns com.biffweb.sqlite.impl.schema
-  (:require [clojure.java.io :as io]
-            [clojure.java.process :as process]
-            [clojure.string :as str]
-            [clojure.tools.logging :as log]))
+  (:require [clojure.string :as str]))
 
 (defn- sql-name [s]
   (str/replace (name s) "-" "_"))
@@ -141,20 +138,3 @@
               (concat (mapv table-sql tables)
                       (->> (mapcat :columns tables)
                            (keep index-sql))))))
-
-(defn apply-schema!
-  [{:biff.sqlite/keys [db-path
-                       schema-path
-                       columns
-                       extra-init-sql
-                       sqlite3def-path]}]
-  (io/make-parents db-path)
-  (io/make-parents schema-path)
-  (let [full-sql (str "-- Auto-generated; do not edit.\n\n"
-                      (schema-sql {:biff.sqlite/columns columns})
-                      (when (not-empty extra-init-sql)
-                        (str "\n\n" (str/join "\n" extra-init-sql))))
-        _        (spit schema-path full-sql)
-        result   (process/exec sqlite3def-path db-path "--apply" "-f" schema-path)]
-    (when (not-empty result)
-      (log/info result))))

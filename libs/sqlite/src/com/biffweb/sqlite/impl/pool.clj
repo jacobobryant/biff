@@ -2,6 +2,7 @@
   "Internal connection pool and write connection management."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [com.biffweb.sqlite.impl.defaults :as impl.defaults]
             [next.jdbc :as jdbc])
   (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
 
@@ -29,3 +30,16 @@
     (doseq [pragma pragmas]
       (jdbc/execute! conn [pragma]))
     conn))
+
+(defn use-sqlite-conn
+  [{:biff.sqlite/keys [db-path]
+    :or               {db-path impl.defaults/db-path}
+    :as               ctx}]
+  (let [read-pool       (start-read-pool db-path)
+        write-conn      (start-write-conn db-path)]
+    (-> ctx
+        (assoc :biff.sqlite/read-pool read-pool
+               :biff.sqlite/write-conn write-conn)
+        (update :biff.core/stop conj (fn []
+                                       (.close write-conn)
+                                       (.close read-pool))))))

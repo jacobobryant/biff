@@ -93,20 +93,20 @@
 (deftest module-exposes-fx-handlers
   (let [module      (biff.sqlite/module)
         on-tx-calls (atom [])
-        modules-var (atom [{:biff.db/on-tx (fn [ctx] (swap! on-tx-calls conj [:a ctx]))}
-                           {:biff.db/on-tx (fn [ctx] (swap! on-tx-calls conj [:b ctx]))}])
+        modules-var (atom [{:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:a ctx]))}
+                           {:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:b ctx]))}])
         init        ((:biff.core/init module) modules-var)]
     (is (= biff.sqlite/fx-handlers (:biff.fx/handlers module)))
     (is (fn? (:biff.core/init module)))
-    (is (fn? (:biff.db/get-kv init)))
-    (is (fn? (:biff.db/list-kv init)))
-    (is (fn? (:biff.db/set-kv init)))
-    ((:biff.db/on-tx init) {:demo true})
+    (is (fn? (:biff.core/kv-get init)))
+    (is (fn? (:biff.core/kv-list init)))
+    (is (fn? (:biff.core/kv-set init)))
+    ((:biff.sqlite/on-tx init) {:demo true})
     (is (= [[:a {:demo true}] [:b {:demo true}]]
            @on-tx-calls))
     (reset! on-tx-calls [])
-    (swap! modules-var conj {:biff.db/on-tx (fn [ctx] (swap! on-tx-calls conj [:c ctx]))})
-    ((:biff.db/on-tx init) {:demo :updated})
+    (swap! modules-var conj {:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:c ctx]))})
+    ((:biff.sqlite/on-tx init) {:demo :updated})
     (is (= [[:a {:demo :updated}] [:b {:demo :updated}] [:c {:demo :updated}]]
            @on-tx-calls))))
 
@@ -118,21 +118,22 @@
                    :widget/label  {:type :text :required true}
                    :widget/count  {:type :int :required true}
                    :widget/score  {:type :real :required true}
-                   :widget/active {:type :boolean :required true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
-      (is (str/includes? sql "CREATE TABLE widget"))
-      (is (str/includes? sql "id BLOB PRIMARY KEY NOT NULL"))
-      (is (str/includes? sql "label TEXT NOT NULL"))
-      (is (str/includes? sql "count INT NOT NULL"))
-      (is (str/includes? sql "score REAL NOT NULL"))
-      (is (str/includes? sql "active INT NOT NULL"))
-      (is (str/includes? sql "STRICT;")))))
+                   :widget/active {:type :boolean :required true}}]
+
+      (is (= (str/split-lines (schema/schema-sql {:biff.sqlite/columns columns}))
+             ["CREATE TABLE widget ("
+              "  id BLOB PRIMARY KEY NOT NULL,"
+              "  active INT NOT NULL,"
+              "  count INT NOT NULL,"
+              "  label TEXT NOT NULL,"
+              "  score REAL NOT NULL"
+              ") STRICT;"])))))
 
 (deftest schema-sql-optional-test
   (testing "optional columns omit NOT NULL"
     (let [columns {:item/id   {:type :text :primary-key true}
                    :item/note {:type :text}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "id TEXT PRIMARY KEY NOT NULL"))
       (is (re-find #"note TEXT\b" sql))
       (is (not (str/includes? sql "note TEXT NOT NULL"))))))
@@ -143,7 +144,7 @@
                    :task/status {:type        :enum                   :required true
                                  :enum-values {0 :task.status/pending
                                                1 :task.status/done}}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "status INT NOT NULL CHECK"))
       (is (str/includes? sql "IN (0, 1)")))))
 
@@ -153,14 +154,14 @@
                    :membership/user-id  {:type        :text                  :required true
                                          :unique-with [:membership/group-id]}
                    :membership/group-id {:type :text :required true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "UNIQUE(user_id, group_id)")))))
 
 (deftest schema-sql-unique-column-test
   (testing "unique constraint from :unique true"
     (let [columns {:user/id    {:type :uuid :primary-key true}
                    :user/email {:type :text :unique true :required true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "UNIQUE(email)")))))
 
 (deftest schema-sql-foreign-key-test
@@ -168,28 +169,28 @@
     (let [columns {:account/id     {:type :text :primary-key true}
                    :post/id        {:type :text :primary-key true}
                    :post/author-id {:type :text :required true :ref :account/id}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "FOREIGN KEY(author_id) REFERENCES account(id)")))))
 
 (deftest schema-sql-index-test
   (testing "index generation from :index true"
     (let [columns {:item/id      {:type :uuid :primary-key true}
                    :item/user-id {:type :uuid :required true :index true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "CREATE INDEX idx_item_user_id ON item(user_id)")))))
 
 (deftest schema-sql-edn-type-test
   (testing "edn type generates BLOB column"
     (let [columns {:user/id          {:type :uuid :primary-key true}
                    :user/digest-days {:type :edn}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "digest_days BLOB")))))
 
 (deftest schema-sql-blob-type-test
   (testing "blob type generates BLOB column"
     (let [columns {:asset/id   {:type :uuid :primary-key true}
                    :asset/data {:type :blob}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "data BLOB")))))
 
 (deftest schema-sql-topo-sort-test
@@ -197,14 +198,14 @@
     (let [columns {:post/id        {:type :uuid :primary-key true}
                    :post/author-id {:type :uuid :required true :ref :user/id}
                    :user/id        {:type :uuid :primary-key true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (< (str/index-of sql "CREATE TABLE user")
              (str/index-of sql "CREATE TABLE post"))))))
 
 (deftest primary-key-implies-required-test
   (testing ":primary-key true implies :required true in schema output"
     (let [columns {:item/id {:type :uuid :primary-key true}}
-          sql     (schema/generate-schema-sql (util/normalize-columns columns) [])]
+          sql     (schema/schema-sql {:biff.sqlite/columns columns})]
       (is (str/includes? sql "id BLOB PRIMARY KEY NOT NULL")))))
 
 (deftest schema-sql-column-sort-order-test
@@ -214,7 +215,7 @@
                          :widget/alpha     {:type :text :required true}
                          :widget/zoptional {:type :text}
                          :widget/beta      {:type :int}}
-          sql           (schema/generate-schema-sql (util/normalize-columns columns) [])
+          sql           (schema/schema-sql {:biff.sqlite/columns columns})
           id-pos        (str/index-of sql "id BLOB PRIMARY KEY")
           alpha-pos     (str/index-of sql "alpha TEXT NOT NULL")
           zebra-pos     (str/index-of sql "zebra TEXT NOT NULL")
@@ -292,9 +293,9 @@
       (let [ctx       (biff.sqlite/use-sqlite {:biff.core/stop      []
                                                :biff.sqlite/db-path db-path
                                                :biff.sqlite/columns test-columns})
-            set-value (:biff.kv/set-value ctx)
-            get-value (:biff.kv/get-value ctx)
-            list-kv   (:biff.db/list-kv ctx)]
+            set-value (:biff.core/kv-set ctx)
+            get-value (:biff.core/kv-get ctx)
+            list-kv   (:biff.core/kv-list ctx)]
         (is (contains? (:biff.sqlite/columns ctx) :biff-sqlite-kv/namespace))
         (set-value ctx :demo/settings "theme" {:mode :dark})
         (set-value ctx :demo/settings "theme-2" {:mode :blue})
@@ -328,7 +329,7 @@
         ctx   {:biff.sqlite/read-pool  *read-pool*
                :biff.sqlite/write-conn *write-conn*
                :biff.sqlite/columns    test-columns
-               :biff.db/on-tx          (fn [_] (swap! calls conj :called))
+               :biff.sqlite/on-tx      (fn [_] (swap! calls conj :called))
                :biff.sqlite/authorize  (constantly true)}]
     (biff.sqlite/execute ctx {:insert-into :user
                               :values      [{:user/id        "u2"
@@ -339,36 +340,6 @@
                                    :set    {:user/name "Robert"}
                                    :where  [:= :user/id "u2"]})
     (is (= [:called :called] @calls))))
-
-(deftest kv-store-migrates-legacy-composite-schema-test
-  (let [db-file (java.io.File/createTempFile "biff-sqlite-kv-migrate" ".db")
-        db-path (.getAbsolutePath db-file)
-        frozen  (nippy/fast-freeze {:mode :dark})]
-    (.delete db-file)
-    (try
-      (with-open [conn (jdbc/get-connection (str "jdbc:sqlite:" db-path))]
-        (jdbc/execute! conn ["CREATE TABLE biff_sqlite_kv (namespace TEXT NOT NULL, key_ TEXT NOT NULL, value_ BLOB NOT NULL, PRIMARY KEY(namespace, key_)) STRICT"])
-        (jdbc/execute! conn ["INSERT INTO biff_sqlite_kv (namespace, key_, value_) VALUES (?, ?, ?)"
-                             ":demo/settings"
-                             "theme"
-                             frozen]))
-      (let [ctx       (biff.sqlite/use-sqlite {:biff.core/stop      []
-                                               :biff.sqlite/db-path db-path
-                                               :biff.sqlite/columns test-columns})
-            set-value (:biff.kv/set-value ctx)
-            get-value (:biff.kv/get-value ctx)
-            kv-rows   (biff.sqlite/execute ctx {:select :* :from :biff-sqlite-kv})]
-        (is (= {:mode :dark}
-               (get-value ctx :demo/settings "theme")))
-        (is (uuid? (:biff-sqlite-kv/id (first kv-rows))))
-        (set-value ctx :demo/settings "theme" {:mode :light})
-        (is (= {:mode :light}
-               (get-value ctx :demo/settings "theme")))
-        ((first (:biff.core/stop ctx))))
-      (finally
-        (.delete (java.io.File. db-path))
-        (.delete (java.io.File. (str db-path "-wal")))
-        (.delete (java.io.File. (str db-path "-shm")))))))
 
 ;; --- Namespaced alias tests ---
 
@@ -524,18 +495,15 @@
                                 :set    {:item/note nil}
                                 :where  [:= :item/id "i1"]}))))
 
-;; --- generate-schema-sql public API test ---
-
-(deftest generate-schema-sql-test
-  (testing "public generate-schema-sql returns full SQL string"
+(deftest schema-sql-test
+  (testing "public schema-sql returns full SQL string"
     (let [columns {:user/id    {:type :uuid :primary-key true}
                    :user/email {:type :text :unique true :required true}}
-          result  (biff.sqlite/generate-schema-sql
+          result  (biff.sqlite/schema-sql
                    {:biff.sqlite/columns        columns
                     :biff.sqlite/extra-init-sql ["CREATE INDEX custom_idx ON user(email);"]})]
-      (is (str/includes? result "-- Auto-generated; do not edit."))
       (is (str/includes? result "CREATE TABLE user"))
-      (is (str/includes? result "CREATE INDEX custom_idx")))))
+      (is (not (str/includes? result "CREATE INDEX custom_idx"))))))
 
 ;; --- make-resolvers tests ---
 

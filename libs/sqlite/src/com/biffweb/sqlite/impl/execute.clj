@@ -12,7 +12,7 @@
 (def write-lock (Object.))
 
 (defn- run-on-tx! [ctx]
-  (when-let [on-tx (:biff.db/on-tx ctx)]
+  (when-let [on-tx (:biff.sqlite/on-tx ctx)]
     (on-tx ctx)))
 
 (defn execute
