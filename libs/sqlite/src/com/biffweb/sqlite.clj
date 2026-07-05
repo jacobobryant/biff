@@ -48,14 +48,16 @@
 (defn use-sqlite [ctx]
   (impl.system/use-sqlite ctx))
 
-(defn use-litestream [ctx]
-  (impl.litestream/use-litestream ctx))
-
 (defn use-sqldef [ctx]
   (impl.sqldef/use-sqldef ctx))
 
-(defn use-sqlite-conn [ctx]
-  (pool/use-sqlite-conn ctx))
+(defn use-conn [ctx]
+  (pool/use-conn ctx))
+
+;; ---
+
+(defn use-litestream [ctx]
+  (impl.litestream/use-litestream ctx))
 
 (defn execute [ctx input]
   (impl.execute/execute ctx input))

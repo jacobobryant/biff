@@ -11,7 +11,7 @@
   (-> ctx
       litestream/use-litestream
       impl.sqldef/use-sqldef
-      pool/use-sqlite-conn))
+      pool/use-conn))
 
 (def fx-handlers
   {:biff.sqlite.fx/execute          exec/execute
