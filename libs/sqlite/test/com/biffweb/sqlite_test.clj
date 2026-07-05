@@ -287,14 +287,18 @@
 
 (deftest kv-store-roundtrip-test
   (let [db-file (java.io.File/createTempFile "biff-sqlite-kv" ".db")
-        db-path (.getAbsolutePath db-file)]
+        db-path (.getAbsolutePath db-file)
+        schema-file (java.io.File/createTempFile "biff-sqlite-schema" ".sql")
+        schema-path (.getAbsolutePath schema-file)]
     (.delete db-file)
+    (.delete schema-file)
     (try
       (let [module    (biff.sqlite/module)
             init      ((:biff.core/init module) (atom [module
                                                        {:biff.sqlite/columns test-columns}]))
             ctx       (biff.sqlite/use-sqlite (merge {:biff.core/stop      []
-                                                       :biff.sqlite/db-path db-path}
+                                                       :biff.sqlite/db-path db-path
+                                                       :biff.sqlite/schema-path schema-path}
                                                       init))
             set-value (:biff.core/kv-set ctx)
             get-value (:biff.core/kv-get ctx)
@@ -323,6 +327,7 @@
                      (list-kv ctx :demo/settings :theme)))
         ((first (:biff.core/stop ctx))))
       (finally
+        (.delete schema-file)
         (.delete (java.io.File. db-path))
         (.delete (java.io.File. (str db-path "-wal")))
         (.delete (java.io.File. (str db-path "-shm")))))))

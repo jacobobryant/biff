@@ -211,7 +211,7 @@
           diff)))))
 
 (defn- run-on-tx! [ctx result]
-  (when-let [on-tx (:biff.sqlite/on-tx ctx)]
+  (when-let [on-tx (:biff.core/on-tx ctx)]
     (on-tx ctx))
   result)
 

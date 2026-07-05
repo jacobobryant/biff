@@ -248,5 +248,5 @@
 (defn module
   []
   {:biff.ring/site-middleware [wrap-datastar]
-   :biff.db/on-tx             #'refresh
+   :biff.core/on-tx           #'refresh
    :biff.core/init            (fn [_] (new-lock))})

@@ -53,7 +53,15 @@
    `:biff.core/kv-set`.
 
    - `key-prefix`: string. If set, returns only the keys beginning with this
-   prefix."
+   prefix.
+
+   ### :biff.core/on-tx
+
+   `(fn [ctx])`
+
+   A function to be called after a database transaction has been submitted.
+   There is no specification that `ctx` include any data about the transaction.
+   See com.biffweb.core/module."
   (:require [com.biffweb.core.impl.system :as impl.sys]
             [com.biffweb.core.impl.secrets :as impl.sec]
             [com.biffweb.core.impl.validation :as impl.v]))
@@ -63,7 +71,8 @@
                   :biff.core/secret  [:fn delay?]
                   :biff.core/kv-set  'fn?
                   :biff.core/kv-get  'fn?
-                  :biff.core/kv-list 'fn?})
+                  :biff.core/kv-list 'fn?
+                  :biff.core/on-tx   'ifn?})
 
 (defn start
   "Starts a Biff application and returns the system map.
@@ -113,6 +122,16 @@
    Calls the :biff.core/stop functions from system in reverse order."
   [system]
   (impl.sys/stop system))
+
+(defn module
+  "Returns a module that aggregates :biff.core/on-tx.
+
+   Contains an init function which defines a :biff.core/on-tx function that
+   calls :biff.core/on-tx from the other modules in a doseq. As such, on-tx
+   functions should run quickly and do heavier work in a background thread if
+   needed."
+  []
+  (impl.sys/module))
 
 (defn register
   "Merges a map of Malli schemas into Biff's global schema registry.

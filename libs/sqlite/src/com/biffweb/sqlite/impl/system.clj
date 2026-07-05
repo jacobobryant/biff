@@ -28,9 +28,4 @@
       :biff.core/kv-set    kv/set-value
       :biff.sqlite/columns (into {}
                                  (mapcat :biff.sqlite/columns)
-                                 @modules-var)
-
-      :biff.sqlite/on-tx
-      (fn [ctx]
-        (doseq [on-tx (keep :biff.sqlite/on-tx @modules-var)]
-          (on-tx ctx)))})})
+                                 @modules-var)})})
