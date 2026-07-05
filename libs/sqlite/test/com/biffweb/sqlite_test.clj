@@ -290,9 +290,12 @@
         db-path (.getAbsolutePath db-file)]
     (.delete db-file)
     (try
-      (let [ctx       (biff.sqlite/use-sqlite {:biff.core/stop      []
-                                               :biff.sqlite/db-path db-path
-                                               :biff.sqlite/columns test-columns})
+      (let [module    (biff.sqlite/module)
+            init      ((:biff.core/init module) (atom [module
+                                                       {:biff.sqlite/columns test-columns}]))
+            ctx       (biff.sqlite/use-sqlite (merge {:biff.core/stop      []
+                                                       :biff.sqlite/db-path db-path}
+                                                      init))
             set-value (:biff.core/kv-set ctx)
             get-value (:biff.core/kv-get ctx)
             list-kv   (:biff.core/kv-list ctx)]

@@ -27,6 +27,7 @@
   :biff.sqlite/after-conn                   :any
   :biff.sqlite/authorize                    'ifn?
   :biff.sqlite/before-conn                  :any
+  :biff.sqlite/bin-dir                      :string
   :biff.sqlite/db-path                      :string
   :biff.sqlite/extra-init-sql               [:sequential :string]
   :biff.sqlite/litestream-access-key-id     :string
@@ -38,7 +39,7 @@
   :biff.sqlite/litestream-version           :string
   :biff.sqlite/on-tx                        'ifn?
   :biff.sqlite/read-pool                    :any
-  :biff.sqlite/sqlite3def-version           :string
+  :biff.sqlite/sqldef-version               :string
   :biff.sqlite/write-conn                   :any})
 
 (defn schema-sql [ctx]
@@ -69,6 +70,3 @@
 
 (defn make-resolvers [ctx]
   (impl.resolver/make-resolvers ctx))
-
-(defn use-litestream [ctx]
-  (impl.litestream/use-litestream ctx))
