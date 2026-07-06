@@ -3,7 +3,7 @@
             [clojure.tools.logging :as log]
             [com.biffweb.core.impl.validation :as impl.v]))
 
-(defn module
+(defn module []
   {:biff.core/init
    (fn [modules-var]
      {:biff.core/on-tx

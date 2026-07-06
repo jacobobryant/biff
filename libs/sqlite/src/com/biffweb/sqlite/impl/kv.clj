@@ -21,12 +21,12 @@
                        :biff.core/kv-key key*})
   (if (nil? value)
     (exec/execute ctx ["DELETE FROM biff_sqlite_kv WHERE namespace = ? AND key_ = ?"
-                       namespace*
+                       (str namespace*)
                        key*])
     (let [value* (nippy/fast-freeze value)]
       (exec/execute ctx {:insert-into   :biff-sqlite-kv
                          :values        [{:biff-sqlite-kv/id        (uuid7)
-                                          :biff-sqlite-kv/namespace namespace*
+                                          :biff-sqlite-kv/namespace (str namespace*)
                                           :biff-sqlite-kv/key-      key*
                                           :biff-sqlite-kv/value-    value*}]
                          :on-conflict   [:biff-sqlite-kv/namespace :biff-sqlite-kv/key-]
@@ -39,7 +39,7 @@
   (some-> (exec/execute ctx {:select [:biff-sqlite-kv/value-]
                              :from   :biff-sqlite-kv
                              :where  [:and
-                                      [:= :biff-sqlite-kv/namespace namespace*]
+                                      [:= :biff-sqlite-kv/namespace (str namespace*)]
                                       [:= :biff-sqlite-kv/key- key*]]})
           first
           :biff-sqlite-kv/value-

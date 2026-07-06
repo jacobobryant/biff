@@ -5,4 +5,5 @@
    :biff.sqlite/schema-path        "resources/schema.sql"
    :biff.sqlite/sqldef-version     "3.10.1"
    :biff.sqlite/bin-dir            "target/bin"
-   :biff.sqlite/litestream-version "0.5.9"})
+   :biff.sqlite/litestream-version "0.5.9"
+   :biff.sqlite/litestream-dir     "storage/litestream"})

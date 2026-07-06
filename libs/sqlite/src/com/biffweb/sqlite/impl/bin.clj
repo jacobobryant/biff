@@ -23,7 +23,7 @@
 
 (defn- supported-platform? []
   (let [{:keys [os arch]} (platform-info)]
-    (or (nil? os) (nil? arch))))
+    (and os arch)))
 
 (defn- executable-name [{:keys [executable-basename]}]
   (if (= :windows (:os (platform-info)))

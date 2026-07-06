@@ -33,7 +33,7 @@
   :biff.sqlite/litestream-access-key-id     :string
   :biff.sqlite/litestream-bucket            :string
   :biff.sqlite/litestream-endpoint          :string
-  :biff.sqlite/litestream-path              :string
+  :biff.sqlite/litestream-dir               :string
   :biff.sqlite/litestream-region            :string
   :biff.sqlite/litestream-secret-access-key :biff.core/secret
   :biff.sqlite/litestream-version           :string

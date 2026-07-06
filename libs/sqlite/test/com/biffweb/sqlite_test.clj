@@ -92,23 +92,17 @@
 
 (deftest module-exposes-fx-handlers
   (let [module      (biff.sqlite/module)
-        on-tx-calls (atom [])
-        modules-var (atom [{:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:a ctx]))}
-                           {:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:b ctx]))}])
+        modules-var (atom [module
+                           {:biff.sqlite/columns test-columns}])
         init        ((:biff.core/init module) modules-var)]
     (is (= biff.sqlite/fx-handlers (:biff.fx/handlers module)))
     (is (fn? (:biff.core/init module)))
     (is (fn? (:biff.core/kv-get init)))
     (is (fn? (:biff.core/kv-list init)))
     (is (fn? (:biff.core/kv-set init)))
-    ((:biff.sqlite/on-tx init) {:demo true})
-    (is (= [[:a {:demo true}] [:b {:demo true}]]
-           @on-tx-calls))
-    (reset! on-tx-calls [])
-    (swap! modules-var conj {:biff.sqlite/on-tx (fn [ctx] (swap! on-tx-calls conj [:c ctx]))})
-    ((:biff.sqlite/on-tx init) {:demo :updated})
-    (is (= [[:a {:demo :updated}] [:b {:demo :updated}] [:c {:demo :updated}]]
-           @on-tx-calls))))
+    (is (contains? (:biff.sqlite/columns init) :biff-sqlite-kv/namespace))
+    (is (= (:user/id test-columns)
+           (get (:biff.sqlite/columns init) :user/id)))))
 
 ;; --- Schema SQL generation tests ---
 
@@ -337,7 +331,7 @@
         ctx   {:biff.sqlite/read-pool  *read-pool*
                :biff.sqlite/write-conn *write-conn*
                :biff.sqlite/columns    test-columns
-               :biff.sqlite/on-tx      (fn [_] (swap! calls conj :called))
+               :biff.core/on-tx        (fn [_] (swap! calls conj :called))
                :biff.sqlite/authorize  (constantly true)}]
     (biff.sqlite/execute ctx {:insert-into :user
                               :values      [{:user/id        "u2"

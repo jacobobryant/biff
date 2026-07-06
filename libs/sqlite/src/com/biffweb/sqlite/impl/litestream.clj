@@ -1,232 +1,114 @@
 (ns com.biffweb.sqlite.impl.litestream
-  "Litestream integration for continuous SQLite replication to S3.
-   Downloads litestream binary automatically and runs it as a subprocess.
-   Adapted from budgetswu.lib.litestream."
   (:require [clojure.java.io :as io]
             [clojure.java.process :as process]
-            [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [com.biffweb.sqlite.impl.defaults :as impl.defaults])
-  (:import [java.nio.file Files Paths]
-           [java.nio.file.attribute PosixFilePermission]))
+            [com.biffweb.core :as biff.core]
+            [com.biffweb.sqlite.impl.bin :as impl.bin]
+            [com.biffweb.sqlite.impl.defaults :as impl.defaults]))
 
-(def litestream-dir "storage/litestream")
-
-(defn- windows? []
-  (str/includes? (str/lower-case (System/getProperty "os.name")) "windows"))
-
-(defn local-bin-path []
-  (str litestream-dir "/" (if (windows?) "litestream.exe" "litestream")))
-
-(defn litestream-config-path []
-  (str litestream-dir "/litestream.yml"))
-
-(defn- infer-download-filename
-  "Infers the correct litestream release filename for the current platform."
-  [version]
-  (let [os-name (str/lower-case (System/getProperty "os.name"))
-        os-type (cond
-                  (str/includes? os-name "linux") "linux"
-                  (or (str/includes? os-name "mac")
-                      (str/includes? os-name "darwin")) "darwin"
-                  (str/includes? os-name "windows") "windows"
-                  :else (throw (ex-info (str "Unable to auto-install litestream (unsupported OS: "
-                                             (System/getProperty "os.name")
-                                             "). Please install it manually.")
-                                        {:os.name (System/getProperty "os.name")})))
-        arch    (case (System/getProperty "os.arch")
-                  ("amd64" "x86_64") "x86_64"
-                  "aarch64" "arm64"
-                  (throw (ex-info (str "Unable to auto-install litestream (unsupported architecture: "
-                                       (System/getProperty "os.arch")
-                                       "). Please install it manually.")
-                                  {:os.arch (System/getProperty "os.arch")})))
-        ext     (if (= os-type "windows") "zip" "tar.gz")]
-    (str "litestream-" version "-" os-type "-" arch "." ext)))
-
-(defn- find-global-litestream
-  "Returns \"litestream\" if a globally installed litestream is found on PATH, or nil."
-  []
-  (try
-    (let [output (str/trim (process/exec "litestream" "version"))]
-      (log/info "Found globally installed litestream:" output)
-      "litestream")
-    (catch Exception _ nil)))
-
-(defn- check-version
-  "Returns the version string of the litestream binary at the given path, or nil."
-  [bin-path]
-  (try
-    (let [output (str/trim (process/exec bin-path "version"))]
-      (some->> output not-empty (re-find #"[\d]+\.[\d]+\.[\d]+")))
-    (catch Exception e
-      (log/warn "Failed to check litestream version:" (.getMessage e))
-      nil)))
-
-(defn- download-and-extract!
-  "Downloads litestream binary from GitHub releases and extracts it."
-  [version]
-  (let [filename     (infer-download-filename version)
-        url          (str "https://github.com/benbjohnson/litestream/releases/download/v"
-                          version "/" filename)
-        archive-path (str litestream-dir "/" filename)
-        bin-path     (local-bin-path)]
-    (log/info "Downloading litestream from" url)
-    (.mkdirs (io/file litestream-dir))
-    (process/exec "curl" "-sL" "-o" archive-path url)
-    (log/info "Extracting litestream binary...")
-    (if (windows?)
-      (process/exec "powershell" "-Command"
-                    (str "Expand-Archive -Path '" archive-path
-                         "' -DestinationPath '" litestream-dir "' -Force"))
-      (process/exec "tar" "xzf" archive-path "-C" litestream-dir))
-    (io/delete-file archive-path true)
-    (when-not (windows?)
-      (let [perms #{PosixFilePermission/OWNER_READ
-                    PosixFilePermission/OWNER_WRITE
-                    PosixFilePermission/OWNER_EXECUTE}]
-        (Files/setPosixFilePermissions
-         (Paths/get bin-path (into-array String [])) perms)))
-    (log/info "Litestream binary installed at" bin-path)))
-
-(defn- ensure-local-binary!
-  "Downloads litestream to local dir if not present or version mismatch."
-  [version]
-  (let [current (check-version (local-bin-path))]
-    (when (not= current version)
-      (when current
-        (log/info "Litestream version mismatch: installed" current
-                  "expected" version))
-      (download-and-extract! version))))
-
-(defn- resolve-bin!
-  "Returns the path to the litestream binary to use. Prefers global install."
-  [version]
-  (or (find-global-litestream)
-      (do (ensure-local-binary! version)
-          (local-bin-path))))
+(defn ensure-litestream-binary! [{:biff.sqlite/keys [litestream-version bin-dir]}]
+  (let [{:keys [os arch]} (impl.bin/platform-info)
+        filename (str "litestream-" litestream-version "-"
+                      (case os
+                        :linux "linux"
+                        :macos "darwin"
+                        :windows "windows")
+                      "-"
+                      (case arch
+                        :amd64 "x86_64"
+                        :arm64 "arm64")
+                      "."
+                      (if (= os :windows)
+                        "zip"
+                        "tar.gz"))
+        url (str "https://github.com/benbjohnson/litestream/releases/download/v"
+                 litestream-version "/" filename)]
+    (impl.bin/ensure-binary!
+     {:executable-basename "litestream"
+      :bin-dir             bin-dir
+      :get-version         (fn [command]
+                             (some->> (process/exec command "version")
+                                      (re-find #"[\d]+\.[\d]+\.[\d]+")))
+      :target-version      litestream-version
+      :url                 url})))
 
 (defn- credential-env
-  "Returns env var map for litestream subprocess with S3 credentials."
   [{:biff.sqlite/keys [litestream-access-key-id litestream-secret-access-key]}]
   {"LITESTREAM_ACCESS_KEY_ID"     litestream-access-key-id
-   "LITESTREAM_SECRET_ACCESS_KEY" (some-> litestream-secret-access-key (.invoke))})
+   "LITESTREAM_SECRET_ACCESS_KEY" (force litestream-secret-access-key)})
 
-(defn- write-config!
-  "Generates litestream YAML config file.
-   Uses env var references for secrets so credentials aren't written to disk."
-  [{:biff.sqlite/keys [db-path litestream-bucket litestream-path
-                       litestream-endpoint litestream-region]
-    :or               {db-path "storage/sqlite/main.db"}}]
-  (let [replica-path (if (str/blank? litestream-path)
-                       (str/replace db-path #"^.*/" "")
-                       (str (str/replace litestream-path #"/$" "") "/"
-                            (str/replace db-path #"^.*/" "")))
-        config       (str "dbs:\n"
-                          "  - path: " db-path "\n"
-                          "    replicas:\n"
-                          "      - type: s3\n"
-                          "        bucket: " litestream-bucket "\n"
-                          "        path: " replica-path "\n"
-                          (when litestream-endpoint
-                            (str "        endpoint: " litestream-endpoint "\n"))
-                          (when litestream-region
-                            (str "        region: " litestream-region "\n"))
-                          "        access-key-id: $LITESTREAM_ACCESS_KEY_ID\n"
-                          "        secret-access-key: $LITESTREAM_SECRET_ACCESS_KEY\n")]
-    (.mkdirs (io/file litestream-dir))
-    (spit (litestream-config-path) config)
-    (log/info "Litestream config written to" (litestream-config-path))))
+(defn- write-config! [{:biff.sqlite/keys [db-path
+                                          litestream-dir
+                                          litestream-bucket
+                                          litestream-endpoint
+                                          litestream-region]}]
+  (let [config-path  (str litestream-dir "/litestream.yml")
+        replica-path (str litestream-dir "/" (.getName (io/file db-path)))
 
-(defn- restore!
-  "Restores SQLite database from S3 replica if local DB doesn't exist.
-   Returns true if restore was performed, false otherwise."
-  [{:biff.sqlite/keys [db-path]
-    :or               {db-path "storage/sqlite/main.db"}
-    :as               ctx}
-   bin-path]
-  (let [db-file (io/file db-path)]
-    (if (.exists db-file)
-      (do (log/info "Local database exists, skipping restore")
-          false)
-      (do (log/info "No local database found, attempting restore from S3...")
-          (.mkdirs (.getParentFile db-file))
-          (let [env       (credential-env ctx)
-                proc      (process/start {:env env}
-                                         bin-path "restore"
-                                         "-config" (litestream-config-path)
-                                         "-if-replica-exists"
-                                         db-path)
-                exit-code (.waitFor proc)]
-            (cond
-              (and (zero? exit-code) (.exists db-file))
-              (do (log/info "Database restored from S3")
-                  true)
+        config
+        (str "dbs:\n"
+             "  - path: " db-path "\n"
+             "    replicas:\n"
+             "      - type: s3\n"
+             "        bucket: " litestream-bucket "\n"
+             "        path: " replica-path "\n"
+             (when litestream-endpoint
+               (str "        endpoint: " litestream-endpoint "\n"))
+             (when litestream-region
+               (str "        region: " litestream-region "\n"))
+             "        access-key-id: $LITESTREAM_ACCESS_KEY_ID\n"
+             "        secret-access-key: $LITESTREAM_SECRET_ACCESS_KEY\n")]
+    (io/make-parents config-path)
+    (spit config-path config)))
 
-              (zero? exit-code)
-              (do (log/info "No replica found in S3, starting fresh")
-                  false)
-
-              :else
-              (do (log/warn "Litestream restore exited with code" exit-code
-                            "- starting fresh")
-                  false)))))))
+(defn- restore! [{:biff.sqlite/keys [db-path litestream-dir] :as ctx} bin-path]
+  (when-not (.exists (io/file db-path))
+    (io/make-parents db-path)
+    (process/exec {:env (credential-env ctx)}
+                  bin-path "restore"
+                  "-config" (str litestream-dir "/litestream.yml")
+                  "-if-replica-exists"
+                  db-path)))
 
 (defn- start-replicate!
-  "Starts litestream replicate as a subprocess. Returns the Process."
-  [ctx bin-path]
-  (log/info "Starting litestream replicate...")
-  (let [env  (credential-env ctx)
-        proc (process/start {:env env}
+  [{:biff.sqlite/keys [litestream-dir] :as ctx} bin-path]
+  (let [proc (process/start {:env (credential-env ctx)}
                             bin-path "replicate"
-                            "-config" (litestream-config-path))]
-    (.start (Thread. (fn []
-                       (try
-                         (with-open [reader (io/reader (process/stdout proc))]
-                           (doseq [line (line-seq reader)]
-                             (log/info "[litestream]" line)))
-                         (catch Exception e
-                           (log/error e "Error reading litestream stdout"))))))
-    (.start (Thread. (fn []
-                       (try
-                         (with-open [reader (io/reader (process/stderr proc))]
-                           (doseq [line (line-seq reader)]
-                             (log/error "[litestream]" line)))
-                         (catch Exception e
-                           (log/error e "Error reading litestream stderr"))))))
+                            "-config" (str litestream-dir "/litestream.yml"))]
+    (doseq [[from-fn log-level] [[process/stdout :info]
+                                 [process/stderr :error]]]
+      (.start
+       (Thread.
+        (fn []
+          (try
+            (with-open [reader (io/reader (from-fn proc))]
+              (doseq [line (line-seq reader)]
+                (log/log log-level "[litestream]" line)))
+            (catch Exception e
+              (log/error e "Error reading litestream output")))))))
     (Thread/sleep 1000)
     (when-not (.isAlive proc)
       (throw (ex-info "Litestream replicate failed to start"
                       {:exit-code (.exitValue proc)})))
-    (log/info "Litestream replicate started (PID:" (.pid proc) ")")
     proc))
 
-(defn- stop-replicate!
-  "Stops the litestream replicate subprocess gracefully."
-  [^Process process]
+(defn- stop-replicate! [^Process process]
   (when (and process (.isAlive process))
-    (log/info "Stopping litestream replicate...")
     (.destroy process)
-    (let [exited (.waitFor process 10 java.util.concurrent.TimeUnit/SECONDS)]
+    (let [exited (.waitFor process 5 java.util.concurrent.TimeUnit/SECONDS)]
       (when-not exited
-        (log/warn "Litestream did not stop gracefully, forcing...")
-        (.destroyForcibly process)))
-    (log/info "Litestream replicate stopped")))
+        (.destroyForcibly process)))))
 
 (defn use-litestream
-  [{:biff.sqlite/keys [litestream-bucket
-                       litestream-access-key-id
-                       litestream-secret-access-key]
-    :as               ctx}]
-  (if-not (every? some? [litestream-bucket
-                         litestream-access-key-id
-                         litestream-secret-access-key])
-    (do (log/info "Litestream: S3 config not present, skipping")
-        ctx)
-    (let [{:biff.sqlite/keys [litestream-version] :as ctx}
-          (merge impl.defaults/defaults ctx)
-
-          bin-path (resolve-bin! litestream-version)]
+  [ctx]
+  (if-not (:biff.sqlite/litestream-access-key-id ctx)
+    ctx
+    (let [ctx      (biff.core/validate
+                    (merge impl.defaults/defaults ctx)
+                    {:required [:biff.sqlite/litestream-access-key-id
+                                :biff.sqlite/litestream-bucket
+                                :biff.sqlite/litestream-secret-access-key]})
+          bin-path (ensure-litestream-binary! ctx)]
       (write-config! ctx)
       (restore! ctx bin-path)
       (let [process (start-replicate! ctx bin-path)]
