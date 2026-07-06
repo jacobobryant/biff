@@ -35,12 +35,18 @@
    - `value`: any Clojure value that can be round-tripped through `pr-str` ->
    `clojure.edn/read-string` without custom options.
 
+   Implementers may use the :biff.core/kv-namespace and :biff.core/kv-key
+   schemas for validation.
+
    ### :biff.core/kv-get
 
    `(fn [ctx namespace key]) => value`
 
    Returns the value for the given key in `namespace.` If `key` is unset,
    returns nil. See `:biff.core/kv-set`.
+
+   Implementers may use the :biff.core/kv-namespace and :biff.core/kv-key
+   schemas for validation.
 
    ### :biff.core/kv-list
 
@@ -55,6 +61,9 @@
    - `key-prefix`: string. If set, returns only the keys beginning with this
    prefix.
 
+   Implementers may use the :biff.core/kv-namespace and :biff.core/kv-prefix
+   schemas for validation.
+
    ### :biff.core/on-tx
 
    `(fn [ctx])`
@@ -66,12 +75,15 @@
             [com.biffweb.core.impl.secrets :as impl.sec]
             [com.biffweb.core.impl.validation :as impl.v]))
 
-(impl.v/register {:biff.core/init    'fn?
-                  :biff.core/stop    [:vector 'fn?]
-                  :biff.core/secret  [:fn delay?]
-                  :biff.core/kv-set  'fn?
-                  :biff.core/kv-get  'fn?
-                  :biff.core/kv-list 'fn?
+(impl.v/register {:biff.core/init         'fn?
+                  :biff.core/stop         [:vector 'fn?]
+                  :biff.core/secret       [:fn delay?]
+                  :biff.core/kv-set       'fn?
+                  :biff.core/kv-get       'fn?
+                  :biff.core/kv-list      'fn?
+                  :biff.core/kv-namespace 'qualified-keyword?
+                  :biff.core/kv-key       'string?
+                  :biff.core/kv-prefix    [:maybe 'string?]
                   :biff.core/on-tx   'ifn?})
 
 (defn start

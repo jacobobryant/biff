@@ -151,21 +151,6 @@
      {:biff.fx/get-handlers
       #(handlers-for-modules @modules-var)})})
 
-(defn uuid [seed]
-  (let [rng       (Random. seed)
-        msb0      (.nextLong rng)
-        lsb0      (.nextLong rng)
-        ;; Set version to 4
-        msb       (-> msb0
-                      (bit-and 0xffffffffffff0fff)
-                      (bit-or  0x0000000000004000))
-        ;; Set RFC 4122 variant
-        lsb       (-> lsb0
-                      (bit-and 0x3fffffffffffffff)
-                      (bit-or  0x8000000000000000))
-        next-seed (.nextLong rng)]
-    [(UUID. msb lsb) next-seed]))
-
 (defn uuid4 [seed]
   (let [rng       (Random. seed)
         msb0      (.nextLong rng)

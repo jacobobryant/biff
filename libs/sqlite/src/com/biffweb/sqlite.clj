@@ -62,13 +62,14 @@
 (defn execute [ctx input]
   (impl.execute/execute ctx input))
 
-(defn authorized-write [ctx input]
-  (impl.authorize/authorized-write ctx input))
+(defn module []
+  (impl.system/module))
 
 (def fx-handlers impl.system/fx-handlers)
 
-(defn module []
-  (impl.system/module))
+(defn authorized-write [ctx input]
+  (impl.authorize/authorized-write ctx input))
+
 
 (defn make-resolvers [ctx]
   (impl.resolver/make-resolvers ctx))

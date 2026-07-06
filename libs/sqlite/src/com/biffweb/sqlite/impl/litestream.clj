@@ -2,14 +2,13 @@
   "Litestream integration for continuous SQLite replication to S3.
    Downloads litestream binary automatically and runs it as a subprocess.
    Adapted from budgetswu.lib.litestream."
-  (:require [clojure.tools.logging :as log]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [clojure.java.process :as process]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]
+            [com.biffweb.sqlite.impl.defaults :as impl.defaults])
   (:import [java.nio.file Files Paths]
            [java.nio.file.attribute PosixFilePermission]))
-
-(def default-version "0.5.9")
 
 (def litestream-dir "storage/litestream")
 
@@ -217,16 +216,17 @@
 (defn use-litestream
   [{:biff.sqlite/keys [litestream-bucket
                        litestream-access-key-id
-                       litestream-secret-access-key
-                       litestream-version]
+                       litestream-secret-access-key]
     :as               ctx}]
   (if-not (every? some? [litestream-bucket
                          litestream-access-key-id
                          litestream-secret-access-key])
     (do (log/info "Litestream: S3 config not present, skipping")
         ctx)
-    (let [version  (or litestream-version default-version)
-          bin-path (resolve-bin! version)]
+    (let [{:biff.sqlite/keys [litestream-version] :as ctx}
+          (merge impl.defaults/defaults ctx)
+
+          bin-path (resolve-bin! litestream-version)]
       (write-config! ctx)
       (restore! ctx bin-path)
       (let [process (start-replicate! ctx bin-path)]
