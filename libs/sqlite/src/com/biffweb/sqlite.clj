@@ -12,15 +12,15 @@
 (def ^:private column-schema
   (let [? {:optional true}]
     [:map
-     [:type          [:enum :int :real :text :boolean :inst :uuid :enum :edn :blob]]
-     [:primary-key ? :boolean]
-     [:unique      ? :boolean]
-     [:unique-with ? [:sequential :qualified-keyword]]
-     [:required    ? :boolean]
-     [:ref         ? :qualified-keyword]
-     [:index       ? :boolean]
-     [:schema      ? :any]
-     [:enum-values ? [:map-of :int :qualified-keyword]]]))
+     [:type           [:enum :int :real :text :boolean :inst :uuid :enum :edn :blob]]
+     [:primary-key  ? :boolean]
+     [:unique       ? :boolean]
+     [:unique-with  ? [:sequential :qualified-keyword]]
+     [:required     ? :boolean]
+     [:ref          ? :qualified-keyword]
+     [:index        ? :boolean]
+     [:extra-schema ? :any]
+     [:enum-values  ? [:map-of :int :qualified-keyword]]]))
 
 (biff.core/register
  {:biff.sqlite/columns                      [:map-of :qualified-keyword column-schema]
@@ -54,13 +54,13 @@
 (defn use-conn [ctx]
   (pool/use-conn ctx))
 
-;; ---
-
 (defn use-litestream [ctx]
   (impl.litestream/use-litestream ctx))
 
 (defn execute [ctx input]
   (impl.execute/execute ctx input))
+
+;; ---
 
 (defn module []
   (impl.system/module))

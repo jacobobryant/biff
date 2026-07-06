@@ -1,5 +1,4 @@
 (ns com.biffweb.sqlite.impl.validate
-  "Internal validation of HoneySQL input against column schemas."
   (:require [malli.core :as malli]))
 
 (defn- default-schema [col]
@@ -16,25 +15,22 @@
 
 (defn- validation-schema [col]
   (let [base     (default-schema col)
-        combined (if-let [user-schema (:schema col)]
+        combined (if-some [user-schema (:extra-schema col)]
                    [:and base user-schema]
                    base)]
-    (if (:required col)
+    (if (or (:required col) (:primary-key col))
       combined
       [:maybe combined])))
 
 (def ^:private schema-for
   (memoize
    (fn [columns col-key]
-     (when-let [col (first (filter #(= col-key (:id %)) columns))]
-       (validation-schema col)))))
+     (some-> (get columns col-key)
+             validation-schema))))
 
 (defn- literal-value? [v]
-  (cond
-    (and (vector? v) (= :lift (first v))) true
-    (map? v) false
-    (vector? v) false
-    :else true))
+  (or (and (vector? v) (= :lift (first v)))
+      (not (or (map? v) (vector? v)))))
 
 (defn- extract-literal [v]
   (if (and (vector? v) (= :lift (first v)))
@@ -52,12 +48,10 @@
                                " does not match schema " (pr-str schema))
                           {:column k :value actual-val :schema schema})))))))
 
-(defn validate-honeysql-input!
-  "Validate INSERT/UPDATE HoneySQL input against column schemas."
+(defn validate-write
   [columns input]
-  (when (map? input)
-    (when-let [set-map (:set input)]
-      (validate-values! columns set-map))
-    (when-let [values (:values input)]
-      (doseq [row values]
-        (validate-values! columns row)))))
+  (when-let [set-map (:set input)]
+    (validate-values! columns set-map))
+  (when-let [values (:values input)]
+    (doseq [row values]
+      (validate-values! columns row))))
