@@ -8,6 +8,8 @@
            [java.util UUID]
            [java.sql ResultSet ResultSetMetaData]))
 
+;;;; read coercion -------------------------------------------------------------
+
 (defn- column-names [^ResultSetMetaData rsmeta]
   (mapv (fn [^Integer i]
           (let [label (.getColumnLabel rsmeta i)]
@@ -20,25 +22,26 @@
         (range 1 (inc (.getColumnCount rsmeta)))))
 
 ;; like rs/as-kebab-maps but preserves namespaces from qualified aliases
+;; (aliases with a "/" in them). It's important that users be able to use
+;; qualified keywords as aliases so that coercing-column-reader can infer what
+;; the type of the column is supposed to be.
 (defn- as-qualified-alias-kebab-maps [^ResultSet rs _opts]
   (let [rsmeta (.getMetaData rs)
         cols   (column-names rsmeta)]
     (rs/->MapResultSetBuilder rs rsmeta cols)))
 
 (defn- bytes->uuid [^bytes ba]
-  (when ba
-    (let [bb (ByteBuffer/wrap ba)]
-      (UUID. (.getLong bb) (.getLong bb)))))
+  (let [bb (ByteBuffer/wrap ba)]
+    (UUID. (.getLong bb) (.getLong bb))))
 
 (defn- epoch-ms->inst [ms]
-  (when ms (Instant/ofEpochMilli ms)))
+  (Instant/ofEpochMilli ms))
 
 (defn- int->bool [n]
-  (when (some? n)
-    (case n
-      0 false
-      1 true
-      (throw (ex-info "Invalid boolean value, expected 0 or 1" {:value n})))))
+  (case n
+    0 false
+    1 true
+    (throw (ex-info "Invalid boolean value, expected 0 or 1" {:value n}))))
 
 (defn- make-enum-reader [enum-map]
   (fn [db-val]
@@ -78,7 +81,6 @@
                             value)]
         (rs/read-column-by-index coerced-value (:rsmeta builder) i)))))
 
-;; read coercion
 
 (def builder-fn
   (memoize
@@ -86,7 +88,7 @@
      (let [column-reader (coercing-column-reader columns)]
        (rs/builder-adapter as-qualified-alias-kebab-maps column-reader)))))
 
-;; write coercion
+;;;; write coercion ------------------------------------------------------------
 
 (defn- uuid->bytes [^UUID uuid]
   (let [bb (ByteBuffer/allocate 16)]
@@ -105,7 +107,7 @@
 (def ^:private memo-build-enum-val->int (memoize build-enum-val->int))
 
 (defn coerce-params [columns params]
-  (let [[enum-val->int] (memo-build-enum-val->int columns)]
+  (let [enum-val->int (memo-build-enum-val->int columns)]
     (mapv (fn [v]
             (cond
               (uuid? v)    (uuid->bytes v)

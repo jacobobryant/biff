@@ -39,17 +39,17 @@
 
 (defn- validate-values! [columns kv-map]
   (doseq [[k v] kv-map
-          :when (literal-value? v)]
-    (when-let [schema (schema-for columns k)]
-      (let [actual-val (extract-literal v)]
-        (when-not (malli/validate schema actual-val)
-          (throw (ex-info (str "Validation failed for column " k
-                               ": value " (pr-str actual-val)
-                               " does not match schema " (pr-str schema))
-                          {:column k :value actual-val :schema schema})))))))
+          :when (literal-value? v)
+          :let [schema (schema-for columns k)]
+          :when schema
+          :let [value (extract-literal v)]
+          :when (not (malli/validate schema value))]
+    (throw (ex-info (str "Invalid value for " k)
+                    {:column k :value value :schema schema}))))
 
-(defn validate-write
-  [columns input]
+;; best-effort attempt at ensuring that :set / :values conforms to the schema /
+;; types in `columns`.
+(defn validate-write [columns input]
   (when-let [set-map (:set input)]
     (validate-values! columns set-map))
   (when-let [values (:values input)]

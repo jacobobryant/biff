@@ -4,13 +4,8 @@
    [clojure.test :refer [deftest is testing use-fixtures]]
    [com.biffweb.graph :as biff.graph]
    [com.biffweb.sqlite :as biff.sqlite]
-   [com.biffweb.sqlite.impl.coerce :as coerce]
-   [com.biffweb.sqlite.impl.query :as query]
    [com.biffweb.sqlite.impl.schema :as schema]
-   [com.biffweb.sqlite.impl.util :as util]
-   [honey.sql :as hsql]
-   [next.jdbc :as jdbc]
-   [taoensso.nippy :as nippy])
+   [next.jdbc :as jdbc])
   (:import
    [java.time Instant]
    [java.util UUID]))
@@ -242,29 +237,25 @@
                           :thing/color      {:type        :enum
                                              :enum-values {0 :thing.color/red
                                                            1 :thing.color/blue}}}
-          cols           (util/normalize-columns columns)
-          read-coercions (coerce/build-all-read-coercions cols)
-          enum-val->int  (coerce/build-enum-val->int cols)
           test-uuid      (UUID/randomUUID)
           test-inst      (Instant/ofEpochMilli 1700000000000)
-          test-tags      {:a 1 :b [2 3]}]
-      ;; UUID roundtrip
-      (is (= test-uuid ((get read-coercions :thing/id)
-                        (coerce/uuid->bytes test-uuid))))
-      ;; Boolean roundtrip
-      (is (= true ((get read-coercions :thing/active)
-                   (coerce/bool->int true))))
-      (is (= false ((get read-coercions :thing/active)
-                    (coerce/bool->int false))))
-      ;; Instant roundtrip
-      (is (= test-inst ((get read-coercions :thing/created-at)
-                        (coerce/inst->epoch-ms test-inst))))
-      ;; Nippy roundtrip (edn type)
-      (let [frozen (nippy/fast-freeze test-tags)]
-        (is (= test-tags ((get read-coercions :thing/tags) frozen))))
-      ;; Enum roundtrip
-      (is (= :thing.color/red ((get read-coercions :thing/color)
-                               (get enum-val->int :thing.color/red)))))))
+          test-tags      {:a 1 :b [2 3]}
+          ctx            {:biff.sqlite/read-pool  *read-pool*
+                          :biff.sqlite/write-conn *write-conn*
+                          :biff.sqlite/columns    columns}]
+      (jdbc/execute! *conn* ["CREATE TABLE thing (id BLOB PRIMARY KEY, active INT, created_at INT, tags BLOB, color INT) STRICT"])
+      (biff.sqlite/execute ctx {:insert-into :thing
+                                :values      [{:thing/id         test-uuid
+                                               :thing/active     true
+                                               :thing/created-at test-inst
+                                               :thing/tags       [:lift test-tags]
+                                               :thing/color      [:lift :thing.color/red]}]})
+      (is (= [{:thing/id         test-uuid
+               :thing/active     true
+               :thing/created-at test-inst
+               :thing/tags       test-tags
+               :thing/color      :thing.color/red}]
+             (biff.sqlite/execute ctx {:select :* :from :thing}))))))
 
 (deftest execute-string-input-test
   (testing "execute accepts a bare SQL string"
@@ -380,19 +371,12 @@
                                               :from   :user})]
         (is (= "Alice" (:user/alias (first results))))))))
 
-(deftest namespaced-alias-honeysql-format-test
-  (testing "namespaced alias in select is formatted as quoted string"
-    (let [input     {:select [[:age :user/age-years]] :from :user}
-          processed (update input :select query/preprocess-select)
-          sql       (first (hsql/format processed))]
-      (is (str/includes? sql "\"user/age_years\"")))))
-
 (deftest namespaced-alias-raw-sql-test
   (let [ctx {:biff.sqlite/read-pool *read-pool*  :biff.sqlite/write-conn *write-conn*
              :biff.sqlite/columns   test-columns}]
     (testing "raw SQL with quoted namespaced alias works"
       (let [results (biff.sqlite/execute ctx
-                                         ["SELECT joined_at AS \"user/joined_at\" FROM user"])]
+                                         ["SELECT joined_at AS \"user/joined-at\" FROM user"])]
         (is (= [{:user/joined-at (Instant/ofEpochMilli 1700000000000)}] results))))))
 
 ;; --- Validation tests ---
@@ -405,7 +389,7 @@
           ctx     {:biff.sqlite/read-pool *read-pool* :biff.sqlite/write-conn *write-conn*
                    :biff.sqlite/columns   columns}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"Validation failed"
+           clojure.lang.ExceptionInfo #"Invalid value"
            (biff.sqlite/execute ctx {:insert-into :user
                                      :values      [{:user/id        "u2"
                                                     :user/name      "Bob"
@@ -432,7 +416,7 @@
           ctx     {:biff.sqlite/read-pool *read-pool* :biff.sqlite/write-conn *write-conn*
                    :biff.sqlite/columns   columns}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"Validation failed"
+           clojure.lang.ExceptionInfo #"Invalid value"
            (biff.sqlite/execute ctx {:update :user
                                      :set    {:user/joined-at "not-an-inst"}
                                      :where  [:= :user/id "u1"]}))))))
@@ -450,16 +434,16 @@
                                 :where  [:= :user/id "u1"]}))))
 
 (deftest validation-with-custom-schema-test
-  (testing "custom :schema on column is validated"
+  (testing "custom :extra-schema on column is validated"
     (let [columns {:user/id        {:type :text :primary-key true}
                    :user/name      {:type   :text             :required true
-                                    :schema [:re #"^[A-Z].*"]}
+                                    :extra-schema [:re #"^[A-Z].*"]}
                    :user/joined-at {:type :inst :required true}}
           ctx     {:biff.sqlite/read-pool *read-pool* :biff.sqlite/write-conn *write-conn*
                    :biff.sqlite/columns   columns}]
       ;; lowercase name should fail validation
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"Validation failed"
+           clojure.lang.ExceptionInfo #"Invalid value"
            (biff.sqlite/execute ctx {:insert-into :user
                                      :values      [{:user/id        "u3"
                                                     :user/name      "lowercase"
@@ -478,7 +462,7 @@
           ctx     {:biff.sqlite/read-pool *read-pool* :biff.sqlite/write-conn *write-conn*
                    :biff.sqlite/columns   columns}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"Validation failed"
+           clojure.lang.ExceptionInfo #"Invalid value"
            (biff.sqlite/execute ctx {:update :user
                                      :set    {:user/joined-at [:lift "not-an-inst"]}
                                      :where  [:= :user/id "u1"]}))))))

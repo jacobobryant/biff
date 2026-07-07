@@ -3,20 +3,18 @@
    Generates diff data structures and manages transaction rollback."
   (:require [com.biffweb.sqlite.impl.execute :as exec]
             [com.biffweb.sqlite.impl.coerce :as coerce]
-            [com.biffweb.sqlite.impl.util :as util]
             [com.biffweb.sqlite.impl.validate :as validate]
             [honey.sql :as hsql]
             [next.jdbc :as jdbc]))
 
 (def ^:private find-primary-key
-  "Find the primary key column for the given table keyword from normalized columns. Memoized."
   (memoize
-   (fn [normalized-columns table-kw]
-     (let [pk-col (first (filter (fn [col]
-                                   (and (= table-kw (util/col-table (:id col)))
-                                        (:primary-key col)))
-                                 normalized-columns))]
-       (when pk-col (:id pk-col))))))
+   (fn [columns table-kw]
+     (some (fn [[id props]]
+             (when (and (= table-kw (keyword (namespace id)))
+                        (:primary-key props))
+               id))
+           columns))))
 
 (defn- extract-table
   "Extract the table keyword from a HoneySQL statement map."
@@ -33,9 +31,9 @@
 
 (defn- format-and-coerce
   "Format a HoneySQL map to a SQL vector and apply write coercions."
-  [stmt enum-val->int]
+  [columns stmt]
   (let [sql-vec (hsql/format stmt)]
-    (into [(first sql-vec)] (coerce/coerce-params enum-val->int (rest sql-vec)))))
+    (into [(first sql-vec)] (coerce/coerce-params columns (rest sql-vec)))))
 
 (defn- execute-sql!
   "Execute a SQL vector on a connection with the given builder-fn."
@@ -44,10 +42,10 @@
 
 (defn- process-insert!
   "Process a plain INSERT statement (no :on-conflict): add :returning :*, execute, return diff entries."
-  [conn stmt builder-fn enum-val->int]
+  [columns conn stmt builder-fn]
   (let [table-kw       (extract-table stmt)
         returning-stmt (assoc stmt :returning [:*])
-        sql-vec        (format-and-coerce returning-stmt enum-val->int)
+        sql-vec        (format-and-coerce columns returning-stmt)
         results        (execute-sql! conn sql-vec builder-fn)]
     (mapv (fn [row]
             {:table  table-kw
@@ -58,10 +56,10 @@
 
 (defn- process-delete!
   "Process a DELETE statement: add :returning :*, execute, return diff entries."
-  [conn stmt builder-fn enum-val->int]
+  [columns conn stmt builder-fn]
   (let [table-kw       (extract-table stmt)
         returning-stmt (assoc stmt :returning [:*])
-        sql-vec        (format-and-coerce returning-stmt enum-val->int)
+        sql-vec        (format-and-coerce columns returning-stmt)
         results        (execute-sql! conn sql-vec builder-fn)]
     (mapv (fn [row]
             {:table  table-kw
@@ -76,15 +74,15 @@
    2. Extract primary keys from the results
    3. Query read-tx for the original records using those primary keys
    4. Pair before/after by primary key to generate diff entries"
-  [read-tx write-tx stmt normalized-columns builder-fn enum-val->int]
+  [columns read-tx write-tx stmt builder-fn]
   (let [table-kw (extract-table stmt)
-        pk-key   (find-primary-key normalized-columns table-kw)]
+        pk-key   (find-primary-key columns table-kw)]
     (when-not pk-key
       (throw (ex-info "authorized-write requires a primary key for UPDATE/upsert statements."
                       {:table table-kw})))
     (let [;; Execute the write with :returning :* on the write transaction
           returning-stmt (assoc stmt :returning [:*])
-          write-sql      (format-and-coerce returning-stmt enum-val->int)
+          write-sql      (format-and-coerce columns returning-stmt)
           after-rows     (execute-sql! write-tx write-sql builder-fn)
           after-by-pk    (into {} (map (juxt pk-key #(into {} %))) after-rows)
           ;; Query the read transaction for before-values using the PKs from the write result
@@ -93,7 +91,7 @@
                            (let [select-stmt {:select [:*]
                                               :from   table-kw
                                               :where  [:in pk-key pks]}
-                                 select-sql  (format-and-coerce select-stmt enum-val->int)]
+                                 select-sql  (format-and-coerce columns select-stmt)]
                              (execute-sql! read-tx select-sql builder-fn)))
           before-by-pk   (into {} (map (juxt pk-key #(into {} %))) before-rows)
           all-pks        (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
@@ -139,9 +137,9 @@
   "Validate that the statement does not attempt to change the primary key column.
    For UPDATE: asserts that :set is a map with keyword keys and does not contain the primary key.
    For UPSERT: asserts that :do-update-set is a vector of keywords and does not contain the primary key."
-  [stmt stmt-type normalized-columns]
+  [columns stmt stmt-type]
   (let [table-kw (extract-table stmt)
-        pk-key   (find-primary-key normalized-columns table-kw)]
+        pk-key   (find-primary-key columns table-kw)]
     (when pk-key
       (case stmt-type
         :update
@@ -187,21 +185,20 @@
    - ctx: the system context map (must contain :biff.sqlite/write-conn, :biff.sqlite/read-pool,
           :biff.sqlite/columns, and :biff.sqlite/authorize)
    - input: a HoneySQL map (INSERT, UPDATE, DELETE, or INSERT...ON CONFLICT)"
-  [ctx input]
-  (let [{:biff.sqlite/keys [columns write-conn read-pool authorize]} ctx
-        columns                                                      (or columns {})
-        {:keys [builder-fn enum-val->int normalized-columns]}        (coerce/memoized-coercions columns)
-        stmt-type                                                    (classify-statement input)]
-    (validate-no-pk-changes! input stmt-type normalized-columns)
-    (validate/validate-honeysql-input! normalized-columns input)
+  [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} input]
+  (let [columns    (or columns {})
+        builder-fn (coerce/builder-fn columns)
+        stmt-type  (classify-statement input)]
+    (validate-no-pk-changes! columns input stmt-type)
+    (validate/validate-write columns input)
     (jdbc/with-transaction [read-tx read-pool]
       ;; Establish the read snapshot before opening the write transaction
       (jdbc/execute! read-tx ["SELECT 1"])
       (jdbc/with-transaction [write-tx write-conn {:isolation :serializable}]
         (let [diff     (case stmt-type
-                         :insert (process-insert! write-tx input builder-fn enum-val->int)
-                         :delete (process-delete! write-tx input builder-fn enum-val->int)
-                         (:update :upsert) (process-update! read-tx write-tx input normalized-columns builder-fn enum-val->int))
+                         :insert (process-insert! columns write-tx input builder-fn)
+                         :delete (process-delete! columns write-tx input builder-fn)
+                         (:update :upsert) (process-update! columns read-tx write-tx input builder-fn))
               auth-ctx (assoc ctx
                               :biff.sqlite/before-conn read-tx
                               :biff.sqlite/after-conn write-tx)]
