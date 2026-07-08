@@ -49,7 +49,7 @@
 
 ;; best-effort attempt at ensuring that :set / :values conforms to the schema /
 ;; types in `columns`.
-(defn validate-write [columns input]
+(defn validate-schema-on-write [columns input]
   (when-let [set-map (:set input)]
     (validate-values! columns set-map))
   (when-let [values (:values input)]

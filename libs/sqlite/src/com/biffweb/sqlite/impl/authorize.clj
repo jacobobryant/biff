@@ -1,11 +1,66 @@
 (ns com.biffweb.sqlite.impl.authorize
-  "Internal implementation for authorized write transactions.
-   Generates diff data structures and manages transaction rollback."
-  (:require [com.biffweb.sqlite.impl.execute :as exec]
+  (:require [com.biffweb.core :as biff.core]
+            [com.biffweb.sqlite.impl.execute :as exec]
             [com.biffweb.sqlite.impl.coerce :as coerce]
             [com.biffweb.sqlite.impl.validate :as validate]
             [honey.sql :as hsql]
             [next.jdbc :as jdbc]))
+
+(def diff-schema
+  [:vector
+   [:map {:closed true}
+    [:table :keyword]
+    [:op [:enum :create :update :delete]]
+    [:before [:maybe [:map-of :keyword :any]]]
+    [:after [:maybe [:map-of :keyword :any]]]]])
+
+(def ^:private table-target-schema
+  [:or
+   :keyword
+   [:and
+    [:vector {:min 1} :any]
+    [:fn #(keyword? (first %))]]])
+
+(def ^:private insert-schema
+  [:and
+   [:map
+    [:insert-into table-target-schema]]
+   [:fn #(not (contains? % :on-conflict))]])
+
+(def ^:private upsert-schema
+  [:map
+   [:insert-into table-target-schema]
+   [:on-conflict :any]
+   [:do-update-set [:vector :keyword]]])
+
+(def ^:private update-schema
+  [:map
+   [:update table-target-schema]
+   [:set [:map-of :keyword :any]]])
+
+(def ^:private delete-schema
+  [:map
+   [:delete-from table-target-schema]])
+
+(def authorized-write-input-schema
+  [:and
+   :map
+   [:fn #(not (contains? % :replace-into))]
+   [:orn
+    [:insert insert-schema]
+    [:upsert upsert-schema]
+    [:update update-schema]
+    [:delete delete-schema]]])
+
+(def ^:private statement-context-schema
+  [:map {:closed true}
+   [:statement-type [:enum :insert :upsert :update :delete]]
+   [:table :keyword]
+   [:primary-key :keyword]])
+
+(biff.core/register
+ {::input authorized-write-input-schema
+  ::context statement-context-schema})
 
 (def ^:private find-primary-key
   (memoize
@@ -16,205 +71,161 @@
                id))
            columns))))
 
-(defn- extract-table
-  "Extract the table keyword from a HoneySQL statement map."
-  [stmt]
+(defn- extract-table [statement]
   (cond
-    (:insert-into stmt) (let [target (:insert-into stmt)]
-                          (if (keyword? target)
-                            target
-                            (if (vector? target)
-                              (first target)
-                              target)))
-    (:update stmt)      (:update stmt)
-    (:delete-from stmt) (:delete-from stmt)))
+    (:insert-into statement) (let [target (:insert-into statement)]
+                               (if (vector? target)
+                                 (first target)
+                                 target))
+    (:update statement)      (:update statement)
+    (:delete-from statement) (:delete-from statement)))
 
-(defn- format-and-coerce
-  "Format a HoneySQL map to a SQL vector and apply write coercions."
-  [columns stmt]
-  (let [sql-vec (hsql/format stmt)]
-    (into [(first sql-vec)] (coerce/coerce-params columns (rest sql-vec)))))
+(defn- execute-statement! [conn columns statement builder-fn]
+  (let [sql-vec (hsql/format statement)]
+    (jdbc/execute! conn
+                   (into [(first sql-vec)]
+                         (coerce/coerce-params columns (rest sql-vec)))
+                   {:builder-fn builder-fn})))
 
-(defn- execute-sql!
-  "Execute a SQL vector on a connection with the given builder-fn."
-  [conn sql-vec builder-fn]
-  (jdbc/execute! conn sql-vec {:builder-fn builder-fn}))
-
-(defn- process-insert!
-  "Process a plain INSERT statement (no :on-conflict): add :returning :*, execute, return diff entries."
-  [columns conn stmt builder-fn]
-  (let [table-kw       (extract-table stmt)
-        returning-stmt (assoc stmt :returning [:*])
-        sql-vec        (format-and-coerce columns returning-stmt)
-        results        (execute-sql! conn sql-vec builder-fn)]
+(defn- process-insert! [{:keys [columns write-tx input builder-fn table]}]
+  (let [returning-statement (assoc input :returning [:*])
+        results        (execute-statement! write-tx columns returning-statement builder-fn)]
     (mapv (fn [row]
-            {:table  table-kw
+            {:table  table
              :op     :create
              :before nil
              :after  (into {} row)})
           results)))
 
-(defn- process-delete!
-  "Process a DELETE statement: add :returning :*, execute, return diff entries."
-  [columns conn stmt builder-fn]
-  (let [table-kw       (extract-table stmt)
-        returning-stmt (assoc stmt :returning [:*])
-        sql-vec        (format-and-coerce columns returning-stmt)
-        results        (execute-sql! conn sql-vec builder-fn)]
+(defn- process-delete! [{:keys [columns write-tx input builder-fn table]}]
+  (let [returning-statement (assoc input :returning [:*])
+        results        (execute-statement! write-tx columns returning-statement builder-fn)]
     (mapv (fn [row]
-            {:table  table-kw
+            {:table  table
              :op     :delete
              :before (into {} row)
              :after  nil})
           results)))
 
 (defn- process-update!
-  "Process an UPDATE or INSERT...ON CONFLICT statement:
-   1. Execute the write statement with :returning :* on write-tx to get after-values
-   2. Extract primary keys from the results
-   3. Query read-tx for the original records using those primary keys
-   4. Pair before/after by primary key to generate diff entries"
-  [columns read-tx write-tx stmt builder-fn]
-  (let [table-kw (extract-table stmt)
-        pk-key   (find-primary-key columns table-kw)]
-    (when-not pk-key
-      (throw (ex-info "authorized-write requires a primary key for UPDATE/upsert statements."
-                      {:table table-kw})))
-    (let [;; Execute the write with :returning :* on the write transaction
-          returning-stmt (assoc stmt :returning [:*])
-          write-sql      (format-and-coerce columns returning-stmt)
-          after-rows     (execute-sql! write-tx write-sql builder-fn)
-          after-by-pk    (into {} (map (juxt pk-key #(into {} %))) after-rows)
-          ;; Query the read transaction for before-values using the PKs from the write result
-          pks            (vec (keys after-by-pk))
-          before-rows    (when (seq pks)
-                           (let [select-stmt {:select [:*]
-                                              :from   table-kw
-                                              :where  [:in pk-key pks]}
-                                 select-sql  (format-and-coerce columns select-stmt)]
-                             (execute-sql! read-tx select-sql builder-fn)))
-          before-by-pk   (into {} (map (juxt pk-key #(into {} %))) before-rows)
-          all-pks        (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
-      (into []
-            (mapcat
-             (fn [pk]
-               (let [before (get before-by-pk pk)
-                     after  (get after-by-pk pk)]
-                 (cond
-                   (and before after)
-                   [{:table table-kw :op :update :before before :after after}]
+  [{:keys [columns read-tx write-tx input builder-fn table primary-key]}]
+  (let [returning-statement (assoc input :returning [:*])
+        after-rows     (execute-statement! write-tx
+                                           columns
+                                           returning-statement
+                                           builder-fn)
+        after-by-pk    (into {} (map (juxt primary-key #(into {} %))) after-rows)
+        pks            (vec (keys after-by-pk))
+        before-rows    (when (seq pks)
+                         (let [select-statement {:select [:*]
+                                                 :from   table
+                                                 :where  [:in primary-key pks]}]
+                           (execute-statement! read-tx
+                                               columns
+                                               select-statement
+                                               builder-fn)))
+        before-by-pk   (into {} (map (juxt primary-key #(into {} %))) before-rows)
+        all-pks        (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
+    (into []
+          (mapcat
+           (fn [pk]
+             (let [before (get before-by-pk pk)
+                   after  (get after-by-pk pk)]
+               (cond
+                 (and before after)
+                 [{:table table :op :update :before before :after after}]
 
-                   (and before (not after))
-                   [{:table table-kw :op :delete :before before :after nil}]
+                 (and before (not after))
+                 [{:table table :op :delete :before before :after nil}]
 
-                   (and after (not before))
-                   [{:table table-kw :op :create :before nil :after after}]))))
-            all-pks))))
+                 (and after (not before))
+                 [{:table table :op :create :before nil :after after}]))))
+          all-pks)))
 
-(defn- classify-statement
-  "Classify a HoneySQL statement as :insert, :upsert, :update, or :delete.
-   Throws if the statement is not a write statement, or if it uses REPLACE."
-  [stmt]
+(defn- classify-statement [statement]
   (cond
-    (not (map? stmt))
-    (throw (ex-info "authorized-write only accepts HoneySQL maps."
-                    {:input stmt}))
+    (and (:insert-into statement) (:on-conflict statement)) :upsert
+    (:insert-into statement) :insert
+    (:update statement)      :update
+    (:delete-from statement) :delete))
 
-    (:replace-into stmt)
-    (throw (ex-info "authorized-write does not support REPLACE INTO statements. Use INSERT ... ON CONFLICT instead."
-                    {:statement stmt}))
+(defn- statement-context [columns statement]
+  (let [table-kw (extract-table statement)]
+    {:statement-type (classify-statement statement)
+     :table table-kw
+     :primary-key (find-primary-key columns table-kw)}))
 
-    (and (:insert-into stmt) (:on-conflict stmt)) :upsert
-    (:insert-into stmt) :insert
-    (:update stmt)      :update
-    (:delete-from stmt) :delete
+(defn- validate-primary-key-unchanged!
+  [statement {:keys [statement-type primary-key]}]
+  (when (case statement-type
+          :update (contains? (:set statement) primary-key)
+          :upsert (some #{primary-key} (:do-update-set statement))
+          false)
+    (throw
+     (ex-info "authorized-write does not allow changing primary key columns."
+              {:primary-key primary-key}))))
 
-    :else
-    (throw (ex-info "authorized-write only accepts INSERT, UPDATE, or DELETE statements."
-                    {:statement stmt}))))
+(defn- validate-input [columns input context]
+  ;; Do two seperate biff.core/validate calls so we report errors on `input`
+  ;; before checking `context`
+  (biff.core/validate {::input input})
+  (biff.core/validate {::context context})
+  (validate-primary-key-unchanged! input context)
+  (validate/validate-schema-on-write columns input))
 
-(defn- validate-no-pk-changes!
-  "Validate that the statement does not attempt to change the primary key column.
-   For UPDATE: asserts that :set is a map with keyword keys and does not contain the primary key.
-   For UPSERT: asserts that :do-update-set is a vector of keywords and does not contain the primary key."
-  [columns stmt stmt-type]
-  (let [table-kw (extract-table stmt)
-        pk-key   (find-primary-key columns table-kw)]
-    (when pk-key
-      (case stmt-type
-        :update
-        (let [set-val (:set stmt)]
-          (when-not (map? set-val)
-            (throw (ex-info "authorized-write UPDATE requires :set to be a map."
-                            {:set set-val})))
-          (when-not (every? keyword? (keys set-val))
-            (throw (ex-info "authorized-write UPDATE requires all :set keys to be keywords."
-                            {:set-keys (keys set-val)})))
-          (when (contains? set-val pk-key)
-            (throw (ex-info (str "authorized-write does not allow changing primary key columns. "
-                                 "Found primary key " pk-key " in :set.")
-                            {:primary-key pk-key :set-keys (keys set-val)}))))
-
-        :upsert
-        (let [update-set (:do-update-set stmt)]
-          (when-not (vector? update-set)
-            (throw (ex-info "authorized-write UPSERT requires :do-update-set to be a vector."
-                            {:do-update-set update-set})))
-          (when-not (every? keyword? update-set)
-            (throw (ex-info "authorized-write UPSERT requires all :do-update-set entries to be keywords."
-                            {:do-update-set update-set})))
-          (when (some #{pk-key} update-set)
-            (throw (ex-info (str "authorized-write does not allow changing primary key columns. "
-                                 "Found primary key " pk-key " in :do-update-set.")
-                            {:primary-key pk-key :do-update-set update-set}))))
-
-        nil))))
-
-(defn authorized-write!
-  "Execute a write statement within a transaction, generating a diff and checking
-   authorization. Returns the diff if authorized.
-
-   Opens a read transaction (before-conn) and a write transaction (after-conn).
-   Both are added to ctx before calling authorize-fn, so it can query the
-   database state before and after the write.
-
-   Primary key changes are not allowed in UPDATE or UPSERT statements.
-   REPLACE INTO statements are rejected.
-
-   Parameters:
-   - ctx: the system context map (must contain :biff.sqlite/write-conn, :biff.sqlite/read-pool,
-          :biff.sqlite/columns, and :biff.sqlite/authorize)
-   - input: a HoneySQL map (INSERT, UPDATE, DELETE, or INSERT...ON CONFLICT)"
+(defn authorized-write*
   [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} input]
-  (let [columns    (or columns {})
-        builder-fn (coerce/builder-fn columns)
-        stmt-type  (classify-statement input)]
-    (validate-no-pk-changes! columns input stmt-type)
-    (validate/validate-write columns input)
-    (jdbc/with-transaction [read-tx read-pool]
-      ;; Establish the read snapshot before opening the write transaction
-      (jdbc/execute! read-tx ["SELECT 1"])
-      (jdbc/with-transaction [write-tx write-conn {:isolation :serializable}]
-        (let [diff     (case stmt-type
-                         :insert (process-insert! columns write-tx input builder-fn)
-                         :delete (process-delete! columns write-tx input builder-fn)
-                         (:update :upsert) (process-update! columns read-tx write-tx input builder-fn))
-              auth-ctx (assoc ctx
-                              :biff.sqlite/before-conn read-tx
-                              :biff.sqlite/after-conn write-tx)]
-          (when-not (authorize auth-ctx diff)
-            (throw (ex-info "Write rejected by authorization rules."
-                            {:diff diff})))
-          diff)))))
+  (let [builder-fn (coerce/builder-fn columns)
+        context (statement-context columns input)
+        statement-type (:statement-type context)]
+    (validate-input columns input context)
+    (locking exec/write-lock
+      (jdbc/with-transaction [read-tx read-pool]
+        (jdbc/execute! read-tx ["SELECT 1"])
+        (jdbc/with-transaction [write-tx write-conn]
+          (let [process-fn (case statement-type
+                             :insert process-insert!
+                             :delete process-delete!
+                             (:update :upsert) process-update!)
+                diff       (process-fn {:columns columns
+                                        :read-tx read-tx
+                                        :write-tx write-tx
+                                        :input input
+                                        :builder-fn builder-fn
+                                        :table (:table context)
+                                        :primary-key (:primary-key context)})
+                auth-ctx   (assoc ctx
+                                  :biff.sqlite/before-conn read-tx
+                                  :biff.sqlite/after-conn write-tx)]
+            (when-not (authorize auth-ctx diff)
+              (throw (ex-info "Write rejected by authorization rules."
+                              {:biff.sqlite/diff diff})))
+            diff))))))
 
-(defn- run-on-tx! [ctx result]
+(defn- run-on-tx! [ctx]
   (when-let [on-tx (:biff.core/on-tx ctx)]
-    (on-tx ctx))
-  result)
+    (on-tx ctx)))
 
+;; Generate a diff (a data structure showing the "before" and "after" states
+;; of each record affected by the transaction, then pass it to the user's
+;; authorize function. To generate the diff:
+;;
+;; - For insert and delete statements, we simply add a `RETURNING *` to the
+;; statement and then use the results as the before / after values.
+;;
+;; - for update/"upsert" (insert ... on conflict) statements, we also add
+;; `RETURNING *` to get the "after" values, and then we get the primary keys
+;; from those and use them in a `SELECT *` statement that we run on a read
+;; transaction that was established before the update statement ran (i.e. so the
+;; read transaction gives us a snapshot of the DB before changes took place).
+;;
+;; To make that diff-generation work, we have to put some restrictions on the
+;; kinds of statements we can accept; for example, update statements are not
+;; allowed to modify primary key columns.
 (defn authorized-write [ctx input]
-  (when-not (:biff.sqlite/authorize ctx)
-    (throw (ex-info "authorized-write requires :biff.sqlite/authorize in ctx."
-                    {})))
-  (locking exec/write-lock
-    (run-on-tx! ctx (authorized-write! ctx input))))
+  (biff.core/validate ctx {:required [:biff.sqlite/authorize
+                                      :biff.sqlite/write-conn
+                                      :biff.sqlite/read-pool]})
+  (let [result (authorized-write* ctx input)]
+    (run-on-tx! ctx)
+    result))

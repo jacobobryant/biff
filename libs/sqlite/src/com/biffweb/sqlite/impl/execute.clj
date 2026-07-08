@@ -35,7 +35,7 @@
 (defn execute [{:biff.sqlite/keys [columns read-pool write-conn] :as ctx}
                input]
   ;; Best-effort schema validation for :set / :values in input
-  (validate/validate-write columns input)
+  (validate/validate-schema-on-write columns input)
   (let [;; Make it so we can use namespaced column aliases which is necessary
         ;; for coercing the results, since coercion is based on `columns`
         input   (if (and (map? input) (:select input))

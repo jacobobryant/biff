@@ -40,7 +40,8 @@
   :biff.sqlite/on-tx                        'ifn?
   :biff.sqlite/read-pool                    :any
   :biff.sqlite/sqldef-version               :string
-  :biff.sqlite/write-conn                   :any})
+  :biff.sqlite/write-conn                   :any
+  :biff.sqlite/diff                         impl.authorize/diff-schema})
 
 (defn schema-sql [ctx]
   (impl.schema/schema-sql ctx))
@@ -60,16 +61,16 @@
 (defn execute [ctx input]
   (impl.execute/execute ctx input))
 
-;; ---
 
 (defn module []
   (impl.system/module))
 
 (def fx-handlers impl.system/fx-handlers)
 
+;; ---
+
 (defn authorized-write [ctx input]
   (impl.authorize/authorized-write ctx input))
-
 
 (defn make-resolvers [ctx]
   (impl.resolver/make-resolvers ctx))

@@ -300,8 +300,12 @@
         (set-value ctx :demo/settings "theme" {:mode :light})
         (is (= {:mode :light}
                (get-value ctx :demo/settings "theme")))
+        (is (= ["theme" "theme-2"]
+               (list-kv ctx :demo/settings nil)))
         (set-value ctx :demo/settings "theme" nil)
         (is (nil? (get-value ctx :demo/settings "theme")))
+        (is (= ["theme-2"]
+               (list-kv ctx :demo/settings nil)))
         (is (thrown? AssertionError
                      (set-value ctx "demo/settings" "theme" :bad)))
         (is (thrown? AssertionError
@@ -784,7 +788,7 @@
                :biff.sqlite/columns    test-columns
                :biff.sqlite/authorize  allow-all}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"REPLACE INTO"
+           AssertionError #"invalid"
            (biff.sqlite/authorized-write
             ctx
             {:replace-into :user
@@ -799,7 +803,7 @@
                :biff.sqlite/columns    test-columns
                :biff.sqlite/authorize  allow-all}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"requires :set to be a map"
+           AssertionError #"invalid"
            (biff.sqlite/authorized-write
             ctx
             {:update :user
@@ -873,7 +877,7 @@
                :biff.sqlite/write-conn *write-conn*
                :biff.sqlite/columns    test-columns}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"requires :biff.sqlite/authorize"
+           AssertionError #"Missing required key: :biff.sqlite/authorize"
            (biff.sqlite/authorized-write
             ctx
             {:insert-into :user
@@ -888,7 +892,7 @@
                :biff.sqlite/columns    test-columns
                :biff.sqlite/authorize  allow-all}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"only accepts INSERT, UPDATE, or DELETE"
+           AssertionError #"invalid"
            (biff.sqlite/authorized-write
             ctx
             {:select :* :from :user}))))))
@@ -900,7 +904,7 @@
                :biff.sqlite/columns    test-columns
                :biff.sqlite/authorize  allow-all}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"only accepts HoneySQL maps"
+           AssertionError #"invalid type"
            (biff.sqlite/authorized-write
             ctx
             "DELETE FROM user WHERE id = 'u1'"))))))
@@ -990,8 +994,8 @@
       (is (= #{"Darth Vader" "Luke Skywalker"}
              (set (map #(-> % :after :card/card-name) diff)))))))
 
-(deftest authorized-write-update-no-pk-throws-test
-  (testing "update on table without primary key throws"
+(deftest authorized-write-no-pk-throws-test
+  (testing "insert, update, and delete require a table with a primary key"
     (jdbc/execute! *conn* ["CREATE TABLE log (message TEXT, level TEXT) STRICT"])
     (jdbc/execute! *conn* ["INSERT INTO log (message, level) VALUES (?, ?)" "hello" "info"])
     (let [columns {:log/message {:type :text}
@@ -1001,12 +1005,24 @@
                    :biff.sqlite/columns    columns
                    :biff.sqlite/authorize  allow-all}]
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo #"primary key"
+           AssertionError #"primary-key"
+           (biff.sqlite/authorized-write
+            ctx
+            {:insert-into :log
+             :values      [{:log/message "hello" :log/level "info"}]})))
+      (is (thrown-with-msg?
+           AssertionError #"primary-key"
            (biff.sqlite/authorized-write
             ctx
             {:update :log
              :set    {:log/level "warn"}
-             :where  [:= :log/message "hello"]}))))))
+             :where  [:= :log/message "hello"]})))
+      (is (thrown-with-msg?
+           AssertionError #"primary-key"
+           (biff.sqlite/authorized-write
+            ctx
+            {:delete-from :log
+             :where       [:= :log/message "hello"]}))))))
 
 (deftest authorized-write-conditional-authorize-test
   (testing "authorize fn can inspect diff to make decisions"
