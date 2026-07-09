@@ -545,6 +545,27 @@
       ;; Join key added
       (is (= {:user/id "u1"} (:post/author (first results)))))))
 
+(deftest make-resolvers-ref-column-without-id-suffix-test
+  (testing "ref columns without -id suffix are exposed as joins with the column key"
+    (jdbc/execute! *conn* ["CREATE TABLE task (id TEXT PRIMARY KEY, title TEXT NOT NULL, assignee TEXT NOT NULL) STRICT"])
+    (jdbc/execute! *conn* ["INSERT INTO task (id, title, assignee) VALUES (?, ?, ?)" "t1" "Review" "u1"])
+    (let [cols      {:user/id       {:type :text :primary-key true}
+                     :user/name     {:type :text :required true}
+                     :task/id       {:type :text :primary-key true}
+                     :task/title    {:type :text :required true}
+                     :task/assignee {:type :text :required true :ref :user/id}}
+          ctx       {:biff.sqlite/read-pool  *read-pool*
+                     :biff.sqlite/write-conn *write-conn*
+                     :biff.sqlite/columns    cols}
+          resolvers (biff.sqlite/make-resolvers ctx)
+          r         (first (filter #(= :com.biffweb.sqlite/task-resolver
+                                       (:biff.graph/id %))
+                                   resolvers))
+          results   ((:biff.graph/resolve-fn r)
+                     (assoc ctx :biff.graph/input [{:task/id "t1"}]))]
+      (is (contains? (:biff.graph/output-ast r) :task/assignee))
+      (is (= {:user/id "u1"} (:task/assignee (first results)))))))
+
 (deftest make-resolvers-missing-entity-test
   (testing "batch resolve returns empty map for missing entities"
     (let [ctx           {:biff.sqlite/read-pool  *read-pool*
@@ -559,11 +580,10 @@
       (is (= {} (second results))))))
 
 (deftest make-resolvers-no-primary-key-test
-  (testing "throws when table has no primary key"
-    (is (thrown-with-msg?
-         clojure.lang.ExceptionInfo #"No primary key"
-         (biff.sqlite/make-resolvers
-          {:biff.sqlite/columns {:broken/name {:type :text}}})))))
+  (testing "skips tables with no primary key"
+    (is (= []
+           (biff.sqlite/make-resolvers
+            {:biff.sqlite/columns {:broken/name {:type :text}}})))))
 
 (deftest make-resolvers-no-refs-test
   (testing "tables without ref columns have no extra join keys"

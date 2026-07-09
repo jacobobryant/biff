@@ -4,59 +4,76 @@
             [com.biffweb.sqlite.impl.execute :as exec]))
 
 (defn- strip-id-suffix [k]
-  (keyword (namespace k) (subs (name k) 0 (- (count (name k)) 3))))
+  (keyword (namespace k)
+           (str/replace (name k) #"-id$" "")))
 
 (defn make-resolvers [{:biff.sqlite/keys [columns]}]
-  (let [columns  (or columns {})
-        by-table (group-by (comp keyword namespace key) columns)]
+  (let [columns (mapv (fn [[id opts]]
+                         (assoc opts
+                                :id id
+                                :table (keyword (namespace id))))
+                       columns)]
     (vec
-     (for [[table-key table-cols] by-table
-           :let [table-cols-map (into {} table-cols)
-                 pk-entry       (first (filter (fn [[_ props]] (:primary-key props))
-                                               table-cols-map))
-                 _              (when-not pk-entry
-                                  (throw (ex-info (str "No primary key found for table " table-key)
-                                                  {:table table-key})))
-                 pk-key         (key pk-entry)
-                 non-pk-cols    (dissoc table-cols-map pk-key)
-                 ref-cols       (into {}
-                                      (keep (fn [[col-key props]]
-                                              (when (and (:ref props)
-                                                         (str/ends-with? (name col-key) "-id"))
-                                                [col-key (:ref props)])))
-                                      non-pk-cols)
-                 join-mappings  (mapv (fn [[col-key ref-key]]
-                                         {:join-key (strip-id-suffix col-key)
-                                          :col-key  col-key
-                                          :ref-key  ref-key})
-                                       ref-cols)
-                 output         (vec (concat (keys non-pk-cols)
-                                             (map (fn [{:keys [join-key ref-key]}]
-                                                    {join-key [ref-key]})
-                                                  join-mappings)))
-                 resolver-id    (keyword "com.biffweb.sqlite"
-                                         (str (name table-key) "-resolver"))]]
+     (for [[table-key columns] (group-by :table columns)
+           :let [primary-key (->> columns
+                                  (filterv :primary-key)
+                                  first
+                                  :id)]
+           :when primary-key
+           :let [output-mappings
+                 (mapcat (fn [col]
+                           (cond
+                             (:primary-key col)
+                             nil
+
+                             (and (:ref col)
+                                  (str/ends-with? (name (:id col)) "-id"))
+                             [{:source-key (:id col)
+                               :output-key (:id col)}
+                              {:source-key (:id col)
+                               :output-key (strip-id-suffix (:id col))
+                               :foreign-key (:ref col)}]
+
+                             :else
+                             [{:source-key (:id col)
+                               :output-key (:id col)
+                               :foreign-key (:ref col)}]))
+                         columns)
+
+                 output (mapv (fn [{:keys [output-key foreign-key]}]
+                                (if foreign-key
+                                  {output-key [foreign-key]}
+                                  output-key))
+                              output-mappings)
+
+                 process-row
+                 (fn [row]
+                   (into {}
+                         (keep (fn [{:keys [source-key
+                                            output-key
+                                            foreign-key]}]
+                                 (when-some [value (get row source-key)]
+                                   [output-key
+                                    (if foreign-key
+                                      {foreign-key value}
+                                      value)])))
+                         output-mappings))]]
        (biff.graph/resolver
-        {:id         resolver-id
-         :input      [pk-key]
+        {:id         (keyword "com.biffweb.sqlite"
+                              (str (name table-key) "-resolver"))
+         :input      [primary-key]
          :output     output
          :batch      true
-         :resolve-fn (fn [ctx inputs]
-                       (let [ids         (mapv pk-key inputs)
-                             results     (exec/execute ctx {:select :*
-                                                            :from   table-key
-                                                            :where  [:in pk-key ids]})
-                             process-row (fn [row]
-                                           (let [row (dissoc row pk-key)
-                                                 row (reduce
-                                                      (fn [row {:keys [join-key col-key ref-key]}]
-                                                        (let [ref-val (get row col-key)]
-                                                          (cond-> row
-                                                            (some? ref-val) (assoc join-key {ref-key ref-val}))))
-                                                      row
-                                                      join-mappings)]
-                                             (into {} (filter (fn [[_ v]] (some? v))) row)))
-                             id->result  (into {} (map (juxt pk-key process-row)) results)]
-                         (mapv (fn [input]
-                                 (get id->result (get input pk-key) {}))
-                               inputs)))})))))
+
+         :resolve-fn
+         (fn [ctx inputs]
+           (let [ids         (mapv primary-key inputs)
+                 results     (exec/execute ctx {:select :*
+                                                :from   table-key
+                                                :where  [:in primary-key ids]})
+                 id->result  (into {}
+                                   (map (juxt primary-key process-row))
+                                   results)]
+             (mapv (fn [input]
+                     (get id->result (get input primary-key) {}))
+                   inputs)))})))))

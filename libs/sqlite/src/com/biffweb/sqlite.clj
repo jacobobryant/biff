@@ -67,8 +67,6 @@
 
 (def fx-handlers impl.system/fx-handlers)
 
-;; ---
-
 (defn authorized-write [ctx input]
   (impl.authorize/authorized-write ctx input))
 
