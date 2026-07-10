@@ -1,5 +1,6 @@
 (ns com.biffweb.sqlite.impl.resolver
   (:require [clojure.string :as str]
+            [com.biffweb.core :as biff.core]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite.impl.execute :as exec]))
 
@@ -7,7 +8,28 @@
   (keyword (namespace k)
            (str/replace (name k) #"-id$" "")))
 
+;; This is used both for generating the resolver's :output query and for
+;; formatting the actual resolver output.
+(defn- make-output-mappings [col]
+  (cond
+    (:primary-key col)
+    nil
+
+    (and (:ref col)
+         (str/ends-with? (name (:id col)) "-id"))
+    [{:source-key (:id col)
+      :output-key (:id col)}
+     {:source-key (:id col)
+      :output-key (strip-id-suffix (:id col))
+      :foreign-key (:ref col)}]
+
+    :else
+    [{:source-key (:id col)
+      :output-key (:id col)
+      :foreign-key (:ref col)}]))
+
 (defn make-resolvers [{:biff.sqlite/keys [columns]}]
+  (biff.core/validate {:biff.sqlite/columns columns})
   (let [columns (mapv (fn [[id opts]]
                          (assoc opts
                                 :id id
@@ -20,31 +42,7 @@
                                   first
                                   :id)]
            :when primary-key
-           :let [output-mappings
-                 (mapcat (fn [col]
-                           (cond
-                             (:primary-key col)
-                             nil
-
-                             (and (:ref col)
-                                  (str/ends-with? (name (:id col)) "-id"))
-                             [{:source-key (:id col)
-                               :output-key (:id col)}
-                              {:source-key (:id col)
-                               :output-key (strip-id-suffix (:id col))
-                               :foreign-key (:ref col)}]
-
-                             :else
-                             [{:source-key (:id col)
-                               :output-key (:id col)
-                               :foreign-key (:ref col)}]))
-                         columns)
-
-                 output (mapv (fn [{:keys [output-key foreign-key]}]
-                                (if foreign-key
-                                  {output-key [foreign-key]}
-                                  output-key))
-                              output-mappings)
+           :let [output-mappings (mapcat make-output-mappings columns)
 
                  process-row
                  (fn [row]
@@ -62,7 +60,11 @@
         {:id         (keyword "com.biffweb.sqlite"
                               (str (name table-key) "-resolver"))
          :input      [primary-key]
-         :output     output
+         :output     (mapv (fn [{:keys [output-key foreign-key]}]
+                             (if foreign-key
+                               {output-key [foreign-key]}
+                               output-key))
+                           output-mappings)
          :batch      true
 
          :resolve-fn

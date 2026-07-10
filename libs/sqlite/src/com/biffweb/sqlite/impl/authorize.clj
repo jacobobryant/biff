@@ -6,14 +6,6 @@
             [honey.sql :as hsql]
             [next.jdbc :as jdbc]))
 
-(def diff-schema
-  [:vector
-   [:map {:closed true}
-    [:table :keyword]
-    [:op [:enum :create :update :delete]]
-    [:before [:maybe [:map-of :keyword :any]]]
-    [:after [:maybe [:map-of :keyword :any]]]]])
-
 (def ^:private table-target-schema
   [:or
    :keyword
@@ -223,6 +215,7 @@
 ;; kinds of statements we can accept; for example, update statements are not
 ;; allowed to modify primary key columns.
 (defn authorized-write [ctx input]
+  (biff.core/validate {:biff.core/statement input})
   (biff.core/validate ctx {:required [:biff.sqlite/authorize
                                       :biff.sqlite/write-conn
                                       :biff.sqlite/read-pool]})

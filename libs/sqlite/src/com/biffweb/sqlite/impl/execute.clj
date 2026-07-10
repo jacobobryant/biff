@@ -1,5 +1,6 @@
 (ns com.biffweb.sqlite.impl.execute
   (:require [clojure.string :as str]
+            [com.biffweb.core :as biff.core]
             [com.biffweb.sqlite.impl.coerce :as coerce]
             [com.biffweb.sqlite.impl.validate :as validate]
             [honey.sql :as hsql]
@@ -34,6 +35,9 @@
 
 (defn execute [{:biff.sqlite/keys [columns read-pool write-conn] :as ctx}
                input]
+  (biff.core/validate {:biff.core/statement input})
+  (biff.core/validate ctx {:required [:biff.sqlite/read-pool
+                                      :biff.sqlite/write-conn]})
   ;; Best-effort schema validation for :set / :values in input
   (validate/validate-schema-on-write columns input)
   (let [;; Make it so we can use namespaced column aliases which is necessary

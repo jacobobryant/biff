@@ -126,6 +126,7 @@
 
 (defn schema-sql
   [{:biff.sqlite/keys [columns]}]
+  (biff.core/validate {:biff.sqlite/columns columns})
   (let [tables (->> columns
                     (mapv (fn [[id opts]]
                             (assoc opts :id id :table (table-for id))))

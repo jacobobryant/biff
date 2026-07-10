@@ -22,6 +22,14 @@
      [:extra-schema ? :any]
      [:enum-values  ? [:map-of :int :qualified-keyword]]]))
 
+(def diff-schema
+  [:vector
+   [:map {:closed true}
+    [:table :keyword]
+    [:op [:enum :create :update :delete]]
+    [:before [:maybe [:map-of :keyword :any]]]
+    [:after [:maybe [:map-of :keyword :any]]]]])
+
 (biff.core/register
  {:biff.sqlite/columns                      [:map-of :qualified-keyword column-schema]
   :biff.sqlite/after-conn                   :any
@@ -31,17 +39,21 @@
   :biff.sqlite/db-path                      :string
   :biff.sqlite/extra-init-sql               [:sequential :string]
   :biff.sqlite/litestream-access-key-id     :string
+  :biff.sqlite/litestream-secret-access-key :biff.core/secret
   :biff.sqlite/litestream-bucket            :string
   :biff.sqlite/litestream-endpoint          :string
   :biff.sqlite/litestream-dir               :string
   :biff.sqlite/litestream-region            :string
-  :biff.sqlite/litestream-secret-access-key :biff.core/secret
   :biff.sqlite/litestream-version           :string
   :biff.sqlite/on-tx                        'ifn?
   :biff.sqlite/read-pool                    :any
   :biff.sqlite/sqldef-version               :string
   :biff.sqlite/write-conn                   :any
-  :biff.sqlite/diff                         impl.authorize/diff-schema})
+  :biff.sqlite/diff                         diff-schema
+  :biff.sqlite/statement                    [:or
+                                             :string
+                                             'sequential?
+                                             'map?]})
 
 (defn schema-sql [ctx]
   (impl.schema/schema-sql ctx))
@@ -60,7 +72,6 @@
 
 (defn execute [ctx input]
   (impl.execute/execute ctx input))
-
 
 (defn module []
   (impl.system/module))

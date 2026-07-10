@@ -5,8 +5,6 @@
             [next.jdbc :as jdbc])
   (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
 
-;; TODO make this more configurable?
-
 (def ^:private pragmas
   ["PRAGMA journal_mode=WAL"
    "PRAGMA busy_timeout = 5000"
