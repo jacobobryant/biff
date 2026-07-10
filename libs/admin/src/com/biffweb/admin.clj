@@ -73,9 +73,9 @@
 (defn- pstats->stored-value [pstats]
   (into {} @pstats))
 
-(defn- get-stored-pstats [{:keys [biff.kv/get-value biff.kv/set-value] :as ctx} day-key]
-  (when get-value
-    (let [value (get-value ctx pstats-kv-namespace day-key)]
+(defn- get-stored-pstats [{:keys [biff.core/kv-get biff.core/kv-set] :as ctx} day-key]
+  (when kv-get
+    (let [value (kv-get ctx pstats-kv-namespace day-key)]
       (cond
         (nil? value)
         nil
@@ -85,8 +85,8 @@
 
         :else
         (do
-          (when set-value
-            (set-value ctx pstats-kv-namespace day-key nil))
+          (when kv-set
+            (kv-set ctx pstats-kv-namespace day-key nil))
           nil)))))
 
 (defn- recent-day-keys [now]
@@ -103,13 +103,13 @@
                {}
                @pstats)))
 
-(defn- flush-pstats! [{:keys [biff.admin/pstats biff.kv/set-value] :as ctx}]
-  (when (and pstats set-value)
+(defn- flush-pstats! [{:keys [biff.admin/pstats biff.core/kv-set] :as ctx}]
+  (when (and pstats kv-set)
     (let [current-day       (pstats-day-key (t/now))
           [all-pstats _new] (swap-vals! pstats #(select-keys % [current-day]))]
       (doseq [[day day-pstats] all-pstats
               :when            day-pstats]
-        (set-value ctx pstats-kv-namespace day (pstats->stored-value day-pstats))))))
+        (kv-set ctx pstats-kv-namespace day (pstats->stored-value day-pstats))))))
 
 (defn- hourly-schedule-from [now]
   (let [start (-> now

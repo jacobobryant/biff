@@ -1,5 +1,6 @@
 (ns com.biffweb.sqlite.impl.schema
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [com.biffweb.core :as biff.core]))
 
 (defn- sql-name [s]
   (str/replace (name s) "-" "_"))

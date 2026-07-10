@@ -24,11 +24,11 @@
                  :user/joined-at (java.time.Instant/now)})
          user-id))
 
-     :biff.kv/get-value
+     :biff.core/kv-get
      (fn [_ctx namespace key]
        (get-in @store [:kv namespace key]))
 
-     :biff.kv/set-value
+     :biff.core/kv-set
      (fn [_ctx namespace key value]
        (swap! store assoc-in [:kv namespace key] value)
        nil)}))

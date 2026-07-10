@@ -11,7 +11,7 @@
    :todo/title
    :todo/completed
    :todo/archived
-   :todo/archived-at
+   [:? :todo/archived-at]
    :todo/created-at
    :todo/updated-at])
 
@@ -33,7 +33,7 @@
     {:todo/ui-state (merge default-ui-state (or tab-state {}))}))
 
 (biff.graph/defresolver admin-link-visible?
-  {:input  [[:? {:session/user [:user/id]}]]
+  {:input  [{[:? :session/user] [:user/id]}]
    :output [:app/show-admin-link?]}
   [{:keys [biff.admin/user-id]} {:keys [session/user]}]
   (let [configured-admin-id (some-> user-id str not-empty)
@@ -49,7 +49,7 @@
 
 (biff.graph/defresolver user-todos
   {:input  [{:session/user [:user/id]}
-            [:? {:todo/ui-state ui-state-fields}]]
+            {[:? :todo/ui-state] ui-state-fields}]
    :output [{:todo/items todo-fields}
             {:todo/archived-items todo-fields}
             :todo/active-count
