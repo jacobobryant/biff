@@ -31,7 +31,9 @@
     [:after [:maybe [:map-of :keyword :any]]]]])
 
 (biff.core/register
- {:biff.sqlite/columns                      [:map-of :qualified-keyword column-schema]
+ {:biff.sqlite/columns                      [:map-of
+                                             :qualified-keyword
+                                             column-schema]
   :biff.sqlite/after-conn                   :any
   :biff.sqlite/authorize                    'ifn?
   :biff.sqlite/before-conn                  :any
@@ -53,7 +55,8 @@
   :biff.sqlite/statement                    [:or
                                              :string
                                              'sequential?
-                                             'map?]})
+                                             'map?]
+  :biff.sqlite/authorized-write-statement   impl.authorize/input-schema})
 
 (defn schema-sql [ctx]
   (impl.schema/schema-sql ctx))

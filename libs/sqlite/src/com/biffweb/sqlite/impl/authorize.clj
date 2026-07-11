@@ -34,7 +34,7 @@
   [:map
    [:delete-from table-target-schema]])
 
-(def authorized-write-input-schema
+(def input-schema
   [:and
    :map
    [:fn #(not (contains? % :replace-into))]
@@ -51,7 +51,7 @@
    [:primary-key :keyword]])
 
 (biff.core/register
- {::input authorized-write-input-schema
+ {::input input-schema
   ::context statement-context-schema})
 
 (def ^:private find-primary-key
@@ -160,7 +160,7 @@
 (defn- validate-input [columns input context]
   ;; Do two seperate biff.core/validate calls so we report errors on `input`
   ;; before checking `context`
-  (biff.core/validate {::input input})
+  (biff.core/validate {:biff.sqlite/authorized-write-statement input})
   (biff.core/validate {::context context})
   (validate-primary-key-unchanged! input context)
   (validate/validate-schema-on-write columns input))

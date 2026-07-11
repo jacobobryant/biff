@@ -171,14 +171,15 @@ TODO
 
 TODO
 
-## AI
+## LLMs
 
-I use AI to generate a rough draft of pretty much all the code I write, reading
-it thoroughly. Then I edit the code and write docs manually. I don't edit the
-tests much, but I do regenerate them after I write detailed docstrings which
-seems to work pretty well.
+I use LLMs to generate a rough draft of pretty much all the code I write,
+reading it thoroughly. I don't release code I haven't read or don't understand.
+Before releasing, I edit the code (sometimes a little, sometimes a lot) and
+write docs manually. I don't edit the tests much, but I do regenerate them after
+I write detailed docstrings which seems to work pretty well.
 
 > Biff documentation: 100% certified angus text.
 
-Biff is intended to be a good framework for both manual and agent-driven
+Biff is intended to be a good framework for both manual and LLM-assisted
 development.

@@ -26,11 +26,11 @@ This library will be a release candidate until all [the other Biff 2
 libraries](/README.md) have been released. Until then there could be breaking
 changes, but I don't anticipate any.
 
-## API Reference
+## Reference
 
-[com.biffweb.fx](/docs/api/com.biffweb.fx.md)
-
-- [Machines](/docs/api/com.biffweb.fx.md#machines)
+- [Machines](docs/reference/machines.md)
+- [Schema](docs/reference/schema.md)
+- [API](/docs/api/com.biffweb.fx.md)
 
 ## Example
 
