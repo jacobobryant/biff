@@ -62,13 +62,13 @@
                                          "target/bin/litestream")]
         (is (= "target/bin/litestream"
                (litestream/ensure-litestream-binary! {:biff.sqlite/litestream-version "0.5.9"
-                                                       :biff.sqlite/bin-dir            (:biff.sqlite/bin-dir defaults/defaults)}))))
+                                                      :biff.sqlite/bin-dir            (:biff.sqlite/bin-dir defaults/defaults)}))))
       (is (= [{:executable-basename "litestream"
                :target-version      "0.5.9"
                :bin-dir             (:biff.sqlite/bin-dir defaults/defaults)
                :url                 "https://github.com/benbjohnson/litestream/releases/download/v0.5.9/litestream-0.5.9-linux-x86_64.tar.gz"}]
              (mapv #(select-keys % [:executable-basename
-                                     :target-version
-                                     :bin-dir
-                                     :url])
+                                    :target-version
+                                    :bin-dir
+                                    :url])
                    @calls))))))

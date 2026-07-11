@@ -230,19 +230,19 @@
 
 (deftest coercion-roundtrip-test
   (testing "UUID, Instant, boolean, enum, and nippy coercions roundtrip correctly"
-    (let [columns        {:thing/id         {:type :uuid :primary-key true}
-                          :thing/active     {:type :boolean}
-                          :thing/created-at {:type :inst}
-                          :thing/tags       {:type :edn}
-                          :thing/color      {:type        :enum
-                                             :enum-values {0 :thing.color/red
-                                                           1 :thing.color/blue}}}
-          test-uuid      (UUID/randomUUID)
-          test-inst      (Instant/ofEpochMilli 1700000000000)
-          test-tags      {:a 1 :b [2 3]}
-          ctx            {:biff.sqlite/read-pool  *read-pool*
-                          :biff.sqlite/write-conn *write-conn*
-                          :biff.sqlite/columns    columns}]
+    (let [columns   {:thing/id         {:type :uuid :primary-key true}
+                     :thing/active     {:type :boolean}
+                     :thing/created-at {:type :inst}
+                     :thing/tags       {:type :edn}
+                     :thing/color      {:type        :enum
+                                        :enum-values {0 :thing.color/red
+                                                      1 :thing.color/blue}}}
+          test-uuid (UUID/randomUUID)
+          test-inst (Instant/ofEpochMilli 1700000000000)
+          test-tags {:a 1 :b [2 3]}
+          ctx       {:biff.sqlite/read-pool  *read-pool*
+                     :biff.sqlite/write-conn *write-conn*
+                     :biff.sqlite/columns    columns}]
       (jdbc/execute! *conn* ["CREATE TABLE thing (id BLOB PRIMARY KEY, active INT, created_at INT, tags BLOB, color INT) STRICT"])
       (biff.sqlite/execute ctx {:insert-into :thing
                                 :values      [{:thing/id         test-uuid
@@ -271,8 +271,8 @@
              (biff.sqlite/execute ctx {:select :id :from :user}))))))
 
 (deftest kv-store-roundtrip-test
-  (let [db-file (java.io.File/createTempFile "biff-sqlite-kv" ".db")
-        db-path (.getAbsolutePath db-file)
+  (let [db-file     (java.io.File/createTempFile "biff-sqlite-kv" ".db")
+        db-path     (.getAbsolutePath db-file)
         schema-file (java.io.File/createTempFile "biff-sqlite-schema" ".sql")
         schema-path (.getAbsolutePath schema-file)]
     (.delete db-file)
@@ -281,10 +281,10 @@
       (let [module    (biff.sqlite/module)
             init      ((:biff.core/init module) (atom [module
                                                        {:biff.sqlite/columns test-columns}]))
-            ctx       (biff.sqlite/use-sqlite (merge {:biff.core/stop      []
-                                                       :biff.sqlite/db-path db-path
-                                                       :biff.sqlite/schema-path schema-path}
-                                                      init))
+            ctx       (biff.sqlite/use-sqlite (merge {:biff.core/stop          []
+                                                      :biff.sqlite/db-path     db-path
+                                                      :biff.sqlite/schema-path schema-path}
+                                                     init))
             set-value (:biff.core/kv-set ctx)
             get-value (:biff.core/kv-get ctx)
             list-kv   (:biff.core/kv-list ctx)]
@@ -440,7 +440,7 @@
 (deftest validation-with-custom-schema-test
   (testing "custom :extra-schema on column is validated"
     (let [columns {:user/id        {:type :text :primary-key true}
-                   :user/name      {:type   :text             :required true
+                   :user/name      {:type         :text             :required true
                                     :extra-schema [:re #"^[A-Z].*"]}
                    :user/joined-at {:type :inst :required true}}
           ctx     {:biff.sqlite/read-pool *read-pool* :biff.sqlite/write-conn *write-conn*

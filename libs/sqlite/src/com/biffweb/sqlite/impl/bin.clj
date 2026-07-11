@@ -11,7 +11,7 @@
 
 (defn platform-info []
   (let [os-name (str/lower-case (System/getProperty "os.name"))
-        arch (str/lower-case (System/getProperty "os.arch"))]
+        arch    (str/lower-case (System/getProperty "os.arch"))]
     {:os   (cond
              (str/includes? os-name "windows") :windows
              (str/includes? os-name "linux") :linux

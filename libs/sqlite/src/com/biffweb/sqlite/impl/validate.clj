@@ -40,9 +40,9 @@
 (defn- validate-values! [columns kv-map]
   (doseq [[k v] kv-map
           :when (literal-value? v)
-          :let [schema (schema-for columns k)]
+          :let  [schema (schema-for columns k)]
           :when schema
-          :let [value (extract-literal v)]
+          :let  [value (extract-literal v)]
           :when (not (malli/validate schema value))]
     (throw (ex-info (str "Invalid value for " k)
                     {:column k :value value :schema schema}))))

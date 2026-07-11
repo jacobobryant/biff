@@ -48,31 +48,6 @@
       str
       (str/replace "\\" "/")))
 
-(defn- anchor-id [name]
-  (-> (str name)
-      str/lower-case
-      (str/replace #"\s+" "-")
-      (str/replace #"[^a-z0-9-]" "")
-      (str/replace #"(^-+|-+$)" "")))
-
-(defn- heading-line [line]
-  (when-some [[_ hashes title] (re-matches #"^(#+)\s+(.+?)\s*$" line)]
-    {:level (count hashes)
-     :title title}))
-
-(defn- table-of-contents [markdown]
-  (str/join
-   "\n"
-   (let [headings  (keep heading-line (str/split-lines markdown))
-         min-level (apply min (map :level headings))]
-     (for [{:keys [level title]} headings]
-       (str (apply str (repeat (* 2 (- level min-level)) " "))
-            "- ["
-            title
-            "](#"
-            (anchor-id title)
-            ")")))))
-
 (defn render-arglist [fn-name arglist]
   (str "("
        fn-name
@@ -105,6 +80,10 @@
          body
          "\n```")))
 
+(defn- namespace-section [ns-doc]
+  (when ns-doc
+    (str "```\n" (normalize-docstring ns-doc) "\n```")))
+
 (defn- write-namespace-doc! [ns-sym]
   (require ns-sym)
   (let [ns-obj      (or (find-ns ns-sym)
@@ -118,24 +97,14 @@
                              "api"
                              (str ns-sym ".md"))
         source-link (relative-path (.getParentFile output-file) source-file)
-        vars        (documented-publics ns-sym)]
-    (when-not ns-doc
-      (throw (ex-info "Namespace is missing a docstring"
-                      {:namespace ns-sym})))
-    (let [body     (str/join "\n\n"
-                             (concat
-                              [(normalize-docstring ns-doc)
-                               "## API"]
-                              (map #(var-section % source-link) vars)))
-          sections [(str "# "
-                         ns-sym
-                         " reference"
-                         "\n\n"
-                         (table-of-contents body))
-                    body]]
-      (io/make-parents output-file)
-      (spit output-file (str (str/join "\n\n" sections) "\n"))
-      (println "Generated" (.getPath output-file)))))
+        vars        (documented-publics ns-sym)
+        sections    (concat
+                     [(str "# " ns-sym " reference")]
+                     (some-> ns-doc namespace-section vector)
+                     (map #(var-section % source-link) vars))]
+    (io/make-parents output-file)
+    (spit output-file (str (str/join "\n\n" sections) "\n"))
+    (println "Generated" (.getPath output-file))))
 
 (defn docs
   "Generates markdown API docs under docs/api/."

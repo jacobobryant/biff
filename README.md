@@ -29,10 +29,6 @@ myself for manual testing.
 The libs all use `:local/root` dependencies so you can't actually add them as a
 dependency on your own project (I think?) until I explicitly publish them.
 
-## Reference
-
-[API docs](/docs/api/)
-
 ## Libraries
 
 Everything is subject to breaking changes for now, but if you'd like to try any

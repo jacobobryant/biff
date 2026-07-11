@@ -8,21 +8,21 @@
 
 (defn ensure-litestream-binary! [{:biff.sqlite/keys [litestream-version bin-dir]}]
   (let [{:keys [os arch]} (impl.bin/platform-info)
-        filename (str "litestream-" litestream-version "-"
-                      (case os
-                        :linux "linux"
-                        :macos "darwin"
-                        :windows "windows")
-                      "-"
-                      (case arch
-                        :amd64 "x86_64"
-                        :arm64 "arm64")
-                      "."
-                      (if (= os :windows)
-                        "zip"
-                        "tar.gz"))
-        url (str "https://github.com/benbjohnson/litestream/releases/download/v"
-                 litestream-version "/" filename)]
+        filename          (str "litestream-" litestream-version "-"
+                               (case os
+                                 :linux "linux"
+                                 :macos "darwin"
+                                 :windows "windows")
+                               "-"
+                               (case arch
+                                 :amd64 "x86_64"
+                                 :arm64 "arm64")
+                               "."
+                               (if (= os :windows)
+                                 "zip"
+                                 "tar.gz"))
+        url               (str "https://github.com/benbjohnson/litestream/releases/download/v"
+                               litestream-version "/" filename)]
     (impl.bin/ensure-binary!
      {:executable-basename "litestream"
       :bin-dir             bin-dir

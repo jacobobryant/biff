@@ -49,14 +49,6 @@
         (throw (ex-info "Invalid enum value"
                         {:enum-value db-val :available (keys enum-map)})))))
 
-(defn- build-enum-val->int [columns]
-  (into {}
-        (comp (map val)
-              (mapcat :enum-values)
-              (map (fn [[k v]]
-                     [v k])))
-        columns))
-
 (defn- read-coercers [columns]
   (into {}
         (keep (fn [[id {:keys [enum-values] column-type :type}]]
@@ -80,7 +72,6 @@
                             (coerce-fn value)
                             value)]
         (rs/read-column-by-index coerced-value (:rsmeta builder) i)))))
-
 
 (def builder-fn
   (memoize

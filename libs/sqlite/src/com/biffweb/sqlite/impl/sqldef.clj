@@ -9,19 +9,19 @@
 
 (defn ensure-sqldef-binary! [{:biff.sqlite/keys [sqldef-version bin-dir]}]
   (let [{:keys [os arch]} (impl.bin/platform-info)
-        asset-name (str "sqlite3def_"
-                        (case os
-                          :linux "linux"
-                          :macos "darwin"
-                          :windows "windows")
-                        "_"
-                        (name arch)
-                        "."
-                        (if (= os :windows)
-                          "zip"
-                          "tar.gz"))
-        url (str "https://github.com/sqldef/sqldef/releases/download/v"
-                 sqldef-version "/" asset-name)]
+        asset-name        (str "sqlite3def_"
+                               (case os
+                                 :linux "linux"
+                                 :macos "darwin"
+                                 :windows "windows")
+                               "_"
+                               (name arch)
+                               "."
+                               (if (= os :windows)
+                                 "zip"
+                                 "tar.gz"))
+        url               (str "https://github.com/sqldef/sqldef/releases/download/v"
+                               sqldef-version "/" asset-name)]
     (impl.bin/ensure-binary!
      {:executable-basename "sqlite3def"
       :bin-dir             bin-dir

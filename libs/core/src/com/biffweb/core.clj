@@ -12,7 +12,7 @@
                   :biff.core/kv-namespace 'qualified-keyword?
                   :biff.core/kv-key       'string?
                   :biff.core/kv-prefix    [:maybe 'string?]
-                  :biff.core/on-tx   'ifn?})
+                  :biff.core/on-tx        'ifn?})
 
 (defn start
   "Starts a Biff application and returns the system map.

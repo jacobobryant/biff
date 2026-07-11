@@ -1,7 +1,7 @@
 # Machines
 
 Machines (the functions returned by
-[machine](/docs/api/com.biffweb.fx.md#machine) / defined by
+[machine](../api/com.biffweb.fx.md#machine) / defined by
 [defmachine](#defmachine)) have the form:
 
 ```clojure

@@ -51,7 +51,7 @@
    [:primary-key :keyword]])
 
 (biff.core/register
- {::input input-schema
+ {::input   input-schema
   ::context statement-context-schema})
 
 (def ^:private find-primary-key
@@ -81,7 +81,7 @@
 
 (defn- process-insert! [{:keys [columns write-tx input builder-fn table]}]
   (let [returning-statement (assoc input :returning [:*])
-        results        (execute-statement! write-tx columns returning-statement builder-fn)]
+        results             (execute-statement! write-tx columns returning-statement builder-fn)]
     (mapv (fn [row]
             {:table  table
              :op     :create
@@ -91,7 +91,7 @@
 
 (defn- process-delete! [{:keys [columns write-tx input builder-fn table]}]
   (let [returning-statement (assoc input :returning [:*])
-        results        (execute-statement! write-tx columns returning-statement builder-fn)]
+        results             (execute-statement! write-tx columns returning-statement builder-fn)]
     (mapv (fn [row]
             {:table  table
              :op     :delete
@@ -102,22 +102,22 @@
 (defn- process-update!
   [{:keys [columns read-tx write-tx input builder-fn table primary-key]}]
   (let [returning-statement (assoc input :returning [:*])
-        after-rows     (execute-statement! write-tx
-                                           columns
-                                           returning-statement
-                                           builder-fn)
-        after-by-pk    (into {} (map (juxt primary-key #(into {} %))) after-rows)
-        pks            (vec (keys after-by-pk))
-        before-rows    (when (seq pks)
-                         (let [select-statement {:select [:*]
-                                                 :from   table
-                                                 :where  [:in primary-key pks]}]
-                           (execute-statement! read-tx
-                                               columns
-                                               select-statement
-                                               builder-fn)))
-        before-by-pk   (into {} (map (juxt primary-key #(into {} %))) before-rows)
-        all-pks        (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
+        after-rows          (execute-statement! write-tx
+                                                columns
+                                                returning-statement
+                                                builder-fn)
+        after-by-pk         (into {} (map (juxt primary-key #(into {} %))) after-rows)
+        pks                 (vec (keys after-by-pk))
+        before-rows         (when (seq pks)
+                              (let [select-statement {:select [:*]
+                                                      :from   table
+                                                      :where  [:in primary-key pks]}]
+                                (execute-statement! read-tx
+                                                    columns
+                                                    select-statement
+                                                    builder-fn)))
+        before-by-pk        (into {} (map (juxt primary-key #(into {} %))) before-rows)
+        all-pks             (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
     (into []
           (mapcat
            (fn [pk]
@@ -144,8 +144,8 @@
 (defn- statement-context [columns statement]
   (let [table-kw (extract-table statement)]
     {:statement-type (classify-statement statement)
-     :table table-kw
-     :primary-key (find-primary-key columns table-kw)}))
+     :table          table-kw
+     :primary-key    (find-primary-key columns table-kw)}))
 
 (defn- validate-primary-key-unchanged!
   [statement {:keys [statement-type primary-key]}]
@@ -167,8 +167,8 @@
 
 (defn authorized-write*
   [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} input]
-  (let [builder-fn (coerce/builder-fn columns)
-        context (statement-context columns input)
+  (let [builder-fn     (coerce/builder-fn columns)
+        context        (statement-context columns input)
         statement-type (:statement-type context)]
     (validate-input columns input context)
     (locking exec/write-lock
@@ -179,12 +179,12 @@
                              :insert process-insert!
                              :delete process-delete!
                              (:update :upsert) process-update!)
-                diff       (process-fn {:columns columns
-                                        :read-tx read-tx
-                                        :write-tx write-tx
-                                        :input input
-                                        :builder-fn builder-fn
-                                        :table (:table context)
+                diff       (process-fn {:columns     columns
+                                        :read-tx     read-tx
+                                        :write-tx    write-tx
+                                        :input       input
+                                        :builder-fn  builder-fn
+                                        :table       (:table context)
                                         :primary-key (:primary-key context)})
                 auth-ctx   (assoc ctx
                                   :biff.sqlite/before-conn read-tx

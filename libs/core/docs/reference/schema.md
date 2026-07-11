@@ -6,17 +6,17 @@ for other libraries.
 
 ### :biff.core/init
 
-`(fn [modules-var]) => {...}`. See [start](/docs/api/com.biffweb.core.md#start).
+`(fn [modules-var]) => {...}`. See [start](../api/com.biffweb.core.md#start).
 
 ### :biff.core/stop
 
-`(fn []) => nil`. See [start](/docs/api/com.biffweb.core.md#start) and
-[stop](/docs/api/com.biffweb.core.md#stop).
+`(fn []) => nil`. See [start](../api/com.biffweb.core.md#start) and
+[stop](../api/com.biffweb.core.md#stop).
 
 ### :biff.core/secret
 
 A `Delay`-like value returned by
-[secret-delay](/docs/api/com.biffweb.core.md#secret-delay). Meant to be used as
+[secret-delay](../api/com.biffweb.core.md#secret-delay). Meant to be used as
 a schema value:
 
 ```clojure

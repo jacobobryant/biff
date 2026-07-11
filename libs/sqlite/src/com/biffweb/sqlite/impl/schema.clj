@@ -50,12 +50,12 @@
                    (str " CHECK (" col-name " IN ("
                         (str/join ", " (sort (keys enum-map)))
                         "))"))
-        comment*  (when enum-map
-                    (->> enum-map
-                         (sort-by key)
-                         (map (fn [[k v]] (str (name v) " (" k ")")))
-                         (str/join ", ")
-                         (str " -- ")))
+        comment* (when enum-map
+                   (->> enum-map
+                        (sort-by key)
+                        (map (fn [[k v]] (str (name v) " (" k ")")))
+                        (str/join ", ")
+                        (str " -- ")))
         required (or (:primary-key column) (:required column))]
     {:line    (str col-name " " col-type
                    (when (:primary-key column) " PRIMARY KEY")
@@ -99,21 +99,21 @@
                        remaining)))))))
 
 (defn- topo-sort-tables [tables]
-  (let [all-tables (into #{} (map :table) tables)
-        table-deps (into {}
-                         (map (fn [{:keys [table columns]}]
-                                [table
-                                 (into #{}
-                                       (comp (keep :ref)
-                                             (map table-for)
-                                             (filter all-tables)
-                                             (remove #{table}))
-                                       columns)]))
-                         tables)
+  (let [all-tables        (into #{} (map :table) tables)
+        table-deps        (into {}
+                                (map (fn [{:keys [table columns]}]
+                                       [table
+                                        (into #{}
+                                              (comp (keep :ref)
+                                                    (map table-for)
+                                                    (filter all-tables)
+                                                    (remove #{table}))
+                                              columns)]))
+                                tables)
         sorted-table-keys (topo-sort table-deps)
-        tables-by-key (into {}
-                            (map (juxt :table identity))
-                            tables)]
+        tables-by-key     (into {}
+                                (map (juxt :table identity))
+                                tables)]
     (mapv tables-by-key sorted-table-keys)))
 
 (defn- sort-columns [table-cols]
@@ -133,7 +133,7 @@
                             (assoc opts :id id :table (table-for id))))
                     (group-by :table)
                     (mapv (fn [[table columns]]
-                            {:table table
+                            {:table   table
                              :columns (vec (sort-columns columns))}))
                     topo-sort-tables)]
     (str/join "\n\n"

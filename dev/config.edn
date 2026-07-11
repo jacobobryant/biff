@@ -1,9 +1,4 @@
-{:biff.tasks/docs-namespaces  [com.biffweb.core
-                               com.biffweb.config
-                               com.biffweb.fx
-                               com.biffweb.graph
-                               com.biffweb.sqlite]
- :biff.tasks/group-name       "com.biffweb"
+{:biff.tasks/group-name       "com.biffweb"
  :biff.tasks/lib-name         "biff"
  :biff.tasks/lib-version      "2.0.0-rc7"
  :biff.tasks/monorepo         true

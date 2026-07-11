@@ -109,7 +109,7 @@
           pstats-atom (atom {"2026-04-27" yesterday
                              "2026-04-28" current})
           ctx         {:biff.admin/pstats pstats-atom
-                       :biff.core/kv-set (fn [_ _ key value] (swap! stored assoc key value))}]
+                       :biff.core/kv-set  (fn [_ _ key value] (swap! stored assoc key value))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T10:30:00Z"))]
         (#'admin/flush-pstats! ctx))
       (is (= {"2026-04-28" current} @pstats-atom))
@@ -127,7 +127,7 @@
                              "2026-04-28" (sample-pstats "current")
                              "2026-04-29" (sample-pstats "future")})
           ctx         {:biff.admin/pstats pstats-atom
-                       :biff.core/kv-set (fn [& _])}]
+                       :biff.core/kv-set  (fn [& _])}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T10:30:00Z"))]
         (#'admin/flush-pstats! ctx))
       (is (= ["2026-04-28"] (keys @pstats-atom))))))
@@ -144,7 +144,7 @@
                         ["2026-04-27" (#'admin/pstats->stored-value (sample-pstats "day-6"))]
                         ["2026-04-28" (#'admin/pstats->stored-value (sample-pstats "day-7"))]])
           ctx    {:biff.admin/pstats (atom {"2026-04-28" (sample-pstats "current-hour")})
-                  :biff.core/kv-get (fn [_ _ key] (get stored key))}]
+                  :biff.core/kv-get  (fn [_ _ key] (get stored key))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T12:00:00Z"))]
         (let [formatted (str (tufte/format-grouped-pstats (#'admin/recent-pstats-data ctx)))]
           (is (str/includes? formatted ":day-1"))
@@ -156,8 +156,8 @@
     (let [stored (atom {"2026-04-28" {:legacy true}
                         "2026-04-27" (#'admin/pstats->stored-value (sample-pstats "day-6"))})
           ctx    {:biff.admin/pstats (atom {})
-                  :biff.core/kv-get (fn [_ _ key] (get @stored key))
-                  :biff.core/kv-set (fn [_ _ key value] (swap! stored assoc key value))}]
+                  :biff.core/kv-get  (fn [_ _ key] (get @stored key))
+                  :biff.core/kv-set  (fn [_ _ key value] (swap! stored assoc key value))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T12:00:00Z"))]
         (let [formatted (str (tufte/format-grouped-pstats (#'admin/recent-pstats-data ctx)))]
           (is (str/includes? formatted ":day-6"))

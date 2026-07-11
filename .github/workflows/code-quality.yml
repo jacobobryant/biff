@@ -20,5 +20,5 @@ jobs:
       - run: clojure -M:run lint
       - run: clojure -M:run format
       - run: git diff --quiet --exit-code
-      - run: clojure -M:run docs
-      - run: git diff --quiet --exit-code -- docs/api
+      - run: bin/docs
+      - run: git diff --quiet --exit-code -- libs/*/docs/api

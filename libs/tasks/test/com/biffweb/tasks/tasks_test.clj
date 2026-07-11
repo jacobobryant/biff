@@ -138,16 +138,13 @@
                           util/read-config (constantly {:biff.tasks/docs-namespaces [ns-sym]})]
               (tasks-docs/docs)))
           (is (= (str "# example.docs reference\n\n"
-                      "- [Schema](#schema)\n"
-                      "  - [:example/value](#examplevalue)\n"
-                      "- [API](#api)\n"
-                      "  - [beta](#beta)\n"
-                      "  - [alpha](#alpha)\n\n"
-                      "## Schema\n\n"
-                      "### :example/value\n\n"
-                      "Namespace summary\n"
+                      "```\n"
+                      "## Schema\n"
                       "\n"
-                      "## API\n\n"
+                      "### :example/value\n"
+                      "\n"
+                      "Namespace summary\n"
+                      "```\n\n"
                       "### beta\n\n"
                       "[view source](../../src/example/docs.clj#L4)\n\n"
                       "```\n"
@@ -160,6 +157,44 @@
                       "```\n"
                       "Alpha doc\n"
                       "indented detail\n"
+                      "```\n")
+                 (slurp output-file)))
+          (finally
+            (remove-ns ns-sym)))))))
+
+(deftest docs-task-allows-missing-namespace-docstring
+  (with-temp-dir [dir]
+    (let [ns-sym      'example.no-doc
+          source-file (io/file dir "src/example/no_doc.clj")
+          output-file (io/file dir "docs/api/example.no-doc.md")]
+      (write-file dir "src/example/no_doc.clj"
+                  (str "(ns example.no-doc)\n\n"
+                       "(defn alpha\n"
+                       "  \"Alpha doc\"\n"
+                       "  []\n"
+                       "  nil)\n"))
+      (let [example-ns (create-ns ns-sym)
+            alpha-var  (intern example-ns 'alpha (fn [] nil))]
+        (alter-meta! alpha-var assoc
+                     :arglists '[()]
+                     :doc "Alpha doc"
+                     :file "example/no_doc.clj"
+                     :line 3)
+        (try
+          (with-user-dir dir
+            (with-redefs [io/resource      (fn [path]
+                                             (when (= path "example/no_doc.clj")
+                                               (.toURL (.toURI source-file))))
+                          require          (fn [sym]
+                                             (is (= ns-sym sym)))
+                          util/read-config (constantly {:biff.tasks/docs-namespaces [ns-sym]})]
+              (tasks-docs/docs)))
+          (is (= (str "# example.no-doc reference\n\n"
+                      "### alpha\n\n"
+                      "[view source](../../src/example/no_doc.clj#L3)\n\n"
+                      "```\n"
+                      "(alpha)\n\n"
+                      "Alpha doc\n"
                       "```\n")
                  (slurp output-file)))
           (finally

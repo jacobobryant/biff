@@ -18,14 +18,14 @@
 
 (defn set-value [ctx namespace* key* value]
   (biff.core/validate {:biff.core/kv-namespace namespace*
-                       :biff.core/kv-key key*})
+                       :biff.core/kv-key       key*})
   (if (nil? value)
     (impl.exec/execute
      ctx
      {:delete-from :biff-sqlite-kv
-      :where [:and
-              [:= :biff-sqlite-kv/namespace (str namespace*)]
-              [:= :biff-sqlite-kv/k key*]]})
+      :where       [:and
+                    [:= :biff-sqlite-kv/namespace (str namespace*)]
+                    [:= :biff-sqlite-kv/k key*]]})
     (let [value* (nippy/fast-freeze value)]
       (impl.exec/execute
        ctx
@@ -40,7 +40,7 @@
 
 (defn get-value [ctx namespace* key*]
   (biff.core/validate {:biff.core/kv-namespace namespace*
-                       :biff.core/kv-key key*})
+                       :biff.core/kv-key       key*})
   (some-> (impl.exec/execute
            ctx
            {:select [:biff-sqlite-kv/v]
@@ -57,7 +57,7 @@
    (list-keys ctx namespace* nil))
   ([ctx namespace* key-prefix]
    (biff.core/validate {:biff.core/kv-namespace namespace*
-                        :biff.core/kv-prefix key-prefix})
+                        :biff.core/kv-prefix    key-prefix})
    (let [where [:= :biff-sqlite-kv/namespace (str namespace*)]
          where (if key-prefix
                  [:and

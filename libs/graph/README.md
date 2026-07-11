@@ -46,7 +46,7 @@ changes, but I don't anticipate any.
 - [Query format](docs/reference/query-format.md)
 - [Writing resolvers](docs/reference/writing-resolvers.md)
 - [Schema](docs/reference/schema.md)
-- [API](/docs/api/com.biffweb.graph.md)
+- [API](docs/api/com.biffweb.graph.md)
 
 ## Concepts
 
@@ -174,7 +174,7 @@ for sqlite (content warning: unedited AI code).
 Then you can define whatever additional resolvers you think would be helpful
 with `com.biffweb.graph/defresolver`. You can move logic from helper functions
 to resolvers gradually as needed. See [the reference
-docs](/docs/api/com.biffweb.graph.md) for more details about writing
+docs](docs/api/com.biffweb.graph.md) for more details about writing
 resolvers.
 
 Finally you pass your resolvers to `com.biffweb.graph/new-ctx` which does some

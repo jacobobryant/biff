@@ -30,7 +30,7 @@ changes, but I don't anticipate any.
 
 - [Machines](docs/reference/machines.md)
 - [Schema](docs/reference/schema.md)
-- [API](/docs/api/com.biffweb.fx.md)
+- [API](docs/api/com.biffweb.fx.md)
 
 ## Example
 

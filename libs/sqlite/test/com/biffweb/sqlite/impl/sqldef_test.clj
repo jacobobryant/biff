@@ -19,13 +19,13 @@
                                          "target/bin/sqlite3def")]
         (is (= "target/bin/sqlite3def"
                (sqldef/ensure-sqldef-binary! {:biff.sqlite/sqldef-version "3.10.1"
-                                               :biff.sqlite/bin-dir         (:biff.sqlite/bin-dir defaults/defaults)}))))
+                                              :biff.sqlite/bin-dir        (:biff.sqlite/bin-dir defaults/defaults)}))))
       (is (= [{:executable-basename "sqlite3def"
                :target-version      "3.10.1"
                :bin-dir             (:biff.sqlite/bin-dir defaults/defaults)
                :url                 "https://github.com/sqldef/sqldef/releases/download/v3.10.1/sqlite3def_linux_amd64.tar.gz"}]
              (mapv #(select-keys % [:executable-basename
-                                     :target-version
-                                     :bin-dir
-                                     :url])
+                                    :target-version
+                                    :bin-dir
+                                    :url])
                    @calls))))))

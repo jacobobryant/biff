@@ -29,7 +29,7 @@ changes, but I don't anticipate any.
 ## Reference
 
 - [Schema](docs/reference/schema.md)
-- [API](/docs/api/com.biffweb.config.md)
+- [API](docs/api/com.biffweb.config.md)
 
 ## Usage
 
