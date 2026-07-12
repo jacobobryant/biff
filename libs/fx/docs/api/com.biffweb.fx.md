@@ -1,4 +1,4 @@
-# com.biffweb.fx reference
+# com.biffweb.fx API
 
 ### machine
 

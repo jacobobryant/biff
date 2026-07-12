@@ -99,7 +99,7 @@
         source-link (relative-path (.getParentFile output-file) source-file)
         vars        (documented-publics ns-sym)
         sections    (concat
-                     [(str "# " ns-sym " reference")]
+                     [(str "# " ns-sym " API")]
                      (some-> ns-doc namespace-section vector)
                      (map #(var-section % source-link) vars))]
     (io/make-parents output-file)

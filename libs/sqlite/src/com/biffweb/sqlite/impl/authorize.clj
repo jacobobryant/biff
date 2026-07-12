@@ -171,7 +171,8 @@
         context        (statement-context columns input)
         statement-type (:statement-type context)]
     (validate-input columns input context)
-    (locking exec/write-lock
+    (.lock exec/write-lock)
+    (try
       (jdbc/with-transaction [read-tx read-pool]
         (jdbc/execute! read-tx ["SELECT 1"])
         (jdbc/with-transaction [write-tx write-conn]
@@ -192,7 +193,9 @@
             (when-not (authorize auth-ctx diff)
               (throw (ex-info "Write rejected by authorization rules."
                               {:biff.sqlite/diff diff})))
-            diff))))))
+            diff)))
+      (finally
+        (.unlock exec/write-lock)))))
 
 (defn- run-on-tx! [ctx]
   (when-let [on-tx (:biff.core/on-tx ctx)]

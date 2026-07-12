@@ -1,4 +1,4 @@
-# com.biffweb.config reference
+# com.biffweb.config API
 
 ### use-aero-config
 

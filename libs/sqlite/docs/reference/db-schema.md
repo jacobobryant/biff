@@ -24,7 +24,11 @@ required:
 
 ```
 :type
-  :int, :real, :text, :boolean, :inst, :uuid, :enum, :edn, or :blob.
+  :int, :real, :text, :boolean, :inst, :uuid, :enum, :edn, or :blob. :edn values
+  may be maps, sets, vectors, or lists and are stored as nippy-encoded byte
+  arrays (blobs). :blob values are byte arrays. :inst values are stored as
+  milliseconds since the epoch and are returned as `java.time.Instant`s. :enum
+  values are qualified keywords; see :enum-values.
 
 :primary-key
   Boolean. Implies :required.
@@ -47,9 +51,11 @@ required:
   indexes, see :biff.sqlite/extra-init-sql).
 
 :enum-values
-  Map of int -> qualified keyword. Denotes the mapping between int values stored
-  in sqlite and the semantic qualified keywords they represent. The namespace
-  must match the column keyword. Must be used with `:type :enum`. Example:
+  Map of int -> qualified keyword. Defines the mapping between int values stored
+  in sqlite and the semantic qualified keywords they represent. Each enum
+  keyword must be globally unique across your entire schema; it's recommended to
+  have the enum keyword namespace match the column keyword. Must be used with
+  `:type :enum`. Example:
 
     :my-table/color {:type :enum,
                      :enum-values {0 :my-table.color/red,
@@ -59,3 +65,12 @@ required:
   Malli schema for validating column values, beyond what can be inferred by the
   :type value.
 ```
+
+Use [schema-sql](../api/com.biffweb.sqlite.md#schema-sql) to see exactly how the
+columns map translates to sqlite statements.
+
+## Migrations
+
+[sqldef](https://github.com/sqldef/sqldef) is used on application startup to
+infer what schema migrations need to be performed based on your current schema
+as described by `:biff.sqlite/columns` (and `:biff.sqlite/extra-init-sql`).

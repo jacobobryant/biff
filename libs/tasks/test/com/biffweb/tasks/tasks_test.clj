@@ -137,7 +137,7 @@
                                              (is (= ns-sym sym)))
                           util/read-config (constantly {:biff.tasks/docs-namespaces [ns-sym]})]
               (tasks-docs/docs)))
-          (is (= (str "# example.docs reference\n\n"
+          (is (= (str "# example.docs API\n\n"
                       "```\n"
                       "## Schema\n"
                       "\n"
@@ -189,7 +189,7 @@
                                              (is (= ns-sym sym)))
                           util/read-config (constantly {:biff.tasks/docs-namespaces [ns-sym]})]
               (tasks-docs/docs)))
-          (is (= (str "# example.no-doc reference\n\n"
+          (is (= (str "# example.no-doc API\n\n"
                       "### alpha\n\n"
                       "[view source](../../src/example/no_doc.clj#L3)\n\n"
                       "```\n"

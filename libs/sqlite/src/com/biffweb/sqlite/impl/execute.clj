@@ -4,17 +4,19 @@
             [com.biffweb.sqlite.impl.coerce :as coerce]
             [com.biffweb.sqlite.impl.validate :as validate]
             [honey.sql :as hsql]
-            [next.jdbc :as jdbc]))
+            [next.jdbc :as jdbc])
+  (:import [java.util.concurrent.locks ReentrantLock]))
 
-(def write-lock (Object.))
+(def write-lock (ReentrantLock.))
 
 (defn- run-on-tx! [ctx]
   (when-let [on-tx (:biff.core/on-tx ctx)]
     (on-tx ctx)))
 
 ;; Turn qualified keyword select aliases into strings so honeysql doesn't turn
-;; them into dotted things (:foo/bar -> "foo/bar" instead of "foo.bar"). Then
-;; next.jdbc turns the results into keywords (:foo/bar).
+;; them into dotted things (:foo/bar -> "foo/bar" instead of "foo.bar" --
+;; "foo.bar" is invalid as a sqlite column alias). See also coerce/builder-fn
+;; which does corresponding post-processing of the query results.
 (defn- preserve-namespaced-aliases [select]
   (if (vector? select)
     (mapv (fn [item]
@@ -56,8 +58,12 @@
         ;; sqlite types to "rich" types (true instead of 1)
         opts    {:builder-fn (coerce/builder-fn columns)}]
     (if (write-statement? (first sql-vec))
-      (let [result (locking write-lock
-                     (jdbc/execute! write-conn sql-vec opts))]
+      (let [result (do
+                     (.lock write-lock)
+                     (try
+                       (jdbc/execute! write-conn sql-vec opts)
+                       (finally
+                         (.unlock write-lock))))]
         (run-on-tx! ctx)
         result)
       (jdbc/execute! read-pool sql-vec opts))))

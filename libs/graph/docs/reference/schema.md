@@ -1,6 +1,6 @@
 # Schema
 
-## :biff.graph/resolver
+### :biff.graph/resolver
 
 Map containing the keys:
 
@@ -16,11 +16,11 @@ Note that resolve-fn takes a single ctx parameter. Resolver input is passed
 under :biff.graph/input (though `resolver` / `defresolver` accept functions
 which take input as a second argument)
 
-## :biff.graph/resolvers
+### :biff.graph/resolvers
 
 `[:sequential :biff.graph/resolver]`
 
-## :biff.graph/middleware
+### :biff.graph/middleware
 
 `[:sequential ifn?]`
 

@@ -37,25 +37,26 @@
                       columns)]
     (vec
      (for [[table-key columns] (group-by :table columns)
-           :let                [primary-key (->> columns
-                                                 (filterv :primary-key)
-                                                 first
-                                                 :id)]
-           :when               primary-key
-           :let                [output-mappings (mapcat make-output-mappings columns)
 
-                                process-row
-                                (fn [row]
-                                  (into {}
-                                        (keep (fn [{:keys [source-key
-                                                           output-key
-                                                           foreign-key]}]
-                                                (when-some [value (get row source-key)]
-                                                  [output-key
-                                                   (if foreign-key
-                                                     {foreign-key value}
-                                                     value)])))
-                                        output-mappings))]]
+           :let  [primary-key (->> columns
+                                   (filterv :primary-key)
+                                   first
+                                   :id)]
+           :when primary-key
+           :let  [output-mappings (mapcat make-output-mappings columns)
+
+                  process-row
+                  (fn [row]
+                    (into {}
+                          (keep (fn [{:keys [source-key
+                                             output-key
+                                             foreign-key]}]
+                                  (when-some [value (get row source-key)]
+                                    [output-key
+                                     (if foreign-key
+                                       {foreign-key value}
+                                       value)])))
+                          output-mappings))]]
        (biff.graph/resolver
         {:id     (keyword "com.biffweb.sqlite"
                           (str (name table-key) "-resolver"))

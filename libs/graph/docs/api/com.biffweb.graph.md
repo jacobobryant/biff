@@ -1,4 +1,4 @@
-# com.biffweb.graph reference
+# com.biffweb.graph API
 
 ### query->ast
 

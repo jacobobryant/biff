@@ -21,10 +21,14 @@
                 (keyword (csk/->kebab-case-string label))))))
         (range 1 (inc (.getColumnCount rsmeta)))))
 
-;; like rs/as-kebab-maps but preserves namespaces from qualified aliases
-;; (aliases with a "/" in them). It's important that users be able to use
-;; qualified keywords as aliases so that coercing-column-reader can infer what
-;; the type of the column is supposed to be.
+;; Like rs/as-kebab-maps but preserves namespaces from qualified aliases
+;; (aliases with a "/" in them). This way, `SELECT ... AS 'foo/bar' FROM foo`
+;; produces a :foo/bar key instead of a :foo/foo/bar key, which is the default
+;; behavior.
+;;
+;; It's important that users be able to use qualified keywords as aliases so
+;; that coercing-column-reader can infer what the type of the column is supposed
+;; to be.
 (defn- as-qualified-alias-kebab-maps [^ResultSet rs _opts]
   (let [rsmeta (.getMetaData rs)
         cols   (column-names rsmeta)]
