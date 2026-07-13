@@ -100,13 +100,16 @@ input
 
 Throws an exception if any required attributes couldn't be resolved.
 
+Calls (:biff.core/wrap-read-tx ctx) if set so that resolvers get a consistent
+view of the database.
+
   (query ctx {:user/id 1} [:user/email :user/joined-at])
   => {:user/email "...", :user/joined-at #inst "..."}
 ```
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/graph.clj#L128)
+[view source](../../src/com/biffweb/graph.clj#L131)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -114,7 +117,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../src/com/biffweb/graph.clj#L132)
+[view source](../../src/com/biffweb/graph.clj#L135)
 
 ```
 (module)

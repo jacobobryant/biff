@@ -2,7 +2,7 @@
 
 ### schema-sql
 
-[view source](../../src/com/biffweb/sqlite.clj#L56)
+[view source](../../src/com/biffweb/sqlite.clj#L61)
 
 ```
 (schema-sql #:biff.sqlite{:keys [columns]})
@@ -14,7 +14,7 @@ Used by use-sqldef (and use-sqlite). All tables use STRICT mode.
 
 ### use-sqlite
 
-[view source](../../src/com/biffweb/sqlite.clj#L64)
+[view source](../../src/com/biffweb/sqlite.clj#L69)
 
 ```
 (use-sqlite ctx)
@@ -24,7 +24,7 @@ A wrapper component that calls use-litestream, use-sqldef, then use-conn.
 
 ### use-litestream
 
-[view source](../../src/com/biffweb/sqlite.clj#L69)
+[view source](../../src/com/biffweb/sqlite.clj#L74)
 
 ```
 (use-litestream #:biff.sqlite{:keys [bin-dir db-path litestream-access-key-id litestream-bucket litestream-dir litestream-endpoint litestream-region litestream-secret-access-key litestream-version]})
@@ -42,7 +42,7 @@ your application runs.
 
 ### use-sqldef
 
-[view source](../../src/com/biffweb/sqlite.clj#L91)
+[view source](../../src/com/biffweb/sqlite.clj#L96)
 
 ```
 (use-sqldef #:biff.sqlite{:keys [bin-dir columns db-path extra-init-sql schema-path sqldef-version]})
@@ -59,7 +59,7 @@ isn't available.
 
 ### use-conn
 
-[view source](../../src/com/biffweb/sqlite.clj#L109)
+[view source](../../src/com/biffweb/sqlite.clj#L114)
 
 ```
 (use-conn #:biff.sqlite{:keys [db-path]})
@@ -80,7 +80,7 @@ The following PRAGMAs are set on each connection:
 
 ### execute
 
-[view source](../../src/com/biffweb/sqlite.clj#L126)
+[view source](../../src/com/biffweb/sqlite.clj#L131)
 
 ```
 (execute {:biff.sqlite/keys [columns read-pool write-conn], :biff.core/keys [on-tx], :as ctx} statement)
@@ -114,9 +114,20 @@ ReentrantLock to avoid contention. Afterward, :biff.core/on-tx is called if
 set. on-tx receives `ctx` as it was passed to this function.
 ```
 
+### execute-tx
+
+[view source](../../src/com/biffweb/sqlite.clj#L166)
+
+```
+(execute-tx ctx statements)
+
+Like execute, but takes a sequence of statements and runs them in a
+transaction. Returns a vector of the results.
+```
+
 ### authorized-write
 
-[view source](../../src/com/biffweb/sqlite.clj#L161)
+[view source](../../src/com/biffweb/sqlite.clj#L172)
 
 ```
 (authorized-write {:biff.sqlite/keys [authorize columns write-conn read-pool], :biff.core/keys [on-tx], :as ctx} statement)
@@ -141,9 +152,19 @@ aborts the transaction and throws an exception.
 On success, calls `on-tx` and then returns the diff.
 ```
 
+### authorized-write-tx
+
+[view source](../../src/com/biffweb/sqlite.clj#L201)
+
+```
+(authorized-write-tx ctx statements)
+
+Like authorized-write, but takes a sequence of statements. Returns the diff.
+```
+
 ### fx-handlers
 
-[view source](../../src/com/biffweb/sqlite.clj#L190)
+[view source](../../src/com/biffweb/sqlite.clj#L206)
 
 ```
 A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
@@ -152,22 +173,23 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
 
 ### module
 
-[view source](../../src/com/biffweb/sqlite.clj#L196)
+[view source](../../src/com/biffweb/sqlite.clj#L212)
 
 ```
 (module)
 
 Returns a biff.core module.
 
-Provides :biff.fx/handlers, collects :biff.sqlite/columns from other modules,
-and also provides a key-value store that can be used by other libraries via
-:biff.core/kv-get, :biff.core/kv-set, and :biff.core/kv-list (which are
-inserted into the system map via :biff.core/init).
+- provides :biff.fx/handlers in the module
+- collects :biff.sqlite/columns from other modules
+- provides some key-value store functions in the system map:
+  :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
+- provides :biff.core/wrap-read-tx in the system map.
 ```
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L206)
+[view source](../../src/com/biffweb/sqlite.clj#L223)
 
 ```
 (make-resolvers #:biff.sqlite{:keys [columns]})
@@ -185,4 +207,8 @@ additional join attribute without the `-id` suffix is also returned:
            {:user/pet [:pet/id]}]
 
 All resolvers have `:batch true`.
+
+Since `module` provides :biff.core/wrap-read-tx, if you use `module`,
+biff.graph queries will run inside a read transaction and thus the resolvers
+will all see a consistent view of the database.
 ```

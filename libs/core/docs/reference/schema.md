@@ -67,6 +67,13 @@ prefix.
 Implementers may use the :biff.core/kv-namespace and :biff.core/kv-prefix
 schemas for validation.
 
+### :biff.core/wrap-read-tx
+
+`(fn [f]) -> f`
+
+Wraps a single-argument function such that database queries which run inside the
+function all view a consistent snapshot of the database.
+
 ### :biff.core/on-tx
 
 `(fn [ctx])`

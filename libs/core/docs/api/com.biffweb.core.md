@@ -2,7 +2,7 @@
 
 ### start
 
-[view source](../../src/com/biffweb/core.clj#L17)
+[view source](../../src/com/biffweb/core.clj#L19)
 
 ```
 (start modules-var components)
@@ -48,7 +48,7 @@ Uses biff.core/validate to ensure that keys in modules, keys returned by
 
 ### stop
 
-[view source](../../src/com/biffweb/core.clj#L59)
+[view source](../../src/com/biffweb/core.clj#L61)
 
 ```
 (stop system)
@@ -60,7 +60,7 @@ Calls the :biff.core/stop functions from system in reverse order.
 
 ### module
 
-[view source](../../src/com/biffweb/core.clj#L66)
+[view source](../../src/com/biffweb/core.clj#L68)
 
 ```
 (module)
@@ -75,7 +75,7 @@ needed.
 
 ### register
 
-[view source](../../src/com/biffweb/core.clj#L76)
+[view source](../../src/com/biffweb/core.clj#L78)
 
 ```
 (register schemas)
@@ -90,7 +90,7 @@ Registered schemas are used by biff.core/validate.
 
 ### get-registry
 
-[view source](../../src/com/biffweb/core.clj#L86)
+[view source](../../src/com/biffweb/core.clj#L88)
 
 ```
 (get-registry)
@@ -104,7 +104,7 @@ Returns all schemas that have been passed to biff.core/register.
 
 ### validate
 
-[view source](../../src/com/biffweb/core.clj#L95)
+[view source](../../src/com/biffweb/core.clj#L97)
 
 ```
 (validate m & {:keys [required extra-schema]})
@@ -132,7 +132,7 @@ For convenience, m can be a sequence of maps instead of a single map.
 
 ### secret-delay
 
-[view source](../../src/com/biffweb/core.clj#L119)
+[view source](../../src/com/biffweb/core.clj#L121)
 
 ```
 (secret-delay x)

@@ -3,16 +3,18 @@
             [com.biffweb.core.impl.secrets :as impl.sec]
             [com.biffweb.core.impl.validation :as impl.v]))
 
-(impl.v/register {:biff.core/init         'fn?
-                  :biff.core/stop         [:vector 'fn?]
-                  :biff.core/secret       [:fn delay?]
-                  :biff.core/kv-set       'fn?
-                  :biff.core/kv-get       'fn?
-                  :biff.core/kv-list      'fn?
-                  :biff.core/kv-namespace 'qualified-keyword?
-                  :biff.core/kv-key       'string?
-                  :biff.core/kv-prefix    [:maybe 'string?]
-                  :biff.core/on-tx        'ifn?})
+(impl.v/register
+ {:biff.core/init         'fn?
+  :biff.core/stop         [:vector 'fn?]
+  :biff.core/secret       [:fn delay?]
+  :biff.core/kv-set       'fn?
+  :biff.core/kv-get       'fn?
+  :biff.core/kv-list      'fn?
+  :biff.core/kv-namespace 'qualified-keyword?
+  :biff.core/kv-key       'string?
+  :biff.core/kv-prefix    [:maybe 'string?]
+  :biff.core/wrap-read-tx 'ifn?
+  :biff.core/on-tx        'ifn?})
 
 (defn start
   "Starts a Biff application and returns the system map.

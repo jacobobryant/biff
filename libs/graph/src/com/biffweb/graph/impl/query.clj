@@ -192,7 +192,12 @@
          _                (impl.v/validate-input (:biff.graph/attr->shape-info ctx)
                                                  input)
          resolving-attrs  #{}
-         results          (resolve-entities ctx input query-ast resolving-attrs)]
+         execute          (fn [ctx]
+                            (resolve-entities ctx input query-ast resolving-attrs))
+         execute          (if-some [wrap-read-tx (:biff.core/wrap-read-tx ctx)]
+                            (wrap-read-tx execute)
+                            execute)
+         results          (execute ctx)]
      (doseq [{::keys [fail-trace]} results
              :when                 fail-trace
              :let                  [attr (-> fail-trace

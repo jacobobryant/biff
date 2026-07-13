@@ -35,35 +35,51 @@
     (boolean (re-find #"(?i)^(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b"
                       trimmed))))
 
-(defn execute [{:biff.sqlite/keys [columns read-pool write-conn] :as ctx}
-               input]
-  (biff.core/validate {:biff.core/statement input})
-  (biff.core/validate ctx {:required [:biff.sqlite/read-pool
-                                      :biff.sqlite/write-conn]})
-  ;; Best-effort schema validation for :set / :values in input
-  (validate/validate-schema-on-write columns input)
+(defn- sql-vec [columns statement]
+  ;; Best-effort schema validation for :set / :values in statement
+  (validate/validate-schema-on-write columns statement)
   (let [;; Make it so we can use namespaced column aliases which is necessary
         ;; for coercing the results, since coercion is based on `columns`
-        input   (if (and (map? input) (:select input))
-                  (update input :select preserve-namespaced-aliases)
-                  input)
-        sql-vec (cond
-                  (map? input) (hsql/format input)
-                  (string? input) [input]
-                  :else input)
-        ;; Coerce the input params to sqlite (e.g. 1 instead of true)
-        sql-vec (into [(first sql-vec)]
-                      (coerce/coerce-params columns (rest sql-vec)))
-        ;; And then supply a builder-fn that coerces the results back from
-        ;; sqlite types to "rich" types (true instead of 1)
-        opts    {:builder-fn (coerce/builder-fn columns)}]
-    (if (write-statement? (first sql-vec))
-      (let [result (do
-                     (.lock write-lock)
-                     (try
-                       (jdbc/execute! write-conn sql-vec opts)
-                       (finally
-                         (.unlock write-lock))))]
+        statement (if (and (map? statement) (:select statement))
+                    (update statement :select preserve-namespaced-aliases)
+                    statement)
+        sql-vec   (cond
+                    (map? statement) (hsql/format statement)
+                    (string? statement) [statement]
+                    :else statement)]
+    ;; Coerce the statement params to sqlite (e.g. 1 instead of true)
+    (into [(first sql-vec)]
+          (coerce/coerce-params columns (rest sql-vec)))))
+
+(defn- execute* [{:biff.sqlite/keys [columns read-pool write-conn] :as ctx}
+                 statements
+                 execute-fn]
+  (biff.core/validate ctx {:required [:biff.sqlite/read-pool
+                                      :biff.sqlite/write-conn]})
+  (let [sql-statements (mapv #(sql-vec columns %) statements)
+        opts           {:builder-fn (coerce/builder-fn columns)}]
+    (if (some (comp write-statement? first) sql-statements)
+      (let [_      (.lock write-lock)
+            result (try
+                     (execute-fn write-conn sql-statements opts)
+                     (finally
+                       (.unlock write-lock)))]
         (run-on-tx! ctx)
         result)
-      (jdbc/execute! read-pool sql-vec opts))))
+      (execute-fn read-pool sql-statements opts))))
+
+(defn execute-tx [ctx statements]
+  (biff.core/validate {:biff.sqlite/statements statements})
+  (execute* ctx
+            statements
+            (fn [conn sql-statements opts]
+              (jdbc/with-transaction [tx conn]
+                (mapv #(jdbc/execute! tx % opts)
+                      sql-statements)))))
+
+(defn execute [ctx statement]
+  (biff.core/validate {:biff.sqlite/statement statement})
+  (execute* ctx
+            [statement]
+            (fn [conn sql-statements opts]
+              (jdbc/execute! conn (first sql-statements) opts))))

@@ -1,4 +1,4 @@
-# biff.sqlite schema
+# Library Schema
 
 ### :biff.sqlite/after-conn
 
@@ -24,6 +24,10 @@ A HoneySQL map with several restrictions:
 - Primary key changes are not allowed in `UPDATE` statements.
 
 These restrictions make it easier to generate a `:biff.sqlite/diff` value.
+
+### :biff.sqlite/authorized-write-statements
+
+A sequence of `:biff.sqlite/authorized-write-statement`.
 
 ### :biff.sqlite/before-conn
 
@@ -116,6 +120,10 @@ post-processed) so that namespaced keywords may be used as column aliases in
 `SELECT` statements, e.g. `{:select [[... :my-table/color]], ...}`. This aids
 with type coercion since coercion is only applied to columns that are defined in
 `:biff.sqlite/columns`.
+
+### :biff.sqlite/statements
+
+A sequence of `:biff.sqlite/statement`.
 
 ### :biff.sqlite/write-conn
 

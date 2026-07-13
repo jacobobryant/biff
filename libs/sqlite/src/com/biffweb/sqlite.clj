@@ -34,6 +34,7 @@
  {:biff.sqlite/after-conn                   :any
   :biff.sqlite/authorize                    'ifn?
   :biff.sqlite/authorized-write-statement   impl.authorize/input-schema
+  :biff.sqlite/authorized-write-statements  [:sequential :biff.sqlite/authorized-write-statement]
   :biff.sqlite/before-conn                  :any
   :biff.sqlite/bin-dir                      :string
   :biff.sqlite/columns                      [:map-of :qualified-keyword column-schema]
@@ -50,7 +51,11 @@
   :biff.sqlite/read-pool                    :any
   :biff.sqlite/schema-path                  :string
   :biff.sqlite/sqldef-version               :string
-  :biff.sqlite/statement                    [:or :string 'sequential? 'map?]
+  :biff.sqlite/statement                    [:or
+                                             :string
+                                             [:cat :string [:* :any]]
+                                             map?]
+  :biff.sqlite/statements                   [:sequential :biff.sqlite/statement]
   :biff.sqlite/write-conn                   :any})
 
 (defn schema-sql
@@ -158,6 +163,12 @@
   [ctx statement]
   (impl.execute/execute ctx statement))
 
+(defn execute-tx
+  "Like execute, but takes a sequence of statements and runs them in a
+   transaction. Returns a vector of the results."
+  [ctx statements]
+  (impl.execute/execute-tx ctx statements))
+
 (defn authorized-write
   "Executes a write sqlite statement, rejecting statements that violate the
    application's authorization rules.
@@ -187,6 +198,11 @@
   [ctx statement]
   (impl.authorize/authorized-write ctx statement))
 
+(defn authorized-write-tx
+  "Like authorized-write, but takes a sequence of statements. Returns the diff."
+  [ctx statements]
+  (impl.authorize/authorized-write-tx ctx statements))
+
 (def
   ^{:doc "A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
           :biff.sqlite.fx/authorized-write."}
@@ -196,10 +212,11 @@
 (defn module
   "Returns a biff.core module.
 
-   Provides :biff.fx/handlers, collects :biff.sqlite/columns from other modules,
-   and also provides a key-value store that can be used by other libraries via
-   :biff.core/kv-get, :biff.core/kv-set, and :biff.core/kv-list (which are
-   inserted into the system map via :biff.core/init)."
+   - provides :biff.fx/handlers in the module
+   - collects :biff.sqlite/columns from other modules
+   - provides some key-value store functions in the system map:
+     :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
+   - provides :biff.core/wrap-read-tx in the system map."
   []
   (impl.system/module))
 
@@ -216,7 +233,11 @@
      :output [:user/pet-id
               {:user/pet [:pet/id]}]
 
-   All resolvers have `:batch true`."
+   All resolvers have `:batch true`.
+
+   Since `module` provides :biff.core/wrap-read-tx, if you use `module`,
+   biff.graph queries will run inside a read transaction and thus the resolvers
+   will all see a consistent view of the database."
   {:arglists '([{:biff.sqlite/keys [columns]}])}
   [ctx]
   (impl.resolver/make-resolvers ctx))

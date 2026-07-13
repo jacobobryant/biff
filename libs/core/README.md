@@ -27,7 +27,7 @@ This library will be a release candidate until all [the other Biff 2
 libraries](/README.md) have been released. Until then there could be breaking
 changes, but I don't anticipate any.
 
-## Get started
+## Example
 
 Try out [the demo app](demo/com/example.clj):
 

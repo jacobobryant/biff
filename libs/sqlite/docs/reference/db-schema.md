@@ -1,4 +1,4 @@
-# Database schema
+# Database Schema
 
 Sqlite database schema is described as a \"columns\" map (stored under
 `:biff.sqlite/columns`) where the keys are table / column names and each value

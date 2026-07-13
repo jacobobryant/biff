@@ -46,6 +46,7 @@
 
 (def ^:private statement-context-schema
   [:map {:closed true}
+   [:statement 'any?]
    [:statement-type [:enum :insert :upsert :update :delete]]
    [:table :keyword]
    [:primary-key :keyword]])
@@ -143,12 +144,13 @@
 
 (defn- statement-context [columns statement]
   (let [table-kw (extract-table statement)]
-    {:statement-type (classify-statement statement)
+    {:statement      statement
+     :statement-type (classify-statement statement)
      :table          table-kw
      :primary-key    (find-primary-key columns table-kw)}))
 
 (defn- validate-primary-key-unchanged!
-  [statement {:keys [statement-type primary-key]}]
+  [{:keys [statement statement-type primary-key]}]
   (when (case statement-type
           :update (contains? (:set statement) primary-key)
           :upsert (some #{primary-key} (:do-update-set statement))
@@ -157,49 +159,102 @@
      (ex-info "authorized-write does not allow changing primary key columns."
               {:primary-key primary-key}))))
 
-(defn- validate-input [columns input context]
+(defn- validate-input [columns {:keys [statement] :as context}]
   ;; Do two seperate biff.core/validate calls so we report errors on `input`
   ;; before checking `context`
-  (biff.core/validate {:biff.sqlite/authorized-write-statement input})
+  (biff.core/validate {:biff.sqlite/authorized-write-statement statement})
   (biff.core/validate {::context context})
-  (validate-primary-key-unchanged! input context)
-  (validate/validate-schema-on-write columns input))
+  (validate-primary-key-unchanged! context)
+  (validate/validate-schema-on-write columns statement))
 
-(defn authorized-write*
-  [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} input]
-  (let [builder-fn     (coerce/builder-fn columns)
-        context        (statement-context columns input)
-        statement-type (:statement-type context)]
-    (validate-input columns input context)
-    (.lock exec/write-lock)
-    (try
-      (jdbc/with-transaction [read-tx read-pool]
-        (jdbc/execute! read-tx ["SELECT 1"])
-        (jdbc/with-transaction [write-tx write-conn]
-          (let [process-fn (case statement-type
-                             :insert process-insert!
-                             :delete process-delete!
-                             (:update :upsert) process-update!)
-                diff       (process-fn {:columns     columns
-                                        :read-tx     read-tx
-                                        :write-tx    write-tx
-                                        :input       input
-                                        :builder-fn  builder-fn
-                                        :table       (:table context)
-                                        :primary-key (:primary-key context)})
-                auth-ctx   (assoc ctx
-                                  :biff.sqlite/before-conn read-tx
-                                  :biff.sqlite/after-conn write-tx)]
-            (when-not (authorize auth-ctx diff)
-              (throw (ex-info "Write rejected by authorization rules."
-                              {:biff.sqlite/diff diff})))
-            diff)))
-      (finally
-        (.unlock exec/write-lock)))))
+(defn- diff-key [columns {:keys [table before after]}]
+  (let [primary-key (find-primary-key columns table)]
+    [table (get (or before after) primary-key)]))
+
+(defn- merged-op [before after]
+  (cond
+    (= before after) nil
+    (and before after) :update
+    before :delete
+    after :create))
+
+(defn- merge-diff-entry [columns state entry]
+  (let [k        (diff-key columns entry)
+        existing (get-in state [:table-pk->diff k])
+        before   (if (contains? existing :before)
+                   (:before existing)
+                   (:before entry))
+        after    (:after entry)
+        merged   (when-let [op (merged-op before after)]
+                   {:table  (:table entry)
+                    :op     op
+                    :before before
+                    :after  after})
+        state    (if existing
+                   state
+                   (update state :table-pks conj k))]
+    (if merged
+      (assoc-in state [:table-pk->diff k] merged)
+      (update state :table-pk->diff dissoc k))))
+
+(defn- merge-diffs [columns diffs]
+  (let [{:keys [table-pk->diff table-pks]}
+        (reduce (fn [state entry]
+                  (merge-diff-entry columns state entry))
+                {:table-pk->diff {} :table-pks []}
+                (apply concat diffs))]
+    (into []
+          (keep table-pk->diff)
+          (distinct table-pks))))
 
 (defn- run-on-tx! [ctx]
   (when-let [on-tx (:biff.core/on-tx ctx)]
     (on-tx ctx)))
+
+(defn authorized-write*
+  [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} statements]
+  (biff.core/validate ctx {:required [:biff.sqlite/authorize
+                                      :biff.sqlite/write-conn
+                                      :biff.sqlite/read-pool]})
+  (let [builder-fn (coerce/builder-fn columns)
+        contexts   (mapv #(statement-context columns %) statements)
+        _          (doseq [context contexts]
+                     (validate-input columns context))
+        _          (.lock exec/write-lock)
+
+        result
+        (try
+          (jdbc/with-transaction [read-tx read-pool]
+            (jdbc/execute! read-tx ["SELECT 1"])
+            (jdbc/with-transaction [write-tx write-conn]
+              (let [diff     (->> contexts
+                                  (mapv (fn [{:keys [statement
+                                                     statement-type
+                                                     table
+                                                     primary-key]}]
+                                          ((case statement-type
+                                             :insert process-insert!
+                                             :delete process-delete!
+                                             (:update :upsert) process-update!)
+                                           {:columns     columns
+                                            :read-tx     read-tx
+                                            :write-tx    write-tx
+                                            :input       statement
+                                            :builder-fn  builder-fn
+                                            :table       table
+                                            :primary-key primary-key})))
+                                  (merge-diffs columns))
+                    auth-ctx (assoc ctx
+                                    :biff.sqlite/before-conn read-tx
+                                    :biff.sqlite/after-conn write-tx)]
+                (when-not (authorize auth-ctx diff)
+                  (throw (ex-info "Write rejected by authorization rules."
+                                  {:biff.sqlite/diff diff})))
+                diff)))
+          (finally
+            (.unlock exec/write-lock)))]
+    (run-on-tx! ctx)
+    result))
 
 ;; Generate a diff (a data structure showing the "before" and "after" states
 ;; of each record affected by the transaction, then pass it to the user's
@@ -217,11 +272,10 @@
 ;; To make that diff-generation work, we have to put some restrictions on the
 ;; kinds of statements we can accept; for example, update statements are not
 ;; allowed to modify primary key columns.
-(defn authorized-write [ctx input]
-  (biff.core/validate {:biff.core/statement input})
-  (biff.core/validate ctx {:required [:biff.sqlite/authorize
-                                      :biff.sqlite/write-conn
-                                      :biff.sqlite/read-pool]})
-  (let [result (authorized-write* ctx input)]
-    (run-on-tx! ctx)
-    result))
+(defn authorized-write [ctx statement]
+  (biff.core/validate {:biff.sqlite/authorized-write-statement statement})
+  (authorized-write* ctx [statement]))
+
+(defn authorized-write-tx [ctx statements]
+  (biff.core/validate {:biff.sqlite/authorized-write-statements statements})
+  (authorized-write* ctx statements))

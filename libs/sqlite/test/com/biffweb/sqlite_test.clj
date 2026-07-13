@@ -338,6 +338,46 @@
                                    :where  [:= :user/id "u2"]})
     (is (= [:called :called] @calls))))
 
+(deftest execute-transaction-test
+  (let [calls (atom [])
+        ctx   {:biff.sqlite/read-pool  *read-pool*
+               :biff.sqlite/write-conn *write-conn*
+               :biff.sqlite/columns    test-columns
+               :biff.core/on-tx        (fn [_] (swap! calls conj :called))}
+        now   (Instant/ofEpochMilli 1700000000000)]
+    (is (= [[{:next.jdbc/update-count 1}]
+            [{:next.jdbc/update-count 1}]]
+           (biff.sqlite/execute-tx
+            ctx
+            [{:insert-into :user
+              :values      [{:user/id        "u2"
+                             :user/name      "Bob"
+                             :user/joined-at now}]}
+             {:update :user
+              :set    {:user/name "Bobby"}
+              :where  [:= :user/id "u2"]}])))
+    (is (= [{:user/name "Bobby"}]
+           (biff.sqlite/execute ctx {:select :user/name
+                                     :from   :user
+                                     :where  [:= :user/id "u2"]})))
+    (is (= [:called] @calls))))
+
+(deftest execute-rejects-transaction-input-test
+  (let [ctx {:biff.sqlite/read-pool  *read-pool*
+             :biff.sqlite/write-conn *write-conn*
+             :biff.sqlite/columns    test-columns}
+        now (Instant/ofEpochMilli 1700000000000)]
+    (is (thrown? AssertionError
+                 (biff.sqlite/execute
+                  ctx
+                  [{:insert-into :user
+                    :values      [{:user/id        "u2"
+                                   :user/name      "Bob"
+                                   :user/joined-at now}]}
+                   {:update :user
+                    :set    {:user/name "Bobby"}
+                    :where  [:= :user/id "u2"]}])))))
+
 ;; --- Namespaced alias tests ---
 
 (deftest namespaced-alias-honeysql-test
@@ -951,6 +991,81 @@
       (is (contains? (:ctx-keys @received) :biff.sqlite/after-conn))
       (is (= 1 (count (:diff @received))))
       (is (= :create (-> @received :diff first :op))))))
+
+(deftest authorized-write-transaction-test
+  (let [calls (atom [])
+        ctx   {:biff.sqlite/read-pool  *read-pool*
+               :biff.sqlite/write-conn *write-conn*
+               :biff.sqlite/columns    test-columns
+               :biff.sqlite/authorize  (fn [_ diff]
+                                         (swap! calls conj diff)
+                                         true)}
+        now   (Instant/ofEpochMilli 1700000000000)
+        diff  (biff.sqlite/authorized-write-tx
+               ctx
+               [{:insert-into :user
+                 :values      [{:user/id        "u2"
+                                :user/name      "Bob"
+                                :user/joined-at now}]}
+                {:update :user
+                 :set    {:user/name "Bobby"}
+                 :where  [:= :user/id "u2"]}])]
+    (is (= 1 (count @calls)))
+    (is (= diff (first @calls)))
+    (is (= [{:table  :user
+             :op     :create
+             :before nil
+             :after  {:user/id        "u2"
+                      :user/name      "Bobby"
+                      :user/joined-at now}}]
+           diff))
+    (is (= [{:user/name "Bobby"}]
+           (biff.sqlite/execute
+            (dissoc ctx :biff.sqlite/authorize)
+            {:select :user/name
+             :from   :user
+             :where  [:= :user/id "u2"]})))))
+
+(deftest authorized-write-transaction-denied-rollback-test
+  (let [ctx {:biff.sqlite/read-pool  *read-pool*
+             :biff.sqlite/write-conn *write-conn*
+             :biff.sqlite/columns    test-columns
+             :biff.sqlite/authorize  deny-all}
+        now (Instant/ofEpochMilli 1700000000000)]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo #"rejected by authorization"
+         (biff.sqlite/authorized-write-tx
+          ctx
+          [{:insert-into :user
+            :values      [{:user/id        "u2"
+                           :user/name      "Bob"
+                           :user/joined-at now}]}
+           {:update :user
+            :set    {:user/name "Bobby"}
+            :where  [:= :user/id "u2"]}])))
+    (is (= []
+           (biff.sqlite/execute
+            (dissoc ctx :biff.sqlite/authorize)
+            {:select :user/id
+             :from   :user
+             :where  [:= :user/id "u2"]})))))
+
+(deftest authorized-write-rejects-transaction-input-test
+  (let [ctx {:biff.sqlite/read-pool  *read-pool*
+             :biff.sqlite/write-conn *write-conn*
+             :biff.sqlite/columns    test-columns
+             :biff.sqlite/authorize  allow-all}
+        now (Instant/ofEpochMilli 1700000000000)]
+    (is (thrown? AssertionError
+                 (biff.sqlite/authorized-write
+                  ctx
+                  [{:insert-into :user
+                    :values      [{:user/id        "u2"
+                                   :user/name      "Bob"
+                                   :user/joined-at now}]}
+                   {:update :user
+                    :set    {:user/name "Bobby"}
+                    :where  [:= :user/id "u2"]}])))))
 
 ;; --- Representative test cases from yakread/budgetswu patterns ---
 
