@@ -1,15 +1,15 @@
 # biff.sqlite
 
-A Biff adapter for sqlite.
+A convenience wrapper for using SQLite in Biff/Clojure applications.
 
-This library streamlines the process of using sqlite in a Biff application
-and provides some helpful sqlite-related functionality in general.
+This library streamlines the process of using SQLite in a Biff application
+and provides some helpful SQLite-related functionality in general.
 Features:
 
 - Backup/restore via [Litestream](https://litestream.io).
 - Migrations via [sqldef](https://github.com/sqldef/sqldef).
 - Rich schema types: define columns as e.g. booleans, instants, nested maps,
-  etc; and biff.sqlite converts them to/from sqlite's supported types
+  etc; and biff.sqlite converts them to/from SQLite's supported types
   (ints, blobs, etc).
 - Validate transactions based on centralized authorization rules you define
   (helps to keep LLM code secure).
@@ -20,7 +20,7 @@ Features:
 - Some other glue code for apps that use biff.core and/or [biff.fx](/libs/fx).
 
 You can also use this library standalone if you want to use certain parts like
-rich schema or litestream/sqldef integration but aren't using any other Biff
+rich schema or Litestream/sqldef integration but aren't using any other Biff
 libs.
 
 This library wraps [next.jdbc](https://github.com/seancorfield/next-jdbc) and
@@ -209,7 +209,7 @@ transactions:
 ### biff.graph resolvers
 
 Use `biff.sqlite/make-resolvers` to generate a biff.graph resolver for each of
-your sqlite tables:
+your SQLite tables:
 
 ```clojure
 ;; with biff.core:
