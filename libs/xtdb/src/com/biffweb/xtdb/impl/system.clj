@@ -2,27 +2,28 @@
   (:require [com.biffweb.xtdb.impl.authorize :as authorize]
             [com.biffweb.xtdb.impl.kv :as kv]
             [com.biffweb.xtdb.impl.tx :as tx]
-            [xtdb.node :as xt.node]))
+            [xtdb.node :as xt.node])
+  (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
 
 (defn expand-config
   [{:biff.xtdb/keys [config storage log
                      storage-bucket storage-endpoint storage-access-key
-                     storage-secret-key storage-max-cache-bytes
+                     storage-secret-key disk-cache-max-bytes memory-cache-max-bytes
                      log-bootstrap-servers log-topic log-epoch]
-    :or             {storage                 :local
-                     log                     :local
-                     log-bootstrap-servers   "localhost:9092"
-                     log-topic               "xtdb-log"
-                     log-epoch               0
-                     storage-max-cache-bytes (* 10 1024 1024 1024)}}]
+    :or             {storage               :local
+                     log                   :local
+                     log-bootstrap-servers "localhost:9092"
+                     log-topic             "xtdb-log"
+                     log-epoch             0
+                     disk-cache-max-bytes  (* 10 1024 1024 1024)}}]
   (or config
       (merge
-       (when (and (= storage :local) storage-max-cache-bytes)
-         {:memory-cache {:max-size-bytes storage-max-cache-bytes}})
+       (when (and (#{:local :remote} storage) memory-cache-max-bytes)
+         {:memory-cache {:max-size-bytes memory-cache-max-bytes}})
        (when (= storage :remote)
          {:disk-cache (cond-> {:path "storage/xtdb2/storage-cache"}
-                        storage-max-cache-bytes
-                        (assoc :max-size-bytes storage-max-cache-bytes))})
+                        disk-cache-max-bytes
+                        (assoc :max-size-bytes disk-cache-max-bytes))})
        (when-not (= storage :memory)
          {:storage (case storage
                      :local [:local {:path "storage/xtdb2/storage"}]
@@ -39,17 +40,25 @@
                                  :topic-name        log-topic
                                  :epoch             log-epoch}])}))))
 
+(defn- start-connection-pool [node hikari-config]
+  (HikariDataSource.
+   (doto (or hikari-config (HikariConfig.))
+     (.setDataSource node))))
+
 (defn use-xtdb [ctx]
   (let [config   (expand-config ctx)
         node     (if (seq config)
                    (xt.node/start-node config)
                    (xt.node/start-node))
+        pool     (start-connection-pool node (:biff.xtdb/hikari-config ctx))
         ctx      (assoc ctx :biff.xtdb/node node)
+        ctx      (assoc ctx :biff.xtdb/connection-pool pool)
         listener (tx/start-listener node ctx)
         ctx      (assoc ctx
                         :biff.xtdb/poll-now (:poll-now listener))]
     (update ctx :biff.core/stop conj (fn []
                                        ((:stop listener))
+                                       (.close pool)
                                        (.close node)))))
 
 (defn- wrap-read-tx [f]

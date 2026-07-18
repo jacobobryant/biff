@@ -7,7 +7,7 @@
             [xtdb.basis :as xt.basis]
             [xtdb.protocols :as xtp]
             [xtdb.tx-ops :as tx-ops])
-  (:import [java.sql BatchUpdateException]
+  (:import [java.sql BatchUpdateException Connection]
            [java.time Instant]
            [java.util UUID]
            [java.util.concurrent LinkedBlockingQueue TimeUnit]
@@ -16,11 +16,14 @@
 
 ;; Query helpers
 
+(defn- connectable [{:biff.xtdb/keys [connection-pool node]}]
+  (or connection-pool node))
+
 (defn q
   ([ctx query]
    (q ctx query nil))
-  ([{:biff.xtdb/keys [node snapshot-token]} query opts]
-   (xt/q node
+  ([{:biff.xtdb/keys [snapshot-token] :as ctx} query opts]
+   (xt/q (connectable ctx)
          (util/format-query query)
          (cond-> (or opts {})
            snapshot-token (assoc :snapshot-token snapshot-token)))))
@@ -118,8 +121,8 @@
   [(assert-count-at-most-one table kvs)])
 
 (defmethod expand-op :biff/upsert [ctx [_ table on & records]]
-  (let [on      (if (map? on) (keys on) on)
-        query   {:select (conj (vec on) :xt/id)
+  (assert (sequential? on) "`on` must be a sequence of attribute keywords.")
+  (let [query   {:select (conj (vec on) :xt/id)
                  :from   [table]
                  :where  [:in
                           [:array (vec on)]
@@ -184,18 +187,35 @@
           kvs)))
 
 (defn- with-conn [{:keys [connectable database]} f]
-  (let [database (cond-> database
-                   (keyword? database) (-> symbol str NormalForm/normalForm))]
-    (with-open [conn (-> (.createConnectionBuilder ^DataSource connectable)
-                         (cond-> database
-                           (.database database))
-                         (.build))]
-      (f conn))))
+  (when (and database (not (instance? DataSource connectable)))
+    (throw (ex-info "Can't set database when connectable is not an XTDB node."
+                    {:database          database
+                     :connectable-class (class connectable)})))
+  (let [database  (cond-> database
+                    (keyword? database) (-> symbol str NormalForm/normalForm))
+        was-conn? (instance? Connection connectable)
+        conn      (cond
+                    was-conn?
+                    connectable
+
+                    (instance? DataSource connectable)
+                    (-> (.createConnectionBuilder ^DataSource connectable)
+                        (cond-> database
+                          (.database database))
+                        (.build))
+
+                    :else
+                    (jdbc/get-connection connectable))]
+    (try
+      (f conn)
+      (finally
+        (when-not was-conn?
+          (.close conn))))))
 
 ;; Like xt/submit-tx but returns an :await-token that can be used to block until
 ;; the transaction has been indexed.
 (defn- submit-tx-for-token [ctx tx-ops tx-opts]
-  (with-conn {:connectable (:biff.xtdb/node ctx)
+  (with-conn {:connectable (connectable ctx)
               :database    (:database tx-opts)}
     (fn [conn]
       (try
@@ -222,9 +242,9 @@
 ;; Public write wrappers
 
 (defn- validate-tx! [tx-ops]
-  (doseq [op tx-ops
+  (doseq [op    tx-ops
           :when (vector? op)
-          :let [[op _table-or-opts & docs] op]
+          :let  [[op _table-or-opts & docs] op]
           :when (#{:put-docs :patch-docs} op)]
     (biff.core/validate docs)))
 
@@ -232,13 +252,12 @@
   ([ctx tx-ops]
    (execute-tx ctx tx-ops nil))
   ([ctx tx-ops tx-opts]
-   (let [tx-ops      (expand-ops ctx tx-ops)
-         _           (validate-tx! tx-ops)
-         tx-key      (xt/execute-tx (:biff.xtdb/node ctx) tx-ops tx-opts)
-         system-time (:system-time tx-key)]
+   (let [tx-ops (expand-ops ctx tx-ops)
+         _      (validate-tx! tx-ops)
+         tx-key (xt/execute-tx (connectable ctx) tx-ops tx-opts)]
      (when-let [poll-now (:biff.xtdb/poll-now ctx)]
-       (poll-now system-time))
-     (notify-on-tx ctx system-time)
+       (poll-now (:system-time tx-key)))
+     (notify-on-tx ctx (:system-time tx-key))
      tx-key)))
 
 (defn submit-tx

@@ -172,10 +172,9 @@ TODO
 I use LLMs to generate a rough draft of pretty much all the code I write,
 reading it thoroughly. I don't release code I haven't read or don't understand.
 Before releasing, I edit the code (sometimes a little, sometimes a lot) and
-write docs manually. I don't edit the tests much, but I do regenerate them after
-I write detailed docstrings which seems to work pretty well.
-
-> Biff documentation: 100% certified angus text.
+write docs _almost always_ manually. I don't edit the tests much, but I do
+regenerate them after I write detailed docstrings which seems to work pretty
+well.
 
 Biff is intended to be a good framework for both manual and LLM-assisted
 development.

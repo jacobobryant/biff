@@ -1,5 +1,6 @@
 (ns com.biffweb.xtdb.impl.util
-  (:require [clojure.walk :as walk]
+  (:require [clojure.string :as str]
+            [clojure.walk :as walk]
             [honey.sql :as hsql]
             [xtdb.util :as xt.util]))
 
@@ -42,12 +43,11 @@
   (str "\"" (name table) "\""))
 
 (defn where-and [kvs]
-  (str
-   (clojure.string/join
-    " AND "
-    (map (fn [[k _]]
-           (str (sql-ident k) " = ?"))
-         kvs))))
+  (str/join
+   " AND "
+   (map (fn [[k _]]
+          (str (sql-ident k) " = ?"))
+        kvs)))
 
 (defn sql-args [kvs]
   (mapv val kvs))
