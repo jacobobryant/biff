@@ -112,7 +112,7 @@
   (impl.sqldef/use-sqldef ctx))
 
 (defn use-conn
-  "Adds read/write datbaase connections to the system map.
+  "Adds read/write database connections to the system map.
 
    The returned system map includes :biff.sqlite/read-pool and
    :biff.sqlite/write-conn. The read pool is a hikari connection pool with the
