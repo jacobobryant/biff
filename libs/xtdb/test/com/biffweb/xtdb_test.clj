@@ -186,7 +186,7 @@
     (try
       (let [pet-id  (UUID/randomUUID)
             user-id (UUID/randomUUID)
-            ctx     (merge (biff.graph/new-ctx (biff.xtdb/make-resolvers base-ctx))
+            ctx     (merge (biff.graph/new-ctx (biff.xtdb/make-resolvers columns))
                            base-ctx)]
         (biff.xtdb/execute-tx
          ctx

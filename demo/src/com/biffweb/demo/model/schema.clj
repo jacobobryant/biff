@@ -59,5 +59,4 @@
 (def module
   {:biff.core/init       init
    :biff.sqlite/columns  columns
-   :biff.graph/resolvers (biff.sqlite/make-resolvers
-                          {:biff.sqlite/columns columns})})
+   :biff.graph/resolvers (biff.sqlite/make-resolvers columns)})

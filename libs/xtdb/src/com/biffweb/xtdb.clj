@@ -170,9 +170,8 @@
               {:user/pet [:pet/id]}]
 
    All resolvers have `:batch true`."
-  {:arglists '([{:biff.xtdb/keys [columns]}])}
-  [ctx]
-  (impl.resolver/make-resolvers ctx))
+  [columns]
+  (impl.resolver/make-resolvers columns))
 
 (def
   ^{:doc "A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,

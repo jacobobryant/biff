@@ -90,7 +90,7 @@
                               (map key))
                         remaining)]
         (if (empty? ready)
-          (into sorted (keys remaining))
+          (into sorted (sort (keys remaining)))
           (recur (into sorted (sort ready))
                  (into {}
                        (comp (remove #(contains? ready (key %)))
@@ -136,7 +136,9 @@
                             {:table   table
                              :columns (vec (sort-columns columns))}))
                     topo-sort-tables)]
-    (str/join "\n\n"
-              (concat (mapv table-sql tables)
-                      (->> (mapcat :columns tables)
-                           (keep index-sql))))))
+    (->> (conj (mapv table-sql tables)
+               (->> (mapcat :columns tables)
+                    (sort-by :id)
+                    (keep index-sql)
+                    (str/join "\n")))
+         (str/join "\n\n"))))

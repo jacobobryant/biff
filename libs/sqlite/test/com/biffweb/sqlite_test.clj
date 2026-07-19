@@ -323,7 +323,7 @@
     (fn [ctx]
       (let [pet-id  (UUID/randomUUID)
             user-id (UUID/randomUUID)
-            ctx     (merge (biff.graph/new-ctx (sqlite/make-resolvers ctx))
+            ctx     (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
                            ctx)]
         (sqlite/execute ctx
                         {:insert-into :pet

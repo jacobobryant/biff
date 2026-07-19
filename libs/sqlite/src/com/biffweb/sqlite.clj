@@ -238,6 +238,5 @@
    Since `module` provides :biff.core/wrap-read-tx, if you use `module`,
    biff.graph queries will run inside a read transaction and thus the resolvers
    will all see a consistent view of the database."
-  {:arglists '([{:biff.sqlite/keys [columns]}])}
-  [ctx]
-  (impl.resolver/make-resolvers ctx))
+  [columns]
+  (impl.resolver/make-resolvers columns))

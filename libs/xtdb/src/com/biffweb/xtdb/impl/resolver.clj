@@ -20,7 +20,7 @@
       :output-key  id
       :foreign-key ref}]))
 
-(defn make-resolvers [{:biff.xtdb/keys [columns]}]
+(defn make-resolvers [columns]
   (biff.core/validate {:biff.xtdb/columns columns})
   (let [columns (mapv (fn [[id opts]]
                         (assoc opts

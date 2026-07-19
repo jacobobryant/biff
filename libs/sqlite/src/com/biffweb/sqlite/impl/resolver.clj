@@ -28,7 +28,7 @@
       :output-key  (:id col)
       :foreign-key (:ref col)}]))
 
-(defn make-resolvers [{:biff.sqlite/keys [columns]}]
+(defn make-resolvers [columns]
   (biff.core/validate {:biff.sqlite/columns columns})
   (let [columns (mapv (fn [[id opts]]
                         (assoc opts
