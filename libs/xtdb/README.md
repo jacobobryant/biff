@@ -195,6 +195,34 @@ by `submit-tx`, `execute-tx`, and `authorized-write` (via `biff.core/validate`):
 Schema enforcement happens on a best-effort basis; only `:put-docs` and
 `:patch-docs` operations are validated.
 
+The `:schema` values aren't used for XTDB schema or migrations; once registered,
+they're used by `execute-tx` and `submit-tx` to validate docs before they're
+submitted.
+
+If you're using `biff.core`, you can register the Malli schemas and add the
+columns map to your system with a module:
+
+```clojure
+(require '[com.biffweb.core :as biff.core])
+
+(def module
+  {:biff.core/init
+   (fn [_]
+     (biff.core/register (biff.xtdb/columns->schema columns))
+     {:biff.xtdb/columns columns})})
+```
+
+If you're not using `biff.core`, call `biff.core/register` yourself and include
+`:biff.xtdb/columns` in the ctx maps you pass to functions that need it:
+
+```clojure
+(biff.core/register (biff.xtdb/columns->schema columns))
+
+(def ctx
+  {:biff.xtdb/columns columns
+   ...})
+```
+
 ### biff.fx integration
 
 `module` provides a `:biff.fx/handlers` map that includes:
