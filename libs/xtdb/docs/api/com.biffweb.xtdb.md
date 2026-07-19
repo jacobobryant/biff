@@ -135,7 +135,7 @@ calling execute-tx or submit-tx.
 [view source](../../src/com/biffweb/xtdb.clj#L156)
 
 ```
-(make-resolvers #:biff.xtdb{:keys [columns]})
+(make-resolvers columns)
 
 Returns a sequence of biff.graph resolvers, one for each table.
 
@@ -157,7 +157,7 @@ All resolvers have `:batch true`.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/xtdb.clj#L177)
+[view source](../../src/com/biffweb/xtdb.clj#L176)
 
 ```
 A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
@@ -166,7 +166,7 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 
 ### module
 
-[view source](../../src/com/biffweb/xtdb.clj#L183)
+[view source](../../src/com/biffweb/xtdb.clj#L182)
 
 ```
 (module)
@@ -176,5 +176,5 @@ Returns a biff.core module.
 - provides :biff.fx/handlers in the module
 - provides key-value store functions in the system map:
   :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-- provides :biff.core/wrap-read-tx in the system map.
+- provides :biff.core/wrap-db-snapshot in the system map.
 ```

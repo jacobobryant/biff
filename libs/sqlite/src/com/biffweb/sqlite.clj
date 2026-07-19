@@ -216,7 +216,7 @@
    - collects :biff.sqlite/columns from other modules
    - provides some key-value store functions in the system map:
      :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-   - provides :biff.core/wrap-read-tx in the system map."
+   - provides :biff.core/wrap-db-snapshot in the system map."
   []
   (impl.system/module))
 
@@ -235,7 +235,7 @@
 
    All resolvers have `:batch true`.
 
-   Since `module` provides :biff.core/wrap-read-tx, if you use `module`,
+   Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
    biff.graph queries will run inside a read transaction and thus the resolvers
    will all see a consistent view of the database."
   [columns]

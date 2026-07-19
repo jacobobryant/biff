@@ -100,7 +100,7 @@ input
 
 Throws an exception if any required attributes couldn't be resolved.
 
-Calls (:biff.core/wrap-read-tx ctx) if set so that resolvers get a consistent
+Calls (:biff.core/wrap-db-snapshot ctx) if set so that resolvers get a consistent
 view of the database.
 
   (query ctx {:user/id 1} [:user/email :user/joined-at])

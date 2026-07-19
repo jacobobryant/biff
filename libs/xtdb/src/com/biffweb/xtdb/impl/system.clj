@@ -61,7 +61,7 @@
                                        (.close pool)
                                        (.close node)))))
 
-(defn- wrap-read-tx [f]
+(defn- wrap-db-snapshot [f]
   (fn [ctx]
     (f (assoc ctx
               :biff.xtdb/snapshot-token
@@ -76,7 +76,7 @@
   {:biff.fx/handlers fx-handlers
    :biff.core/init
    (fn [_modules-var]
-     {:biff.core/kv-get       kv/get-value
-      :biff.core/kv-list      kv/list-keys
-      :biff.core/kv-set       kv/set-value
-      :biff.core/wrap-read-tx wrap-read-tx})})
+     {:biff.core/kv-get           kv/get-value
+      :biff.core/kv-list          kv/list-keys
+      :biff.core/kv-set           kv/set-value
+      :biff.core/wrap-db-snapshot wrap-db-snapshot})})

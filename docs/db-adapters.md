@@ -20,7 +20,7 @@ should provide at least these things:
   implementations for `:biff.core/kv-set`, `:biff.core/kv-get`, and
   `:biff.core/kv-list`. If the database has a way to ensure that multiple
   queries see a consistent view of the database, then the `:biff.core/init`
-  function should also return `:biff.core/wrap-read-tx`. See [biff.core's schema
+  function should also return `:biff.core/wrap-db-snapshot`. See [biff.core's schema
   reference](/libs/core/docs/reference/schema.md).
 
 - The module should also include a

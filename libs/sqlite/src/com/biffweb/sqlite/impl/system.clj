@@ -7,7 +7,7 @@
             [com.biffweb.sqlite.impl.sqldef :as impl.sqldef]
             [next.jdbc :as jdbc]))
 
-(defn- wrap-read-tx [f]
+(defn- wrap-db-snapshot [f]
   (fn [ctx]
     (jdbc/with-transaction [tx (:biff.sqlite/read-pool ctx)]
       (f (assoc ctx :biff.sqlite/read-pool tx)))))
@@ -31,10 +31,10 @@
 
    :biff.core/init
    (fn [modules-var]
-     {:biff.core/kv-get       kv/get-value
-      :biff.core/kv-list      kv/list-keys
-      :biff.core/kv-set       kv/set-value
-      :biff.core/wrap-read-tx wrap-read-tx
-      :biff.sqlite/columns    (into {}
-                                    (mapcat :biff.sqlite/columns)
-                                    @modules-var)})})
+     {:biff.core/kv-get           kv/get-value
+      :biff.core/kv-list          kv/list-keys
+      :biff.core/kv-set           kv/set-value
+      :biff.core/wrap-db-snapshot wrap-db-snapshot
+      :biff.sqlite/columns        (into {}
+                                        (mapcat :biff.sqlite/columns)
+                                        @modules-var)})})

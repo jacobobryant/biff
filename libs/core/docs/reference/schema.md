@@ -67,7 +67,7 @@ prefix.
 Implementers may use the :biff.core/kv-namespace and :biff.core/kv-prefix
 schemas for validation.
 
-### :biff.core/wrap-read-tx
+### :biff.core/wrap-db-snapshot
 
 `(fn [f]) -> f`
 

@@ -93,8 +93,8 @@ notify `:biff.core/on-tx` after async transactions have been indexed.
 ### :biff.xtdb/snapshot-token
 
 String. Passed to XTDB queries so multiple queries can view a consistent
-database snapshot. Normally set by `:biff.core/wrap-read-tx`, which is provided
-by [module](../api/com.biffweb.xtdb.md#module).
+database snapshot. Normally set by `:biff.core/wrap-db-snapshot`, which is
+provided by [module](../api/com.biffweb.xtdb.md#module).
 
 ### :biff.xtdb/storage
 

@@ -252,7 +252,7 @@
       (finally
         (close-ctx base-ctx)))))
 
-(deftest module-provides-fx-kv-columns-and-wrap-read-tx
+(deftest module-provides-fx-kv-columns-and-wrap-db-snapshot
   (let [modules-var (atom [{:biff.xtdb/columns {:app/name {:schema :string}}}])
         module      (biff.xtdb/module)
         init        ((:biff.core/init module) modules-var)]
@@ -265,4 +265,4 @@
     (is (ifn? (:biff.core/kv-get init)))
     (is (ifn? (:biff.core/kv-set init)))
     (is (ifn? (:biff.core/kv-list init)))
-    (is (ifn? (:biff.core/wrap-read-tx init)))))
+    (is (ifn? (:biff.core/wrap-db-snapshot init)))))

@@ -347,7 +347,7 @@
                  {:user/pet [:pet/id
                              :pet/species]}])))))))
 
-(deftest module-provides-fx-kv-schema-and-wrap-read-tx
+(deftest module-provides-fx-kv-schema-and-wrap-db-snapshot
   (let [modules-var (atom [{:biff.sqlite/columns {:app/id {:type :uuid :primary-key true}}}])
         module      (sqlite/module)
         init        ((:biff.core/init module) modules-var)]
@@ -362,7 +362,7 @@
     (is (ifn? (:biff.core/kv-get init)))
     (is (ifn? (:biff.core/kv-set init)))
     (is (ifn? (:biff.core/kv-list init)))
-    (is (ifn? (:biff.core/wrap-read-tx init)))))
+    (is (ifn? (:biff.core/wrap-db-snapshot init)))))
 
 (deftest use-conn-adds-read-and-write-connections-with-pragmas
   (let [ctx (sqlite/use-conn {:biff.sqlite/db-path (temp-db-path)

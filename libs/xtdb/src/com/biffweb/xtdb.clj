@@ -185,6 +185,6 @@
    - provides :biff.fx/handlers in the module
    - provides key-value store functions in the system map:
      :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-   - provides :biff.core/wrap-read-tx in the system map."
+   - provides :biff.core/wrap-db-snapshot in the system map."
   []
   (impl.system/module))

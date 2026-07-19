@@ -194,8 +194,8 @@
          resolving-attrs  #{}
          execute          (fn [ctx]
                             (resolve-entities ctx input query-ast resolving-attrs))
-         execute          (if-some [wrap-read-tx (:biff.core/wrap-read-tx ctx)]
-                            (wrap-read-tx execute)
+         execute          (if-some [wrap-db-snapshot (:biff.core/wrap-db-snapshot ctx)]
+                            (wrap-db-snapshot execute)
                             execute)
          results          (execute ctx)]
      (doseq [{::keys [fail-trace]} results

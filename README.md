@@ -173,7 +173,7 @@ TODO
 I use LLMs to generate a rough draft of pretty much all the code I write,
 reading it thoroughly. I don't release code I haven't read or don't understand.
 Before releasing, I edit the code (sometimes a little, sometimes a lot) and
-write docs _almost always_ manually. I don't edit the tests much, but I do
+write docs almost always manually. I don't edit the tests much, but I do
 regenerate them after I write detailed docstrings which seems to work pretty
 well.
 

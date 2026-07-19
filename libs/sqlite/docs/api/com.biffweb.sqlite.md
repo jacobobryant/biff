@@ -184,7 +184,7 @@ Returns a biff.core module.
 - collects :biff.sqlite/columns from other modules
 - provides some key-value store functions in the system map:
   :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-- provides :biff.core/wrap-read-tx in the system map.
+- provides :biff.core/wrap-db-snapshot in the system map.
 ```
 
 ### make-resolvers
@@ -192,7 +192,7 @@ Returns a biff.core module.
 [view source](../../src/com/biffweb/sqlite.clj#L223)
 
 ```
-(make-resolvers #:biff.sqlite{:keys [columns]})
+(make-resolvers columns)
 
 Returns a sequence of biff.graph resolvers, one for each table.
 
@@ -208,7 +208,7 @@ additional join attribute without the `-id` suffix is also returned:
 
 All resolvers have `:batch true`.
 
-Since `module` provides :biff.core/wrap-read-tx, if you use `module`,
+Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
 biff.graph queries will run inside a read transaction and thus the resolvers
 will all see a consistent view of the database.
 ```
