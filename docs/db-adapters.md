@@ -1,9 +1,8 @@
 # How to write a Biff database adapter
 
 If you want to make it easy to use a particular database in a Biff application,
-you'll probably want to write an adapter library. So far I've released [an
-adapter library for SQLite](/libs/sqlite/), and I plan to write at least one
-more adapter library for XTDB 2.
+you'll probably want to write an adapter library. I maintain two adapter
+libraries; [one for sqlite](/libs/sqlite/) and [one for XTDB](/libs/xtdb/).
 
 ## Core functionality
 
