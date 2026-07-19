@@ -23,28 +23,26 @@ map based on `storage` and `log` plus their related options.
 ```
 (use-xtdb ctx)
 
-Starts an XTDB node and adds it to the system map.
+Starts an in-process XTDB node and a connection pool.
 
-Passes ctx to expand-config.
+Passes ctx to expand-config. When ctx is passed to q, execute-tx, submit-tx,
+or authorized-write, those functions:
 
-The returned system map includes `:biff.xtdb/node`,
-`:biff.xtdb/connection-pool`, and `:biff.xtdb/poll-now`. `poll-now` is an
-internal function used by submit-tx to notify `:biff.core/on-tx` after async
-transactions have been indexed.
+- Use the connection pool.
+- Trigger a call to :biff.core/on-tx, if set.
 
-Adds a stop function under `:biff.core/stop` which closes the connection pool
-and node.
+Sets :biff.xtdb/node and :biff.xtdb/connection-pool on ctx.
 ```
 
 ### q
 
-[view source](../../src/com/biffweb/xtdb.clj#L77)
+[view source](../../src/com/biffweb/xtdb.clj#L75)
 
 ```
 (q {:biff.xtdb/keys [connection-pool node snapshot-token], :as ctx} query)
 (q {:biff.xtdb/keys [connection-pool node snapshot-token], :as ctx} query opts)
 
-Convenience wrapper for xtdb.api/q.
+Wrapper for xtdb.api/q.
 
 If query is a map, formats it with HoneySQL, adding support for qualified
 keywords (e.g. :user/email gets converted to :user$email).
@@ -54,20 +52,20 @@ Includes snapshot-token in the query opts.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/xtdb.clj#L91)
+[view source](../../src/com/biffweb/xtdb.clj#L89)
 
 ```
 (execute-tx ctx tx-ops)
-(execute-tx ctx tx-ops tx-opts)
+(execute-tx {:biff.xtdb/keys [node connection-pool], :as ctx} tx-ops tx-opts)
 
-Executes a transaction and waits for it to be indexed.
+Wrapper for xtdb.api/execute-tx.
 
-Expands Biff's custom transaction ops, validates docs in `:put-docs` and
-`:patch-docs` operations with `biff.core/validate`, executes the transaction
-with XTDB, then calls `:biff.core/on-tx` if set. Uses
-`:biff.xtdb/connection-pool` if set.
+- Supports Biff's custom transaction operations.
+- Enforces Malli schema for :put-docs and :patch-docs operations via
+  biff.core/validate.
+- Calls :biff.core/on-tx if set.
 
-Returns XTDB's transaction key, including `:tx-id` and `:system-time`.
+Returns a map with :tx-id and :system-time.
 ```
 
 ### submit-tx
@@ -76,43 +74,40 @@ Returns XTDB's transaction key, including `:tx-id` and `:system-time`.
 
 ```
 (submit-tx ctx tx-ops)
-(submit-tx ctx tx-ops tx-opts)
+(submit-tx {:biff.xtdb/keys [node connection-pool], :as ctx} tx-ops tx-opts)
 
-Submits a transaction without waiting for it to be indexed.
+Wrapper for xtdb.api/submit-tx
 
-Expands Biff's custom transaction ops and validates docs in `:put-docs` and
-`:patch-docs` operations with `biff.core/validate`, like execute-tx.
+- Supports Biff's custom transaction operations.
+- Enforces Malli schema for :put-docs and :patch-docs operations via
+  biff.core/validate.
+- Calls :biff.core/on-tx if set.
 
-Returns `{:tx-id ...}`. If `use-xtdb` has been run and `:biff.core/on-tx`
-is set, on-tx will be called in the background after the transaction has
-been indexed. Uses `:biff.xtdb/connection-pool` if set.
+Returns a map with :tx-id.
 ```
 
 ### authorized-write
 
-[view source](../../src/com/biffweb/xtdb.clj#L123)
+[view source](../../src/com/biffweb/xtdb.clj#L124)
 
 ```
 (authorized-write {:biff.xtdb/keys [authorize node], :as ctx} tx-ops)
 (authorized-write {:biff.xtdb/keys [authorize node], :as ctx} tx-ops tx-opts)
 
-Submits a transaction only if it passes the application's authorization rules.
+Wrapper for xt/submit-tx that enforces authorization rules.
 
-`:biff.xtdb/authorize` must be set to `(fn [ctx diff])`. The diff is also
-added to `ctx` under `:biff.xtdb/diff` before authorize is called.
+The :biff.xtdb/authorize function must be set. If it doesn't return true,
+the transaction is rejected.
 
-Only transaction operations with known diff semantics are accepted:
-`:put-docs`, `:patch-docs`, `:delete-docs`, and `:erase-docs`. Custom ops
-are expanded before this check; the built-in custom ops are not accepted
-because they expand to SQL assertions. If authorize returns a falsey value,
-throws an exception and does not submit the transaction.
+Only :put-docs, :patch-docs, :delete-docs, and :erase-docs operations are
+accepted.
 
-On success, returns the result of submit-tx with `:biff.xtdb/diff` added.
+On success, returns the result of submit-tx with :biff.xtdb/diff added.
 ```
 
 ### prefix-uuid
 
-[view source](../../src/com/biffweb/xtdb.clj#L143)
+[view source](../../src/com/biffweb/xtdb.clj#L141)
 
 ```
 (prefix-uuid uuid-prefix uuid-rest)
@@ -123,7 +118,7 @@ rest of `uuid-rest`.
 
 ### columns->schema
 
-[view source](../../src/com/biffweb/xtdb.clj#L149)
+[view source](../../src/com/biffweb/xtdb.clj#L147)
 
 ```
 (columns->schema columns)
@@ -137,16 +132,16 @@ calling execute-tx or submit-tx.
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/xtdb.clj#L158)
+[view source](../../src/com/biffweb/xtdb.clj#L156)
 
 ```
 (make-resolvers #:biff.xtdb{:keys [columns]})
 
 Returns a sequence of biff.graph resolvers, one for each table.
 
-Each resolver takes the table's primary key as input and returns all the
-other columns as output. The primary key for table `:user` is assumed to be
-`:user/id`, corresponding to XTDB's `:xt/id`.
+Each resolver takes an alias of :xt/id as input, which has the form
+:<table>/id (e.g. :user/id). All other keys in `columns` with the same
+namespace are included in the output.
 
 Columns with `:ref` are returned as joins. If a ref column ends in `-id`,
 that column is returned as a regular non-join attribute and an additional
@@ -162,7 +157,7 @@ All resolvers have `:batch true`.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/xtdb.clj#L179)
+[view source](../../src/com/biffweb/xtdb.clj#L177)
 
 ```
 A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
@@ -171,7 +166,7 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 
 ### module
 
-[view source](../../src/com/biffweb/xtdb.clj#L185)
+[view source](../../src/com/biffweb/xtdb.clj#L183)
 
 ```
 (module)
