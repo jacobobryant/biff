@@ -6,6 +6,7 @@ This library streamlines the process of using SQLite in a Biff application
 and provides some helpful SQLite-related functionality in general.
 Features:
 
+- Sane defaults like WAL mode, STRICT tables, etc.
 - Backup/restore via [Litestream](https://litestream.io).
 - Migrations via [sqldef](https://github.com/sqldef/sqldef).
 - Rich schema types: define columns as e.g. booleans, instants, nested maps,
