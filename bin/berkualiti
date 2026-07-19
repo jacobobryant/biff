@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-clj -M:run format
+clojure -M:run format
 bin/docs
-clj -M:run lint
+clojure -M:run lint
 bin/test-all

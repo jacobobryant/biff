@@ -9,6 +9,6 @@ for dir in "$root"/libs/*; do
   grep -q ':biff.tasks/docs-namespaces' "$dir/dev/config.edn" || continue
   (
     cd "$dir"
-    clj -M:run docs
+    clojure -M:run docs
   )
 done
