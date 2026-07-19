@@ -9,10 +9,10 @@
            [java.util UUID]))
 
 (def columns
-  {:pet/id      {:type :uuid :primary-key true}
-   :pet/species {:type        :enum
-                 :enum-values {0 :pet.species/iguana
-                               1 :pet.species/tardigrade}}
+  {:pet/id         {:type :uuid :primary-key true}
+   :pet/species    {:type        :enum
+                    :enum-values {0 :pet.species/iguana
+                                  1 :pet.species/tardigrade}}
    :user/id        {:type :uuid :primary-key true}
    :user/email     {:type :text :unique true :required true}
    :user/score     {:type :int :required true :unique-with [:user/email]}
@@ -36,7 +36,7 @@
   ([columns]
    (let [ctx (sqlite/use-conn {:biff.sqlite/db-path (temp-db-path)
                                :biff.sqlite/columns columns
-                               :biff.core/stop []})]
+                               :biff.core/stop      []})]
      (doseq [statement (split-sql (sqlite/schema-sql ctx))]
        (sqlite/execute ctx statement))
      ctx)))
@@ -87,24 +87,24 @@
           prefs     {:theme :dark :alerts [:email :sms]}]
       (sqlite/execute ctx
                       {:insert-into :pet
-                       :values      [{:pet/id pet-id
+                       :values      [{:pet/id      pet-id
                                       :pet/species [:lift :pet.species/iguana]}]})
       (sqlite/execute ctx
                       {:insert-into :user
-                       :values      [{:user/id user-id
-                                      :user/email "ada@example.com"
-                                      :user/score 42
-                                      :user/active true
+                       :values      [{:user/id        user-id
+                                      :user/email     "ada@example.com"
+                                      :user/score     42
+                                      :user/active    true
                                       :user/joined-at joined-at
-                                      :user/prefs [:lift prefs]
-                                      :user/pet-id pet-id}]})
-      (is (= [{:user/id user-id
-               :user/email "ada@example.com"
-               :user/score 42
-               :user/active true
+                                      :user/prefs     [:lift prefs]
+                                      :user/pet-id    pet-id}]})
+      (is (= [{:user/id        user-id
+               :user/email     "ada@example.com"
+               :user/score     42
+               :user/active    true
                :user/joined-at joined-at
-               :user/prefs prefs
-               :user/pet-id pet-id}]
+               :user/prefs     prefs
+               :user/pet-id    pet-id}]
              (sqlite/execute ctx
                              {:select [:user/id
                                        :user/email
@@ -126,12 +126,12 @@
 (deftest execute-validates-honeysql-writes-and-rejects-unknown-enums
   (with-ctx ctx
     (is (= {:column :user/score
-            :value "not an int"
+            :value  "not an int"
             :schema :int}
            (thrown-data
             #(sqlite/execute ctx
                              {:insert-into :user
-                              :values      [{:user/id (UUID/randomUUID)
+                              :values      [{:user/id    (UUID/randomUUID)
                                              :user/email "ada@example.com"
                                              :user/score "not an int"}]}))))
     (is (= :pet.species/missing
@@ -150,18 +150,18 @@
              (sqlite/execute-tx
               ctx
               [{:insert-into :user
-                :values      [{:user/id id-a
+                :values      [{:user/id    id-a
                                :user/email "a@example.com"
                                :user/score 1}]}
                {:insert-into :user
-                :values      [{:user/id id-b
+                :values      [{:user/id    id-b
                                :user/email "b@example.com"
                                :user/score 2}]}])))
       (is (thrown? Exception
                    (sqlite/execute-tx
                     ctx
                     [{:insert-into :user
-                      :values      [{:user/id (UUID/randomUUID)
+                      :values      [{:user/id    (UUID/randomUUID)
                                      :user/email "c@example.com"
                                      :user/score 3}]}
                      "INSERT INTO missing_table VALUES (1)"])))
@@ -181,80 +181,80 @@
       (is (= 0 @calls))
       (sqlite/execute ctx
                       {:insert-into :user
-                       :values      [{:user/id (UUID/randomUUID)
+                       :values      [{:user/id    (UUID/randomUUID)
                                       :user/email "ada@example.com"
                                       :user/score 1}]})
       (is (= 1 @calls)))))
 
 (deftest authorized-write-generates-diffs-and-enforces-authorization
   (with-ctx base-ctx
-    (let [pet-id    (UUID/randomUUID)
-          user-id   (UUID/randomUUID)
-          diffs     (atom [])
-          on-tx     (atom 0)
-          ctx       (assoc base-ctx
-                           :biff.sqlite/authorize
-                           (fn [auth-ctx diff]
-                             (is (some? (:biff.sqlite/before-conn auth-ctx)))
-                             (is (some? (:biff.sqlite/after-conn auth-ctx)))
-                             (swap! diffs conj diff)
-                             true)
-                           :biff.core/on-tx
-                           (fn [_] (swap! on-tx inc)))
+    (let [pet-id  (UUID/randomUUID)
+          user-id (UUID/randomUUID)
+          diffs   (atom [])
+          on-tx   (atom 0)
+          ctx     (assoc base-ctx
+                         :biff.sqlite/authorize
+                         (fn [auth-ctx diff]
+                           (is (some? (:biff.sqlite/before-conn auth-ctx)))
+                           (is (some? (:biff.sqlite/after-conn auth-ctx)))
+                           (swap! diffs conj diff)
+                           true)
+                         :biff.core/on-tx
+                         (fn [_] (swap! on-tx inc)))
           create-diff
           (sqlite/authorized-write
            ctx
            {:insert-into :user
-            :values      [{:user/id user-id
+            :values      [{:user/id    user-id
                            :user/email "ada@example.com"
                            :user/score 1}]})]
-      (is (= [{:table :user
-               :op :create
+      (is (= [{:table  :user
+               :op     :create
                :before nil
-               :after {:user/id user-id
-                       :user/email "ada@example.com"
-                       :user/score 1
-                       :user/active nil
-                       :user/joined-at nil
-                       :user/prefs nil
-                       :user/pet-id nil}}]
+               :after  {:user/id        user-id
+                        :user/email     "ada@example.com"
+                        :user/score     1
+                        :user/active    nil
+                        :user/joined-at nil
+                        :user/prefs     nil
+                        :user/pet-id    nil}}]
              create-diff))
       (sqlite/execute ctx
                       {:insert-into :pet
-                       :values      [{:pet/id pet-id
+                       :values      [{:pet/id      pet-id
                                       :pet/species [:lift :pet.species/tardigrade]}]})
-      (is (= [{:table :user
-               :op :update
-               :before {:user/id user-id
-                        :user/email "ada@example.com"
-                        :user/score 1
-                        :user/active nil
+      (is (= [{:table  :user
+               :op     :update
+               :before {:user/id        user-id
+                        :user/email     "ada@example.com"
+                        :user/score     1
+                        :user/active    nil
                         :user/joined-at nil
-                        :user/prefs nil
-                        :user/pet-id nil}
-               :after {:user/id user-id
-                       :user/email "ada@example.com"
-                       :user/score 2
-                       :user/active nil
-                       :user/joined-at nil
-                       :user/prefs nil
-                       :user/pet-id pet-id}}]
+                        :user/prefs     nil
+                        :user/pet-id    nil}
+               :after  {:user/id        user-id
+                        :user/email     "ada@example.com"
+                        :user/score     2
+                        :user/active    nil
+                        :user/joined-at nil
+                        :user/prefs     nil
+                        :user/pet-id    pet-id}}]
              (sqlite/authorized-write
               ctx
               {:update :user
-               :set    {:user/score 2
+               :set    {:user/score  2
                         :user/pet-id pet-id}
                :where  [:= :user/id user-id]})))
-      (is (= [{:table :user
-               :op :delete
-               :before {:user/id user-id
-                        :user/email "ada@example.com"
-                        :user/score 2
-                        :user/active nil
+      (is (= [{:table  :user
+               :op     :delete
+               :before {:user/id        user-id
+                        :user/email     "ada@example.com"
+                        :user/score     2
+                        :user/active    nil
                         :user/joined-at nil
-                        :user/prefs nil
-                        :user/pet-id pet-id}
-               :after nil}]
+                        :user/prefs     nil
+                        :user/pet-id    pet-id}
+               :after  nil}]
              (sqlite/authorized-write
               ctx
               {:delete-from :user
@@ -264,22 +264,22 @@
       (let [rejecting-ctx (assoc base-ctx
                                  :biff.sqlite/authorize
                                  (constantly false))]
-        (is (= [{:table :user
-                 :op :create
+        (is (= [{:table  :user
+                 :op     :create
                  :before nil
-                 :after {:user/id user-id
-                         :user/email "ada@example.com"
-                         :user/score 1
-                         :user/active nil
-                         :user/joined-at nil
-                         :user/prefs nil
-                         :user/pet-id nil}}]
+                 :after  {:user/id        user-id
+                          :user/email     "ada@example.com"
+                          :user/score     1
+                          :user/active    nil
+                          :user/joined-at nil
+                          :user/prefs     nil
+                          :user/pet-id    nil}}]
                (:biff.sqlite/diff
                 (thrown-data
                  #(sqlite/authorized-write
                    rejecting-ctx
                    {:insert-into :user
-                    :values      [{:user/id user-id
+                    :values      [{:user/id    user-id
                                    :user/email "ada@example.com"
                                    :user/score 1}]})))))
         (is (= []
@@ -296,7 +296,7 @@
              (sqlite/authorized-write-tx
               ctx
               [{:insert-into :user
-                :values      [{:user/id user-id
+                :values      [{:user/id    user-id
                                :user/email "ada@example.com"
                                :user/score 1}]}
                {:update :user
@@ -320,18 +320,18 @@
                          ctx)]
       (sqlite/execute ctx
                       {:insert-into :pet
-                       :values      [{:pet/id pet-id
+                       :values      [{:pet/id      pet-id
                                       :pet/species [:lift :pet.species/iguana]}]})
       (sqlite/execute ctx
                       {:insert-into :user
-                       :values      [{:user/id user-id
-                                      :user/email "ada@example.com"
-                                      :user/score 1
+                       :values      [{:user/id     user-id
+                                      :user/email  "ada@example.com"
+                                      :user/score  1
                                       :user/pet-id pet-id}]})
-      (is (= {:user/email "ada@example.com"
+      (is (= {:user/email  "ada@example.com"
               :user/pet-id pet-id
-              :user/pet {:pet/id pet-id
-                         :pet/species :pet.species/iguana}}
+              :user/pet    {:pet/id      pet-id
+                            :pet/species :pet.species/iguana}}
              (biff.graph/query
               ctx
               {:user/id user-id}
@@ -359,7 +359,7 @@
 
 (deftest use-conn-adds-read-and-write-connections-with-pragmas
   (let [ctx (sqlite/use-conn {:biff.sqlite/db-path (temp-db-path)
-                              :biff.core/stop []})]
+                              :biff.core/stop      []})]
     (try
       (is (some? (:biff.sqlite/read-pool ctx)))
       (is (some? (:biff.sqlite/write-conn ctx)))
