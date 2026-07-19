@@ -42,24 +42,20 @@
       :else
       (apply task-fn args))))
 
-(defn -main [tasks-str & args]
-  (let [tasks (->> (str/split tasks-str #",")
-                   (mapv (fn [task-str]
-                           @(requiring-resolve (symbol task-str))))
-                   (apply merge))]
-    (when (contains? #{"help" "--help" "-h" nil} (first args))
-      (print-help tasks)
-      (System/exit 0))
-    (alter-var-root #'tasks (constantly tasks))
-    (try
-      (apply run-task args)
-      (catch clojure.lang.ExceptionInfo e
-        (if-some [task-name (::task-name (ex-data e))]
-          (binding [*out* *err*]
-            (println "Unrecognized task:" task-name)
-            (shutdown-agents)
-            (System/exit 1))
-          (throw e)))
-      (finally
-        (shutdown-agents))))
+(defn main* [tasks & args]
+  (when (contains? #{"help" "--help" "-h" nil} (first args))
+    (print-help tasks)
+    (System/exit 0))
+  (alter-var-root #'tasks (constantly tasks))
+  (try
+    (apply run-task args)
+    (catch clojure.lang.ExceptionInfo e
+      (if-some [task-name (::task-name (ex-data e))]
+        (binding [*out* *err*]
+          (println "Unrecognized task:" task-name)
+          (shutdown-agents)
+          (System/exit 1))
+        (throw e)))
+    (finally
+      (shutdown-agents)))
   (System/exit 0))
