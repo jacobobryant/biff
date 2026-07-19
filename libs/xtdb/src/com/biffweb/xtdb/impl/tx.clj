@@ -246,7 +246,7 @@
           :when (vector? op)
           :let  [[op _table-or-opts & docs] op]
           :when (#{:put-docs :patch-docs} op)]
-    (biff.core/validate docs)))
+    (biff.core/validate-with-ex docs)))
 
 (defn execute-tx
   ([ctx tx-ops]

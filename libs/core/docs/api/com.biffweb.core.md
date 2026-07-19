@@ -110,7 +110,8 @@ Returns all schemas that have been passed to biff.core/register.
 (validate m & {:keys [required extra-schema]})
 
 Throws an AssertionError if any values in m don't match the registered
-schemas for their key. Returns m.
+schemas for their key. Returns m. When *assert* is false, compiles to a
+no-op.
 
   (biff.core/register {:person/age :int})
   (biff.core/validate {:person/age "three"})
@@ -130,9 +131,22 @@ schemas for their key. Returns m.
 For convenience, m can be a sequence of maps instead of a single map.
 ```
 
+### validate-with-ex
+
+[view source](../../src/com/biffweb/core.clj#L122)
+
+```
+(validate-with-ex m & {:keys [required extra-schema]})
+
+Like `validate` but ignores *assert* and throws an ExceptionInfo.
+
+Intended for cases where you want to ensure that validation runs in
+production.
+```
+
 ### secret-delay
 
-[view source](../../src/com/biffweb/core.clj#L121)
+[view source](../../src/com/biffweb/core.clj#L131)
 
 ```
 (secret-delay x)

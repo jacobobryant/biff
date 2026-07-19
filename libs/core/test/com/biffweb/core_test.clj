@@ -34,7 +34,14 @@
                           (biff.core/validate {:foo 1})))
     (is (thrown-with-msg? AssertionError
                           #"Expected a map, got 1"
-                          (biff.core/validate [1])))))
+                          (biff.core/validate [1]))))
+  (testing "validate-with-ex ignores *assert* and throws ExceptionInfo"
+    (binding [*assert* false]
+      (is (= {:foo "ok"}
+             (biff.core/validate-with-ex {:foo "ok"})))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"invalid: should be a string"
+                            (biff.core/validate-with-ex {:foo 1}))))))
 
 (deftest secret-delay-test
   (let [secret (biff.core/secret-delay "super-secret")]

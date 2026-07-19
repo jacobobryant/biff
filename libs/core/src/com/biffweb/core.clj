@@ -96,7 +96,8 @@
 
 (defmacro validate
   "Throws an AssertionError if any values in m don't match the registered
-   schemas for their key. Returns m.
+   schemas for their key. Returns m. When *assert* is false, compiles to a
+   no-op.
 
      (biff.core/register {:person/age :int})
      (biff.core/validate {:person/age \"three\"})
@@ -117,6 +118,15 @@
   {:arglists '([m & {:keys [required extra-schema]}])}
   [& args]
   `(impl.v/validate ~@args))
+
+(defn validate-with-ex
+  "Like `validate` but ignores *assert* and throws an ExceptionInfo.
+
+   Intended for cases where you want to ensure that validation runs in
+   production."
+  {:arglists '([m & {:keys [required extra-schema]}])}
+  [m-or-seq & opts]
+  (apply impl.v/validate-with-ex m-or-seq opts))
 
 (defn secret-delay
   "Wraps x in a Delay that doesn't show its value when serialized.

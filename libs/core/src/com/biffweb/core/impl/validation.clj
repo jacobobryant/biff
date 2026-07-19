@@ -42,39 +42,49 @@
      (binding [*print-namespace-maps* false]
        (pprint/pprint x)))))
 
-(defn- validate-map [m {:keys [required biff-registry malli-registry error-data]}]
+(defn- validate-map [m {:keys [required biff-registry malli-registry error-data
+                               error-fn]}]
   (let [error-data-str (when error-data
                          (str "\n" (pprint-str error-data)))]
     (when-some [missing (not-empty (remove #(contains? m %) required))]
-      (assertion-error "Missing required key"
-                       (when (< 1 (count missing)) "s")
-                       ": "
-                       (str/join ", " (mapv pr-str missing))
-                       error-data-str))
+      (error-fn "Missing required key"
+                (when (< 1 (count missing)) "s")
+                ": "
+                (str/join ", " (mapv pr-str missing))
+                error-data-str))
     (doseq [[k v] (select-keys m (keys biff-registry))
             :when (not (malli/validate k v {:registry malli-registry}))
             :let  [explanation (malli/explain k v {:registry malli-registry})
                    message     (humanize-explanation explanation)]]
-      (assertion-error "`" (pr-str k) " " (value-str v) "` is invalid: " message
-                       error-data-str))))
+      (error-fn "`" (pr-str k) " " (value-str v) "` is invalid: " message
+                error-data-str))))
 
 (defn validate*
-  [m-or-seq & {:keys [extra-schema] :as opts}]
+  [error-fn m-or-seq & {:keys [extra-schema] :as opts}]
   (let [biff-registry  (merge (get-registry) extra-schema)
         malli-registry (malli.r/composite-registry
                         malli/default-registry
                         (malli.r/fast-registry biff-registry))
-        opts           (merge opts {:biff-registry  biff-registry
+        opts           (merge opts {:error-fn       error-fn
+                                    :biff-registry  biff-registry
                                     :malli-registry malli-registry})]
     (doseq [m (if (sequential? m-or-seq) m-or-seq [m-or-seq])]
       (cond
         (nil? m) nil
         (map? m) (validate-map m opts)
-        :else (assertion-error "Expected a map, got " (value-str m)))))
+        :else (error-fn "Expected a map, got " (value-str m)))))
   m-or-seq)
+
+(defn validate-with-ex
+  [m-or-seq & opts]
+  (apply validate*
+         (fn [& message-parts]
+           (throw (ex-info (apply str message-parts) {})))
+         m-or-seq
+         opts))
 
 (defmacro validate
   [m-or-seq & opts]
   (if *assert*
-    `(validate* ~m-or-seq ~@opts)
+    `(validate* assertion-error ~m-or-seq ~@opts)
     m-or-seq))

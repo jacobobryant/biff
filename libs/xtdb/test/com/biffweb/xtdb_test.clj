@@ -132,7 +132,7 @@
                                  :from   [:user]
                                  :where  [:= :user/email "a@example.com"]})))
         (is (thrown?
-             AssertionError
+             clojure.lang.ExceptionInfo
              (biff.xtdb/execute-tx
               ctx
               [[:put-docs :user
