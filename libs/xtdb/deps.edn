@@ -10,8 +10,9 @@
          com.github.seancorfield/next.jdbc {:mvn/version "1.3.1108"}
          com.taoensso/nippy                {:mvn/version "3.6.2"}}
  :aliases
- {:run {:jvm-opts    ["--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED"
-                      "--enable-native-access=ALL-UNNAMED"]
+ {:run {:jvm-opts    ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                      "--enable-native-access=ALL-UNNAMED"
+                      "-Dio.netty.tryReflectionSetAccessible=true"]
         :extra-paths ["test" "dev"]
         :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
         :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

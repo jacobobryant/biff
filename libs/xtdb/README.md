@@ -1,8 +1,9 @@
 # biff.xtdb
 
-A convenience wrapper for using [XTDB v2](https://xtdb.com) in Biff/Clojure applications.
+A convenience wrapper for using [XTDB v2](https://xtdb.com) in Biff/Clojure
+applications.
 
-- Start up an in-process node with high-level config options.
+- Start up an in-process node with high-level config defaults.
 - Custom `:biff/upsert` and `:biff/assert-unique` transaction operations.
 - Optionally enforce Malli schemas on write.
 - Define centralized authorization rules for validating transactions.
@@ -12,6 +13,15 @@ A convenience wrapper for using [XTDB v2](https://xtdb.com) in Biff/Clojure appl
 
 ```clojure
 com.biffweb/xtdb {:mvn/version "2.0.0-rc8"}
+```
+
+biff.xtdb depends on XTDB 2.1.0 which requires Java <25. Per the XTDB docs,
+you'll need to add these Java arguments to your deps.edn file:
+
+```clojure
+:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+           "--enable-native-access=ALL-UNNAMED"
+           "-Dio.netty.tryReflectionSetAccessible=true"]
 ```
 
 ### Status

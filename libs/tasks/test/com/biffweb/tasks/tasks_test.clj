@@ -494,7 +494,7 @@
     (is (str/includes? (slurp (io/file dir ".github/workflows/code-quality.yml"))
                        "distribution: temurin"))
     (is (str/includes? (slurp (io/file dir ".github/workflows/code-quality.yml"))
-                       "java-version: '25'"))
+                       "java-version: '21'"))
     (is (str/includes? (slurp (io/file dir ".github/workflows/code-quality.yml"))
                        "clojure -M:run update --cache-only"))
     (is (str/includes? (slurp (io/file dir ".github/workflows/code-quality.yml"))
