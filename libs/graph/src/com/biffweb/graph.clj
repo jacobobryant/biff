@@ -140,6 +140,7 @@
    you can pass the system map as ctx to `query`."
   []
   {:biff.core/init   (fn [modules-var]
-                       {:biff.graph/get-ctx #(impl.ctx/ctx-from-modules
-                                              @modules-var)})
+                       (let [get-ctx #(impl.ctx/ctx-from-modules @modules-var)]
+                         (get-ctx) ; for validation
+                         {:biff.graph/get-ctx get-ctx}))
    :biff.fx/handlers fx-handlers})
