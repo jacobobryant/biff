@@ -6,7 +6,7 @@
 (impl.v/register
  {:biff.core/init             'fn?
   :biff.core/stop             [:vector 'fn?]
-  :biff.core/secret           [:fn delay?]
+  :biff.core/secret           [:or [:fn delay?] :string]
   :biff.core/kv-set           'fn?
   :biff.core/kv-get           'fn?
   :biff.core/kv-list          'fn?

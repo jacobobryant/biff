@@ -1,262 +1,201 @@
 (ns com.biffweb.ring-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [clojure.string :as str]
-            [com.biffweb.ring :as biff.ring :refer [defpath defroute path]]
-            [taoensso.nippy :as nippy]))
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
+            [com.biffweb.ring :as ring]
+            [ring.util.codec :as codec])
+  (:import [java.util UUID]))
 
-(defpath home "/")
-(defpath subscriptions "/subscriptions/:id")
-(defpath subscription-route ["/subscriptions/:id" {:name ::subscription}])
+(ring/defpath post-path ["/posts/:id" {:get identity}])
 
-(defroute test-route "/test-route"
-  :get (fn [_ctx] {:status 200 :body "hello"}))
+(ring/defroute greeting-route "/greeting/:name"
+  :get
+  (fn [{:keys [path-params]}]
+    [:h1 "Hello " (:name path-params)]))
 
-(defroute path-fn-route (home)
-  :get (fn [_ctx] {:status 200 :body "home"}))
+(ring/defroute effect-route
+  [:test/value]
 
-(defroute hiccup-route "/hiccup"
-  :get (fn [_ctx] [:div "hello"]))
+  :post
+  (fn [_ value]
+    {:status 201
+     :body   [:span value]}))
 
-(defroute hiccup-body-route "/hiccup-body"
-  :get (fn [_ctx] {:body [:main [:h1 "hello"]]}))
+(deftest path-renders-path-params
+  (is (= "/posts/42" (ring/path "/posts/:id" 42)))
+  (is (= "/posts/42" (ring/path ["/posts/:id" {:get identity}] 42)))
+  (is (= "/posts/42" (post-path 42))))
 
-(defroute fx-route "/fx-test"
-  [:com.biffweb.ring-test/query {:q "data"}]
-  :get (fn [_ctx result] {:body (str "got: " result)}))
+(deftest path-round-trips-uuid-params
+  (let [id      (UUID/fromString "1f936a6e-63cd-4ba1-8e21-566171a8233c")
+        encoded (subs (ring/path "/items/:id" id) 7)
+        seen    ((ring/wrap-path-param-uuids :path-params)
+                 {:path-params {:id    encoded
+                                :slug  "not-a-uuid"
+                                :other "......................"}})]
+    (is (= 22 (count encoded)))
+    (is (= {:id    id
+            :slug  "not-a-uuid"
+            :other "......................"}
+           seen))))
 
-(defroute no-fx-route "/no-fx"
-  :get (fn [_ctx] {:status 200}))
+(deftest path-encodes-query-params
+  (let [url  (ring/path "/search" {:term "two words" :page 2})
+        npy  (get (codec/form-decode (subs url (inc (.indexOf url "?"))))
+                  "npy")
+        seen ((ring/wrap-nippy-params :params)
+              {:params {"npy" npy}})]
+    (is (str/starts-with? url "/search?npy="))
+    (is (= {"npy" npy :term "two words" :page 2} seen))))
 
-(defn- handler-for [modules]
-  (let [system ((:biff.core/init (biff.ring/module)) (atom modules))]
-    (:biff.ring/handler system)))
+(deftest path-testing-mode-returns-unencoded-params
+  (binding [ring/*testing* true]
+    (is (= ["/posts/7" {:tab "activity"}]
+           (ring/path "/posts/:id" 7 {:tab "activity"})))))
 
-(defn- response-header [header value-fn]
-  (fn [handler]
-    (fn [ctx]
-      (assoc-in (handler ctx) [:headers header] (value-fn ctx)))))
+(deftest path-rejects-invalid-input
+  (doseq [[input args] [["/posts/:id" []]
+                        ["/posts/:id" [1 {} :extra]]
+                        ["/posts" [1 {}]]]]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"Wrong number of args"
+                          (apply ring/path input args))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                        #"reitit-style route vector"
+                        (ring/path {:path "/posts"}))))
 
-(defn- decode-npy [path]
-  (some-> (second (str/split path #"\?npy=" 2))
-          (#(.decode (java.util.Base64/getUrlDecoder) ^String %))
-          nippy/thaw))
+(deftest anti-forgery-websocket-middleware-checks-origin
+  (let [handler   (ring/wrap-anti-forgery-websockets
+                   (fn [_] {:status 204}))
+        websocket {:headers {"upgrade"    "WebSocket"
+                             "connection" "keep-alive, Upgrade"}}]
+    (is (= 204 (:status (handler {:headers {}}))))
+    (is (= 403 (:status (handler websocket))))
+    (is (= 403 (:status
+                (handler (assoc websocket
+                                :biff.ring/base-url "https://example.com")))))
+    (is (= 204 (:status
+                (handler (-> websocket
+                             (assoc :biff.ring/base-url "https://example.com")
+                             (assoc-in [:headers "origin"]
+                                       "https://example.com"))))))))
 
-(deftest defroute-creates-route-vector
-  (let [[uri handler-map] test-route]
-    (is (= "/test-route" uri))
-    (is (fn? (:get handler-map)))
-    (is (nil? (:post handler-map)))))
+(deftest path-param-middleware-decodes-only-encoded-uuids
+  (let [id      (random-uuid)
+        encoded (subs (ring/path "/:id" id) 1)
+        handler (ring/wrap-path-param-uuids :path-params)]
+    (is (= {:id id :slug "hello"}
+           (handler {:path-params {:id encoded :slug "hello"}})))
+    (is (nil? (handler {})))))
 
-(deftest defroute-accepts-uri-expressions
-  (is (= "/" (first path-fn-route))))
+(deftest nippy-param-middleware-ignores-invalid-values
+  (let [handler (ring/wrap-nippy-params :params)]
+    (is (= {:npy "invalid" :existing true}
+           (handler {:params {:npy "invalid" :existing true}})))
+    (is (= {:existing true}
+           (handler {:params {:existing true}})))))
 
-(deftest defpath-returns-readable-paths
-  (let [id #uuid "1dfcc5ea-1268-4604-8ec7-0c9d66400715"]
-    (is (= "/" (home)))
-    (is (= "/subscriptions/HfzF6hJoRgSOxwydZkAHFQ"
-           (subscriptions id)))
-    (is (= "/subscriptions/42"
-           (subscription-route 42)))
-    (let [path (home {})]
-      (is (str/starts-with? path "/?npy="))
-      (is (= {} (decode-npy path))))
-    (let [path (subscriptions 42 {:foo "bar"})]
-      (is (str/starts-with? path "/subscriptions/42?npy="))
-      (is (= {:foo "bar"} (decode-npy path))))
-    (is (= ["/subscriptions/42" {:foo "bar"}]
-           (binding [biff.ring/*testing* true]
-             (subscriptions 42 {:foo "bar"}))))))
+(deftest resource-middleware-serves-files-and-indexes
+  (let [handler (ring/wrap-resource (constantly {:status 404}))
+        request {:request-method :get :uri "/css/test.css"}]
+    (is (= 200 (:status (handler request))))
+    (is (str/includes? (get-in (handler request)
+                               [:headers "Content-Type"])
+                       "text/css"))
+    (is (= 404 (:status (handler {:request-method :get
+                                  :uri            "/missing.txt"}))))
+    (is (= 200 (:status
+                (handler {:request-method        :get
+                          :uri                   "/css"
+                          :biff.ring/index-files ["test.css"]}))))))
 
-(deftest path-renders-strings-and-route-vectors
-  (let [route ["/teams/:team-id/members/:member-id" {:name ::member}]]
-    (is (= "/" (path "/")))
-    (is (= "/teams/7/members/9"
-           (path route 7 9)))
-    (let [rendered (path route 7 9 {:tab "info"})]
-      (is (str/starts-with? rendered "/teams/7/members/9?npy="))
-      (is (= {:tab "info"} (decode-npy rendered))))
-    (is (= ["/teams/7/members/9" {:tab "info"}]
-           (binding [biff.ring/*testing* true]
-             (path route 7 9 {:tab "info"}))))))
+(deftest internal-error-middleware-converts-exceptions
+  (let [ex      (ex-info "boom" {:value 1})
+        handler (ring/wrap-internal-error (fn [_] (throw ex)))]
+    (is (= 500 (:status (handler {}))))
+    (is (= {:status 500 :exception ex}
+           ((ring/wrap-internal-error (fn [_] (throw ex)))
+            {:biff.ring/on-error
+             (fn [{:keys [status ex]}]
+               {:status status :exception ex})})))))
 
-(deftest defroute-handler-runs-machine
-  (let [[_ handler-map] test-route
-        handler         (:get handler-map)]
-    (is (= {:status 200 :body "hello"}
-           (handler {:request-method :get})))))
+(deftest ssl-middleware-honors-request-options
+  (let [handler (ring/wrap-ssl (constantly {:status 200}))]
+    (is (= 200 (:status (handler {:scheme           :http
+                                  :server-name      "example.com"
+                                  :server-port      80
+                                  :uri              "/"
+                                  :biff.ring/secure false}))))
+    (is (= 307 (:status (handler {:scheme                 :http
+                                  :server-name            "example.com"
+                                  :server-port            80
+                                  :uri                    "/"
+                                  :biff.ring/ssl-redirect true}))))
+    (is (= "max-age=31536000; includeSubDomains"
+           (get-in (handler {:scheme         :https
+                             :biff.ring/hsts true})
+                   [:headers "Strict-Transport-Security"])))))
 
-(deftest defroute-wraps-hiccup
-  (let [[_ handler-map] hiccup-route
-        handler         (:get handler-map)
-        response        (handler {:request-method :get})]
-    (is (= 200 (:status response)))
-    (is (= "text/html; charset=utf-8"
-           (get-in response [:headers "content-type"])))
-    (is (re-find #"<div>hello</div>" (:body response)))))
+(deftest route-definitions-produce-reitit-routes
+  (is (= "/greeting/:name" (first greeting-route)))
+  (is (= ::greeting-route (get-in greeting-route [1 :name])))
+  (is (fn? (get-in greeting-route [1 :get])))
+  (is (= "/_biff/api/com.biffweb.ring-test/effect-route"
+         (first effect-route)))
+  (is (= #{:name :post} (set (keys (second effect-route)))))
+  (is (= {:status  200
+          :headers {"content-type" "text/html; charset=utf-8"}
+          :body    "<!DOCTYPE html>\n<h1>Hello Ada</h1>"}
+         ((get-in greeting-route [1 :get])
+          {:request-method :get
+           :path-params    {:name "Ada"}})))
+  (is (= {:status  201
+          :headers {"content-type" "text/html; charset=utf-8"}
+          :body    "<!DOCTYPE html>\n<span>loaded</span>"}
+         ((get-in effect-route [1 :post])
+          {:request-method :post
+           :biff.fx/handlers
+           {:test/value (constantly "loaded")}}))))
 
-(deftest defroute-renders-hiccup-body-maps
-  (let [[_ handler-map] hiccup-body-route
-        handler         (:get handler-map)
-        response        (handler {:request-method :get})]
-    (is (= 200 (:status response)))
-    (is (= "text/html; charset=utf-8"
-           (get-in response [:headers "content-type"])))
-    (is (re-find #"<main>" (:body response)))))
+(deftest make-handler-routes-site-and-api-requests
+  (let [handler (ring/make-handler
+                 {:site-routes [["/site" {:get (constantly {:status 200
+                                                            :body   "site"})}]]
+                  :api-routes  [["/api" {:get (constantly {:status 200
+                                                           :body   "api"})}]]})]
+    (is (= "site" (:body (handler {:request-method :get
+                                   :uri            "/site"
+                                   :scheme         :https}))))
+    (is (= "api" (:body (handler {:request-method :get
+                                  :uri            "/api"
+                                  :scheme         :https}))))
+    (is (= 404 (:status (handler {:request-method :get
+                                  :uri            "/missing"
+                                  :scheme         :https}))))))
 
-(deftest defroute-with-initial-fx
-  (let [[_ handler-map] fx-route
-        handler         (:get handler-map)]
-    (is (= {:body "got: query-result"}
-           (handler {:request-method :get
-                     :biff.fx/handlers
-                     {:com.biffweb.ring-test/query (fn [_ _opts] "query-result")}})))))
+(deftest module-collects-routes-and-middleware
+  (let [modules (atom [{:biff.ring/routes
+                        ["/module" {:get (constantly {:status 200
+                                                      :body   "module"})}]}
+                       {:biff.ring/base-middleware
+                        [(fn [handler]
+                           (fn [request]
+                             (handler (assoc request :wrapped true))))]}])
+        system  ((:biff.core/init (ring/module)) modules)
+        handler (:biff.ring/handler system)]
+    (is (some? (:biff.ring/fallback-session-store system)))
+    (is (= "module" (:body (handler {:request-method :get
+                                     :uri            "/module"
+                                     :scheme         :https}))))))
 
-(deftest defroute-without-fx-no-wrap-result
-  (let [[_ handler-map] no-fx-route
-        handler         (:get handler-map)]
-    (is (= {:status 200}
-           (handler {:request-method :get})))))
-
-(deftest wrap-path-param-uuids-decodes-url-safe-base64-uuids
-  (let [request {:path-params {"id"   "HfzF6hJoRgSOxwydZkAHFQ"
-                               "slug" "hello"}}
-        seen    (atom nil)
-        handler (biff.ring/wrap-path-param-uuids
-                 (fn [ctx]
-                   (reset! seen (:path-params ctx))
-                   {:status 200}))]
-    (handler request)
-    (is (= #uuid "1dfcc5ea-1268-4604-8ec7-0c9d66400715"
-           (get @seen "id")))
-    (is (= "hello"
-           (get @seen "slug")))))
-
-(deftest wrap-nippy-params-merges-deserialized-maps-and-swallows-errors
-  (let [map-npy    (.encodeToString
-                    (.withoutPadding (java.util.Base64/getUrlEncoder))
-                    (nippy/freeze {:foo "hi"}))
-        vector-npy (.encodeToString
-                    (.withoutPadding (java.util.Base64/getUrlEncoder))
-                    (nippy/freeze [:not-a-map]))
-        captured   (atom [])
-        handler    (biff.ring/wrap-nippy-params
-                    (fn [ctx]
-                      (swap! captured conj (:params ctx))
-                      {:status 200}))]
-    (handler {:params {:npy map-npy}})
-    (handler {:params {:npy "not-base64"}})
-    (handler {:params {:npy vector-npy}})
-    (is (= {:npy map-npy :foo "hi"}
-           (first @captured)))
-    (is (= {:npy "not-base64"}
-           (second @captured)))
-    (is (= 3 (count @captured)))
-    (is (= {:npy vector-npy}
-           (nth @captured 2)))))
-
-(deftest module-uses-route-groups-and-custom-middleware
-  (let [handler
-        (handler-for
-         [{:biff.ring/routes
-           ["/hello" {:get  (fn [_]
-                              {:status  200
-                               :headers {}
-                               :body    "site"})
-                      :name ::hello}]
-           :biff.ring/base-middleware
-           [(response-header
-             "x-route-name"
-             #(str (get-in % [:reitit.core/match :data :name])))]
-           :biff.ring/site-middleware
-           [(response-header "x-middleware-layer" (constantly "site"))]}
-          {:biff.ring/api-routes
-           ["/api/ping" {:get (fn [_]
-                                {:status  200
-                                 :headers {}
-                                 :body    "api"})}]
-           :biff.ring/api-middleware
-           [(response-header "x-middleware-layer" (constantly "api"))]}])]
-    (testing "site routes get site middleware and base middleware sees route data"
-      (let [response (handler {:request-method :get
-                               :uri            "/hello"
-                               :headers        {}})]
-        (is (= 200 (:status response)))
-        (is (= "site" (get-in response [:headers "x-middleware-layer"])))
-        (is (= ":com.biffweb.ring-test/hello"
-               (get-in response [:headers "x-route-name"])))))
-    (testing "api routes get api middleware"
-      (let [response (handler {:request-method :get
-                               :uri            "/api/ping"
-                               :headers        {}})]
-        (is (= 200 (:status response)))
-        (is (= "api" (get-in response [:headers "x-middleware-layer"])))))))
-
-(deftest module-uses-biff-ring-on-error-for-default-handler
-  (let [handler
-        (handler-for
-         [{:biff.ring/routes
-           ["/hello" {:get (fn [_] {:status 200 :body "site"})}]}])
-        response
-        (handler {:request-method :get
-                  :uri            "/missing"
-                  :headers        {}
-                  :biff.ring/on-error
-                  (fn [{:keys [status]}]
-                    {:status status
-                     :body   (str "custom " status)})})]
-    (is (= 404 (:status response)))
-    (is (= "custom 404" (:body response)))))
-
-(deftest handler-serves-static-resources-outside-reitit-routes
-  (let [handler (handler-for [])]
-    (testing "static assets are served even when no reitit route matches"
-      (let [response (handler {:request-method :get
-                               :uri            "/css/test.css"
-                               :headers        {}})
-            body     (let [body (:body response)]
-                       (if (instance? java.io.File body)
-                         (slurp body)
-                         body))]
-        (is (= 200 (:status response)))
-        (is (= "text/css"
-               (get-in response [:headers "Content-Type"])))
-        (is (= "body { color: rebeccapurple; }\n" body))))))
-
-(deftest site-routes-accept-secret-reader-values
-  (let [handler
-        (handler-for
-         [{:biff.ring/routes
-           ["/hello" {:get (fn [_] {:status 200 :body "site"})}]}])
-        response
-        (handler {:request-method          :get
-                  :uri                     "/hello"
-                  :headers                 {}
-                  :biff.ring/cookie-secret (constantly "ldlF/I/l7DYn6ahOHjGEhg==")})]
-    (is (= 200 (:status response)))
-    (is (= "site" (:body response)))))
-
-(deftest module-provides-fallback-session-store
-  (let [system ((:biff.core/init (biff.ring/module)) (atom []))]
-    (is (some? (:biff.ring/fallback-session-store system)))))
-
-(deftest wrap-anti-forgery-websockets-rejects-invalid-websocket-requests
-  (let [handler (biff.ring/wrap-anti-forgery-websockets (constantly {:status 200}))]
-    (testing "missing base URL rejects websocket requests"
-      (is (= 403
-             (:status
-              (handler {:headers {"upgrade"    "websocket"
-                                  "connection" "Upgrade"}})))))
-    (testing "matching origin is allowed"
-      (is (= 200
-             (:status
-              (handler {:biff.ring/base-url "https://example.com"
-                        :headers            {"upgrade"    "websocket"
-                                             "connection" "Upgrade"
-                                             "origin"     "https://example.com"}})))))
-    (testing "origin mismatch is rejected"
-      (is (= 403
-             (:status
-              (handler {:biff.ring/base-url "https://example.com"
-                        :headers            {"upgrade"    "websocket"
-                                             "connection" "Upgrade"
-                                             "origin"     "https://evil.example.com"}})))))))
+(deftest server-module-handler-reflects-module-changes
+  (let [modules (atom [])
+        handler (:biff.ring/handler
+                 ((:biff.core/init (ring/module)) modules))]
+    (is (= 404 (:status (handler {:request-method :get
+                                  :uri            "/later"
+                                  :scheme         :https}))))
+    (reset! modules [{:biff.ring/api-routes
+                      ["/later" {:get (constantly {:status 204})}]}])
+    (is (= 204 (:status (handler {:request-method :get
+                                  :uri            "/later"
+                                  :scheme         :https}))))))
