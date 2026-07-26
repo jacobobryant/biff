@@ -1,31 +1,16 @@
 (ns com.biffweb.ring
-  (:require [clojure.string :as str]
-            [clojure.tools.logging :as log]
-            [com.biffweb.core :as biff.core]
-            [com.biffweb.fx :as fx]
-            [com.biffweb.ring.impl :as impl]
-            [muuntaja.middleware :as muuntaja]
-            [reitit.ring :as reitit-ring]
-            [ring.adapter.jetty :as jetty]
-            [ring.middleware.anti-forgery :as anti-forgery]
-            [ring.middleware.content-type :refer [wrap-content-type]]
-            [ring.middleware.defaults :as rd]
-            [ring.middleware.resource :as res]
-            [ring.middleware.session :as session]
-            [ring.middleware.session.cookie :as cookie]
-            [ring.middleware.session.memory :as memory]
-            [ring.middleware.ssl :as ssl]
-            [ring.util.codec :as codec]
-            [taoensso.nippy :as nippy])
-  (:import (java.nio ByteBuffer)
-           (java.util Base64 UUID)))
+  (:require [com.biffweb.core :as biff.core]
+            [com.biffweb.ring.impl.middleware :as impl.middleware]
+            [com.biffweb.ring.impl.path :as impl.path]
+            [com.biffweb.ring.impl.route :as impl.route]
+            [com.biffweb.ring.impl.server :as impl.server]))
 
 (biff.core/register
- {:biff.ring/api-middleware         'sequential?
-  :biff.ring/api-routes             'sequential?
-  :biff.ring/base-middleware        'sequential?
+ {:biff.ring/api-middleware         [:sequential 'ifn?]
+  :biff.ring/api-routes             [:sequential 'ifn?]
+  :biff.ring/base-middleware        [:sequential 'ifn?]
   :biff.ring/base-url               'string?
-  :biff.ring/cookie-secret          [:or 'string? 'ifn?]
+  :biff.ring/cookie-secret          :biff.core/secret
   :biff.ring/fallback-session-store 'some?
   :biff.ring/handler                'ifn?
   :biff.ring/host                   'string?
@@ -38,375 +23,165 @@
   :biff.ring/secure                 'boolean?
   :biff.ring/session-max-age        'integer?
   :biff.ring/session-same-site      'keyword?
-  :biff.ring/site-middleware        'sequential?
+  :biff.ring/site-middleware        [:sequential 'ifn]
   :biff.ring/ssl-redirect           'boolean?})
 
-(def ^:dynamic *testing* false)
+(def
+  ^{:dynamic true
+    :doc     "When true, path returns `[path query-params]` instead of encoding
+              query params. Intended for tests."}
+  *testing*
+  false)
 
-(defn- url-safe-base64-encode [^bytes bytes]
-  (.encodeToString (.withoutPadding (Base64/getUrlEncoder)) bytes))
+;;;; routes and paths
 
-(defn- url-safe-base64-decode [^String s]
-  (.decode (Base64/getUrlDecoder) s))
-
-(defn- encode-path-param [x]
-  (if (uuid? x)
-    (let [buf (ByteBuffer/allocate 16)]
-      (.putLong buf (.getMostSignificantBits ^UUID x))
-      (.putLong buf (.getLeastSignificantBits ^UUID x))
-      (url-safe-base64-encode (.array buf)))
-    (str x)))
-
-(defn- maybe-decode-uuid [x]
-  (if-not (string? x)
-    x
-    (try
-      (let [bytes (url-safe-base64-decode x)]
-        (if (= 16 (alength bytes))
-          (let [buf (ByteBuffer/wrap bytes)]
-            (UUID. (.getLong buf) (.getLong buf)))
-          x))
-      (catch IllegalArgumentException _
-        x))))
-
-(defn- path-params [path]
-  (re-seq #":[^/]+" path))
-
-(defn ^:no-doc route-path [path-or-route]
-  (cond
-    (string? path-or-route)
-    path-or-route
-
-    (and (vector? path-or-route)
-         (string? (first path-or-route)))
-    (first path-or-route)
-
-    :else
-    (throw (ex-info "Path helpers expect a string or a reitit-style route vector."
-                    {:path-or-route path-or-route}))))
-
-(defn ^:no-doc render-path [path args]
-  (loop [segments (str/split path #"/" -1)
-         args     (map encode-path-param args)
-         rendered []]
-    (if-some [segment (first segments)]
-      (if (str/starts-with? segment ":")
-        (recur (rest segments) (rest args) (conj rendered (first args)))
-        (recur (rest segments) args (conj rendered segment)))
-      (str/join "/" rendered))))
-
-(defn ^:no-doc path-with-query [path query-params]
-  (when-not (map? query-params)
-    (throw (ex-info "defpath query params must be a map."
-                    {:query-params query-params})))
-  (if *testing*
-    [path query-params]
-    (str path
-         "?"
-         (codec/form-encode
-          {:npy (url-safe-base64-encode (nippy/freeze query-params))}))))
+(defn make-handler [opts]
+  (impl.server/make-handler opts))
 
 (defn path
-  "Returns a path string with optional path params and nippy-encoded query params.
+  "Returns a path string with substituted path and query parameters.
 
-  The first argument can be either a path string or a reitit-style route vector."
+   `path-or-route` may be a path string or a Reitit route vector whose first
+   element is a path string. Each `:parameter` segment consumes one argument.
+   UUID arguments are encoded as compact URL-safe strings.
+
+   An optional final map is Nippy-encoded in the `npy` query parameter. When
+   *testing* is true, returns `[path query-params]` instead."
   [path-or-route & args]
-  (let [path             (route-path path-or-route)
-        path-param-count (count (path-params path))
-        arg-count        (count args)]
-    (when-not (<= path-param-count arg-count (inc path-param-count))
-      (throw (ex-info "Wrong number of args for path."
-                      {:path             path
-                       :path-param-count path-param-count
-                       :arg-count        arg-count})))
-    (let [[path-args query-params] (split-at path-param-count args)
-          rendered                 (render-path path path-args)]
-      (if (= arg-count path-param-count)
-        rendered
-        (path-with-query rendered (first query-params))))))
+  (apply impl.path/path path-or-route args))
 
 (defmacro defpath
-  "Defines a function that returns a path string with optional path and nippy-encoded query params."
+  "Defines a path function.
+
+   `path-or-route` may be a path string or a Reitit route vector. The resulting
+   function passes its arguments to path."
   [sym path-or-route]
-  `(def ~sym (partial path (route-path ~path-or-route))))
+  `(impl.path/defpath ~sym ~path-or-route))
 
 (defmacro defroute
-  "Defines a route var with auto-generated or explicit URI."
+  "Defines a Reitit route backed by a biff.fx machine.
+
+   The optional first argument is a URI string. If omitted, the URI is generated
+   from the current namespace and `sym`. The optional next argument is an
+   initial biff.fx effects vector. Remaining key-value pairs map request methods
+   to handler functions.
+
+   Handlers may return Ring responses, Hiccup forms, or Ring responses with a
+   Hiccup body. When an initial effects vector is provided, handlers receive the
+   effects result as a second argument."
   [sym & args]
-  (let [uri            (impl/autogen-endpoint *ns* sym)
-        route-name     (keyword (str *ns*) (str sym))
-        args-sym       (gensym "args")
-        uri-sym        (gensym "uri")
-        rest-args-sym  (gensym "rest-args")
-        initial-fx-sym (gensym "initial-fx")
-        params-sym     (gensym "params")]
-    `(def ~sym
-       (let [~args-sym             [~@args]
-             [~uri-sym & ~rest-args-sym]
-             (if (string? (first ~args-sym))
-               ~args-sym
-               (into [nil] ~args-sym))
-             [~initial-fx-sym & kvs#]
-             (if (and (vector? (first ~rest-args-sym))
-                      (not (string? (ffirst ~rest-args-sym))))
-               ~rest-args-sym
-               (into [nil] ~rest-args-sym))
-             [& {:as ~params-sym}] kvs#]
-         (impl/route* (or ~uri-sym ~uri)
-                      ~route-name
-                      fx/machine
-                      (cond-> (update-vals ~params-sym impl/wrap-hiccup)
-                        ~initial-fx-sym
-                        (impl/wrap-methods impl/wrap-result)
+  `(impl.route/defroute ~sym ~@args))
 
-                        true
-                        (merge {:start (fn [{:keys [~'request-method]}]
-                                         (cond-> {:biff.fx/next ~'request-method}
-                                           ~initial-fx-sym
-                                           (assoc :biff.fx/result ~initial-fx-sym)))})))))))
+;;;; middleware
 
-(def ^:private http-status->msg
-  {400 "Bad Request"
-   401 "Unauthorized"
-   403 "Forbidden"
-   404 "Not Found"
-   405 "Method Not Allowed"
-   406 "Not Acceptable"
-   500 "Internal Server Error"})
+(defn wrap-anti-forgery-websockets
+  "Rejects cross-origin WebSocket requests.
 
-(defn- default-on-error [{:keys [status]}]
-  {:status  status
-   :headers {"content-type" "text/html; charset=utf-8"}
-   :body    (str "<h1>" (http-status->msg status "Error") "</h1>")})
+   WebSocket requests are accepted only when the `Origin` header equals
+   :biff.ring/base-url. Requests are rejected when the base URL is absent.
+   Non-WebSocket requests are passed through unchanged."
+  [handler]
+  (impl.middleware/wrap-anti-forgery-websockets handler))
 
-(defn- on-error-handler [ctx]
-  (or (:biff.ring/on-error ctx)
-      default-on-error))
+(defn wrap-path-param-uuids
+  "Decodes compact UUID values in the request's :path-params map.
 
-(defn- websocket-request? [{:keys [headers]}]
-  (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
-       (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")))
+   Other path parameter values are left unchanged. This reverses the UUID
+   encoding performed by path."
+  [handler]
+  (impl.middleware/wrap-path-param-uuids handler))
 
-(defn wrap-anti-forgery-websockets [handler]
-  (fn [{:keys [headers] :as ctx}]
-    (let [base-url (:biff.ring/base-url ctx)]
-      (cond
-        (not (websocket-request? ctx))
-        (handler ctx)
+(defn wrap-nippy-params
+  "Decodes the `npy` request parameter and merges its value into :params.
 
-        (nil? base-url)
-        (do
-          (log/warn "Rejecting websocket request because :biff.ring/base-url is not set.")
-          {:status  403
-           :headers {"content-type" "text/plain; charset=utf-8"}
-           :body    "Forbidden"})
+   The decoded value is merged only when it is a map. Missing, malformed, and
+   non-map values are ignored."
+  [handler]
+  (impl.middleware/wrap-nippy-params handler))
 
-        (not= base-url (get headers "origin"))
-        (do
-          (log/warn "Rejecting websocket request due to origin mismatch." {:origin (get headers "origin")})
-          {:status  403
-           :headers {"content-type" "text/plain; charset=utf-8"}
-           :body    "Forbidden"})
+(defn wrap-resource
+  "Serves classpath resources before calling `handler`.
 
-        :else
-        (handler ctx)))))
+   Resources are loaded from :biff.ring/root, which defaults to `public`. Also
+   tries each value in :biff.ring/index-files after the request URI; this
+   defaults to `[\"index.html\"]`."
+  [handler]
+  (impl.middleware/wrap-resource handler))
 
-(defn wrap-path-param-uuids [handler]
-  (fn [{:as ctx}]
-    (handler
-     (cond-> ctx
-       (:path-params ctx)
-       (update :path-params #(update-vals % maybe-decode-uuid))))))
+(defn wrap-internal-error
+  "Catches exceptions, logs them, and returns an error response.
 
-(defn wrap-nippy-params [handler]
-  (fn [{:as ctx}]
-    (let [npy (or (get-in ctx [:params :npy])
-                  (get-in ctx [:params "npy"]))]
-      (handler
-       (if-not npy
-         ctx
-         (try
-           (let [value (nippy/thaw (url-safe-base64-decode npy))]
-             (if (map? value)
-               (update ctx :params merge value)
-               ctx))
-           (catch Throwable _
-             ctx)))))))
+   Calls :biff.ring/on-error with the request plus `:status 500` and `:ex`. Uses
+   a minimal HTML response when :biff.ring/on-error is absent."
+  [handler]
+  (impl.middleware/wrap-internal-error handler))
 
-(defn wrap-resource [handler]
-  (fn [ctx]
-    (let [root        (:biff.ring/root ctx "public")
-          index-files (:biff.ring/index-files ctx ["index.html"])]
-      (or (->> index-files
-               (map #(update ctx :uri str/replace-first #"/?$" (str "/" %)))
-               (into [ctx])
-               (some (wrap-content-type #(res/resource-request % root))))
-          (handler ctx)))))
+(defn wrap-log-requests
+  "Logs the duration, response status, method, and URI of each request."
+  [handler]
+  (impl.middleware/wrap-log-requests handler))
 
-(defn wrap-internal-error [handler]
-  (fn [ctx]
-    (try
-      (handler ctx)
-      (catch Throwable t
-        (log/error t "Exception while handling request")
-        ((on-error-handler ctx) (assoc ctx :status 500 :ex t))))))
+(defn wrap-session
+  "Adds Ring session middleware.
 
-(defn wrap-log-requests [handler]
-  (fn [ctx]
-    (let [start    (System/nanoTime)
-          resp     (handler ctx)
-          stop     (System/nanoTime)
-          duration (quot (- stop start) 1000000)]
-      (log/infof "%3sms %s %-4s %s"
-                 (str duration)
-                 (:status resp "nil")
-                 (name (:request-method ctx))
-                 (str (:uri ctx)
-                      (when-some [qs (:query-string ctx)]
-                        (str "?" qs))))
-      resp)))
+   Uses an encrypted cookie store when :biff.ring/cookie-secret is set. The
+   secret may be a base64-encoded string or a zero-argument delayed secret. If
+   absent, uses :biff.ring/fallback-session-store or a new in-memory store.
 
-(defn wrap-https-scheme [handler]
-  (fn [ctx]
-    (let [secure? (:biff.ring/secure ctx true)]
-      (handler (if (and secure? (= :http (:scheme ctx)))
-                 (assoc ctx :scheme :https)
-                 ctx)))))
+   Session cookies are HTTP-only. Their maximum age and SameSite value default
+   to 60 days and `:lax`, respectively, and can be set with
+   :biff.ring/session-max-age and :biff.ring/session-same-site."
+  [handler]
+  (impl.middleware/wrap-session handler))
 
-(defn- session-store [{:biff.ring/keys [cookie-secret
-                                        fallback-session-store]}]
-  (if-some [cookie-secret (some-> cookie-secret (.invoke))]
-    (let [decoder (java.util.Base64/getDecoder)]
-      (cookie/cookie-store
-       {:key (.decode ^java.util.Base64$Decoder decoder ^String cookie-secret)}))
-    (do
-      (log/warn "No cookie secret configured; using in-memory Ring sessions.")
-      (or fallback-session-store (memory/memory-store)))))
+(defn wrap-ssl
+  "Adds HSTS and optional HTTPS redirect middleware.
 
-(defn wrap-session [handler]
-  (fn [ctx]
-    (let [session-max-age   (:biff.ring/session-max-age ctx (* 60 60 24 60))
-          session-same-site (:biff.ring/session-same-site ctx :lax)]
-      ((session/wrap-session
-        handler
-        {:cookie-attrs {:max-age   session-max-age
-                        :same-site session-same-site
-                        :http-only true}
-         :store        (session-store ctx)})
-       ctx))))
+   SSL behavior is enabled unless :biff.ring/secure is false. HSTS defaults to
+   true and can be disabled with :biff.ring/hsts. Redirects default to false and
+   can be enabled with :biff.ring/ssl-redirect."
+  [handler]
+  (impl.middleware/wrap-ssl handler))
 
-(defn wrap-ssl [handler]
-  (fn [ctx]
-    (let [secure?       (:biff.ring/secure ctx true)
-          hsts?         (:biff.ring/hsts ctx true)
-          ssl-redirect? (:biff.ring/ssl-redirect ctx false)
-          handler       (if secure?
-                          (cond-> handler
-                            hsts? ssl/wrap-hsts
-                            ssl-redirect? ssl/wrap-ssl-redirect)
-                          handler)]
-      (handler ctx))))
+(defn wrap-site-defaults
+  "Adds middleware defaults for browser routes.
 
-(defn wrap-site-defaults [handler]
-  (-> handler
-      wrap-anti-forgery-websockets
-      anti-forgery/wrap-anti-forgery
-      wrap-session
-      wrap-path-param-uuids
-      wrap-nippy-params
-      muuntaja/wrap-params
-      muuntaja/wrap-format
-      (rd/wrap-defaults
-       (-> rd/site-defaults
-           (assoc-in [:security :anti-forgery] false)
-           (assoc-in [:responses :absolute-redirects] false)
-           (assoc :session false)
-           (assoc :static false)))))
+   Includes Ring site defaults, Muuntaja parameters and formats, Nippy query
+   parameters, compact UUID path parameters, sessions, anti-forgery protection,
+   and WebSocket origin checks. Static resources and sessions from Ring
+   defaults are disabled in favor of wrap-resource and wrap-session."
+  [handler]
+  (impl.middleware/wrap-site-defaults handler))
 
-(defn wrap-api-defaults [handler]
-  (-> handler
-      muuntaja/wrap-params
-      muuntaja/wrap-format
-      (rd/wrap-defaults rd/api-defaults)))
+(defn wrap-api-defaults
+  "Adds Ring API defaults and Muuntaja parameters and formats."
+  [handler]
+  (impl.middleware/wrap-api-defaults handler))
 
-(defn wrap-base-defaults [handler]
-  (-> handler
-      wrap-https-scheme
-      wrap-resource
-      wrap-internal-error
-      wrap-ssl
-      wrap-log-requests))
+(defn wrap-base-defaults
+  "Adds middleware shared by browser and API routes.
 
-(defn- make-default-handler [status]
-  (fn [ctx]
-    ((on-error-handler ctx) (assoc ctx :status status))))
+   Includes HTTPS scheme adjustment, static resources, internal error handling,
+   SSL behavior, and request logging."
+  [handler]
+  (impl.middleware/wrap-base-defaults handler))
 
-(defn- module-routes [modules key]
-  (->> modules
-       (keep #(get % key))
-       vec))
+;;;; biff.core integration
 
-(defn- module-middleware [modules key]
-  (->> modules
-       (mapcat #(get % key []))
-       vec))
+(defn use-jetty
+  "Starts Jetty with :biff.ring/handler and adds a stop function to `ctx`.
 
-(defn- route-group [middleware routes]
-  (when (seq routes)
-    ["" {:middleware middleware}
-     routes]))
+   Merges `ctx` into each Ring request. :biff.ring/host and :biff.ring/port
+   default to `localhost` and `8080`. Throws if :biff.ring/handler is absent."
+  [ctx]
+  (impl.server/use-jetty ctx))
 
-(defn- routes [modules]
-  (let [base-middleware (module-middleware modules :biff.ring/base-middleware)
-        site-middleware (module-middleware modules :biff.ring/site-middleware)
-        api-middleware  (module-middleware modules :biff.ring/api-middleware)
-        site-routes     (module-routes modules :biff.ring/routes)
-        api-routes      (module-routes modules :biff.ring/api-routes)
-        children        (cond-> []
-                          (seq site-routes)
-                          (conj (route-group (into [wrap-site-defaults] site-middleware) site-routes))
+(defn module
+  "Returns a biff.core module that assembles a Ring handler.
 
-                          (seq api-routes)
-                          (conj (route-group (into [wrap-api-defaults] api-middleware) api-routes)))]
-    [["" {:middleware base-middleware}
-      children]]))
-
-(def ^:private handler-for-modules
-  (memoize
-   (fn [modules]
-     (wrap-base-defaults
-      (reitit-ring/ring-handler
-       (reitit-ring/router (routes modules))
-       (reitit-ring/create-default-handler
-        {:not-found          (make-default-handler 404)
-         :method-not-allowed (make-default-handler 405)
-         :not-acceptable     (make-default-handler 406)}))))))
-
-(defn use-jetty [{:as ctx}]
-  (let [host    (:biff.ring/host ctx "localhost")
-        port    (:biff.ring/port ctx 8080)
-        handler (:biff.ring/handler ctx)]
-    (when-not handler
-      (throw (ex-info "Missing Ring handler" {:required :biff.ring/handler})))
-    (let [server (jetty/run-jetty
-                  (fn [req]
-                    (try
-                      (handler (merge ctx req))
-                      (catch Throwable t
-                        (log/error t "Unhandled exception in Jetty handler")
-                        {:status  500
-                         :headers {"content-type" "text/plain; charset=utf-8"}
-                         :body    "Internal Server Error"})))
-                  {:host  host
-                   :port  port
-                   :join? false})]
-      (log/info "Jetty running on" (str "http://" host ":" port))
-      (update ctx :biff.core/stop conj #(.stop server)))))
-
-(defn module []
-  {:biff.core/init
-   (fn [modules-var]
-     {:biff.ring/fallback-session-store (memory/memory-store)
-      :biff.ring/handler
-      (fn [request]
-        ((handler-for-modules @modules-var) request))})})
+   Collects :biff.ring/routes, :biff.ring/api-routes, and their middleware from
+   other modules. Its init function provides :biff.ring/handler and an in-memory
+   :biff.ring/fallback-session-store. The handler is rebuilt when the modules
+   var's value changes."
+  []
+  (impl.server/module))
