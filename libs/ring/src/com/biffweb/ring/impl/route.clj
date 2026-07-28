@@ -7,7 +7,7 @@
 
 (defn wrap-fx-result [f]
   (fn [ctx]
-    (f ctx (:biff.fx/result ctx))))
+    (f ctx (:biff.ring/fx-result ctx))))
 
 (defn wrap-methods [params wrapper-fn]
   (reduce (fn [m method]
@@ -49,7 +49,7 @@
     (merge {:start (fn [{:keys [request-method]}]
                      (cond-> {:biff.fx/next request-method}
                        initial-fx
-                       (assoc :biff.fx/result initial-fx)))})))
+                       (assoc :biff.ring/fx-result initial-fx)))})))
 
 (defn route [uri route-name route-methods handler]
   [uri (into {:name route-name}
@@ -62,12 +62,12 @@
           (str "Invalid characters in URL: " uri)))
 
 (defmacro defroute [sym & args]
-  (let [uri        (str "/_biff/api/" *ns* "/" sym)
-        route-name (keyword (str *ns*) (str sym))
-        impl-sym   (symbol (str sym "-impl"))]
+  (let [default-uri (str "/_biff/api/" *ns* "/" sym)
+        route-name  (keyword (str *ns*) (str sym))
+        impl-sym    (symbol (str sym "-impl"))]
     `(let [args#          [~@args]
            [uri# & args#] (if (not (string? (first args#)))
-                            (into [~uri] args#)
+                            (into [~default-uri] args#)
                             args#)
 
            [initial-fx# & kvs#]
@@ -78,10 +78,10 @@
            [~'& {:as state-fns#}] kvs#
            state-fns#             (prepare-state-fns initial-fx# state-fns#)]
        (validate-uri uri#)
-       (def ~impl-sym
-         (fx/machine ~route-name state-fns#))
-       (def ~sym
-         (route uri#
-                ~route-name
-                (filterv state-fns# all-methods)
-                (fn [req#] (#'~impl-sym req#)))))))
+       [(def ~impl-sym
+          (fx/machine ~route-name state-fns#))
+        (def ~sym
+          (route uri#
+                 ~route-name
+                 (filterv state-fns# all-methods)
+                 (fn [req#] (#'~impl-sym req#))))])))

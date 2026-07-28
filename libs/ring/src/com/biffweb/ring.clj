@@ -28,160 +28,268 @@
 
 (def
   ^{:dynamic true
-    :doc     "When true, path returns `[path query-params]` instead of encoding
-              query params. Intended for tests."}
+    :doc     "See `path`. Default false."}
   *testing*
   false)
 
 ;;;; routes and paths
 
-(defn make-handler [opts]
+(defn make-handler
+  "Returns a Reitit Ring handler with default middleware applied.
+
+   Applies wrap-base-defaults, wrap-api-defaults, and wrap-site-defaults to the
+   provider Reitit routes. If additional middleware is provided, it is placed on
+   the inside of its corresponding default middleware. Each middleware parameter
+   is a vector of functions.
+
+   Includes a default handler for 404, 405 and 406 errors. If incoming requests
+   have :biff.ring/on-error set, that will be used instead with :status set on
+   the request."
+  {:arglists '([{:keys [site-routes
+                        site-middleware
+                        api-routes
+                        api-middleware
+                        base-middleware]}])}
+  [opts]
   (impl.server/make-handler opts))
 
 (defn path
-  "Returns a path string with substituted path and query parameters.
+  "Returns a path with given path and query parameters applied.
 
-   `path-or-route` may be a path string or a Reitit route vector whose first
-   element is a path string. Each `:parameter` segment consumes one argument.
-   UUID arguments are encoded as compact URL-safe strings.
+   The first argument can be either a Reitit path template like \"/posts/:id\"
+   or a Reitit route, in which case the path template will be extracted from
+   it.
 
-   An optional final map is Nippy-encoded in the `npy` query parameter. When
-   *testing* is true, returns `[path query-params]` instead."
-  [path-or-route & args]
-  (apply impl.path/path path-or-route args))
+   If the path template includes path parameters, corresponding arguments must
+   be provided for them. Any UUID path parameters will be base64, URL encoded,
+   and they can be decoded with wrap-path-param-uuids. Non-UUID path parameters
+   are inserted as-is.
+
+   You may optionally include a map of additional parameters at the end which
+   will be encoded via taoensso.nippy/fast-freeze into a single `npy` query
+   parameter. They can be decoded with wrap-nippy-params.
+
+     (path \"posts/:id\" 1 {:foo \"bar\"{)
+     => \"/posts/1?foo=bar\")
+
+   If *testing* is bound to true, returns a vector containing the path string
+   and the unencoded query params."
+  [path-template-or-route & args]
+  (apply impl.path/path path-template-or-route args))
 
 (defmacro defpath
-  "Defines a path function.
+  "Convenience macro for (def sym (partial path path-template-or-route))
 
-   `path-or-route` may be a path string or a Reitit route vector. The resulting
-   function passes its arguments to path."
-  [sym path-or-route]
-  `(impl.path/defpath ~sym ~path-or-route))
+   It's recommended to use this in a dedicated shared namespace to define paths
+   that must be referenced from multiple namespaces."
+  [sym path-template-or-route]
+  `(impl.path/defpath ~sym ~path-template-or-route))
 
 (defmacro defroute
   "Defines a Reitit route backed by a biff.fx machine.
 
-   The optional first argument is a URI string. If omitted, the URI is generated
-   from the current namespace and `sym`. The optional next argument is an
-   initial biff.fx effects vector. Remaining key-value pairs map request methods
-   to handler functions.
+     (defroute my-route \"/posts/:id\"
+       [:example.fx/query ...]  ; effect descriptor
 
-   Handlers may return Ring responses, Hiccup forms, or Ring responses with a
-   Hiccup body. When an initial effects vector is provided, handlers receive the
-   effects result as a second argument."
+       :get
+       (fn [ctx query-result]
+         ...)
+
+       :next
+       (fn [ctx]
+         ...))
+     => [#'com.example/my-route-impl
+         #'com.example/my-route]
+
+     my-route
+     => [\"/posts/:id\" {:name ..., :get ...}]
+
+   A Reitit path template string may be provided after the var name. If it
+   is omitted, a path of the form \"/_biff/api/<namespace>/<symbol>\" will be
+   used by default.
+
+   After that, you may provide an optional biff.fx effect descriptor (a vector).
+   Its result will be passed as the second argument to any state functions that
+   have HTTP method keywords (:get, :post, etc). If other state functions need
+   to use the result, it is also available via (:biff.ring/fx-result ctx).
+
+   The machine has a default :start state function which simply transitions to
+   the state named by the request method (:get, :post, etc).
+
+   The var is defined as a Reitit route, i.e. a vector containing the path
+   template string and an options map. The fully-qualified var name is used as
+   the route :name (converted to a keyword). The handler function is set to
+   whatever HTTP methods the machine has states for. The machine may contain
+   multiple HTTP method states.
+
+   The handler function is also defined as a var with an -impl suffix, which
+   helps with testing and REPL-driven development (late binding)."
   [sym & args]
   `(impl.route/defroute ~sym ~@args))
 
 ;;;; middleware
 
 (defn wrap-anti-forgery-websockets
-  "Rejects cross-origin WebSocket requests.
+  "Provides CSRF protection for websocket requests.
 
-   WebSocket requests are accepted only when the `Origin` header equals
-   :biff.ring/base-url. Requests are rejected when the base URL is absent.
-   Non-WebSocket requests are passed through unchanged."
+   :biff.ring/base-url must be set, and incoming websocket requests must have
+   that value in the Origin header. If :biff.ring/base-url isn't set, all
+   websocket requests will be rejected.
+
+   Returns a default 403 response which can be overridden by setting a
+   :biff.ring/on-error handler on the incoming Ring request."
   [handler]
   (impl.middleware/wrap-anti-forgery-websockets handler))
 
 (defn wrap-path-param-uuids
-  "Decodes compact UUID values in the request's :path-params map.
-
-   Other path parameter values are left unchanged. This reverses the UUID
-   encoding performed by path."
+  "Updates :path-params on incoming requests, decoding any UUIDs encoded by
+   `path`."
   [handler]
   (impl.middleware/wrap-path-param-uuids handler))
 
 (defn wrap-nippy-params
-  "Decodes the `npy` request parameter and merges its value into :params.
-
-   The decoded value is merged only when it is a map. Missing, malformed, and
-   non-map values are ignored."
+  "Decodes Nippy-encoded params from `path` and merges them into :params."
   [handler]
   (impl.middleware/wrap-nippy-params handler))
 
 (defn wrap-resource
-  "Serves classpath resources before calling `handler`.
+  "Serves files from the classpath.
 
-   Resources are loaded from :biff.ring/root, which defaults to `public`. Also
-   tries each value in :biff.ring/index-files after the request URI; this
-   defaults to `[\"index.html\"]`."
+   The following keys will be checked on incoming Ring requests:
+
+     :biff.ring/root        - default \"public\"
+     :biff.ring/index-files - default [\"index.html\"]
+
+   Before calling `handler`, checks the `root` folder on the classpath for a
+   file matching the incoming :uri value. If not found, tries again with each of
+   the index files used as a basename. If still not found, passes the request on
+   to the wrapped handler."
   [handler]
   (impl.middleware/wrap-resource handler))
 
 (defn wrap-internal-error
-  "Catches exceptions, logs them, and returns an error response.
+  "Logs exceptions and returns a default 500 response.
 
-   Calls :biff.ring/on-error with the request plus `:status 500` and `:ex`. Uses
-   a minimal HTML response when :biff.ring/on-error is absent."
+   Set :biff.ring/on-error on incoming requests to override the default
+   response."
   [handler]
   (impl.middleware/wrap-internal-error handler))
 
 (defn wrap-log-requests
-  "Logs the duration, response status, method, and URI of each request."
+  "Logs an info message after each request finishes."
   [handler]
   (impl.middleware/wrap-log-requests handler))
 
 (defn wrap-session
-  "Adds Ring session middleware.
+  "A wrapper for ring.middleware.session/wrap-session that accepts options at
+   request time and sets some opinionated defaults.
 
-   Uses an encrypted cookie store when :biff.ring/cookie-secret is set. The
-   secret may be a base64-encoded string or a zero-argument delayed secret. If
-   absent, uses :biff.ring/fallback-session-store or a new in-memory store.
+   Incoming requests may have the following keys:
 
-   Session cookies are HTTP-only. Their maximum age and SameSite value default
-   to 60 days and `:lax`, respectively, and can be set with
-   :biff.ring/session-max-age and :biff.ring/session-same-site."
+   :biff.ring/secure
+     Default true. Sets the `Secure` cookie attribute.
+
+   :biff.ring/session-store
+     Optional. An implementation of ring.middleware.session.store/SessionStore.
+     Takes precedence over cookie-secret and fallback-session-store.
+
+   :biff.ring/cookie-secret
+     Optional. A base64-encoded :key value for
+     ring.middleware.session.cookie/cookie-store. If set, uses encrypted cookies
+     for session storage. Takes precedence over fallback-session-store.
+
+   :biff.ring/fallback-session-store
+     Optional. A default session store to use if session-store and cookie-secret
+     aren't set. This key is set by `module`.
+
+   :biff.ring/session-max-age
+     Default 60 days. The number of seconds after which the session cookie
+     expires.
+
+   :biff.ring/session-same-site
+     Default :lax. Sets `SameSite` on the session cookie.
+
+   Sets HttpOnly on the session cookie."
   [handler]
   (impl.middleware/wrap-session handler))
 
 (defn wrap-ssl
-  "Adds HSTS and optional HTTPS redirect middleware.
+  "Wraps ring.middleware.ssl/{wrap-hsts,wrap-ssl-redirect}
 
-   SSL behavior is enabled unless :biff.ring/secure is false. HSTS defaults to
-   true and can be disabled with :biff.ring/hsts. Redirects default to false and
-   can be enabled with :biff.ring/ssl-redirect."
+   Incoming requests may have the following keys:
+
+   :biff.ring/secure
+     If false, other options are ignored and this middleware is a no-op.
+
+   :biff.ring/hsts
+     Default true. Enables `wrap-hsts`.
+
+   :biff.ring/ssl-redirect
+     Default false. Enables `wrap-ssl-redirect`."
   [handler]
   (impl.middleware/wrap-ssl handler))
 
 (defn wrap-site-defaults
-  "Adds middleware defaults for browser routes.
+  "A composition of site-relevant middleware.
 
-   Includes Ring site defaults, Muuntaja parameters and formats, Nippy query
-   parameters, compact UUID path parameters, sessions, anti-forgery protection,
-   and WebSocket origin checks. Static resources and sessions from Ring
-   defaults are disabled in favor of wrap-resource and wrap-session."
+   Includes:
+
+   - anti forgery (including for websockets)
+   - sessions
+   - param decoding for use with `path`
+   - muuntaja's wrap-params and wrap-format
+   - ring.middleware.default's site defaults"
   [handler]
   (impl.middleware/wrap-site-defaults handler))
 
 (defn wrap-api-defaults
-  "Adds Ring API defaults and Muuntaja parameters and formats."
+  "A composition of API-relevant middleware.
+
+   Includes:
+
+   - Muuntaja's wrap-params and wrap-format
+   - ring.middleware.default's API defaults"
   [handler]
   (impl.middleware/wrap-api-defaults handler))
 
 (defn wrap-base-defaults
-  "Adds middleware shared by browser and API routes.
+  "A collection of site- and API-relevant middleware.
 
-   Includes HTTPS scheme adjustment, static resources, internal error handling,
-   SSL behavior, and request logging."
+   Includes:
+
+   - Static resource serving
+   - Internal server error handling
+   - HSTS
+   - SSL redirect
+   - Request logging"
   [handler]
   (impl.middleware/wrap-base-defaults handler))
 
 ;;;; biff.core integration
 
 (defn use-jetty
-  "Starts Jetty with :biff.ring/handler and adds a stop function to `ctx`.
+  "A biff.core component that starts a Jetty webserver.
 
-   Merges `ctx` into each Ring request. :biff.ring/host and :biff.ring/port
-   default to `localhost` and `8080`. Throws if :biff.ring/handler is absent."
+   Merges ctx into incoming requests."
+  {:arglists '([{:biff.ring/keys [host port handler]
+                 :or {host "localhost"
+                      port 8080}}])}
   [ctx]
   (impl.server/use-jetty ctx))
 
 (defn module
-  "Returns a biff.core module that assembles a Ring handler.
+  "A biff.core module that sets :biff.ring/handler and
+   :biff.ring/fallback-session-store on the system map.
 
-   Collects :biff.ring/routes, :biff.ring/api-routes, and their middleware from
-   other modules. Its init function provides :biff.ring/handler and an in-memory
-   :biff.ring/fallback-session-store. The handler is rebuilt when the modules
-   var's value changes."
+   :biff.ring/handler is compiled by collecting the following keys from other
+   modules and passing them to `make-handler`:
+
+     :biff.ring/routes (site routes)
+     :biff.ring/api-routes
+     :biff.ring/site-middleware
+     :biff.ring/api-middleware
+     :biff.ring/base-middleware
+
+   :biff.ring/fallback-session-store is set to an in-memory store."
   []
   (impl.server/module))
