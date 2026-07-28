@@ -31,7 +31,7 @@
                                                       {:bucket      storage-bucket
                                                        :endpoint    storage-endpoint
                                                        :credentials {:access-key storage-access-key
-                                                                     :secret-key storage-secret-key}}]}])})
+                                                                     :secret-key (force storage-secret-key)}}]}])})
        (when-not (= log :memory)
          {:log (case log
                  :local [:local {:path  "storage/xtdb2/log"

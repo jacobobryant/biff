@@ -51,9 +51,9 @@
         ((modules->handler @modules-var) request))})})
 
 (defn use-jetty [{:biff.ring/keys [host port handler]
-                  :or {host "localhost"
-                       port 8080}
-                  :as ctx}]
+                  :or             {host "localhost"
+                                   port 8080}
+                  :as             ctx}]
   (biff.core/validate ctx {:required [:biff.ring/handler]})
   (let [server (jetty/run-jetty
                 (fn [request]

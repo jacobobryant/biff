@@ -74,9 +74,9 @@
 
 (defn wrap-resource [handler]
   (fn [{:biff.ring/keys [root index-files]
-        :or {root "public"
-             index-files ["index.html"]}
-        :as ctx}]
+        :or             {root        "public"
+                         index-files ["index.html"]}
+        :as             ctx}]
     (or (->> index-files
              (map #(update ctx :uri str/replace-first #"/?$" (str "/" %)))
              (into [ctx])
@@ -93,8 +93,8 @@
 
 (defn wrap-log-requests [handler]
   (fn [ctx]
-    (let [start    (System/nanoTime)
-          response (handler ctx)
+    (let [start       (System/nanoTime)
+          response    (handler ctx)
           duration-ms (quot (- (System/nanoTime) start) 1000000)]
       (log/infof "%3sms %s %-4s %s"
                  (str duration-ms)
@@ -112,10 +112,10 @@
                          fallback-session-store
                          session-max-age
                          session-same-site]
-        :or {session-max-age (* 60 60 24 60)
-             secure true
-             session-same-site :lax}
-        :as ctx}]
+        :or             {session-max-age   (* 60 60 24 60)
+                         secure            true
+                         session-same-site :lax}
+        :as             ctx}]
     (let [cookie-secret (force cookie-secret)
 
           session-store
@@ -133,7 +133,7 @@
         {:cookie-attrs {:max-age   session-max-age
                         :same-site session-same-site
                         :http-only true
-                        :secure secure}
+                        :secure    secure}
          :store        session-store})
        ctx))))
 
@@ -141,10 +141,10 @@
   (fn [{:biff.ring/keys [secure
                          hsts
                          ssl-redirect]
-        :or {secure true
-             hsts true
-             ssl-redirect false}
-        :as ctx}]
+        :or             {secure       true
+                         hsts         true
+                         ssl-redirect false}
+        :as             ctx}]
     ((cond-> handler
        (and secure hsts) ssl/wrap-hsts
        (and secure ssl-redirect) ssl/wrap-ssl-redirect)

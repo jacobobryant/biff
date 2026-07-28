@@ -22,7 +22,7 @@
        (keyword? (first node))))
 
 (defn- hiccup-response [response body]
-  (merge {:status 200
+  (merge {:status  200
           :headers {"content-type" "text/html; charset=utf-8"}}
          response
          {:body (hiccup/render body)}))

@@ -3,7 +3,8 @@
             [com.biffweb.ring.impl.middleware :as impl.middleware]
             [com.biffweb.ring.impl.path :as impl.path]
             [com.biffweb.ring.impl.route :as impl.route]
-            [com.biffweb.ring.impl.server :as impl.server]))
+            [com.biffweb.ring.impl.server :as impl.server]
+            [ring.middleware.session.store :as session.store]))
 
 (biff.core/register
  {:biff.ring/api-middleware         [:sequential 'ifn?]
@@ -11,7 +12,7 @@
   :biff.ring/base-middleware        [:sequential 'ifn?]
   :biff.ring/base-url               'string?
   :biff.ring/cookie-secret          :biff.core/secret
-  :biff.ring/fallback-session-store 'some?
+  :biff.ring/fallback-session-store [:fn #(satisfies? session.store/SessionStore %)]
   :biff.ring/handler                'ifn?
   :biff.ring/host                   'string?
   :biff.ring/hsts                   'boolean?
@@ -23,6 +24,7 @@
   :biff.ring/secure                 'boolean?
   :biff.ring/session-max-age        'integer?
   :biff.ring/session-same-site      'keyword?
+  :biff.ring/session-store          [:fn #(satisfies? session.store/SessionStore %)]
   :biff.ring/site-middleware        [:sequential 'ifn]
   :biff.ring/ssl-redirect           'boolean?})
 
@@ -93,11 +95,12 @@
 
        :get
        (fn [ctx query-result]
-         ...)
+         {:biff.fx/next :next
+          ...})
 
        :next
        (fn [ctx]
-         ...))
+         [:div ...]))
      => [#'com.example/my-route-impl
          #'com.example/my-route]
 
@@ -115,6 +118,11 @@
 
    The machine has a default :start state function which simply transitions to
    the state named by the request method (:get, :post, etc).
+
+   If a state function returns a vector whose first element is a keyword, it
+   will be rendered as hiccup (via lambdaisland.hiccup) and returned as a 200
+   response. You may also return a response map with :body set to a hiccup
+   vector.
 
    The var is defined as a Reitit route, i.e. a vector containing the path
    template string and an options map. The fully-qualified var name is used as
@@ -272,8 +280,8 @@
 
    Merges ctx into incoming requests."
   {:arglists '([{:biff.ring/keys [host port handler]
-                 :or {host "localhost"
-                      port 8080}}])}
+                 :or             {host "localhost"
+                                  port 8080}}])}
   [ctx]
   (impl.server/use-jetty ctx))
 

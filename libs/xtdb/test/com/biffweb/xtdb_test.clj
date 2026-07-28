@@ -63,6 +63,12 @@
            :biff.xtdb/storage-access-key     "access"
            :biff.xtdb/storage-secret-key     "secret"
            :biff.xtdb/memory-cache-max-bytes 2})))
+  (is (= "secret"
+         (get-in
+          (biff.xtdb/expand-config
+           {:biff.xtdb/storage            :remote
+            :biff.xtdb/storage-secret-key (biff.core/secret-delay "secret")})
+          [:storage 1 :object-store 1 :credentials :secret-key])))
   (is (= {:disk-cache {:path           "storage/xtdb2/storage-cache"
                        :max-size-bytes 3}
           :storage    [:remote {:object-store
