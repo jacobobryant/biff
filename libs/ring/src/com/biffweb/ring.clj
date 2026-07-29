@@ -25,7 +25,7 @@
   :biff.ring/session-max-age        'integer?
   :biff.ring/session-same-site      'keyword?
   :biff.ring/session-store          [:fn #(satisfies? session.store/SessionStore %)]
-  :biff.ring/site-middleware        [:sequential 'ifn]
+  :biff.ring/site-middleware        [:sequential 'ifn?]
   :biff.ring/ssl-redirect           'boolean?})
 
 (def

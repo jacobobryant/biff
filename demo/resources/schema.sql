@@ -32,12 +32,8 @@ CREATE TABLE todo (
   FOREIGN KEY(user_id) REFERENCES user(id)
 ) STRICT;
 
-CREATE INDEX idx_user_joined_at ON user(joined_at);
-
 CREATE INDEX idx_todo_archived ON todo(archived);
-
 CREATE INDEX idx_todo_created_at ON todo(created_at);
-
 CREATE INDEX idx_todo_updated_at ON todo(updated_at);
-
 CREATE INDEX idx_todo_user_id ON todo(user_id);
+CREATE INDEX idx_user_joined_at ON user(joined_at);
