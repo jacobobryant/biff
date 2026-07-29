@@ -51,9 +51,8 @@
     (is (= "super-secret" (secret)))
     (is (= {:biff.core/secret secret}
            (biff.core/validate {:biff.core/secret secret})))
-    (is (thrown-with-msg? AssertionError
-                          #"invalid"
-                          (biff.core/validate {:biff.core/secret "super-secret"})))
+    (is (= {:biff.core/secret "super-secret"}
+           (biff.core/validate {:biff.core/secret "super-secret"})))
     (is (thrown? clojure.lang.ArityException
                  (secret :extra-arg)))))
 

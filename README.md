@@ -35,7 +35,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc9"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc10"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
@@ -50,10 +50,10 @@ Released:
 - [biff.graph](/libs/graph/)
 - [biff.sqlite](/libs/sqlite/)
 - [biff.xtdb](/libs/xtdb/)
+- [biff.ring](/libs/ring/)
 
 Remaining (see [libs/](/libs/)):
 
-- biff.ring
 - biff.datastar
 - biff.run
 - biff.tasks

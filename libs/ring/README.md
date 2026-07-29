@@ -12,7 +12,7 @@ Features:
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "2.0.0-rc8"}
+com.biffweb/ring {:mvn/version "2.0.0-rc10"}
 ```
 
 ### Status
@@ -126,6 +126,10 @@ create a single `routes.clj` file and define route paths in it with `defpath`:
 (defpath another-page "/another-page")
 (defpath post-page    "/posts/:id")
 ...
+
+(require '[example.routes :as routes])
+(routes/post-page 123)
+=> "/posts/123"
 ```
 
 ## Tips

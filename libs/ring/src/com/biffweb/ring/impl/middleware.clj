@@ -65,7 +65,7 @@
        (if-not npy
          ctx
          (try
-           (let [value (nippy/thaw (path/base64-decode npy))]
+           (let [value (nippy/fast-thaw (path/base64-decode npy))]
              (if (map? value)
                (update ctx :params merge value)
                ctx))
