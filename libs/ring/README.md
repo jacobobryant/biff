@@ -12,7 +12,7 @@ Features:
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "2.0.0-rc10"}
+com.biffweb/ring {:mvn/version "2.0.0-rc11"}
 ```
 
 ### Status

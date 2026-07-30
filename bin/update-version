@@ -1,0 +1,6 @@
+#!/bin/bash
+old=$1
+new=$2
+for f in $(git ls-files); do
+  sed -i "s/$old/$new/g" $f
+done
