@@ -17,8 +17,8 @@
                                "_"
                                (name arch)
                                "."
-                               (if (= os :windows)
-                                 "zip"
+                               (case os
+                                 (:windows :macos) "zip"
                                  "tar.gz"))
         url               (str "https://github.com/sqldef/sqldef/releases/download/v"
                                sqldef-version "/" asset-name)]

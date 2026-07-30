@@ -183,7 +183,8 @@
   (let [today  (t/date (t/in now tz))
         cutoff (t/<< today (t/new-period 30 :days))]
     (->> events
-         (filter #(t/<= cutoff (day-key (:instant %) tz)))
+         (filterv :instant)
+         (filterv #(t/<= cutoff (day-key (:instant %) tz)))
          (group-by #(day-key (:instant %) tz))
          (reduce-kv (fn [m day evts]
                       (assoc m day (count (set (map :user-id evts)))))
@@ -196,7 +197,9 @@
   [events tz now]
   (let [today         (t/date (t/in now tz))
         cutoff        (t/<< today (t/new-period 37 :days))
-        events        (filter #(t/<= cutoff (day-key (:instant %) tz)) events)
+        events        (->> events
+                           (filterv :instant)
+                           (filter #(t/<= cutoff (day-key (:instant %) tz))))
         events-by-day (group-by #(day-key (:instant %) tz) events)
         end-date      today
         start-date    (t/<< today (t/new-period 29 :days))
@@ -220,8 +223,8 @@
   (let [today  (t/date (t/in now tz))
         cutoff (t/<< today (t/new-period 30 :days))]
     (->> users
-         (filter :joined-at)
-         (filter #(t/<= cutoff (day-key (:joined-at %) tz)))
+         (filterv :joined-at)
+         (filterv #(t/<= cutoff (day-key (:joined-at %) tz)))
          (group-by #(day-key (:joined-at %) tz))
          (reduce-kv (fn [m day u]
                       (assoc m day (count u)))
@@ -234,6 +237,7 @@
   (let [today  (t/date (t/in now tz))
         cutoff (t/<< today (t/new-period 30 :days))]
     (->> events
+         (filterv :instant)
          (filter #(t/<= cutoff (day-key (:instant %) tz)))
          (group-by #(day-key (:instant %) tz))
          (reduce-kv (fn [m day evts]
