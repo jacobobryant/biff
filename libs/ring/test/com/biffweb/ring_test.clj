@@ -195,13 +195,13 @@
   (is (= #{:name :post} (set (keys (second effect-route)))))
   (is (= {:status  200
           :headers {"content-type" "text/html; charset=utf-8"}
-          :body    "<!DOCTYPE html>\n<h1>Hello Ada</h1>"}
+          :body    "<!DOCTYPE html><h1>Hello Ada</h1>"}
          ((get-in greeting-route [1 :get])
           {:request-method :get
            :path-params    {:name "Ada"}})))
   (is (= {:status  201
           :headers {"content-type" "text/html; charset=utf-8"}
-          :body    "<!DOCTYPE html>\n<span>loaded</span>"}
+          :body    "<!DOCTYPE html><span>loaded</span>"}
          ((get-in effect-route [1 :post])
           {:request-method :post
            :biff.fx/handlers

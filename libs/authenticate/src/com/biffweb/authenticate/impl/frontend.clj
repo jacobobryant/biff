@@ -1,6 +1,6 @@
 (ns com.biffweb.authenticate.impl.frontend
   (:require [com.biffweb.authenticate.impl.backend :as backend]
-            [lambdaisland.hiccup :as hiccup]))
+            [dev.onionpancakes.chassis.core :as chassis]))
 
 ;; === Style helpers (inline styles instead of CSS classes) ===
 
@@ -299,4 +299,4 @@
                                   (render-tabs ctx))))]
     {:status  200
      :headers {"content-type" "text/html"}
-     :body    (hiccup/render html)}))
+     :body    (chassis/html [chassis/doctype-html5 html])}))

@@ -3,7 +3,6 @@
             [com.biffweb.core :as biff.core]
             [com.biffweb.ring.impl.middleware :as middleware]
             [reitit.ring :as reitit-ring]
-            [ring.adapter.jetty :as jetty]
             [ring.middleware.session.memory :as memory]))
 
 (defn- default-error-handler [status]
@@ -55,7 +54,7 @@
                                    port 8080}
                   :as             ctx}]
   (biff.core/validate ctx {:required [:biff.ring/handler]})
-  (let [server (jetty/run-jetty
+  (let [server ((requiring-resolve 'ring.adapter.jetty/run-jetty)
                 (fn [request]
                   (try
                     (handler (merge ctx request))

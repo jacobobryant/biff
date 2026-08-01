@@ -3,7 +3,7 @@
            com.biffweb/fx          {:local/root "../fx"}
            tick/tick               {:mvn/version "1.0.1"}
            hato/hato               {:mvn/version "1.0.0"}
-           com.lambdaisland/hiccup {:mvn/version "0.14.67"}}
+           dev.onionpancakes/chassis {:mvn/version "1.0.365"}}
  :aliases {:run  {:extra-paths ["test" "demo" "dev"]
                   :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
                   :main-opts   ["-m" "com.biffweb.tasks.lib"]}

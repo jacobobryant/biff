@@ -15,6 +15,9 @@ Features:
 com.biffweb/ring {:mvn/version "2.0.0-rc11"}
 ```
 
+If you don't want to use Jetty, you can include `:exclusions
+[ring/ring-jetty-adapter]`.
+
 ### Status
 
 This library will be a release candidate until all [the other Biff 2

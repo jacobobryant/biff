@@ -5,7 +5,6 @@
    [com.biffweb.datastar :as biff.datastar]
    [dev.onionpancakes.chassis.core :as chassis]
    [ring.adapter.jetty :as ring-jetty]
-   [ring.middleware.anti-forgery :refer [wrap-anti-forgery]]
    [ring.middleware.json :refer [wrap-json-params]]
    [ring.middleware.params :refer [wrap-params]]
    [ring.middleware.session :refer [wrap-session]])
@@ -348,7 +347,6 @@ button.secondary { background: #475569; }
   (-> routes
       (biff.datastar/wrap-datastar
        lock-state)
-      wrap-anti-forgery
       wrap-session
       (wrap-json-params {:keywords? true})
       wrap-params))

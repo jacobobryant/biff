@@ -196,7 +196,7 @@
    [:span.text-sm.font-medium.text-slate-700 "Show archived"]])
 
 (defn- app-container
-  [req {:keys [session/user
+  [_req {:keys [session/user
                todo/ui-state
                app/show-admin-link?
                todo/items

@@ -1,12 +1,6 @@
 (ns com.biffweb.admin.impl.ui
   "UI helpers for the admin dashboard."
-  (:require [lambdaisland.hiccup :as hiccup]
-            [clojure.string :as str]))
-
-(defn- render-html
-  "Render hiccup to HTML string, stripping the DOCTYPE that lambdaisland/hiccup adds."
-  [hiccup-form]
-  (str/replace (hiccup/render hiccup-form) #"^<!DOCTYPE html>\n?" ""))
+  (:require [dev.onionpancakes.chassis.core :as chassis]))
 
 (defn admin-page
   "Render an admin page with consistent layout."
@@ -16,7 +10,7 @@
    :body
    (str
     "<!DOCTYPE html>\n"
-    (render-html
+    (chassis/html
      [:html {:lang "en"}
       [:head
        [:meta {:charset "utf-8"}]
@@ -33,7 +27,7 @@
   [hiccup]
   {:status  200
    :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body    (render-html hiccup)})
+   :body    (chassis/html hiccup)})
 
 (defn heading [text]
   [:h1.text-2xl.font-bold.mb-6 text])

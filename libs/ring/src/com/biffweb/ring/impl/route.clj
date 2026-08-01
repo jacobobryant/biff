@@ -1,6 +1,6 @@
 (ns com.biffweb.ring.impl.route
   (:require [com.biffweb.fx :as fx]
-            [lambdaisland.hiccup :as hiccup]))
+            [dev.onionpancakes.chassis.core :as chassis]))
 
 (def all-methods
   [:get :post :put :delete :head :options :trace :patch :connect])
@@ -25,7 +25,7 @@
   (merge {:status  200
           :headers {"content-type" "text/html; charset=utf-8"}}
          response
-         {:body (hiccup/render body)}))
+         {:body (chassis/html [chassis/doctype-html5 body])}))
 
 (defn wrap-hiccup [f]
   (fn [& args]

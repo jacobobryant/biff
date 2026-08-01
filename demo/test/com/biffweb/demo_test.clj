@@ -148,7 +148,7 @@
             send-code    (http-post "/_biff/auth/send-code"
                                     :cookie cookie
                                     :form-params {"email" email})
-            verify-page  (http-get (get-in send-code [:headers "location"])
+            _verify-page (http-get (get-in send-code [:headers "location"])
                                    :cookie cookie)
             verify-code  (http-post "/_biff/auth/verify-code"
                                     :cookie cookie

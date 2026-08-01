@@ -1,7 +1,7 @@
 (ns demo
   (:require [com.biffweb.authenticate :as auth]
             [clojure.string :as str]
-            [lambdaisland.hiccup :as hiccup]
+            [dev.onionpancakes.chassis.core :as chassis]
             [ring.adapter.jetty :as jetty]
             [ring.middleware.defaults :as defaults]
             [reitit.ring :as reitit-ring]
@@ -27,7 +27,7 @@
 (defn render [hiccup-form]
   {:status  200
    :headers {"content-type" "text/html"}
-   :body    (str "<!DOCTYPE html>" (hiccup/render hiccup-form))})
+   :body    (chassis/html [chassis/doctype-html5 hiccup-form])})
 
 (defn app-page [req]
   (let [uid (get-in req [:session :uid])]

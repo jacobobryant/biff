@@ -1,7 +1,7 @@
 (ns com.biffweb.demo.lib.ui
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [lambdaisland.hiccup :as hiccup]
+            [dev.onionpancakes.chassis.core :as chassis]
             [ring.util.response :as ring-response]))
 
 (def ^:private datastar-script-url
@@ -19,7 +19,7 @@
 (defn html-response [body]
   {:status  200
    :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body    (hiccup/render body)})
+   :body    (chassis/html [chassis/doctype-html5 body])})
 
 (defn signal-patch-response [signals]
   {:status  200
