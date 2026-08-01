@@ -63,21 +63,72 @@
                         #"reitit-style route vector"
                         (ring/path {:path "/posts"}))))
 
-(deftest anti-forgery-websocket-middleware-checks-origin
-  (let [handler   (ring/wrap-anti-forgery-websockets
-                   (fn [_] {:status 204}))
-        websocket {:headers {"upgrade"    "WebSocket"
-                             "connection" "keep-alive, Upgrade"}}]
-    (is (= 204 (:status (handler {:headers {}}))))
-    (is (= 403 (:status (handler websocket))))
+(deftest cross-origin-protection-allows-safe-methods
+  (let [handler (ring/wrap-csrf-protection
+                 (fn [_] {:status 204}))]
+    (doseq [method [:get :head :options]]
+      (is (= 204 (:status
+                  (handler {:request-method method
+                            :headers        {"sec-fetch-site" "cross-site"}})))))))
+
+(deftest cross-origin-protection-checks-fetch-metadata
+  (let [handler (ring/wrap-csrf-protection
+                 (fn [_] {:status 204}))]
+    (doseq [fetch-site ["same-origin" "none"]]
+      (is (= 204 (:status
+                  (handler {:request-method :post
+                            :headers        {"sec-fetch-site" fetch-site}})))))
+    (doseq [fetch-site ["same-site" "cross-site"]]
+      (is (= 403 (:status
+                  (handler {:request-method :post
+                            :headers        {"sec-fetch-site" fetch-site}})))))))
+
+(deftest cross-origin-protection-falls-back-to-origin
+  (let [handler (ring/wrap-csrf-protection
+                 (fn [_] {:status 204}))]
+    (is (= 403 (:status (handler {:request-method :post :headers {}}))))
     (is (= 403 (:status
-                (handler (assoc websocket
-                                :biff.ring/base-url "https://example.com")))))
+                (handler {:request-method :post
+                          :headers        {"origin" "" "sec-fetch-site" ""}}))))
     (is (= 204 (:status
-                (handler (-> websocket
-                             (assoc :biff.ring/base-url "https://example.com")
-                             (assoc-in [:headers "origin"]
-                                       "https://example.com"))))))))
+                (handler {:request-method :post
+                          :headers        {"host"   "example.com:8443"
+                                           "origin" "https://example.com:8443"}}))))
+    (is (= 403 (:status
+                (handler {:request-method :post
+                          :headers        {"host"           "example.com:8443"
+                                           "origin"         "https://example.com:8443"
+                                           "sec-fetch-site" " "}}))))
+    (doseq [origin ["https://other.example"
+                    "https://example.com"
+                    "not an origin"]]
+      (is (= 403 (:status
+                  (handler {:request-method :post
+                            :headers        {"host"   "example.com:8443"
+                                             "origin" origin}})))))))
+
+(deftest cross-origin-protection-checks-websocket-handshakes
+  (let [websocket    {:request-method :get
+                      :headers        {"connection" "Upgrade"
+                                       "upgrade"    "websocket"}}
+        csrf-handler (ring/wrap-csrf-protection
+                      (fn [_] {:status 204}))]
+    (is (= 403 (:status (csrf-handler websocket))))
+    (is (= 403 (:status
+                (csrf-handler
+                 (assoc-in websocket [:headers "sec-fetch-site"]
+                           "cross-site")))))
+    (is (= 204 (:status
+                (csrf-handler
+                 (assoc-in websocket [:headers "sec-fetch-site"]
+                           "same-origin")))))
+    (is (= 204 (:status
+                (csrf-handler
+                 (assoc websocket :headers
+                        {"connection" "Upgrade"
+                         "upgrade"    "websocket"
+                         "host"       "example.com"
+                         "origin"     "https://example.com"})))))))
 
 (deftest path-param-middleware-decodes-only-encoded-uuids
   (let [id      (random-uuid)

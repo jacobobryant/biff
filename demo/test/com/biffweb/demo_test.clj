@@ -45,7 +45,6 @@
 (defn- start-test-system [db-dir port]
   (biff.core/start
    {:biff.auth/skip-captcha true
-    :biff.ring/base-url     (str "http://127.0.0.1:" port)
     :biff.ring/host         "127.0.0.1"
     :biff.ring/port         port
     :biff.ring/secure       false
@@ -91,6 +90,7 @@
 (defn- http-post [path & {:keys [cookie headers form-params body]}]
   (hato/post (request-url path)
              (cond-> {:as               :text
+                      :headers          {"sec-fetch-site" "same-origin"}
                       :redirect-policy  :none
                       :throw-exceptions false}
                cookie
@@ -124,11 +124,6 @@
                  :form-params (merge {"tabId" tab-id}
                                      form-params)))))
 
-(defn- csrf-token [body]
-  (or (second (re-find #"__anti-forgery-token\" value=\"([^\"]+)\"" body))
-      (second (re-find #"X-CSRF-Token': \"([^\"]+)\"" body))
-      (throw (ex-info "Couldn't find CSRF token in response body." {}))))
-
 (defn- db-query [sql & params]
   (biff.sqlite/execute *system* (into [sql] params)))
 
@@ -150,23 +145,18 @@
                                      true)]
       (let [signin-page  (http-get "/signin")
             cookie       (response-cookie nil signin-page)
-            signin-token (csrf-token (:body signin-page))
             send-code    (http-post "/_biff/auth/send-code"
                                     :cookie cookie
-                                    :form-params {"email"                email
-                                                  "__anti-forgery-token" signin-token})
+                                    :form-params {"email" email})
             verify-page  (http-get (get-in send-code [:headers "location"])
                                    :cookie cookie)
-            verify-token (csrf-token (:body verify-page))
             verify-code  (http-post "/_biff/auth/verify-code"
                                     :cookie cookie
-                                    :form-params {"email"                email
-                                                  "code"                 (:code @sent-email)
-                                                  "__anti-forgery-token" verify-token})
+                                    :form-params {"email" email
+                                                  "code"  (:code @sent-email)})
             cookie       (response-cookie cookie verify-code)
             app-page     (http-get "/app" :cookie cookie)]
         {:app-page    app-page
-         :app-token   (csrf-token (:body app-page))
          :cookie      cookie
          :email       email
          :send-code   send-code
@@ -212,11 +202,10 @@
     (is (str/includes? (:body admin-page) "Admin Setup"))))
 
 (deftest todo-mutations-work-over-http-test
-  (let [{:keys [app-token cookie] :as _signin} (sign-in!)
+  (let [{:keys [cookie] :as _signin}           (sign-in!)
         title                                  (str "Todo " (random-uuid))
         create-resp                            (http-post "/app/todos"
                                                           :cookie cookie
-                                                          :headers {"x-csrf-token" app-token}
                                                           :form-params {"newtodo" title})
         todo-row                               (first (biff.sqlite/execute
                                                        *system*
@@ -225,7 +214,6 @@
                                                         :where  [:= :todo/title title]}))
         toggle-resp                            (http-post (routes/todo-toggle (:todo/id todo-row))
                                                           :cookie cookie
-                                                          :headers {"x-csrf-token" app-token}
                                                           :form-params {"completed" "true"})
         toggled-row                            (first (biff.sqlite/execute
                                                        *system*
@@ -234,7 +222,6 @@
                                                         :where  [:= :todo/id (:todo/id todo-row)]}))
         archive-resp                           (http-post (routes/todo-archive (:todo/id todo-row))
                                                           :cookie cookie
-                                                          :headers {"x-csrf-token" app-token}
                                                           :form-params {"archived" "true"})
         archived-row                           (first (biff.sqlite/execute
                                                        *system*
@@ -274,12 +261,11 @@
                                   :show-archived))))
 
 (deftest datastar-todo-controls-work-over-http-test
-  (let [{:keys [app-token cookie]} (sign-in!)
+  (let [{:keys [cookie]}           (sign-in!)
         tab-id                     "demo-test-tab"
         title                      (str "Datastar todo " (random-uuid))
         create-resp                (http-post "/app/todos"
                                               :cookie cookie
-                                              :headers {"x-csrf-token" app-token}
                                               :form-params {"newtodo" title})
         todo-row                   (first (biff.sqlite/execute
                                            *system*
@@ -288,8 +274,7 @@
                                             :where  [:= :todo/title title]}))
         toggle-resp                (datastar-post (routes/todo-toggle (:todo/id todo-row))
                                                   tab-id
-                                                  :cookie cookie
-                                                  :headers {"x-csrf-token" app-token})
+                                                  :cookie cookie)
         toggle-row                 (first (biff.sqlite/execute
                                            *system*
                                            {:select [:todo/completed]
@@ -298,13 +283,11 @@
         filter-resp                (datastar-post (routes/tab-state)
                                                   tab-id
                                                   :cookie cookie
-                                                  :headers {"x-csrf-token" app-token}
                                                   :form-params {"filter" "completed"})
         filtered-page              (http-get (datastar-app-path tab-id) :cookie cookie)
         archive-resp               (datastar-post (routes/todo-archive (:todo/id todo-row))
                                                   tab-id
-                                                  :cookie cookie
-                                                  :headers {"x-csrf-token" app-token})
+                                                  :cookie cookie)
         archived-row               (first (biff.sqlite/execute
                                            *system*
                                            {:select [:todo/archived]
@@ -313,14 +296,12 @@
         show-archived-resp         (datastar-post (routes/tab-state)
                                                   tab-id
                                                   :cookie cookie
-                                                  :headers {"x-csrf-token" app-token}
                                                   :signals {"filter"       "all"
                                                             "showArchived" true})
         archived-page              (http-get (datastar-app-path tab-id) :cookie cookie)
         hide-archived-resp         (datastar-post (routes/tab-state)
                                                   tab-id
                                                   :cookie cookie
-                                                  :headers {"x-csrf-token" app-token}
                                                   :signals {"filter"       "all"
                                                             "showArchived" false})
         hidden-page                (http-get (datastar-app-path tab-id) :cookie cookie)]
@@ -339,10 +320,9 @@
     (is (not (str/includes? (:body hidden-page) title)))))
 
 (deftest archive-queue-route-archives-active-todos-test
-  (let [{:keys [app-token cookie email]} (sign-in!)
+  (let [{:keys [cookie email]}           (sign-in!)
         archive-resp                     (http-post "/app/archive"
-                                                    :cookie cookie
-                                                    :headers {"x-csrf-token" app-token})
+                                                    :cookie cookie)
         active-count                     (fn []
                                            (some-> (first (db-query
                                                            "SELECT COUNT(*) AS total

@@ -12,10 +12,6 @@ A Reitit routes vector.
 
 `[:vector fn?]`. Ring middleware for Reitit.
 
-### :biff.ring/base-url
-
-String. A url like `https://example.com` that your site is served from.
-
 ### :biff.ring/cookie-secret
 
 String. A base64 string which will be decoded to a 16-byte array. May be wrapped

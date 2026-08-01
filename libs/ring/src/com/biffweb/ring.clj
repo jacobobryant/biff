@@ -10,7 +10,6 @@
  {:biff.ring/api-middleware         [:sequential 'ifn?]
   :biff.ring/api-routes             [:sequential 'ifn?]
   :biff.ring/base-middleware        [:sequential 'ifn?]
-  :biff.ring/base-url               'string?
   :biff.ring/cookie-secret          :biff.core/secret
   :biff.ring/fallback-session-store [:fn #(satisfies? session.store/SessionStore %)]
   :biff.ring/handler                'ifn?
@@ -137,17 +136,21 @@
 
 ;;;; middleware
 
-(defn wrap-anti-forgery-websockets
-  "Provides CSRF protection for websocket requests.
+(defn wrap-csrf-protection
+  "Prevents CSRF attacks via Sec-Fetch-Site and other headers.
 
-   :biff.ring/base-url must be set, and incoming websocket requests must have
-   that value in the Origin header. If :biff.ring/base-url isn't set, all
-   websocket requests will be rejected.
+   Follows the algorithm described in https://words.filippo.io/csrf/, but is
+   stricter in a few ways:
 
-   Returns a default 403 response which can be overridden by setting a
-   :biff.ring/on-error handler on the incoming Ring request."
+   - If the Sec-Fetch-Site and Origin headers are both missing, rejects the
+     request instead of accepting it.
+
+   - Applies CSRF protection to websocket upgrade requests.
+
+   Set :biff.ring/on-error on incoming requests to override the default 403
+   response."
   [handler]
-  (impl.middleware/wrap-anti-forgery-websockets handler))
+  (impl.middleware/wrap-csrf-protection handler))
 
 (defn wrap-path-param-uuids
   "Updates :path-params on incoming requests, decoding any UUIDs encoded by

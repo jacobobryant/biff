@@ -3,7 +3,6 @@
             [clojure.tools.logging :as log]
             [com.biffweb.ring.impl.path :as path]
             [muuntaja.middleware :as muuntaja]
-            [ring.middleware.anti-forgery :as anti-forgery]
             [ring.middleware.content-type :refer [wrap-content-type]]
             [ring.middleware.defaults :as defaults]
             [ring.middleware.resource :as resource]
@@ -33,22 +32,29 @@
   (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
        (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")))
 
-(defn wrap-anti-forgery-websockets [handler]
-  (fn [{:keys [headers biff.ring/base-url] :as ctx}]
-    (cond
-      (not (websocket-request? ctx))
-      (handler ctx)
+(defn- safe-request? [{:keys [request-method] :as ctx}]
+  (and (contains? #{:get :head :options "GET" "HEAD" "OPTIONS"}
+                  request-method)
+       (not (websocket-request? ctx))))
 
-      (nil? base-url)
-      (do
-        (log/warn "Rejecting websocket request because :biff.ring/base-url is not set.")
-        (on-error (assoc ctx :status 403)))
+(defn- same-host? [origin host]
+  (try
+    (= host (.getRawAuthority (java.net.URI. origin)))
+    (catch Exception _
+      false)))
 
-      (not= base-url (get headers "origin"))
-      (on-error (assoc ctx :status 403))
-
-      :else
-      (handler ctx))))
+;; See https://words.filippo.io/csrf/
+(defn wrap-csrf-protection [handler]
+  (fn [{:keys [headers] :as ctx}]
+    (let [{:strs [sec-fetch-site origin host]} headers]
+      (if (or (safe-request? ctx)
+              (#{"same-origin" "none"} sec-fetch-site)
+              (and (empty? sec-fetch-site)
+                   (not-empty origin)
+                   (not-empty host)
+                   (same-host? origin host)))
+        (handler ctx)
+        (on-error (assoc ctx :status 403))))))
 
 (defn wrap-path-param-uuids [handler]
   (fn [ctx]
@@ -154,8 +160,7 @@
 
 (defn wrap-site-defaults [handler]
   (-> handler
-      wrap-anti-forgery-websockets
-      anti-forgery/wrap-anti-forgery
+      wrap-csrf-protection
       wrap-session
       wrap-path-param-uuids
       wrap-nippy-params

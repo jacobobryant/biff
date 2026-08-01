@@ -3,13 +3,12 @@
             [com.biffweb.demo.routes :as routes]))
 
 (defn home
-  [{:keys [session anti-forgery-token]}]
+  [{:keys [session]}]
   (if (:uid session)
     {:status  303
      :headers {"location" (routes/app)}}
     (ui/page
-     {:title              "Biff Demo App"
-      :anti-forgery-token anti-forgery-token}
+     {:title "Biff Demo App"}
      [:section.space-y-6
       [:p {:class "text-sm font-semibold uppercase text-teal-700 tracking-[0.2em]"} "Biff demo"]
       (ui/page-title "A showcase app for Biff itself")

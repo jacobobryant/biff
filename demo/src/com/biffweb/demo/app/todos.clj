@@ -226,7 +226,6 @@
             "Archive in batches of 3"]])
         [:form {:method "post"
                 :action (routes/auth-signout)}
-         (ui/csrf-field req)
          (ui/button {:type "submit"} "Log out")]]]
       [:div.flex.flex-wrap.items-center.gap-2.text-sm.text-slate-600
        [:span "Signed in as"]
@@ -311,8 +310,7 @@
       (if (:biff.datastar/sse-request req)
         (ui/html-response container)
         (ui/page
-         {:title              "Biff Demo App"
-          :anti-forgery-token (:anti-forgery-token req)}
+         {:title "Biff Demo App"}
          [:div.mx-auto.my-12.max-w-5xl.space-y-6
           (merge {:class "space-y-6"} biff.datastar/init-opts)
           container])))))

@@ -1,17 +1,11 @@
 (ns com.biffweb.demo.lib.ui
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [com.biffweb.datastar :as biff.datastar]
             [lambdaisland.hiccup :as hiccup]
             [ring.util.response :as ring-response]))
 
 (def ^:private datastar-script-url
   "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.1/bundles/datastar.js")
-
-(defn csrf-field [{:keys [anti-forgery-token]}]
-  [:input {:type  "hidden"
-           :name  "__anti-forgery-token"
-           :value anti-forgery-token}])
 
 (defn css-path []
   (if-some [last-modified
@@ -40,7 +34,7 @@
   {:status 204})
 
 (defn page
-  [{:keys [title anti-forgery-token]} & body]
+  [{:keys [title]} & body]
   (html-response
    [:html {:lang "en"}
     [:head
@@ -52,11 +46,7 @@
      [:link {:rel  "stylesheet"
              :href (css-path)}]
      [:script {:type "module"
-               :src  datastar-script-url}]
-     [:script {:type "module"}
-      (biff.datastar/configure-csrf
-       datastar-script-url
-       anti-forgery-token)]]
+               :src  datastar-script-url}]]
     (into
      [:body.bg-slate-50.text-slate-900]
      body)]))

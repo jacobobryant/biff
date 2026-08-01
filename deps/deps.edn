@@ -34,7 +34,6 @@
         org.slf4j/slf4j-simple               {:mvn/version "2.0.18"}
         org.xerial/sqlite-jdbc               {:mvn/version "3.53.2.0"}
         refactor-nrepl/refactor-nrepl        {:mvn/version "3.13.0"}
-        ring/ring-anti-forgery               {:mvn/version "1.4.0"}
         ring/ring-core                       {:mvn/version "1.15.4"}
         ring/ring-defaults                   {:mvn/version "0.7.0"}
         ring/ring-jetty-adapter              {:mvn/version "1.15.4"}
