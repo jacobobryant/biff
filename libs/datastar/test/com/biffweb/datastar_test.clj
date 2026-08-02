@@ -1,12 +1,25 @@
 (ns com.biffweb.datastar-test
   (:require
+   [clojure.java.io :as io]
    [clojure.string :as str]
    [clojure.test :refer [deftest is]]
    [com.biffweb.datastar :as datastar]
-   [com.biffweb.datastar.impl.brotli :as brotli]
    [ring.core.protocols :as rp])
   (:import
-   (java.io PipedInputStream PipedOutputStream)))
+   (com.aayushatharva.brotli4j.decoder BrotliInputStream)
+   (java.io ByteArrayOutputStream IOException PipedInputStream PipedOutputStream)))
+
+(defn- decompress-stream [data]
+  (with-open [in  (-> data io/input-stream BrotliInputStream.)
+              out (ByteArrayOutputStream.)]
+    (.enableEagerOutput in)
+    (try
+      (loop [read (.read in)]
+        (when (<= 0 read)
+          (.write out read)
+          (recur (.read in))))
+      (catch IOException _))
+    (str out)))
 
 (defn- wait-for [pred]
   (loop [remaining 100]
@@ -18,20 +31,10 @@
 
 (deftest init-opts-include-page-request-header
   (let [opts datastar/init-opts]
-    (is (= datastar/tab-id-js (:data-signals:tab-id opts)))
+    (is (= "self.crypto.randomUUID().substring(0,8)"
+           (:data-signals:tab-id opts)))
     (is (str/includes? (:data-init opts) "@get("))
-    (is (str/includes? (:data-init opts) "'X-Biff-Datastar-Page-Request': 'true'"))
-    (is (not (str/includes? (:data-init opts) "'X-CSRF-Token': \"csrf-token\"")))))
-
-(deftest configure-csrf-wraps-actions
-  (let [script         (datastar/configure-csrf "https://example.test/datastar.js" "csrf-token")
-        default-script (datastar/configure-csrf "csrf-token")]
-    (is (str/includes? script "import { action, actions } from \"https://example.test/datastar.js\";"))
-    (is (str/includes? script "const methods = ['get', 'post', 'put', 'patch', 'delete'];"))
-    (is (str/includes? script "headers: {"))
-    (is (str/includes? script "'X-CSRF-Token': \"csrf-token\""))
-    (is (str/includes? script "...(options.headers ?? {})"))
-    (is (str/includes? default-script "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.1/bundles/datastar.js"))))
+    (is (str/includes? (:data-init opts) "'X-Biff-Datastar-SSE-Request': 'true'"))))
 
 (deftest refresh-bumps-epoch
   (let [lock-state (datastar/new-lock)]
@@ -74,7 +77,7 @@
                                   "</div>")}))
         request  (merge (datastar/new-lock)
                         {:request-method :get
-                         :headers        {"x-biff-datastar-page-request" "true"
+                         :headers        {"x-biff-datastar-sse-request" "true"
                                           "accept"                       "text/event-stream"
                                           "datastar-request"             "true"}
                          :params         {"datastar" "{\"tabId\":\"tab-1\"}"}})
@@ -89,7 +92,7 @@
         (is (wait-for #(pos? (.available in))))
         (let [buf (byte-array (.available in))]
           (.read in buf)
-          (is (str/includes? (brotli/decompress-stream buf) "Hello from tab-1")))
+          (is (str/includes? (decompress-stream buf) "Hello from tab-1")))
         (finally
           (datastar/refresh request)
           (.close in)

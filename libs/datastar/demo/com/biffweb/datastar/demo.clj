@@ -127,15 +127,12 @@
 (defn- channel-exists? [state channel-id]
   (contains? (:channels state) channel-id))
 
-(defn- page-head [req]
+(defn- page-head []
   [:head
    [:meta {:charset "utf-8"}]
    [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-   [:meta {:name "csrf-token" :content (:anti-forgery-token req)}]
    [:script {:type "module"
              :src  datastar-script-url}]
-   [:script {:type "module"}
-    (chassis/raw (biff.datastar/configure-csrf datastar-script-url (:anti-forgery-token req)))]
    [:title "biff.datastar demo"]
    [:style "
 body { font-family: system-ui, sans-serif; margin: 0; background: #f5f7fb; color: #1f2937; }
@@ -273,7 +270,7 @@ button.secondary { background: #475569; }
                     (content req state)
                     [chassis/doctype-html5
                      [:html {:lang "en"}
-                      (page-head req)
+                      (page-head)
                       [:body
                        [:div (merge {:class "stack"} biff.datastar/init-opts)
                         (content req state)]]]])]
@@ -344,9 +341,9 @@ button.secondary { background: #475569; }
     (not-found req)))
 
 (def app-sync
-  (-> routes
-      (biff.datastar/wrap-datastar
-       lock-state)
+  (-> (fn [request]
+        (routes (merge request lock-state)))
+      biff.datastar/wrap-datastar
       wrap-session
       (wrap-json-params {:keywords? true})
       wrap-params))

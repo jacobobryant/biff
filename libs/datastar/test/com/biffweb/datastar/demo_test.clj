@@ -13,8 +13,6 @@
         body     (:body response)]
     (is (= 200 (:status response)))
     (is (str/includes? body demo/datastar-script-url))
-    (is (str/includes? body "const methods = ['get', 'post', 'put', 'patch', 'delete'];"))
-    (is (str/includes? body "'X-CSRF-Token': "))
     (is (str/includes? body "data-signals:tab-id"))
     (is (str/includes? body "data-bind:channelId"))
     (is (str/includes? body "data-signals:message-count"))
