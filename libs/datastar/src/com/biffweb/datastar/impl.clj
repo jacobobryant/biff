@@ -21,9 +21,8 @@
 (def ^:private default-options
   {:biff.datastar/rate-limit-ms 15
    ;; copied from Hyperlith
-   :biff.datastar/window-size 18
-   :biff.datastar/quality 5
-   :biff.datastar/buffer-size 16384})
+   :biff.datastar/window-size   18
+   :biff.datastar/quality       5})
 
 ;;;; Brotli ====================================================================
 
@@ -34,12 +33,13 @@
 (defn new-brotli-stream ^BrotliOutputStream
   [^ByteArrayOutputStream compressed-buffer
    {:biff.datastar/keys [buffer-size quality window-size]}]
-  (BrotliOutputStream. compressed-buffer
-                       (doto (Encoder$Parameters.)
-                         (.setMode Encoder$Mode/TEXT)
-                         (.setWindow window-size)
-                         (.setQuality quality))
-                       buffer-size))
+  (let [params (doto (Encoder$Parameters.)
+                 (.setMode Encoder$Mode/TEXT)
+                 (.setWindow window-size)
+                 (.setQuality quality))]
+    (if buffer-size
+      (BrotliOutputStream. compressed-buffer params buffer-size)
+      (BrotliOutputStream. compressed-buffer params))))
 
 (defn compress-chunk
   [^ByteArrayOutputStream compressed-buffer
@@ -52,22 +52,7 @@
     (.reset compressed-buffer)
     compressed-bytes))
 
-;;;; Page init =================================================================
-
-(def ^:private open-sse-action
-  (str "@get("
-       "window.location.pathname + "
-       "(window.location.search + '&biff-datastar-sse=true').replace(/^&/,'?'), "
-       "{openWhenHidden: false, retryMaxCount: Infinity})"))
-
-(def init-opts
-  {:data-signals:biff_datastar_tab-id__case.kebab
-   "self.crypto.randomUUID().substring(0,8)"
-
-   :data-init              open-sse-action
-   :data-on:online__window open-sse-action})
-
-;;;; Signal parsing ============================================================
+;;;; Signals ===================================================================
 
 (defn- parse-signal-str [s]
   (let [segments (str/split s #"_")]
@@ -96,27 +81,71 @@
                       (update-keys (comp parse-signal-str name)))
                    (first (filterv map? [body-params body params])))))
 
-(defn- merge-datastar-context [request]
-  (let [signals (parse-signals request)]
-    (into request
-          (filter (comp some? val))
-          {:biff.datastar/signals signals
-           :biff.datastar/tab-id  (:biff.datastar/tab-id signals)
+(defn- merge-signals [request]
+  (let [signals    (parse-signals request)
+        tab-id     (some-> (:biff.datastar/tab-id signals) parse-uuid)
+        csrf-token (:biff.datastar/anti-forgery-token signals)]
+    (cond-> request
+      signals (assoc :biff.datastar/signals signals)
+      tab-id  (assoc :biff.datastar/tab-id tab-id)
+      tab-id  (assoc-in [:biff.datastar/signals :biff.datastar/tab-id] tab-id)
+      csrf-token (assoc-in [:headers "x-csrf-token"] csrf-token))))
 
-           :biff.datastar/sse-request
-           (= (get-in request [:query-params "biff-datastar-sse"]) "true")})))
+(defn wrap-signals [handler]
+  (fn [request]
+    (handler (merge-signals request))))
+
+(defn- signal-name-part [x]
+  (if (keyword? x)
+    (do
+      (assert (not (str/includes? (str x) "_"))
+              "Underscores are not allowed in signal keywords.")
+      (assert (not (str/includes? (name x) "."))
+              "Periods are not allowed in signal keyword names.")
+      (-> (subs (str x) 1)
+          (str/replace #"[./]" "_")))
+    (str x)))
+
+(defn signal-name [signal]
+  (if (vector? signal)
+    (str/join "." (mapv signal-name-part signal))
+    (signal-name-part signal)))
 
 (defn- key-json [k]
   (if (keyword? k)
-    (do
-      (assert (not (str/includes? (str k) "_"))
-              "Underscores are not allowed in signal keywords")
-      (-> (subs (str k) 1)
-          (str/replace #"[./]" "_")))
+    (signal-name-part k)
     (str k)))
 
 (defn signals-json [signals]
   (json/write-str signals :key-fn key-json))
+
+(defn patch-signals [signals]
+  {:status  200
+   :headers {"Cache-Control" "no-store"
+             "Content-Type"  "text/event-stream; charset=utf-8"}
+   :body    (str "event: datastar-patch-signals\n"
+                 "data: signals " (signals-json signals) "\n\n")})
+
+;;;; Page init =================================================================
+
+(def ^:private open-sse-action
+  (str "@get("
+       "window.location.pathname + "
+       "(window.location.search + '&biff-datastar-sse=true').replace(/^&/,'?'), "
+       "{openWhenHidden: false, retryMaxCount: Infinity})"))
+
+(defn init-opts
+  ([]
+   (init-opts {}))
+  ([{:keys [anti-forgery-token]}]
+   (merge {:data-signals:biff_datastar_tab-id__case.kebab
+           "self.crypto.randomUUID()"
+
+           :data-init              open-sse-action
+           :data-on:online__window open-sse-action}
+          (when anti-forgery-token
+            {:data-signals (signals-json {:biff.datastar/anti-forgery-token
+                                          anti-forgery-token})}))))
 
 ;;;; SSE =======================================================================
 
@@ -186,8 +215,8 @@
                    observed-epoch
                    (wait-for-refresh request observed-epoch)
 
-                   elapsed-ms     (- (System/currentTimeMillis)
-                                     iteration-start-ms)]
+                   elapsed-ms (- (System/currentTimeMillis)
+                                 iteration-start-ms)]
                (when (< elapsed-ms rate-limit-ms)
                  (Thread/sleep (- rate-limit-ms elapsed-ms)))
                (recur body-hash observed-epoch))))
@@ -197,11 +226,15 @@
          (catch IOException _e)
          (catch Exception e (log/error e)))))))
 
-(defn wrap-datastar
-  [handler]
+(defn wrap-sse-render [handler]
   (fn [request]
-    (let [request (merge-datastar-context request)]
-      (if (:biff.datastar/sse-request request)
+    (let [has-signals (contains? request :biff.datastar/signals)
+          sse-request (= (get-in request [:query-params "biff-datastar-sse"])
+                         "true")
+          request     (cond-> request
+                        (not has-signals) merge-signals
+                        true (assoc :biff.datastar/sse-request sse-request))]
+      (if sse-request
         (do
           (biff.core/validate request {:required [:biff.datastar/lock
                                                   :biff.datastar/condition
@@ -217,6 +250,6 @@
 
 (defn module
   []
-  {:biff.ring/site-middleware [wrap-datastar]
+  {:biff.ring/site-middleware [wrap-sse-render]
    :biff.core/on-tx           #'refresh
    :biff.core/init            (fn [_] (new-lock))})

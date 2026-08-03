@@ -18,7 +18,7 @@ biff.core also contains:
 ### Dependency
 
 ```clojure
-com.biffweb/core {:mvn/version "2.0.0-rc11"}
+com.biffweb/core {:mvn/version "2.0.0-rc12"}
 ```
 
 ### Status

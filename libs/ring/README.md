@@ -12,11 +12,11 @@ Features:
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "2.0.0-rc11"}
+com.biffweb/ring {:mvn/version "2.0.0-rc12"}
 ```
 
-If you don't want to use Jetty, you can include `:exclusions
-[ring/ring-jetty-adapter]`.
+If you don't want to use Jetty, you can do `com.biffweb/ring {:mvn/version ...,
+:exclusions [ring/ring-jetty-adapter]}`.
 
 ### Status
 

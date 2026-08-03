@@ -197,13 +197,13 @@
 
 (defn- app-container
   [_req {:keys [session/user
-               todo/ui-state
-               app/show-admin-link?
-               todo/items
-               todo/archived-items
-               todo/completed-count
-               todo/archived-count
-               todo/remaining-count]}]
+                todo/ui-state
+                app/show-admin-link?
+                todo/items
+                todo/archived-items
+                todo/completed-count
+                todo/archived-count
+                todo/remaining-count]}]
   (let [show-archived? (:todo/show-archived ui-state)
         filter-k       (:todo/filter ui-state)]
     [:div#biff-datastar-content.space-y-8
@@ -312,7 +312,7 @@
         (ui/page
          {:title "Biff Demo App"}
          [:div.mx-auto.my-12.max-w-5xl.space-y-6
-          (merge {:class "space-y-6"} biff.datastar/init-opts)
+          (merge {:class "space-y-6"} (biff.datastar/init-opts))
           container])))))
 
 (defroute create-todo-route "/app/todos"

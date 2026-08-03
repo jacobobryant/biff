@@ -18,13 +18,12 @@ projects=(
   "$root/libs/sqlite"
   "$root/libs/xtdb"
   "$root/libs/ring"
+  "$root/libs/datastar"
   #"$root/libs/cljrun"
-  #"$root/libs/background"
-  #"$root/libs/admin"
-  #"$root/libs/authenticate"
-  #"$root/libs/datastar"
-  #"$root/libs/sqlite"
   #"$root/libs/tasks"
+  #"$root/libs/background"
+  #"$root/libs/authenticate"
+  #"$root/libs/admin"
   #"$root"
 )
 
