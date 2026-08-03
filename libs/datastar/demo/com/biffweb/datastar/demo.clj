@@ -1,6 +1,5 @@
 (ns com.biffweb.datastar.demo
   (:require
-   [clojure.data.json :as json]
    [clojure.string :as str]
    [com.biffweb.datastar :as biff.datastar]
    [dev.onionpancakes.chassis.core :as chassis]
@@ -14,29 +13,10 @@
    (java.util.concurrent Executors)
    (org.eclipse.jetty.util.thread ExecutorThreadPool)))
 
-(defonce app-state
-  (atom {:channels      {"general" {:id       "general"
-                                    :name     "general"
-                                    :messages []}}
-         :channel-order ["general"]
-         :tab-state     {}}))
-
-(defonce lock-state
-  (biff.datastar/new-lock))
-
 (def datastar-script-url
   "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.1/bundles/datastar.js")
 
 (def new-channel-option "__new__")
-
-(add-watch app-state ::refresh
-           (fn [_ _ old-state new-state]
-             (when-not (= old-state new-state)
-               (future (biff.datastar/refresh lock-state)))))
-
-(defn- vthread-pool []
-  (doto (ExecutorThreadPool.)
-    (.setVirtualThreadsExecutor (Executors/newVirtualThreadPerTaskExecutor))))
 
 (defn- post [path]
   (str "@post("
@@ -46,7 +26,7 @@
 (defn- signal-patch-body [signals]
   (str "event: datastar-patch-signals\n"
        "data: signals "
-       (json/write-str signals)
+       (biff.datastar/signals-json signals)
        "\n\n"))
 
 (defn- signal-patch-response [signals]
@@ -162,12 +142,12 @@ button.secondary { background: #475569; }
                               (not (channel-exists? state selected-option)))]
     [:div.stack
      [:form.stack (merge {:data-on:change (post "/channel")}
-                         (input-signal "channelId" selected-option))
+                         (input-signal "chat_channel-id__case.kebab" selected-option))
       [:label
        "Channel"
        [:select {:id                  "channel-select"
                  :name                "channelId"
-                 :data-bind:channelId ""}
+                 :data-bind:chat_channel-id__case.kebab ""}
         (for [{:keys [id name]} (channels state)]
           [:option (cond-> {:value id}
                      (= id selected-option)
@@ -185,14 +165,14 @@ button.secondary { background: #475569; }
      (when (new-channel-selected? req state)
        [:form.stack
         (merge {:data-on:submit (post "/channels")}
-               (input-signal "newChannelName" ""))
+               (input-signal "chat_new-channel-name__case.kebab" ""))
         [:label
          "Create a channel"
          [:input {:id                       "new-channel-name"
                   :name                     "newChannelName"
                   :placeholder              "team-updates"
                   :required                 true
-                  :data-bind:newChannelName ""}]]
+                  :data-bind:chat_new-channel-name__case.kebab ""}]]
         [:div.row
          [:button {:type "submit"} "Create channel"]]])]))
 
@@ -209,10 +189,10 @@ button.secondary { background: #475569; }
       [:h2 {:style "margin:0"} (str "#" name)]
       [:div.muted (str (count messages) " messages")]]
      [:div#messages.messages
-      {:data-signals:message-count                 (str (count messages))
-       :data-signals:messages-at-bottom__ifmissing "true"
-       :data-on:scroll                             "$messagesAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 8"
-       :data-effect                                "$messageCount, $messagesAtBottom && requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; })"}
+      {:data-signals:chat_message-count__case.kebab                 (str (count messages))
+       :data-signals:chat_messages-at-bottom__case.kebab__ifmissing "true"
+       :data-on:scroll                                               "$chat_messages-at-bottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 8"
+       :data-effect                                                  "$chat_message-count, $chat_messages-at-bottom && requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; })"}
       (if (seq messages)
         [:div.message-list
          (for [{:keys [id display-name text created-at]} messages]
@@ -226,23 +206,23 @@ button.secondary { background: #475569; }
 (defn- composer [channel-id]
   [:form.stack
    (merge {:data-on:submit (post "/messages")}
-          (input-signal "displayName" "Alice")
-          (input-signal "channelId" channel-id)
-          (input-signal "messageText" ""))
+          (input-signal "chat_display-name__case.kebab" "Alice")
+          (input-signal "chat_channel-id__case.kebab" channel-id)
+          (input-signal "chat_message-text__case.kebab" ""))
    [:label
     "Display name"
     [:input {:id                    "display-name"
              :name                  "displayName"
              :placeholder           "Sprite"
              :required              true
-             :data-bind:displayName ""}]]
+             :data-bind:chat_display-name__case.kebab ""}]]
    [:label
     "Message"
     [:textarea {:id                    "message-text"
                 :name                  "messageText"
                 :placeholder           "Type a message..."
                 :required              true
-                :data-bind:messageText ""}]]
+                :data-bind:chat_message-text__case.kebab ""}]]
    [:div.row
     [:button {:type "submit"} "Send"]]])
 
@@ -284,12 +264,12 @@ button.secondary { background: #475569; }
          (:biff.datastar/tab-id req)
          assoc
          :channel-id
-         (or (signal-value req :channelid)
+         (or (signal-value req :chat/channel-id)
              "general"))
   (noop-response))
 
 (defn- create-channel-handler [req]
-  (if-let [channel-id (signal-value req :newchannelname)]
+  (if-let [channel-id (signal-value req :chat/new-channel-name)]
     (do
       (swap! app-state
              (fn [state]
@@ -299,14 +279,14 @@ button.secondary { background: #475569; }
                                      assoc
                                      :channel-id
                                      channel-id))))
-      (signal-patch-response {"channelid"      channel-id
-                              "newchannelname" ""}))
+      (signal-patch-response {:chat/channel-id       channel-id
+                              :chat/new-channel-name ""}))
     {:status 204}))
 
 (defn- send-message-handler [req]
-  (let [channel-id   (signal-value req :channelid)
-        display-name (signal-value req :displayname)
-        message-text (signal-value req :messagetext)
+  (let [channel-id   (signal-value req :chat/channel-id)
+        display-name (signal-value req :chat/display-name)
+        message-text (signal-value req :chat/message-text)
         message-id   (str (UUID/randomUUID))
         state        (if (and channel-id display-name message-text)
                        (swap! app-state
@@ -323,7 +303,7 @@ button.secondary { background: #475569; }
                        @app-state)]
     (if (some #(= message-id (:id %))
               (get-in state [:channels channel-id :messages]))
-      (signal-patch-response {"messagetext" ""})
+      (signal-patch-response {:chat/message-text ""})
       {:status 204})))
 
 (defn- not-found [_]
@@ -331,39 +311,52 @@ button.secondary { background: #475569; }
    :headers {"Content-Type" "text/plain; charset=utf-8"}
    :body    "not found"})
 
-(defn- routes [req]
-  (case [(:request-method req) (:uri req)]
-    [:get "/"] (page-response req)
-    [:head "/"] (page-response req)
-    [:post "/channel"] (set-channel-handler req)
-    [:post "/channels"] (create-channel-handler req)
-    [:post "/messages"] (send-message-handler req)
-    (not-found req)))
+(defn- base-handler [req]
+  ((case [(:request-method req) (:uri req)]
+     [:get "/"] page-response
+     [:head "/"] page-response
+     [:post "/channel"] set-channel-handler
+     [:post "/channels"] create-channel-handler
+     [:post "/messages"] send-message-handler
+     not-found)
+   req))
 
-(def app-sync
-  (-> (fn [request]
-        (routes (merge request lock-state)))
+(def handler
+  (-> base-handler
       biff.datastar/wrap-datastar
       wrap-session
       (wrap-json-params {:keywords? true})
       wrap-params))
 
-(defonce server (atom nil))
+(defonce system (atom nil))
+
+(def default-app-state
+  {:channels      {"general" {:id       "general"
+                              :name     "general"
+                              :messages []}}
+   :channel-order ["general"]
+   :tab-state     {}})
 
 (defn start! []
-  (when-let [server* @server]
-    (.stop server*))
-  (reset! server
-          (ring-jetty/run-jetty app-sync
-                                {:join?       false
-                                 :port        8080
-                                 :thread-pool (vthread-pool)}))
-  @server)
+  (let [state  (atom default-app-state)
+        ctx    (merge (biff.datastar/new-lock)
+                      {::state state})
+        _ (add-watch state ::refresh
+                     (fn [_ _ old-state new-state]
+                       (when-not (= old-state new-state)
+                         (future (biff.datastar/refresh ctx)))))
+        server (ring-jetty/run-jetty #(handler (merge % ctx))
+                                     {:join? false :port 8080})
+        ctx (merge ctx {::server server
+                        ::close (fn []
+                                  (.stop server)
+                                  (remove-watch state ::refresh))})]
+    (reset! system ctx)))
 
 (defn stop! []
-  (when-let [server* @server]
-    (.stop server*)
-    (reset! server nil)))
+  (when-some [close (::close @system)]
+    (close))
+  (reset! system nil))
 
 (defn -main [& _]
   (start!)

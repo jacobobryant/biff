@@ -45,6 +45,9 @@
       (fn [modules-var]
         {:example/get-foo #(get-foo @modules-var)})}
 
+   Includes a default init function which defines a :biff.core/on-tx function
+   that calls :biff.core/on-tx from the other modules in a doseq.
+
    Each component is a function that receives the system map, starts stateful
    resources or does other initialization as needed, and returns an updated
    system map. Components can add stop functions (zero-arg functions that stop a
@@ -64,16 +67,6 @@
    Calls the :biff.core/stop functions from system in reverse order."
   [system]
   (impl.sys/stop system))
-
-(defn module
-  "Returns a module that aggregates :biff.core/on-tx.
-
-   Contains an init function which defines a :biff.core/on-tx function that
-   calls :biff.core/on-tx from the other modules in a doseq. As such, on-tx
-   functions should run quickly and do heavier work in a background thread if
-   needed."
-  []
-  (impl.sys/module))
 
 (defn register
   "Merges a map of Malli schemas into Biff's global schema registry.

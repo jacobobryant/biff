@@ -3,13 +3,11 @@
             [clojure.tools.logging :as log]
             [com.biffweb.core.impl.validation :as impl.v]))
 
-(defn module []
-  {:biff.core/init
-   (fn [modules-var]
+(defn- default-init [modules-var]
      {:biff.core/on-tx
       (fn [ctx]
         (doseq [on-tx (keep :biff.core/on-tx @modules-var)]
-          (on-tx ctx)))})})
+       (on-tx ctx)))})
 
 (defn- safe-merge [& ms]
   (when-some [duplicate-keys (->> (mapcat keys ms)
@@ -29,7 +27,8 @@
        (keep :biff.core/init)
        (mapv #(% modules-var))
        impl.v/validate
-       (apply safe-merge)))
+       (apply safe-merge)
+       (merge (default-init modules-var))))
 
 (defn- shim-old-component
   "Maintain backwards compatibility with Biff components that still use :biff/stop"

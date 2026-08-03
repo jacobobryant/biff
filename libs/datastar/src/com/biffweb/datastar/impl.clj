@@ -71,8 +71,10 @@
 
 (defn- parse-signal-str [s]
   (let [segments (str/split s #"_")]
-    (keyword (str/join "." (subvec segments 0 (dec (count segments))))
-             (peek segments))))
+    (if (= (count segments) 1)
+      (keyword s)
+      (keyword (str/join "." (subvec segments 0 (dec (count segments))))
+               (peek segments)))))
 
 (defn- parse-signals [{:keys [headers
                               request-method
@@ -106,14 +108,17 @@
 
 (defn- key-json [k]
   (if (keyword? k)
-    (-> (subs (str k) 1)
-        (str/replace #"[./]" "_"))
+    (do
+      (assert (not (str/includes? (str k) "_"))
+              "Underscores are not allowed in signal keywords")
+      (-> (subs (str k) 1)
+          (str/replace #"[./]" "_")))
     (str k)))
 
 (defn signals-json [signals]
   (json/write-str signals :key-fn key-json))
 
-;;;; SSE stuff =================================================================
+;;;; SSE =======================================================================
 
 ;; Called on system startup
 (defn new-lock []
@@ -166,12 +171,13 @@
              (let [iteration-start-ms (System/currentTimeMillis)
                    response           (handler request)
                    body               (when (= (:status response) 200)
-                                        (or (:body response) ""))
-                   body-hash          (hash body)
-                   body-changed?      (not= body-hash previous-body-hash)
+                                        (:body response))
+                   body-hash          (if body
+                                        (hash body)
+                                        previous-body-hash)
 
                    _
-                   (when body-changed?
+                   (when (not= body-hash previous-body-hash)
                      (->> (patch-elements-event body)
                           (compress-chunk compressed-buffer brotli-stream)
                           (.write response-output))
@@ -206,6 +212,8 @@
                      "Content-Encoding" "br"}
            :body    (streaming-response-body handler request)})
         (handler request)))))
+
+;;;; biff.core =================================================================
 
 (defn module
   []

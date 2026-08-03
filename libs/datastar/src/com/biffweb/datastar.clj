@@ -8,7 +8,6 @@
  {:biff.datastar/buffer-size       :int
   :biff.datastar/condition         [:fn #(instance? Condition %)]
   :biff.datastar/epoch             [:fn #(instance? clojure.lang.IAtom %)]
-  :biff.datastar/heartbeat-minutes :int
   :biff.datastar/lock              [:fn #(instance? ReentrantLock %)]
   :biff.datastar/quality           :int
   :biff.datastar/rate-limit-ms     [:and :int pos?]
