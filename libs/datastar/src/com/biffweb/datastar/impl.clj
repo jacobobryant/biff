@@ -22,8 +22,7 @@
   {:biff.datastar/rate-limit-ms 15
    ;; copied from Hyperlith
    :biff.datastar/window-size   18
-   :biff.datastar/quality       5
-   :biff.datastar/buffer-size   16384})
+   :biff.datastar/quality       5})
 
 ;;;; Brotli ====================================================================
 
@@ -34,12 +33,13 @@
 (defn new-brotli-stream ^BrotliOutputStream
   [^ByteArrayOutputStream compressed-buffer
    {:biff.datastar/keys [buffer-size quality window-size]}]
-  (BrotliOutputStream. compressed-buffer
-                       (doto (Encoder$Parameters.)
-                         (.setMode Encoder$Mode/TEXT)
-                         (.setWindow window-size)
-                         (.setQuality quality))
-                       buffer-size))
+  (let [params (doto (Encoder$Parameters.)
+                 (.setMode Encoder$Mode/TEXT)
+                 (.setWindow window-size)
+                 (.setQuality quality))]
+    (if buffer-size
+      (BrotliOutputStream. compressed-buffer params buffer-size)
+      (BrotliOutputStream. compressed-buffer params))))
 
 (defn compress-chunk
   [^ByteArrayOutputStream compressed-buffer

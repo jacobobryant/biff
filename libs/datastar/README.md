@@ -1,4 +1,4 @@
-# biff.datastar (alpha/wip/ai generated)
+# biff.datastar
 
 here's how I described this in slack:
 
