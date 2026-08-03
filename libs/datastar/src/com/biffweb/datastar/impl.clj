@@ -21,9 +21,9 @@
 (def ^:private default-options
   {:biff.datastar/rate-limit-ms 15
    ;; copied from Hyperlith
-   :biff.datastar/window-size 18
-   :biff.datastar/quality 5
-   :biff.datastar/buffer-size 16384})
+   :biff.datastar/window-size   18
+   :biff.datastar/quality       5
+   :biff.datastar/buffer-size   16384})
 
 ;;;; Brotli ====================================================================
 
@@ -67,7 +67,7 @@
    :data-init              open-sse-action
    :data-on:online__window open-sse-action})
 
-;;;; Signal parsing ============================================================
+;;;; Signals ===================================================================
 
 (defn- parse-signal-str [s]
   (let [segments (str/split s #"_")]
@@ -106,17 +106,36 @@
            :biff.datastar/sse-request
            (= (get-in request [:query-params "biff-datastar-sse"]) "true")})))
 
+(defn- signal-name-part [x]
+  (if (keyword? x)
+    (do
+      (assert (not (str/includes? (str x) "_"))
+              "Underscores are not allowed in signal keywords.")
+      (assert (not (str/includes? (name x) "."))
+              "Periods are not allowed in signal keyword names.")
+      (-> (subs (str x) 1)
+          (str/replace #"[./]" "_")))
+    (str x)))
+
+(defn signal-name [signal]
+  (if (vector? signal)
+    (str/join "." (mapv signal-name-part signal))
+    (signal-name-part signal)))
+
 (defn- key-json [k]
   (if (keyword? k)
-    (do
-      (assert (not (str/includes? (str k) "_"))
-              "Underscores are not allowed in signal keywords")
-      (-> (subs (str k) 1)
-          (str/replace #"[./]" "_")))
+    (signal-name-part k)
     (str k)))
 
 (defn signals-json [signals]
   (json/write-str signals :key-fn key-json))
+
+(defn patch-signals [signals]
+  {:status  200
+   :headers {"Cache-Control" "no-store"
+             "Content-Type"  "text/event-stream; charset=utf-8"}
+   :body    (str "event: datastar-patch-signals\n"
+                 "data: signals " (signals-json signals) "\n\n")})
 
 ;;;; SSE =======================================================================
 
@@ -186,8 +205,8 @@
                    observed-epoch
                    (wait-for-refresh request observed-epoch)
 
-                   elapsed-ms     (- (System/currentTimeMillis)
-                                     iteration-start-ms)]
+                   elapsed-ms (- (System/currentTimeMillis)
+                                 iteration-start-ms)]
                (when (< elapsed-ms rate-limit-ms)
                  (Thread/sleep (- rate-limit-ms elapsed-ms)))
                (recur body-hash observed-epoch))))

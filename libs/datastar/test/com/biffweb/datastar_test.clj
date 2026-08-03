@@ -29,12 +29,12 @@
         (Thread/sleep 20)
         (recur (dec remaining))))))
 
-(deftest init-opts-include-page-request-header
+(deftest init-opts-open-sse-request
   (let [opts datastar/init-opts]
     (is (= "self.crypto.randomUUID().substring(0,8)"
-           (:data-signals:tab-id opts)))
+           (:data-signals:biff_datastar_tab-id__case.kebab opts)))
     (is (str/includes? (:data-init opts) "@get("))
-    (is (str/includes? (:data-init opts) "'X-Biff-Datastar-SSE-Request': 'true'"))))
+    (is (str/includes? (:data-init opts) "biff-datastar-sse=true"))))
 
 (deftest refresh-bumps-epoch
   (let [lock-state (datastar/new-lock)]
@@ -51,7 +51,7 @@
         request     (merge (datastar/new-lock)
                            {:request-method :post
                             :headers        {"datastar-request" "true"}
-                            :body-params    {:tabId "tab-1"}})]
+                            :body-params    {:biff_datastar_tab-id "tab-1"}})]
     (handler request)
     (is (= "tab-1" @seen-tab-id))))
 
@@ -62,11 +62,25 @@
                      :body   (:biff.datastar/signals req)}))
         response (handler {:request-method :post
                            :headers        {"datastar-request" "true"}
-                           :body-params    {"displayname" "Alice"
-                                            :messageText  "hello"}})]
-    (is (= {:displayname "Alice"
-            :messageText "hello"}
+                           :body-params    {"user_display-name" "Alice"
+                                            :message_text       "hello"}})]
+    (is (= {:user/display-name "Alice"
+            :message/text      "hello"}
            (:body response)))))
+
+(deftest wrap-datastar-preserves-unnamespaced-signal-keys
+  (let [handler  (datastar/wrap-datastar
+                  (fn [req]
+                    {:status 200
+                     :body   (:biff.datastar/signals req)}))
+        response (handler {:request-method :post
+                           :headers        {"datastar-request" "true"}
+                           :body-params    {"counter" 1}})]
+    (is (= {:counter 1} (:body response)))))
+
+(deftest nested-signal-names
+  (is (= "foo_bar_baz.0.hello"
+         (datastar/signal-name [:foo.bar/baz 0 :hello]))))
 
 (deftest sse-response-streams-initial-patch
   (let [handler  (datastar/wrap-datastar
@@ -77,10 +91,10 @@
                                   "</div>")}))
         request  (merge (datastar/new-lock)
                         {:request-method :get
-                         :headers        {"x-biff-datastar-sse-request" "true"
-                                          "accept"                       "text/event-stream"
-                                          "datastar-request"             "true"}
-                         :params         {"datastar" "{\"tabId\":\"tab-1\"}"}})
+                         :headers        {"accept"           "text/event-stream"
+                                          "datastar-request" "true"}
+                         :query-params   {"biff-datastar-sse" "true"
+                                          "datastar"          "{\"biff_datastar_tab-id\":\"tab-1\"}"}})
         response (handler request)
         body     (:body response)]
     (is (= 200 (:status response)))

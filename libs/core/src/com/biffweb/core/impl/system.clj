@@ -4,9 +4,9 @@
             [com.biffweb.core.impl.validation :as impl.v]))
 
 (defn- default-init [modules-var]
-     {:biff.core/on-tx
-      (fn [ctx]
-        (doseq [on-tx (keep :biff.core/on-tx @modules-var)]
+  {:biff.core/on-tx
+   (fn [ctx]
+     (doseq [on-tx (keep :biff.core/on-tx @modules-var)]
        (on-tx ctx)))})
 
 (defn- safe-merge [& ms]

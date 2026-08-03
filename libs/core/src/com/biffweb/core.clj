@@ -147,3 +147,7 @@
    evaluated immediately, unlike a normal Delay."
   [x]
   (impl.sec/secret-delay x))
+
+;; technically removing this would be a breaking change--might do it right
+;; before the non-prerelease
+(def ^:no-doc module {})
