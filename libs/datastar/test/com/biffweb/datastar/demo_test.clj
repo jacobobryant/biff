@@ -49,7 +49,7 @@
   (let [state    (test-state)
         response (#'demo/send-message-handler
                   {::demo/state           state
-                   :biff.datastar/signals {::demo/channel-id  "general"
+                   :biff.datastar/signals {::demo/channel-id   "general"
                                            ::demo/display-name "Alice"
                                            ::demo/message-text "hello"}})]
     (is (= 200 (:status response)))
@@ -69,7 +69,7 @@
                            (update :channel-order conj "noice")))
         response (#'demo/send-message-handler
                   {::demo/state           state
-                   :biff.datastar/signals {::demo/channel-id  "noice"
+                   :biff.datastar/signals {::demo/channel-id   "noice"
                                            ::demo/display-name "Alice"
                                            ::demo/message-text "hello"}})]
     (is (= 200 (:status response)))

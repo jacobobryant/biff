@@ -15,5 +15,5 @@
                        ring/ring-json            {:mvn/version "0.5.1"}
                        ring/ring-jetty-adapter   {:mvn/version "1.15.4"}
                        org.slf4j/slf4j-simple    {:mvn/version "2.0.18"}
-                       metosin/malli                       {:mvn/version "0.20.1"}}
+                       metosin/malli             {:mvn/version "0.20.1"}}
          :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}
