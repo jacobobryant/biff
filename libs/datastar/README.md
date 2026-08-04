@@ -1,5 +1,93 @@
 # biff.datastar
 
+A lightweight approach for writing server-side-rendered web apps with Clojure
+and [Datastar](https://data-star.dev). The result is ergonomic for both simple
+and complex UIs.
+
+This library implements the same general "immediate mode" architecture as
+[andersmurphy/hyperlith](https://github.com/andersmurphy/hyperlith):
+
+- Each page in your application starts a long-lived SSE connection.
+- Whenever backend state (the database) changes, the entire page is re-rendered.
+- If anything in the page changed, the new HTML is compressed with Brotli and
+  pushed to the client.
+- UI state that needs to be used by your backend rendering logic is stored in
+  server-side per-tab state.
+
+Your application only needs to define a single render function per page. Your
+POST/etc request handlers update the backend state and return an empty response,
+letting biff.datastar handle the UI updates. If your app needs real-time updates
+or collaborative features, those basically come for free.
+
+### Dependency
+
+```clojure
+com.biffweb/ring {:mvn/version "..."}
+```
+
+### Status
+
+This library will be a release candidate until all [the other Biff 2
+libraries](/README.md) have been released. Until then there could be breaking
+changes.
+
+This architecture is obviously a much less well-trodden path than a typical
+request/response setup, and I personally haven't used it at scale. For side
+projects, you'll be fine (probably). If you're working on a Serious Project,
+you'll want to take some measurements.
+
+Some resources:
+
+- [Anders Murphy's blog](https://andersmurphy.com), e.g. see [Realtime
+  collaborative webapps without
+  Clojurescript](https://andersmurphy.com/2025/04/07/clojure-realtime-collaborative-web-apps-without-clojurescript.html).
+- [A Tale of Two Web Architectures](https://m.youtube.com/watch?v=8W6Lr1hRgXo),
+  a case study from Clojure Conj 2025.
+- [Interview with David Nolen](https://youtu.be/2ECucq-mTGg)
+
+## Reference
+
+- [Schema](docs/reference/schema.md)
+- [API](docs/api/com.biffweb.datastar.md)
+
+## Example
+
+Run `clj -M:demo` to start the demo app, which is, of course, a chat app. Open
+multiple tabs to see the realtime updates in action.
+
+View the [demo app source](demo/com/biffweb/datastar/demo.clj). Some parts to
+take note of:
+
+- `refresh` is called whenever state changes.
+- We have `wrap-datastar` in the middleware stack.
+- The map returned by `new-lock` is passed to both `wrap-datastar`
+  (by merging it into incoming Ring requests) and `refresh`.
+- There is only one Ring handler that returns HTML: `chat-page`.
+- `chat-page` uses `sse-page-response` to conditionally render the `<html>` and
+  `<body>` elements (which include `biff.datastar/init-opts`) based on
+  `:biff.datastar/sse-request`.
+
+## Usage
+
+Add Datastar (JS lib) to your pages:
+
+
+- datastar JS dep
+- new-lock, refresh, wrap-datastar (or use module)
+- writing a page handler
+  - use signals for all form inputs
+- writing action handlers
+- CSRF
+- tab state
+    - maybe tab IDs should be full UUIDs so they don't need to be keyed with the
+      user ID
+
+## Tips
+
+- use actions to cache expensive page-load queries
+- prefer tab state over signals
+
+<!--
 here's how I described this in slack:
 
 > I've got an initial draft of a datastar integration hashed out:
@@ -47,3 +135,5 @@ here's how I described this in slack:
 > used in an SSE stream.
 >
 > Oh, and of course the lib comes with a demo chat app.
+
+-->
