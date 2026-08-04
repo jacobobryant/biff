@@ -22,7 +22,7 @@ or collaborative features, those basically come for free.
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "..."}
+com.biffweb/datastar {:mvn/version "..."}
 ```
 
 ### Status
