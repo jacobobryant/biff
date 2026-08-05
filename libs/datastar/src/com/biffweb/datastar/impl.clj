@@ -62,7 +62,7 @@
 
 (def init-opts
   {:data-signals:biff_datastar_tab-id__case.kebab
-   "self.crypto.randomUUID().substring(0,8)"
+   "self.crypto.randomUUID()"
 
    :data-init              open-sse-action
    :data-on:online__window open-sse-action})
@@ -101,7 +101,8 @@
     (into request
           (filter (comp some? val))
           {:biff.datastar/signals signals
-           :biff.datastar/tab-id  (:biff.datastar/tab-id signals)
+           :biff.datastar/tab-id  (some-> (:biff.datastar/tab-id signals)
+                                          parse-uuid)
 
            :biff.datastar/sse-request
            (= (get-in request [:query-params "biff-datastar-sse"]) "true")})))

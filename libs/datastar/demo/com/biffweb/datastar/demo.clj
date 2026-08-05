@@ -379,7 +379,7 @@
    [:channel-order [:vector :string]]
    [:tab-state
     [:map-of
-     :string
+     :uuid
      [:map {:closed true}
       [:channel-id :string]]]]])
 
