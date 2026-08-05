@@ -227,6 +227,29 @@ This can be useful for e.g. clearing an input field after a form submission.
 
 ### Tab state
 
+`init-opts` creates a `:biff.datastar/tab-id` signal on page load which you can
+use to associate backend state with a particular browser tab. As a convenience,
+`wrap-datastar` sets that key directly on the Ring request so you don't have to
+get it from `:biff.datastar/signals`.
+
+
+```clojure
+(defn my-handler [{:biff.datastar/keys [signals tab-id] :as request}]
+  (set-tab-state tab-id ...)
+  ...)
+```
+
+The tab ID is a random UUID. biff.datastar does not provide any tab state
+implementation; it only provides the tab ID. You can e.g. create a `tab_state`
+table in your database that uses the tab ID as the primary key. You may want
+include `created_at` / `updated_at` columns in that table so that you can delete
+old tab state for sessions that have expired, if desired.
+
+Backend tab state is useful for storing UI state that you want to expose to the
+page rendering handler (the one that's used by `wrap-datastar` to push events on
+the SSE connection). For example, for a large virtualized table, you could store
+the table's scroll position in tab state.
+
 ### CSRF protection
 
 ## Tips
