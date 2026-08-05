@@ -36,6 +36,9 @@ modules-var:
    (fn [modules-var]
      {:example/get-foo #(get-foo @modules-var)})}
 
+Includes a default init function which defines a :biff.core/on-tx function
+that calls :biff.core/on-tx from the other modules in a doseq.
+
 Each component is a function that receives the system map, starts stateful
 resources or does other initialization as needed, and returns an updated
 system map. Components can add stop functions (zero-arg functions that stop a
@@ -48,7 +51,7 @@ Uses biff.core/validate to ensure that keys in modules, keys returned by
 
 ### stop
 
-[view source](../../src/com/biffweb/core.clj#L61)
+[view source](../../src/com/biffweb/core.clj#L64)
 
 ```
 (stop system)
@@ -58,24 +61,9 @@ Stops a Biff application.
 Calls the :biff.core/stop functions from system in reverse order.
 ```
 
-### module
-
-[view source](../../src/com/biffweb/core.clj#L68)
-
-```
-(module)
-
-Returns a module that aggregates :biff.core/on-tx.
-
-Contains an init function which defines a :biff.core/on-tx function that
-calls :biff.core/on-tx from the other modules in a doseq. As such, on-tx
-functions should run quickly and do heavier work in a background thread if
-needed.
-```
-
 ### register
 
-[view source](../../src/com/biffweb/core.clj#L78)
+[view source](../../src/com/biffweb/core.clj#L71)
 
 ```
 (register schemas)
@@ -90,7 +78,7 @@ Registered schemas are used by biff.core/validate.
 
 ### get-registry
 
-[view source](../../src/com/biffweb/core.clj#L88)
+[view source](../../src/com/biffweb/core.clj#L81)
 
 ```
 (get-registry)
@@ -104,7 +92,7 @@ Returns all schemas that have been passed to biff.core/register.
 
 ### validate
 
-[view source](../../src/com/biffweb/core.clj#L97)
+[view source](../../src/com/biffweb/core.clj#L90)
 
 ```
 (validate m & {:keys [required extra-schema]})
@@ -133,7 +121,7 @@ For convenience, m can be a sequence of maps instead of a single map.
 
 ### validate-with-ex
 
-[view source](../../src/com/biffweb/core.clj#L122)
+[view source](../../src/com/biffweb/core.clj#L115)
 
 ```
 (validate-with-ex m & {:keys [required extra-schema]})
@@ -146,7 +134,7 @@ production.
 
 ### secret-delay
 
-[view source](../../src/com/biffweb/core.clj#L131)
+[view source](../../src/com/biffweb/core.clj#L124)
 
 ```
 (secret-delay x)
