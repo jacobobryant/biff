@@ -290,6 +290,11 @@ rendering code pass the CSRF token to `init-opts`:
   Then the page rendering function only needs to read materialized results from
   tab state.
 
+- To help manage server load you can also tune the
+  `:biff.datastar/rate-limit-ms` which is read by `wrap-sse-render` and controls
+  how often in milliseconds a client's page can be re-rendered. The default is
+  15 (67 FPS).
+
 - To model forms with multiple/nested entities, you can use nested signals:
 
 ```clojure
