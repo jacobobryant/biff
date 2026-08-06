@@ -5,19 +5,26 @@
 [view source](../../src/com/biffweb/datastar.clj#L19)
 
 ```
-A map of Datastar options for a hiccup element. On page load, sends an SSE
-request to the current URL. Also creates a :biff.datastar/tab-id signal.
-See `wrap-datastar`.
+(init-opts)
+(init-opts {:keys [anti-forgery-token]})
+
+Returns a map of Datastar options for a hiccup element.
+
+On page load, sends an SSE request to the current URL. Also creates a
+:biff.datastar/tab-id signal. See `wrap-sse-render`.
+
+If :anti-forgery-token is passed in, sets a :biff.datastar/anti-forgery-token
+signal. See `wrap-signals`.
 ```
 
 ### new-lock
 
-[view source](../../src/com/biffweb/datastar.clj#L27)
+[view source](../../src/com/biffweb/datastar.clj#L31)
 
 ```
 (new-lock)
 
-Returns a map of parameters needed by `refresh` and `wrap-datastar`.
+Returns a map of parameters needed by `refresh` and `wrap-sse-render`.
 
 Includes:
 - :biff.datastar/lock
@@ -27,38 +34,32 @@ Includes:
 
 ### refresh
 
-[view source](../../src/com/biffweb/datastar.clj#L37)
+[view source](../../src/com/biffweb/datastar.clj#L41)
 
 ```
 (refresh #:biff.datastar{:keys [lock condition epoch]})
 
-Signals to `wrap-datastar` that backend state has changed and thus a new
+Signals to `wrap-sse-render` that backend state has changed and thus a new
 payload should be rendered for connected clients.
 
 Typically called whenever a database transaction has been committed.
 ```
 
-### wrap-datastar
+### wrap-sse-render
 
-[view source](../../src/com/biffweb/datastar.clj#L46)
+[view source](../../src/com/biffweb/datastar.clj#L50)
 
 ```
-(wrap-datastar handler)
+(wrap-sse-render handler)
 
 Parses signals and starts long-lived SSE connections when requested.
 
-For Datastar requests (GET, POST, and all other methods), sets a
-:biff.datastar/signals map on the incoming request containing the parsed
-signals. Underscores are used as a keyword segment separator so that the
-signals map can contain namespaced keywords; see `signals-json`.
+First, parses Datastar signals using the same logic as `wrap-signals`.
 
-For convenience, also sets the :biff.datastar/tab-id signal (set by
-`init-opts`) on the Ring request.
-
-When the request was triggered by `init-opts`, sets
+Then, if the request was triggered by `init-opts`, sets
 `:biff.datastar/sse-request true` on the Ring request and starts a long-lived
-SSE connection. `wrap-datastar` will then call the wrapped handler (i.e. the
-handler which used `init-opts`) repeatedly whenever `refresh` has been
+SSE connection. `wrap-sse-render` will then call the wrapped handler (i.e.
+the handler which used `init-opts`) repeatedly whenever `refresh` has been
 called, pushing the response to the client in a datastar-patch-elements
 event. Responses are compressed with Brotli.
 
@@ -72,7 +73,7 @@ body's top-level element must have `id` set.)
    :body   (render-hiccup
             [:html
              [:head ...]
-             [:body biff.datastar/init-opts
+             [:body (biff.datastar/init-opts)
               [:div {:id "content"}
                ...]]])
    ...}
@@ -96,23 +97,42 @@ request may also include:
 See the schema reference.
 ```
 
+### wrap-signals
+
+[view source](../../src/com/biffweb/datastar.clj#L97)
+
+```
+(wrap-signals handler)
+
+Parses Datastar signals and sets them on :biff.datastar/signals.
+
+For Datastar requests (GET, POST, and all other methods), sets a
+:biff.datastar/signals map on the incoming request containing the parsed
+signals. Underscores are used as a keyword segment separator so that the
+signals map can contain namespaced keywords; see `signals-json`.
+
+For convenience, also sets the :biff.datastar/tab-id signal (set by
+`init-opts`) on the Ring request. If a :biff.datastar/anti-forgery-token
+signal is set, the x-csrf-token request header is set to its value.
+```
+
 ### module
 
-[view source](../../src/com/biffweb/datastar.clj#L99)
+[view source](../../src/com/biffweb/datastar.clj#L111)
 
 ```
 (module)
 
 Returns a biff.core module including:
 
-- `:biff.ring/site-middleware [wrap-datastar]`
+- `:biff.ring/site-middleware [wrap-sse-render]`
 - `:biff.core/on-tx refresh`
 - A :biff.core/init function that returns `(new-lock)`
 ```
 
 ### signals-json
 
-[view source](../../src/com/biffweb/datastar.clj#L108)
+[view source](../../src/com/biffweb/datastar.clj#L120)
 
 ```
 (signals-json signals)
@@ -124,12 +144,12 @@ keywords are encoded used `_` as a separator, e.g. :foo.bar/baz becomes
 "foo_bar_baz". Signal keywords are not allowed to contain underscores prior
 to conversion, and they may not contain periods in the name.
 
-`wrap-datastar` converts these signals back to keywords.
+`wrap-signals` and `wrap-sse-render` convert these signals back to keywords.
 ```
 
 ### signal-name
 
-[view source](../../src/com/biffweb/datastar.clj#L120)
+[view source](../../src/com/biffweb/datastar.clj#L132)
 
 ```
 (signal-name k)
@@ -145,7 +165,7 @@ signal by passing in a vector:
 
 ### patch-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L131)
+[view source](../../src/com/biffweb/datastar.clj#L143)
 
 ```
 (patch-signals signals)

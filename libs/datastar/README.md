@@ -1,7 +1,5 @@
 # biff.datastar
 
-This README is still WIP.
-
 A lightweight approach for writing server-side-rendered web apps with Clojure
 and [Datastar](https://data-star.dev). The result is ergonomic for both simple
 and complex UIs.
@@ -61,8 +59,8 @@ View the [demo app source](demo/com/biffweb/datastar/demo.clj). Some parts to
 take note of:
 
 - `refresh` is called whenever state changes.
-- We have `wrap-datastar` in the middleware stack.
-- The map returned by `new-lock` is passed to both `wrap-datastar`
+- We have `wrap-sse-render` in the middleware stack.
+- The map returned by `new-lock` is passed to both `wrap-sse-render`
   (by merging it into incoming Ring requests) and `refresh`.
 - There is only one Ring handler that returns HTML: `chat-page`.
 - `chat-page` uses `sse-page-response` to conditionally render the `<html>` and
@@ -88,13 +86,13 @@ Add Datastar (JS lib) to your pages:
 Besides that, there are three functions you need to integrate into your
 application:
 
-- [`wrap-datastar`](docs/api/com.biffweb.datastar.md#wrap-datastar): add this to
-  your Ring middleware.
+- [`wrap-sse-render`](docs/api/com.biffweb.datastar.md#wrap-sse-render): add
+  this to your Ring middleware.
 - [`refresh`](docs/api/com.biffweb.datastar.md#refresh): call this whenever a
   new database transaction is committed.
 - [`new-lock`](docs/api/com.biffweb.datastar.md#new-lock): call this on system
   startup to get a map with some state in it, then merge that map into incoming
-  Ring requests (so that `wrap-datastar` gets it) and also pass that map to
+  Ring requests (so that `wrap-sse-render` gets it) and also pass that map to
   `refresh`.
 
 If you're using [biff.core](/libs/core), [biff.ring](/libs/ring), and a Biff
@@ -106,18 +104,18 @@ as [biff.sqlite](/libs/sqlite) or [biff.xtdb](/libs/xtdb)), you can simply add
 ### Writing page handlers
 
 Each page in your application should include
-[`init-opts`](docs/api/com.biffweb.datastar.md#module) in an element's DOM opts,
+[`init-opts`](docs/api/com.biffweb.datastar.md#init-opts) in an element's DOM opts,
 and there should be a wrapper element with an `id` set. On page load,
 `init-opts` will trigger another GET request to the same URL that served the
-page, with a particular query parameter set that `wrap-datastar` recognizes.
+page, with a particular query parameter set that `wrap-sse-render` recognizes.
 
-`wrap-datastar` will intercept that request and start a long-lived SSE
-connection. Whenever `refresh` is called, `wrap-datastar` will call the
+`wrap-sse-render` will intercept that request and start a long-lived SSE
+connection. Whenever `refresh` is called, `wrap-sse-render` will call the
 underlying Ring handler and push the returned HTML to the client (as a
 [`datastar-patch-elements`](https://data-star.dev/reference/sse_events#datastar-patch-elements)
 event), replacing the wrapper element.
 
-When the Ring handler is called in this way, `wrap-datastar` will set
+When the Ring handler is called in this way, `wrap-sse-render` will set
 `:biff.datastar/sse-request true` on the Ring request. When this key is set,
 your handler should return only the wrapper element, without `<html>`, `<body>`
 etc. and also without `init-opts`. You can use a helper function like this:
@@ -137,7 +135,7 @@ etc. and also without `init-opts`. You can use a helper function like this:
                  [chassis/doctype-html5
                   [:html {:lang "en"}
                    [:head ...]
-                   [:body biff.datastar/init-opts
+                   [:body (biff.datastar/init-opts)
                     content*]]]))}))
 
 (defn my-page [request]
@@ -160,7 +158,7 @@ be initialized with `__ifmissing`:
   ...]
 ```
 
-This will prevent the input values from being overwritten whan `wrap-datastar`
+This will prevent the input values from being overwritten whan `wrap-sse-render`
 pushes new page HTML.
 
 I recommend using namespaced signal names, since signals are essentially a
@@ -179,7 +177,7 @@ replaced with underscores.
 ```
 
 Datastar includes all the page's signals in requests to your [action
-handlers](#writing-action-handlers). `wrap-datastar` parses these signals and
+handlers](#writing-action-handlers). `wrap-sse-render` parses these signals and
 includes them in a `:biff.datastar/signals` key on the Ring request, with signal
 names converted to keywords (and underscores turned back into periods/slashes).
 
@@ -207,11 +205,11 @@ actions](https://data-star.dev/guide/backend_requests#backend-actions):
 
 As described [above](#signals), these actions will include all the signals for
 the entire page (not just those bound to inputs within the current form), and
-`wrap-datastar` will insert them into the `:biff.datastar/signals` key. Your
+`wrap-sse-render` will insert them into the `:biff.datastar/signals` key. Your
 Ring handlers can then read the signals and update the backend state (e.g.
 submit a database transaction) accordingly. (Per [setup](#setup), this should
 cause `refresh` to be called which will in turn trigger a push from
-`wrap-datastar`).
+`wrap-sse-render`).
 
 Your handlers can return `{:status 204}`, or they can return a
 [`datastar-patch-signals`](https://data-star.dev/reference/sse_events#datastar-patch-signals)
@@ -229,8 +227,8 @@ This can be useful for e.g. clearing an input field after a form submission.
 
 `init-opts` creates a `:biff.datastar/tab-id` signal on page load which you can
 use to associate backend state with a particular browser tab. As a convenience,
-`wrap-datastar` sets that key directly on the Ring request so you don't have to
-get it from `:biff.datastar/signals`.
+`wrap-sse-render` sets that key directly on the Ring request so you don't have
+to get it from `:biff.datastar/signals`.
 
 
 ```clojure
@@ -243,16 +241,56 @@ The tab ID is a random UUID. biff.datastar does not provide any tab state
 implementation; it only provides the tab ID. You can e.g. create a `tab_state`
 table in your database that uses the tab ID as the primary key. You may want
 include `created_at` / `updated_at` columns in that table so that you can delete
-old tab state for sessions that have expired, if desired.
+old tab state for sessions that have expired, if desired. The actual tab state
+data could be stored as unstructured (e.g. json/blob) data.
+
+If needed you can use something other than your main database as the tab state
+store, such as Redis.
 
 Backend tab state is useful for storing UI state that you want to expose to the
-page rendering handler (the one that's used by `wrap-datastar` to push events on
-the SSE connection). For example, for a large virtualized table, you could store
-the table's scroll position in tab state.
+page rendering handler (the one that's used by `wrap-sse-render` to push events
+on the SSE connection). For example, for a large virtualized table, you could
+store the table's scroll position in tab state.
 
 ### CSRF protection
 
+biff.ring's
+[`wrap-csrf-protection`](/libs/ring/api/com.biffweb.ring.md#wrap-csrf-protection)
+middleware can be used to provide CSRF protection without needing to include a
+token with incoming requests. `wrap-csrf-token` is included in biff.ring's
+default middleware stack.
+
+Alternatively, if you're using
+[ring-anti-forgery](https://github.com/ring-clojure/ring-anti-forgery), you can
+add [`wrap-signals`](/libs/ring/api/com.biffweb.ring.md#wrap-signals) to your
+middleware so it runs before `wrap-anti-forgery`, and then have your page
+rendering code pass the CSRF token to `init-opts`:
+
+```clojure
+(defn my-page [request]
+  (let [response-body
+        [:body (biff.datastar/init-opts
+                (select-keys request [:anti-forgery-token]))
+         ...]]
+    ...))
+```
+
+`wrap-signals` will then set the `x-csrf-token` request header to the
+`:anti-forgery-token` value so that `wrap-anti-forgery` can see it.
+
 ## Tips
 
-- use actions to cache expensive page-load queries
-- signals for nested form entities
+- For this approach to work, your page rendering function (including any
+  database queries it runs) needs to be fast. If your page must run an expensive
+  query (e.g. to fetch search results or recommendations), you can run a `@post`
+  action on payload which runs the query and stores the results in tab state.
+  Then the page rendering function only needs to read materialized results from
+  tab state.
+
+- To model forms with multiple/nested entities, you can use nested signals:
+
+```clojure
+[:form {:data-signals__ifmissing
+        (signals-json {::my-form {:pets {0 {:pet/name ""}}}})}
+ [:input {:data-bind (signal-name [::my-form :pets 0 :pet/name])}]]
+```

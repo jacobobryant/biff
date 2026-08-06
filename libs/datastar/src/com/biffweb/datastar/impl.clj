@@ -52,21 +52,6 @@
     (.reset compressed-buffer)
     compressed-bytes))
 
-;;;; Page init =================================================================
-
-(def ^:private open-sse-action
-  (str "@get("
-       "window.location.pathname + "
-       "(window.location.search + '&biff-datastar-sse=true').replace(/^&/,'?'), "
-       "{openWhenHidden: false, retryMaxCount: Infinity})"))
-
-(def init-opts
-  {:data-signals:biff_datastar_tab-id__case.kebab
-   "self.crypto.randomUUID()"
-
-   :data-init              open-sse-action
-   :data-on:online__window open-sse-action})
-
 ;;;; Signals ===================================================================
 
 (defn- parse-signal-str [s]
@@ -96,16 +81,18 @@
                       (update-keys (comp parse-signal-str name)))
                    (first (filterv map? [body-params body params])))))
 
-(defn- merge-datastar-context [request]
-  (let [signals (parse-signals request)]
-    (into request
-          (filter (comp some? val))
-          {:biff.datastar/signals signals
-           :biff.datastar/tab-id  (some-> (:biff.datastar/tab-id signals)
-                                          parse-uuid)
+(defn- merge-signals [request]
+  (let [signals    (parse-signals request)
+        tab-id     (some-> (:biff.datastar/tab-id signals) parse-uuid)
+        csrf-token (:biff.datastar/anti-forgery-token signals)]
+    (cond-> request
+      signals (assoc :biff.datastar/signals signals)
+      tab-id  (assoc :biff.datastar/tab-id tab-id)
+      csrf-token (assoc-in [:headers "x-csrf-token"] csrf-token))))
 
-           :biff.datastar/sse-request
-           (= (get-in request [:query-params "biff-datastar-sse"]) "true")})))
+(defn wrap-signals [handler]
+  (fn [request]
+    (handler (merge-signals request))))
 
 (defn- signal-name-part [x]
   (if (keyword? x)
@@ -137,6 +124,27 @@
              "Content-Type"  "text/event-stream; charset=utf-8"}
    :body    (str "event: datastar-patch-signals\n"
                  "data: signals " (signals-json signals) "\n\n")})
+
+;;;; Page init =================================================================
+
+(def ^:private open-sse-action
+  (str "@get("
+       "window.location.pathname + "
+       "(window.location.search + '&biff-datastar-sse=true').replace(/^&/,'?'), "
+       "{openWhenHidden: false, retryMaxCount: Infinity})"))
+
+(defn init-opts
+  ([]
+   (init-opts {}))
+  ([{:keys [anti-forgery-token]}]
+   (merge {:data-signals:biff_datastar_tab-id__case.kebab
+           "self.crypto.randomUUID()"
+
+           :data-init              open-sse-action
+           :data-on:online__window open-sse-action}
+          (when anti-forgery-token
+            {:data-signals (signals-json {:biff.datastar/anti-forgery-token
+                                          anti-forgery-token})}))))
 
 ;;;; SSE =======================================================================
 
@@ -217,11 +225,15 @@
          (catch IOException _e)
          (catch Exception e (log/error e)))))))
 
-(defn wrap-datastar
-  [handler]
+(defn wrap-sse-render [handler]
   (fn [request]
-    (let [request (merge-datastar-context request)]
-      (if (:biff.datastar/sse-request request)
+    (let [has-signals (contains? request :biff.datastar/signals)
+          sse-request (= (get-in request [:query-params "biff-datastar-sse"])
+                         "true")
+          request     (cond-> request
+                        (not has-signals) merge-signals
+                        true (assoc :biff.datastar/sse-request sse-request))]
+      (if sse-request
         (do
           (biff.core/validate request {:required [:biff.datastar/lock
                                                   :biff.datastar/condition
@@ -237,6 +249,6 @@
 
 (defn module
   []
-  {:biff.ring/site-middleware [wrap-datastar]
+  {:biff.ring/site-middleware [wrap-sse-render]
    :biff.core/on-tx           #'refresh
    :biff.core/init            (fn [_] (new-lock))})

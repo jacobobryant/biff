@@ -13,19 +13,23 @@
   :biff.datastar/rate-limit-ms [:and :int pos?]
   :biff.datastar/signals       'map?
   :biff.datastar/sse-request   :boolean
-  :biff.datastar/tab-id        :string
+  :biff.datastar/tab-id        :uuid
   :biff.datastar/window-size   :int})
 
-(def
-  ^{:doc
-    "A map of Datastar options for a hiccup element. On page load, sends an SSE
-     request to the current URL. Also creates a :biff.datastar/tab-id signal.
-     See `wrap-datastar`."}
-  init-opts
-  impl/init-opts)
+(defn init-opts
+  "Returns a map of Datastar options for a hiccup element.
+
+   On page load, sends an SSE request to the current URL. Also creates a
+   :biff.datastar/tab-id signal. See `wrap-sse-render`.
+
+   If :anti-forgery-token is passed in, sets a :biff.datastar/anti-forgery-token
+   signal. See `wrap-signals`."
+  {:arglists '([] [{:keys [anti-forgery-token]}])}
+  ([] (impl/init-opts))
+  ([opts] (impl/init-opts opts)))
 
 (defn new-lock
-  "Returns a map of parameters needed by `refresh` and `wrap-datastar`.
+  "Returns a map of parameters needed by `refresh` and `wrap-sse-render`.
 
    Includes:
    - :biff.datastar/lock
@@ -35,7 +39,7 @@
   (impl/new-lock))
 
 (defn refresh
-  "Signals to `wrap-datastar` that backend state has changed and thus a new
+  "Signals to `wrap-sse-render` that backend state has changed and thus a new
    payload should be rendered for connected clients.
 
    Typically called whenever a database transaction has been committed."
@@ -43,21 +47,15 @@
   [ctx]
   (impl/refresh ctx))
 
-(defn wrap-datastar
+(defn wrap-sse-render
   "Parses signals and starts long-lived SSE connections when requested.
 
-   For Datastar requests (GET, POST, and all other methods), sets a
-   :biff.datastar/signals map on the incoming request containing the parsed
-   signals. Underscores are used as a keyword segment separator so that the
-   signals map can contain namespaced keywords; see `signals-json`.
+   First, parses Datastar signals using the same logic as `wrap-signals`.
 
-   For convenience, also sets the :biff.datastar/tab-id signal (set by
-   `init-opts`) on the Ring request.
-
-   When the request was triggered by `init-opts`, sets
+   Then, if the request was triggered by `init-opts`, sets
    `:biff.datastar/sse-request true` on the Ring request and starts a long-lived
-   SSE connection. `wrap-datastar` will then call the wrapped handler (i.e. the
-   handler which used `init-opts`) repeatedly whenever `refresh` has been
+   SSE connection. `wrap-sse-render` will then call the wrapped handler (i.e.
+   the handler which used `init-opts`) repeatedly whenever `refresh` has been
    called, pushing the response to the client in a datastar-patch-elements
    event. Responses are compressed with Brotli.
 
@@ -71,7 +69,7 @@
       :body   (render-hiccup
                [:html
                 [:head ...]
-                [:body biff.datastar/init-opts
+                [:body (biff.datastar/init-opts)
                  [:div {:id \"content\"}
                   ...]]])
       ...}
@@ -94,12 +92,26 @@
 
    See the schema reference."
   [handler]
-  (impl/wrap-datastar handler))
+  (impl/wrap-sse-render handler))
+
+(defn wrap-signals
+  "Parses Datastar signals and sets them on :biff.datastar/signals.
+
+   For Datastar requests (GET, POST, and all other methods), sets a
+   :biff.datastar/signals map on the incoming request containing the parsed
+   signals. Underscores are used as a keyword segment separator so that the
+   signals map can contain namespaced keywords; see `signals-json`.
+
+   For convenience, also sets the :biff.datastar/tab-id signal (set by
+   `init-opts`) on the Ring request. If a :biff.datastar/anti-forgery-token
+   signal is set, the x-csrf-token request header is set to its value."
+  [handler]
+  (impl/wrap-signals handler))
 
 (defn module
   "Returns a biff.core module including:
 
-   - `:biff.ring/site-middleware [wrap-datastar]`
+   - `:biff.ring/site-middleware [wrap-sse-render]`
    - `:biff.core/on-tx refresh`
    - A :biff.core/init function that returns `(new-lock)`"
   []
@@ -113,7 +125,7 @@
    \"foo_bar_baz\". Signal keywords are not allowed to contain underscores prior
    to conversion, and they may not contain periods in the name.
 
-   `wrap-datastar` converts these signals back to keywords."
+   `wrap-signals` and `wrap-sse-render` convert these signals back to keywords."
   [signals]
   (impl/signals-json signals))
 

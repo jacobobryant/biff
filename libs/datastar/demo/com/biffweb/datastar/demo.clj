@@ -104,7 +104,7 @@
                            :margin      0
                            :background  "#f5f7fb"
                            :color       "#1f2937"}}
-                  biff.datastar/init-opts)
+                  (biff.datastar/init-opts))
      content]]])
 
 (defn- sse-page-response [{:keys [biff.datastar/sse-request] :as ctx}
@@ -352,10 +352,10 @@
 
 (def handler
   (-> base-handler
-      ;; wrap-state must come before wrap-datastar so that we get up-to-date
-      ;; state every time wrap-datastar calls the underlying handler.
+      ;; wrap-state must come before wrap-sse-render so that we get up-to-date
+      ;; state every time wrap-sse-render calls the underlying handler.
       wrap-state
-      biff.datastar/wrap-datastar
+      biff.datastar/wrap-sse-render
       (wrap-json-params {:keywords? true})
       wrap-params))
 

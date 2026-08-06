@@ -312,7 +312,7 @@
         (ui/page
          {:title "Biff Demo App"}
          [:div.mx-auto.my-12.max-w-5xl.space-y-6
-          (merge {:class "space-y-6"} biff.datastar/init-opts)
+          (merge {:class "space-y-6"} (biff.datastar/init-opts))
           container])))))
 
 (defroute create-todo-route "/app/todos"
