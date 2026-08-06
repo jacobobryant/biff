@@ -258,14 +258,14 @@ store the table's scroll position in tab state.
 ### CSRF protection
 
 biff.ring's
-[`wrap-csrf-protection`](/libs/ring/api/com.biffweb.ring.md#wrap-csrf-protection)
+[`wrap-csrf-protection`](/libs/ring/docs/api/com.biffweb.ring.md#wrap-csrf-protection)
 middleware can be used to provide CSRF protection without needing to include a
 token with incoming requests. `wrap-csrf-token` is included in biff.ring's
 default middleware stack.
 
 Alternatively, if you're using
 [ring-anti-forgery](https://github.com/ring-clojure/ring-anti-forgery), you can
-add [`wrap-signals`](/libs/ring/api/com.biffweb.ring.md#wrap-signals) to your
+add [`wrap-signals`](/libs/ring/docs/api/com.biffweb.ring.md#wrap-signals) to your
 middleware so it runs before `wrap-anti-forgery`, and then have your page
 rendering code pass the CSRF token to `init-opts`:
 
