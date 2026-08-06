@@ -1,11 +1,11 @@
 (ns com.biffweb.demo-test
   (:require [clojure.java.io :as io]
-            [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [com.biffweb.admin :as biff.admin]
             [com.biffweb.background :as biff.background]
             [com.biffweb.core :as biff.core]
+            [com.biffweb.datastar :as biff.datastar]
             [com.biffweb.demo.lib.email :as email]
             [com.biffweb.demo.app.todos :as todos]
             [com.biffweb.demo.modules :as modules]
@@ -79,13 +79,14 @@
 (defn- request-url [path]
   (str *base-url* path))
 
-(defn- http-get [path & {:keys [cookie]}]
+(defn- http-get [path & {:keys [cookie headers]}]
   (hato/get (request-url path)
             (cond-> {:as               :text
+                     :headers          headers
                      :redirect-policy  :none
                      :throw-exceptions false}
               cookie
-              (assoc :headers {"cookie" cookie}))))
+              (assoc-in [:headers "cookie"] cookie))))
 
 (defn- http-post [path & {:keys [cookie headers form-params body]}]
   (hato/post (request-url path)
@@ -108,20 +109,27 @@
 (defn- datastar-app-path [tab-id]
   (str "/app?u=&datastar="
        (java.net.URLEncoder/encode
-        (str "{\"tabId\":\"" tab-id "\"}")
+        (biff.datastar/signals-json {:biff.datastar/tab-id tab-id})
         "UTF-8")))
 
+(defn- datastar-get [path & {:keys [cookie]}]
+  (http-get path
+            :cookie cookie
+            :headers {"datastar-request" "true"}))
+
 (defn- datastar-post [path tab-id & {:keys [cookie headers form-params signals]}]
-  (let [headers (merge {"datastar-request" "true"} headers)]
+  (let [headers (merge {"datastar-request" "true"} headers)
+        tab-id  {:biff.datastar/tab-id tab-id}]
     (if signals
       (http-post path
                  :cookie cookie
                  :headers (merge {"content-type" "application/json"} headers)
-                 :body (json/generate-string (merge {"tabId" tab-id} signals)))
+                 :body (biff.datastar/signals-json (merge tab-id signals)))
       (http-post path
                  :cookie cookie
                  :headers headers
-                 :form-params (merge {"tabId" tab-id}
+                 :form-params (merge {(biff.datastar/signal-name :biff.datastar/tab-id)
+                                      (:biff.datastar/tab-id tab-id)}
                                      form-params)))))
 
 (defn- db-query [sql & params]
@@ -262,7 +270,7 @@
 
 (deftest datastar-todo-controls-work-over-http-test
   (let [{:keys [cookie]}   (sign-in!)
-        tab-id             "demo-test-tab"
+        tab-id             (random-uuid)
         title              (str "Datastar todo " (random-uuid))
         create-resp        (http-post "/app/todos"
                                       :cookie cookie
@@ -284,7 +292,7 @@
                                           tab-id
                                           :cookie cookie
                                           :form-params {"filter" "completed"})
-        filtered-page      (http-get (datastar-app-path tab-id) :cookie cookie)
+        filtered-page      (datastar-get (datastar-app-path tab-id) :cookie cookie)
         archive-resp       (datastar-post (routes/todo-archive (:todo/id todo-row))
                                           tab-id
                                           :cookie cookie)
@@ -298,13 +306,13 @@
                                           :cookie cookie
                                           :signals {"filter"       "all"
                                                     "showArchived" true})
-        archived-page      (http-get (datastar-app-path tab-id) :cookie cookie)
+        archived-page      (datastar-get (datastar-app-path tab-id) :cookie cookie)
         hide-archived-resp (datastar-post (routes/tab-state)
                                           tab-id
                                           :cookie cookie
                                           :signals {"filter"       "all"
                                                     "showArchived" false})
-        hidden-page        (http-get (datastar-app-path tab-id) :cookie cookie)]
+        hidden-page        (datastar-get (datastar-app-path tab-id) :cookie cookie)]
     (is (= 200 (:status create-resp)))
     (is (= 204 (:status toggle-resp)))
     (is (true? (:todo/completed toggle-row)))

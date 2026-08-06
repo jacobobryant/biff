@@ -51,7 +51,7 @@ Released:
 - [biff.sqlite](/libs/sqlite/)
 - [biff.xtdb](/libs/xtdb/)
 - [biff.ring](/libs/ring/)
-- [biff.datastar](/libs/ring/)
+- [biff.datastar](/libs/datastar/)
 
 Remaining (see [libs/](/libs/)):
 
