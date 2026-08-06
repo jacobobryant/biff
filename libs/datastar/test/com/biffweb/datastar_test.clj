@@ -41,12 +41,12 @@
                       :headers        {"datastar-request" "true"}
                       :query-params   {"datastar"
                                        (datastar/signals-json
-                                        {:biff.datastar/tab-id tab-id
+                                        {:biff.datastar/tab-id             tab-id
                                          :biff.datastar/anti-forgery-token "token"
-                                         :profile/display-name "Ada"})}})]
-        (is (= {:biff.datastar/tab-id tab-id
+                                         :profile/display-name             "Ada"})}})]
+        (is (= {:biff.datastar/tab-id             tab-id
                 :biff.datastar/anti-forgery-token "token"
-                :profile/display-name "Ada"}
+                :profile/display-name             "Ada"}
                (:biff.datastar/signals request)))
         (is (= tab-id (:biff.datastar/tab-id request)))
         (is (= "token" (get-in request [:headers "x-csrf-token"])))))
@@ -55,7 +55,7 @@
                      {:request-method :post
                       :headers        {"datastar-request" "true"}
                       :body-params    {"profile_display-name" "Grace"
-                                       "nested" {"account_active" true}}})]
+                                       "nested"               {"account_active" true}}})]
         (is (= {:profile/display-name "Grace"
                 :nested               {:account/active true}}
                (:biff.datastar/signals request)))))))
