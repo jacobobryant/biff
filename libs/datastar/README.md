@@ -41,9 +41,10 @@ Some resources:
 - [Anders Murphy's blog](https://andersmurphy.com), e.g. see [Realtime
   collaborative webapps without
   Clojurescript](https://andersmurphy.com/2025/04/07/clojure-realtime-collaborative-web-apps-without-clojurescript.html).
-- [A Tale of Two Web Architectures](https://m.youtube.com/watch?v=8W6Lr1hRgXo),
+- [A Tale of Two Web Architectures](https://youtu.be/8W6Lr1hRgXo),
   a case study from Clojure Conj 2025.
-- [Interview with David Nolen](https://youtu.be/2ECucq-mTGg).
+- [Interview with David Nolen](https://youtu.be/2ECucq-mTGg), including a live
+  demo partway through.
 
 ## Reference
 
