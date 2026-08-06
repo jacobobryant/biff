@@ -88,6 +88,7 @@
     (cond-> request
       signals (assoc :biff.datastar/signals signals)
       tab-id  (assoc :biff.datastar/tab-id tab-id)
+      tab-id  (assoc-in [:biff.datastar/signals :biff.datastar/tab-id] tab-id)
       csrf-token (assoc-in [:headers "x-csrf-token"] csrf-token))))
 
 (defn wrap-signals [handler]
