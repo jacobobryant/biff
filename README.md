@@ -51,10 +51,10 @@ Released:
 - [biff.sqlite](/libs/sqlite/)
 - [biff.xtdb](/libs/xtdb/)
 - [biff.ring](/libs/ring/)
+- [biff.datastar](/libs/ring/)
 
 Remaining (see [libs/](/libs/)):
 
-- biff.datastar
 - biff.run
 - biff.tasks
 - biff.authenticate
