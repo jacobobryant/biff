@@ -6,21 +6,27 @@
             [com.biffweb.xtdb.impl.tx :as impl.tx]))
 
 (biff.core/register
- {:biff.xtdb/authorize              'ifn?
-  :biff.xtdb/columns                [:map-of :qualified-keyword
-                                     [:map
-                                      [:schema {:optional true} :any]
-                                      [:ref {:optional true} :qualified-keyword]]]
-  :biff.xtdb/config                 :any
-  :biff.xtdb/connection-pool        :any
-  :biff.xtdb/disk-cache-max-bytes   [:maybe :int]
-  :biff.xtdb/hikari-config          :any
-  :biff.xtdb/diff                   [:vector
-                                     [:map
-                                      [:table :keyword]
-                                      [:op [:enum :create :update :delete :erase]]
-                                      [:before [:maybe [:map-of :keyword :any]]]
-                                      [:after [:maybe [:map-of :keyword :any]]]]]
+ {:biff.xtdb/authorize 'ifn?
+
+  :biff.xtdb/columns
+  [:map-of :qualified-keyword
+   [:map
+    [:schema {:optional true} :any]
+    [:ref {:optional true} :qualified-keyword]]]
+
+  :biff.xtdb/config               :any
+  :biff.xtdb/connection-pool      :any
+  :biff.xtdb/disk-cache-max-bytes [:maybe :int]
+  :biff.xtdb/hikari-config        :any
+
+  :biff.xtdb/diff
+  [:vector
+   [:map
+    [:table :keyword]
+    [:op [:enum :create :update :delete :erase]]
+    [:before [:maybe [:map-of :keyword :any]]]
+    [:after [:maybe [:map-of :keyword :any]]]]]
+
   :biff.xtdb/latest-system-time     inst?
   :biff.xtdb/log                    [:enum :memory :local :kafka]
   :biff.xtdb/log-bootstrap-servers  :string
@@ -79,8 +85,11 @@
    keywords (e.g. :user/email gets converted to :user$email).
 
    Includes snapshot-token in the query opts."
-  {:arglists '([{:biff.xtdb/keys [connection-pool node snapshot-token] :as ctx} query]
-               [{:biff.xtdb/keys [connection-pool node snapshot-token] :as ctx} query opts])}
+  {:arglists
+   '([{:biff.xtdb/keys [connection-pool node snapshot-token] :as ctx}
+      query]
+     [{:biff.xtdb/keys [connection-pool node snapshot-token] :as ctx}
+      query opts])}
   ([ctx query]
    (impl.tx/q ctx query))
   ([ctx query opts]

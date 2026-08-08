@@ -1,11 +1,14 @@
 {:paths   ["src"]
  :deps    {org.clojure/clojure       {:mvn/version "1.12.5"}
            org.clojure/tools.logging {:mvn/version "1.3.1"}
-           metosin/malli             {:mvn/version "0.20.1"}}
+           metosin/malli             {:mvn/version "0.20.1"}
+           com.biffweb/stuff         {:local/root "../stuff"}}
  :aliases {:run  {:extra-paths ["test" "dev"]
                   :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
                   :main-opts   ["-m" "com.biffweb.tasks.lib"]}
            :demo {:extra-paths ["demo"]
-                  :extra-deps  {ring/ring-jetty-adapter     {:mvn/version "1.15.4"}
-                                org.clojure/tools.namespace {:mvn/version "1.5.1"}
-                                org.slf4j/slf4j-simple      {:mvn/version "2.0.18"}}}}}
+
+                  :extra-deps
+                  {ring/ring-jetty-adapter     {:mvn/version "1.15.4"}
+                   org.clojure/tools.namespace {:mvn/version "1.5.1"}
+                   org.slf4j/slf4j-simple      {:mvn/version "2.0.18"}}}}}

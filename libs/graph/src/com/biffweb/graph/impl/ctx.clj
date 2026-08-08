@@ -52,7 +52,8 @@
                                                resolver-id)])))
           output-ast)))
 
-(defn wrap-select-output [{:biff.graph/keys [id resolve-fn output-ast] :as resolver}]
+(defn wrap-select-output
+  [{:biff.graph/keys [id resolve-fn output-ast] :as resolver}]
   (let [resolve-fn (fn [ctx]
                      (-> (resolve-fn ctx)
                          (select-output output-ast id)))]
@@ -79,7 +80,8 @@
                                      (get @cache id {}))
                    uncached-inputs (when cache
                                      (into []
-                                           (comp (remove #(contains? resolver-cache %))
+                                           (comp (remove
+                                                  #(contains? resolver-cache %))
                                                  (distinct))
                                            input))]
                (cond
@@ -90,9 +92,12 @@
                  (mapv resolver-cache input)
 
                  :else
-                 (let [new-results    (resolve-fn (assoc ctx :biff.graph/input uncached-inputs))
+                 (let [new-results    (resolve-fn
+                                       (assoc ctx :biff.graph/input
+                                              uncached-inputs))
+                       cache-update   (zipmap uncached-inputs new-results)
                        _              (update-cache! cache update id merge
-                                                     (zipmap uncached-inputs new-results))
+                                                     cache-update)
                        resolver-cache (get @cache id {})]
                    (mapv resolver-cache input)))))
            (fn [{:biff.graph/keys [cache input] :as ctx}]
@@ -106,7 +111,8 @@
                  (get resolver-cache input)
 
                  :else
-                 (get-in (update-cache! cache assoc-in [id input] (resolve-fn ctx))
+                 (get-in (update-cache! cache assoc-in
+                                        [id input] (resolve-fn ctx))
                          [id input])))))))
 
 (defn- shape-info [resolvers]

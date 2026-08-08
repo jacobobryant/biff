@@ -8,8 +8,52 @@
         com.biffweb/graph        {:local/root "libs/graph"}
         com.biffweb/ring         {:local/root "libs/ring"}
         com.biffweb/sqlite       {:local/root "libs/sqlite"}}
+
  :aliases
- {:run {:extra-paths ["dev"]
-        :extra-deps  {com.biffweb/tasks    {:local/root "libs/tasks"}
-                      borkdude/rewrite-edn {:mvn/version "0.5.9"}}
-        :main-opts   ["-m" "tasks"]}}}
+ {:run {:extra-paths ["dev"
+                      "libs/admin/dev"
+                      "libs/admin/test"
+                      "libs/authenticate/demo"
+                      "libs/authenticate/dev"
+                      "libs/authenticate/test"
+                      "libs/background/dev"
+                      "libs/background/test"
+                      "libs/config/dev"
+                      "libs/config/test"
+                      "libs/core/dev"
+                      "libs/core/test"
+                      "libs/datastar/demo"
+                      "libs/datastar/dev"
+                      "libs/datastar/test"
+                      "libs/fx/dev"
+                      "libs/fx/test"
+                      "libs/graph/dev"
+                      "libs/graph/test"
+                      "libs/ring/dev"
+                      "libs/ring/test"
+                      "libs/run/dev"
+                      "libs/run/test"
+                      "libs/sqlite/dev"
+                      "libs/sqlite/test"
+                      "libs/stuff/dev"
+                      "libs/stuff/test"
+                      "libs/tasks/dev"
+                      "libs/tasks/test"
+                      "libs/xtdb/dev"
+                      "libs/xtdb/test"]
+
+        :extra-deps {borkdude/rewrite-edn      {:mvn/version "0.5.9"},
+                     com.biffweb/tasks         {:local/root "libs/tasks"},
+                     com.biffweb/xtdb          {:local/root "libs/xtdb"},
+                     com.taoensso/telemere     {:mvn/version "1.2.1"},
+                     dev.onionpancakes/chassis {:mvn/version "1.0.365"},
+                     metosin/malli             {:mvn/version "0.20.1"},
+                     org.slf4j/slf4j-simple    {:mvn/version "2.0.18"},
+                     rewrite-clj/rewrite-clj   {:mvn/version "1.1.47"},
+                     ring/ring-jetty-adapter   {:mvn/version "1.15.4"},
+                     ring/ring-json            {:mvn/version "0.5.1"}}
+
+        :main-opts ["-m" "tasks"]
+        :jvm-opts  ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                    "--enable-native-access=ALL-UNNAMED"
+                    "-Dio.netty.tryReflectionSetAccessible=true"]}}}

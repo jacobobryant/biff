@@ -26,6 +26,5 @@
 (defn -main [& _args]
   (let [{:biff.tasks/keys [nrepl-port]} (start)]
     (nrepl/-main "--port" nrepl-port
-                 "--middleware" (pr-str '[cider.nrepl/cider-middleware
-                                          refactor-nrepl.middleware/wrap-refactor])))
+                 "--middleware" (pr-str '[cider.nrepl/cider-middleware])))
   @(promise))

@@ -2,7 +2,7 @@
 
 ### use-aero-config
 
-[view source](../../src/com/biffweb/config.clj#L68)
+[view source](../../src/com/biffweb/config.clj#L66)
 
 ```
 (use-aero-config {:biff.config/keys [profile], :as ctx})

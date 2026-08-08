@@ -176,11 +176,16 @@
                        :resolve-fn (fn [_ctx _input]
                                      {:user/profile "bio"})})])]
     (is (thrown-with-msg? AssertionError
-                          #"declared :user/profile as a scalar but value is a join"
+                          (re-pattern
+                           (str "declared :user/profile as a scalar "
+                                "but value is a join"))
                           (biff.graph/query scalar-ctx [:user/profile])))
-    (is (thrown-with-msg? AssertionError
-                          #"declared :user/profile as a join but value is a scalar"
-                          (biff.graph/query join-ctx [{:user/profile [:profile/bio]}])))))
+    (let [query [{:user/profile [:profile/bio]}]]
+      (is (thrown-with-msg? AssertionError
+                            (re-pattern
+                             (str "declared :user/profile as a join "
+                                  "but value is a scalar"))
+                            (biff.graph/query join-ctx query))))))
 
 (deftest resolver-exceptions-include-trace-and-input
   (let [ctx  (test-ctx
@@ -204,7 +209,8 @@
                                :input      [:user/id]
                                :output     [:user/name]
                                :resolve-fn (fn [_ctx {:user/keys [id]}]
-                                             {:user/name (str "User " id)})})]}])
+                                             {:user/name
+                                              (str "User " id)})})]}])
         ctx         ((:biff.core/init (biff.graph/module)) modules-var)]
     (is (= {:user/name "User 1"}
            (biff.graph/query ctx {:user/id 1} [:user/name])))

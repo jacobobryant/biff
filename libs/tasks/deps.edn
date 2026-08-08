@@ -1,20 +1,23 @@
-{:deps    {babashka/fs                          {:mvn/version "0.5.33"}
-           babashka/process                     {:mvn/version "0.6.25"}
-           cider/cider-nrepl                    {:mvn/version "0.59.0"}
-           com.github.liquidz/antq              {:mvn/version "2.11.1276"}
-           com.nextjournal/beholder             {:mvn/version "1.0.3"}
-           com.biffweb/core                     {:local/root "../core"}
-           dev.weavejester/cljfmt               {:mvn/version "0.16.4"}
-           hato/hato                            {:mvn/version "1.0.0"}
-           io.github.clojure/tools.build        {:git/tag "v0.10.13", :git/sha "ae52edf", :exclusions [org.slf4j/slf4j-nop]}
-           io.github.cognitect-labs/test-runner {:git/tag "v0.5.1", :git/sha "dfb30dd"}
-           com.biffweb/run                      {:local/root "../run"}
-           com.biffweb/config                   {:local/root "../config"}
-           nrepl/nrepl                          {:mvn/version "1.7.0"}
-           org.clojure/data.json                {:mvn/version "2.5.2"}
-           org.clojure/tools.namespace          {:mvn/version "1.5.1"}
-           refactor-nrepl/refactor-nrepl        {:mvn/version "3.12.0"}
-           slipset/deps-deploy                  {:mvn/version "0.2.4", :exclusions [org.slf4j/slf4j-nop]}}
- :paths   ["src"]
+{:paths   ["src" "resources"]
+ :deps    {babashka/fs                   {:mvn/version "0.5.33"}
+           babashka/process              {:mvn/version "0.6.25"}
+           borkdude/rewrite-edn          {:mvn/version "0.5.9"}
+           cider/cider-nrepl             {:mvn/version "0.59.0"}
+           com.github.liquidz/antq       {:mvn/version "2.11.1276"}
+           com.nextjournal/beholder      {:mvn/version "1.0.3"}
+           com.biffweb/core              {:local/root "../core"}
+           hato/hato                     {:mvn/version "1.0.0"}
+           io.github.clojure/tools.build {:git/tag    "v0.10.13"
+                                          :git/sha    "ae52edf"
+                                          :exclusions [org.slf4j/slf4j-nop]}
+           lambdaisland/kaocha           {:mvn/version "1.91.1392"}
+           com.biffweb/run               {:local/root "../run"}
+           com.biffweb/config            {:local/root "../config"}
+           com.biffweb/stuff             {:local/root "../stuff"}
+           nrepl/nrepl                   {:mvn/version "1.7.0"}
+           org.clojure/data.json         {:mvn/version "2.5.2"}
+           org.clojure/tools.namespace   {:mvn/version "1.5.1"}
+           slipset/deps-deploy           {:mvn/version "0.2.4"
+                                          :exclusions  [org.slf4j/slf4j-nop]}}
  :aliases {:run {:extra-paths ["test" "dev"]
                  :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

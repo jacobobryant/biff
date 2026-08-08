@@ -35,7 +35,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc12"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc13"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
@@ -52,11 +52,11 @@ Released:
 - [biff.xtdb](/libs/xtdb/)
 - [biff.ring](/libs/ring/)
 - [biff.datastar](/libs/datastar/)
+- [biff.run](/libs/run/)
+- [biff.tasks](/libs/tasks/)
 
 Remaining (see [libs/](/libs/)):
 
-- biff.run
-- biff.tasks
 - biff.authenticate
 - biff.admin
 - biff.background

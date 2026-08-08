@@ -8,6 +8,9 @@
                   :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
                   :main-opts   ["-m" "com.biffweb.tasks.lib"]}
            :demo {:extra-paths ["demo"]
-                  :extra-deps  {ring/ring-jetty-adapter {:mvn/version "1.15.4"}
-                                ring/ring-defaults      {:mvn/version "0.7.0"}
-                                metosin/reitit-ring     {:mvn/version "0.10.1"}}}}}
+
+                  :extra-deps {ring/ring-jetty-adapter {:mvn/version "1.15.4"}
+                               ring/ring-defaults      {:mvn/version "0.7.0"}
+
+                               metosin/reitit-ring
+                               {:mvn/version "0.10.1"}}}}}

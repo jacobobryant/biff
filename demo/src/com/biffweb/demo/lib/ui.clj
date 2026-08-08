@@ -64,6 +64,7 @@
 (defn button
   [{:as opts} & children]
   (into
-   [:button (update opts :class #(str "rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+   [:button (update opts :class #(str "rounded bg-blue-600 px-4 py-2 "
+                                      "font-medium text-white hover:bg-blue-700"
                                       (when % (str " " %))))]
    children))

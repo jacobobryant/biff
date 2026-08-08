@@ -7,7 +7,8 @@
    {:keys [to subject html text]}]
   (let [response (hato/post
                   "https://api.mailersend.com/v1/email"
-                  {:headers          {"Authorization" (str "Bearer " (force api-key))}
+                  {:headers          {"Authorization"
+                                      (str "Bearer " (force api-key))}
                    :content-type     :json
                    :throw-exceptions false
                    :as               :json

@@ -116,7 +116,8 @@
                       (reduce (fn [node path]
                                 (let [current (get-in form path)
                                       shared' (get shared (peek path))]
-                                  (r/assoc-in node path (merge current shared'))))
+                                  (r/assoc-in node path
+                                              (merge current shared'))))
                               node
                               paths))
         updated-str (str updated)]

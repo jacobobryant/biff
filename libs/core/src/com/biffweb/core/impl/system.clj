@@ -30,9 +30,9 @@
        (apply safe-merge)
        (merge (default-init modules-var))))
 
-(defn- shim-old-component
-  "Maintain backwards compatibility with Biff components that still use :biff/stop"
-  [component]
+;; Maintain backwards compatibility with Biff components that still use
+;; :biff/stop
+(defn- shim-old-component [component]
   (fn [system]
     (let [system* (component system)]
       (-> system*
@@ -49,7 +49,8 @@
 
          system-map
          (reduce (fn [system component]
-                   (log/info "starting:" (str/replace (str component) #"@.*" ""))
+                   (log/info "starting:"
+                             (str/replace (str component) #"@.*" ""))
                    (impl.v/validate ((shim-old-component component) system)))
                  initial-system
                  components)]

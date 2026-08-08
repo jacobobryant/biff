@@ -53,7 +53,8 @@
       (is (instance? clojure.lang.Atom (:biff.admin/pstats init-result)))
       (is (= {} @(:biff.admin/pstats init-result)))
       (is (contains? init-result :biff.admin/signin-codes))
-      (is (instance? clojure.lang.Atom (:biff.admin/signin-codes init-result))))))
+      (is (instance? clojure.lang.Atom
+                     (:biff.admin/signin-codes init-result))))))
 
 (deftest wrap-profiling-test
   (testing "wrap-profiling passes through when no pstats"
@@ -73,14 +74,19 @@
     (let [pstats-atom (atom nil)
           handler     (fn [_] {:status 200})
           wrapped     (admin/wrap-profiling handler)
-          resp        (with-redefs [t/now (constantly (t/instant "2026-04-27T10:30:00Z"))]
+          resp        (with-redefs [t/now
+                                    (constantly
+                                     (t/instant "2026-04-27T10:30:00Z"))]
                         (wrapped {:request-method    :get
                                   :biff.admin/pstats pstats-atom
-                                  :reitit.core/match {:data     {:name ::test-route}
-                                                      :template "/test"}}))]
+
+                                  :reitit.core/match
+                                  {:data     {:name ::test-route}
+                                   :template "/test"}}))]
       (is (= 200 (:status resp)))
       (is (= ["2026-04-27"] (keys @pstats-atom)))
-      (is (plain-data? (#'admin/pstats->stored-value (get @pstats-atom "2026-04-27")))))))
+      (is (plain-data? (#'admin/pstats->stored-value
+                        (get @pstats-atom "2026-04-27")))))))
 
 (deftest wrap-resolver-profiling-test
   (testing "wraps resolver resolve function"
@@ -102,27 +108,31 @@
       (is (= {:result 42} result)))))
 
 (deftest flush-pstats-test
-  (testing "flush-pstats! writes all day snapshots and keeps only the current day in memory"
+  (testing (str "flush-pstats! writes all day snapshots and keeps only "
+                "the current day in memory")
     (let [stored      (atom {"2026-04-27" {:old true}})
           current     (sample-pstats "current")
           yesterday   (sample-pstats "existing")
           pstats-atom (atom {"2026-04-27" yesterday
                              "2026-04-28" current})
           ctx         {:biff.admin/pstats pstats-atom
-                       :biff.core/kv-set  (fn [_ _ key value] (swap! stored assoc key value))}]
+                       :biff.core/kv-set  (fn [_ _ key value]
+                                            (swap! stored assoc key value))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T10:30:00Z"))]
         (#'admin/flush-pstats! ctx))
       (is (= {"2026-04-28" current} @pstats-atom))
       (is (plain-data? (get @stored "2026-04-27")))
       (is (plain-data? (get @stored "2026-04-28")))
-      (let [formatted (str (tufte/format-grouped-pstats {"2026-04-27" (get @stored "2026-04-27")
-                                                         "2026-04-28" (get @stored "2026-04-28")}))]
+      (let [formatted (str (tufte/format-grouped-pstats
+                            {"2026-04-27" (get @stored "2026-04-27")
+                             "2026-04-28" (get @stored "2026-04-28")}))]
         (is (str/includes? formatted "2026-04-27"))
         (is (str/includes? formatted "2026-04-28"))
         (is (str/includes? formatted ":existing"))
         (is (str/includes? formatted ":current")))))
 
-  (testing "flush-pstats! leaves the current day in memory and removes older days"
+  (testing (str "flush-pstats! leaves the current day in memory and "
+                "removes older days")
     (let [pstats-atom (atom {"2026-04-27" (sample-pstats "old")
                              "2026-04-28" (sample-pstats "current")
                              "2026-04-29" (sample-pstats "future")})
@@ -133,20 +143,27 @@
       (is (= ["2026-04-28"] (keys @pstats-atom))))))
 
 (deftest recent-pstats-data-test
-  (testing "recent-pstats-data returns grouped persisted days with in-memory current-day override"
+  (testing (str "recent-pstats-data returns grouped persisted days with "
+                "in-memory current-day override")
     (let [stored (into {}
-                       [["2026-04-21" (#'admin/pstats->stored-value (sample-pstats "too-old"))]
-                        ["2026-04-22" (#'admin/pstats->stored-value (sample-pstats "day-1"))]
-                        ["2026-04-23" (#'admin/pstats->stored-value (sample-pstats "day-2"))]
-                        ["2026-04-24" (#'admin/pstats->stored-value (sample-pstats "day-3"))]
-                        ["2026-04-25" (#'admin/pstats->stored-value (sample-pstats "day-4"))]
-                        ["2026-04-26" (#'admin/pstats->stored-value (sample-pstats "day-5"))]
-                        ["2026-04-27" (#'admin/pstats->stored-value (sample-pstats "day-6"))]
-                        ["2026-04-28" (#'admin/pstats->stored-value (sample-pstats "day-7"))]])
-          ctx    {:biff.admin/pstats (atom {"2026-04-28" (sample-pstats "current-hour")})
-                  :biff.core/kv-get  (fn [_ _ key] (get stored key))}]
+                       (mapv (fn [[day label]]
+                               [day (#'admin/pstats->stored-value
+                                     (sample-pstats label))])
+                             [["2026-04-21" "too-old"]
+                              ["2026-04-22" "day-1"]
+                              ["2026-04-23" "day-2"]
+                              ["2026-04-24" "day-3"]
+                              ["2026-04-25" "day-4"]
+                              ["2026-04-26" "day-5"]
+                              ["2026-04-27" "day-6"]
+                              ["2026-04-28" "day-7"]]))
+          ctx    {:biff.admin/pstats
+                  (atom {"2026-04-28" (sample-pstats "current-hour")})
+
+                  :biff.core/kv-get (fn [_ _ key] (get stored key))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T12:00:00Z"))]
-        (let [formatted (str (tufte/format-grouped-pstats (#'admin/recent-pstats-data ctx)))]
+        (let [formatted (str (tufte/format-grouped-pstats
+                              (#'admin/recent-pstats-data ctx)))]
           (is (str/includes? formatted ":day-1"))
           (is (str/includes? formatted ":current-hour"))
           (is (not (str/includes? formatted ":day-7")))
@@ -154,12 +171,17 @@
 
   (testing "recent-pstats-data deletes malformed stored values"
     (let [stored (atom {"2026-04-28" {:legacy true}
-                        "2026-04-27" (#'admin/pstats->stored-value (sample-pstats "day-6"))})
+
+                        "2026-04-27"
+                        (#'admin/pstats->stored-value
+                         (sample-pstats "day-6"))})
           ctx    {:biff.admin/pstats (atom {})
                   :biff.core/kv-get  (fn [_ _ key] (get @stored key))
-                  :biff.core/kv-set  (fn [_ _ key value] (swap! stored assoc key value))}]
+                  :biff.core/kv-set  (fn [_ _ key value]
+                                       (swap! stored assoc key value))}]
       (with-redefs [t/now (constantly (t/instant "2026-04-28T12:00:00Z"))]
-        (let [formatted (str (tufte/format-grouped-pstats (#'admin/recent-pstats-data ctx)))]
+        (let [formatted (str (tufte/format-grouped-pstats
+                              (#'admin/recent-pstats-data ctx)))]
           (is (str/includes? formatted ":day-6"))
           (is (nil? (get @stored "2026-04-28"))))))))
 
@@ -195,7 +217,9 @@
     (let [m            (admin/module {:biff.admin/get-user-events (fn [_] [])})
           routes       (:biff.ring/routes m)
           ;; Routes structure: [prefix {middleware} ["/health" ...] ...]
-          health-route (some (fn [r] (when (and (vector? r) (= "/health" (first r))) r))
+          health-route (some (fn [r]
+                               (when (and (vector? r)
+                                          (= "/health" (first r))) r))
                              (rest (rest routes)))]
       (is (some? health-route)))))
 

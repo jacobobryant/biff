@@ -2,11 +2,7 @@
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [com.biffweb.core :as biff.core]))
-
-(biff.core/register
- {:biff.config/profile           'keyword?
-  :biff.config/system-properties 'map?})
+            [com.biffweb.stuff.secret :as stuff.secret]))
 
 ;; Algorithm adapted from dotenv-java:
 ;; https://github.com/cdimascio/dotenv-java/blob/master/src/main/java/io/github/cdimascio/dotenv/internal/DotenvParser.java
@@ -14,7 +10,9 @@
 ;; https://github.com/bkeepers/dotenv/blob/master/lib/dotenv/parser.rb
 (defn- parse-env-var [line]
   (let [line      (str/trim line)
-        [_ _ k v] (re-matches #"^\s*(export\s+)?([\w.\-]+)\s*=\s*(['][^']*[']|[\"][^\"]*[\"]|[^#]*)?\s*(#.*)?$"
+        pattern   (str "^\\s*(export\\s+)?([\\w.\\-]+)\\s*=\\s*"
+                       "(['][^']*[']|[\"][^\"]*[\"]|[^#]*)?\\s*(#.*)?$")
+        [_ _ k v] (re-matches (re-pattern pattern)
                               line)]
     (when-not (or (str/starts-with? line "#")
                   (str/starts-with? line "////")
@@ -36,7 +34,7 @@
   (defmethod aero/reader 'biff/secret
     [opts _ value]
     (when-some [value (aero/reader opts 'biff/env value)]
-      (biff.core/secret-delay value))))
+      (stuff.secret/secret-delay value))))
 
 (register-reader-methods!)
 

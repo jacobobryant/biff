@@ -54,8 +54,11 @@
   [query-item]
   (let [[query-item optional] (case (:key query-item)
                                 :required-or-join [(:value query-item) nil]
-                                :optional-scalar [{:key   :scalar
-                                                   :value (second (:value query-item))}
+
+                                :optional-scalar [{:key :scalar
+
+                                                   :value
+                                                   (second (:value query-item))}
                                                   true])]
     (case (:key query-item)
       :scalar
@@ -64,11 +67,13 @@
                                  {:optional optional})]
 
       :join
-      (let [[parsed-attr parsed-subquery] (first (:value query-item))
-            [attr optional]               (case (:key parsed-attr)
-                                            :required [(:value parsed-attr) optional]
-                                            :optional [(second (:value parsed-attr)) true])
-            {:keys [wildcard children]}   (parsed-subquery->ast parsed-subquery)]
+      (let [[attr-node subquery]        (first (:value query-item))
+            attr-value                  (:value attr-node)
+            [attr optional]             (case (:key attr-node)
+                                          :required [attr-value optional]
+                                          :optional
+                                          [(second attr-value) true])
+            {:keys [wildcard children]} (parsed-subquery->ast subquery)]
         [attr (into {:kind :join}
                     (filter val)
                     {:children children

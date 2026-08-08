@@ -2,7 +2,7 @@
 
 ### *testing*
 
-[view source](../../src/com/biffweb/ring.clj#L30)
+[view source](../../src/com/biffweb/ring.clj#L36)
 
 ```
 See `path`. Default false.
@@ -10,7 +10,7 @@ See `path`. Default false.
 
 ### make-handler
 
-[view source](../../src/com/biffweb/ring.clj#L38)
+[view source](../../src/com/biffweb/ring.clj#L44)
 
 ```
 (make-handler {:keys [site-routes site-middleware api-routes api-middleware base-middleware]})
@@ -29,7 +29,7 @@ the request.
 
 ### path
 
-[view source](../../src/com/biffweb/ring.clj#L57)
+[view source](../../src/com/biffweb/ring.clj#L63)
 
 ```
 (path path-template-or-route & args)
@@ -58,7 +58,7 @@ and the unencoded query params.
 
 ### defpath
 
-[view source](../../src/com/biffweb/ring.clj#L81)
+[view source](../../src/com/biffweb/ring.clj#L87)
 
 ```
 (defpath sym path-template-or-route)
@@ -71,7 +71,7 @@ that must be referenced from multiple namespaces.
 
 ### defroute
 
-[view source](../../src/com/biffweb/ring.clj#L89)
+[view source](../../src/com/biffweb/ring.clj#L95)
 
 ```
 (defroute sym & args)
@@ -124,7 +124,7 @@ helps with testing and REPL-driven development (late binding).
 
 ### wrap-csrf-protection
 
-[view source](../../src/com/biffweb/ring.clj#L139)
+[view source](../../src/com/biffweb/ring.clj#L145)
 
 ```
 (wrap-csrf-protection handler)
@@ -145,7 +145,7 @@ response.
 
 ### wrap-path-param-uuids
 
-[view source](../../src/com/biffweb/ring.clj#L155)
+[view source](../../src/com/biffweb/ring.clj#L161)
 
 ```
 (wrap-path-param-uuids handler)
@@ -156,7 +156,7 @@ Updates :path-params on incoming requests, decoding any UUIDs encoded by
 
 ### wrap-nippy-params
 
-[view source](../../src/com/biffweb/ring.clj#L161)
+[view source](../../src/com/biffweb/ring.clj#L167)
 
 ```
 (wrap-nippy-params handler)
@@ -166,7 +166,7 @@ Decodes Nippy-encoded params from `path` and merges them into :params.
 
 ### wrap-resource
 
-[view source](../../src/com/biffweb/ring.clj#L166)
+[view source](../../src/com/biffweb/ring.clj#L172)
 
 ```
 (wrap-resource handler)
@@ -186,7 +186,7 @@ to the wrapped handler.
 
 ### wrap-internal-error
 
-[view source](../../src/com/biffweb/ring.clj#L181)
+[view source](../../src/com/biffweb/ring.clj#L187)
 
 ```
 (wrap-internal-error handler)
@@ -199,7 +199,7 @@ response.
 
 ### wrap-log-requests
 
-[view source](../../src/com/biffweb/ring.clj#L189)
+[view source](../../src/com/biffweb/ring.clj#L195)
 
 ```
 (wrap-log-requests handler)
@@ -209,7 +209,7 @@ Logs an info message after each request finishes.
 
 ### wrap-session
 
-[view source](../../src/com/biffweb/ring.clj#L194)
+[view source](../../src/com/biffweb/ring.clj#L200)
 
 ```
 (wrap-session handler)
@@ -247,7 +247,7 @@ Sets HttpOnly on the session cookie.
 
 ### wrap-ssl
 
-[view source](../../src/com/biffweb/ring.clj#L227)
+[view source](../../src/com/biffweb/ring.clj#L233)
 
 ```
 (wrap-ssl handler)
@@ -268,7 +268,7 @@ Incoming requests may have the following keys:
 
 ### wrap-site-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L243)
+[view source](../../src/com/biffweb/ring.clj#L249)
 
 ```
 (wrap-site-defaults handler)
@@ -286,7 +286,7 @@ Includes:
 
 ### wrap-api-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L256)
+[view source](../../src/com/biffweb/ring.clj#L262)
 
 ```
 (wrap-api-defaults handler)
@@ -301,7 +301,7 @@ Includes:
 
 ### wrap-base-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L266)
+[view source](../../src/com/biffweb/ring.clj#L272)
 
 ```
 (wrap-base-defaults handler)
@@ -319,7 +319,7 @@ Includes:
 
 ### use-jetty
 
-[view source](../../src/com/biffweb/ring.clj#L281)
+[view source](../../src/com/biffweb/ring.clj#L287)
 
 ```
 (use-jetty {:biff.ring/keys [host port handler], :or {host "localhost", port 8080}})
@@ -331,7 +331,7 @@ Merges ctx into incoming requests.
 
 ### module
 
-[view source](../../src/com/biffweb/ring.clj#L291)
+[view source](../../src/com/biffweb/ring.clj#L297)
 
 ```
 (module)

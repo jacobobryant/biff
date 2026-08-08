@@ -1,0 +1,16 @@
+#kaocha/v1
+ {:tests [{:id         :unit
+           :test-paths ["libs/admin/test"
+                        "libs/authenticate/test"
+                        "libs/background/test"
+                        "libs/config/test"
+                        "libs/core/test"
+                        "libs/datastar/test"
+                        "libs/fx/test"
+                        "libs/graph/test"
+                        "libs/ring/test"
+                        "libs/run/test"
+                        "libs/sqlite/test"
+                        "libs/stuff/test"
+                        "libs/tasks/test"
+                        "libs/xtdb/test"]}]}

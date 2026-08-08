@@ -35,11 +35,6 @@ A database connection (transaction) that _does not_ include writes made by
 [authorized-write](../api/com.biffweb.sqlite.md#authorized-write). Passed to the
 `:biff.sqlite/authorize` function.
 
-### :biff.sqlite/bin-dir
-
-String. Default `target/bin`. The directory in which to store binaries for
-litestream and sqldef.
-
 ### :biff.sqlite/columns
 
 `{<column keyword> <options map>}`. See [database schema](db-schema.md).

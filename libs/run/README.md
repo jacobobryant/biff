@@ -1,29 +1,52 @@
 # biff.run
 
-A tool&mdash;nay, a convention&mdash;for curating and running Clojure CLI tasks.
+A lightweight `clj`-based task runner:
 
-I made biff.run because I wanted to provide a bundle of default CLI tasks for
-[Biff](https://biffweb.com) projects without having to copy a bunch of boilerplate into new
-projects. Both the task implementations (functions) and task "bundles" (maps, see below) should be
-defined in library code. As a "task bundle" maintainer, this allows me to both update task
-implementations and add new tasks without requiring users to do anything besides bumping a version.
+- Tasks are defined as a map of functions, either in your project code or in a
+  separate library.
 
-I also wanted a solution that:
+- You define a `:run` alias in your project's `deps.edn` file which includes
+  biff.run in `:extra-deps` and has a `:main-opts` entrypoint that passes your
+  tasks map to `com.biffweb.run/main`.
 
-- works without anything installed other than `clj`.
-- is useful for curating tasks even if those tasks weren't written with biff.run in mind.
+- You can then run commands like `clj -M:run my-task arg1 arg2` and `clj -M:run
+  --help`.
 
-I currently only use biff.run in Biff projects, so the bundle of tasks there is largely Biff-specific.
-However I also like the idea of providing a more "vanilla" bundle of default tasks that could be
-useful more broadly in non-Biff projects. (e.g. there could be tasks for creating new projects,
-running tests, updating deps, building jars, publishing to clojars...). Maybe I'll do that before
-publicly announcing this tool.
+I made biff.run because I wanted a task runner that doesn't need anything other
+than `clj` to be installed and that is designed for collections of tasks to be
+defined/maintained in library code, not project code.
 
-## Demo
+Specifically, [biff.tasks](/libs/tasks/) uses biff.run to provide a default set
+of tasks for Biff projects. It also has a collection of non-Biff-specific tasks
+for library projects.
 
-This repo defines a couple example tasks in `demo/src/`:
+The main tradeoff is that when writing tasks, you have to be careful to avoid
+unnecessary `require`s in order to keep startup times acceptable. And even then,
+you obviously still won't get ~instant startup times as you would with e.g.
+Babashka tasks.
+
+### Dependency
+
+```clojure
+com.biffweb/run {:mvn/version "2.0.0-rc13"}
+```
+
+### Status
+
+This library will be a release candidate until all [the other Biff 2
+libraries](/README.md) have been released. Until then there could be breaking
+changes.
+
+## Reference
+
+- [API](docs/api/com.biffweb.run.md)
+
+## Example
+
+The `demo/` project defines a couple example tasks:
 
 ```bash
+$ cd demo
 $ clj -M:run -h
 Available commands:
 
@@ -36,82 +59,61 @@ Task A args: ("--message" "hello")
 
 ## Usage
 
-The main idea is that tasks are defined as maps like so:
+First, define a tasks map and provide a `-main` function that passes it to
+biff.run. For locally-defined tasks, I recommend putting them in
+`dev/tasks.clj`:
 
 ```clojure
-(ns com.example.tasks)
-
-(def tasks
-  {"my-task" {:task 'com.example/my-task
-              :doc "Run my task"}
-   "nrepl"   {:task 'nrepl.cmdline/-main
-              :doc "Start an nREPL server"}})
-```
-
-To ensure reasonable start-up time, this namespace holding the tasks map shouldn't require anything.
-Individual tasks are required only when they're ran.
-
-Then you add a `-main` entrypoint that invokes biff.run:
-
-```clojure
-(ns com.example.tasks
+(ns tasks
   (:require [com.biffweb.run :as biff.run]))
 
 (def tasks
-  {"my-task" {:task 'com.example/my-task
-              :doc "Run my task"}
+  {"my-task" {:task 'tasks.my-task/my-task
+              :doc  "Run my task"}
+   ;; Since tasks are regular functions, you can easily aggregate tasks from
+   ;; various libraries:
    "nrepl"   {:task 'nrepl.cmdline/-main
-              :doc "Start an nREPL server"}})
+              :doc  "Start an nREPL server"}})
 
 (defn -main [& args]
-  (apply biff.run/main* tasks args))
+  (apply biff.run/main tasks args))
 ```
 
-Then you add an alias to `deps.edn` that calls that namespace:
+Next, include a `:run` alias in your project's `deps.edn` which adds your tasks
+to the classpath and invokes your `-main` function by default:
 
 ```clojure
-;; :run is used as the alias by convention
-:aliases {:run {:extra-deps {com.biffweb/run {:mvn/version "1.0"}
-                             ;; If your tasks are defined in a library, add it here:
-                             com.example/tasks {:mvn/version "1.0"}}
-                ;; If your tasks are defined in the current project, make sure they're on the
-                ;; classpath:
-                :extra-paths ["dev"]
-                :main-opts ["-m" "com.example.tasks"]}}
+{:aliases
+ {:run {;; As mentioned, you can define tasks in a local dev/tasks.clj file:
+        :extra-paths ["dev"]
+        :extra-deps {com.biffweb/run {:mvn/version "..."}
+                     ;; and/or use tasks from an external library:
+                     com.example/tasks {:mvn/version "..."}}
+        :main-opts  ["-m" "tasks"]  ; or ["-m" "com.example/tasks"]
+        }}}
 ```
 
-Then you can do `clj -M:run my-task` to run the task, or `clj -M:run -h` to see the available tasks.
-For extra ergonomics you can put `alias biff.run='clj -M:run'` in your `.bashrc`.
+Then you can run `clj -M:run my-task arg1 arg2` to run a task or run `clj -M:run
+-h` to see the available tasks.
 
-I generally define the `:run` alias in my project `deps.edn` files, but you could also stick it in
-`~/.clojure/deps.edn`.
+### Writing tasks
 
-### Defining your own tasks
+Tasks functions (the functions pointed to by a `:task` symbol) are plain
+functions that accept unparsed command line arguments (strings). Individual
+tasks can parse command line options however they want, though I typically have
+my own tasks read options from a config file (like `resources/config.edn`)
+instead.
 
-Continuing the example above, if you want to define (or override) some additional project-specific
-tasks, you can reference them in `dev/demo_tasks.clj`:
+#### Managing startup time
 
-```clojure
-(ns demo-tasks
-  (:require [com.biffweb.run :as biff.run]
-            [com.example.tasks :as example.tasks]))
+The namespace containing your tasks map (the "tasks namespace") should not
+require anything other than biff.run (and an external tasks namespace if
+needed). Each task should be defined in its own namespace so that its
+dependencies are required only when that task runs. If a task has dependencies
+that are used conditionally, you can require them at run time via
+`requiring-resolve`.
 
-(def tasks
-  (merge example.tasks/tasks
-         {"another-task" {:task 'demo-tasks.another-task/task
-                         :doc "Run another task"}}))
-
-(defn -main [& args]
-  (apply biff.run/main* tasks args))
-```
-
-And then point `deps.edn` at `demo-tasks`:
-
-```clojure
-:main-opts ["-m" "demo-tasks"]
-```
-
-### Writing tasks that call other tasks
+#### Calling other tasks
 
 biff.run provides a `run-task` function for calling other tasks:
 
@@ -124,8 +126,9 @@ biff.run provides a `run-task` function for calling other tasks:
   (run-task "another-task" "--foo" "bar"))
 ```
 
-This will ensure that if the user has defined a custom `"another-task"` task, you'll call it. If you
-don't care about that, you can instead call the task function directly:
+This will ensure that if the user has defined a custom `"another-task"` task,
+you'll call it. If you don't care about that, you can always call the task
+function directly instead of going through `run-task`:
 
 ```clojure
 (ns com.example.my-task
@@ -135,7 +138,30 @@ don't care about that, you can instead call the task function directly:
   (another-task "--foo" "bar"))
 ```
 
-### Argument parsing
+#### Overriding tasks
 
-biff.run doesn't do any argument-parsing; all arguments are passed as strings and you can parse them
-using whatever methods you like.
+If you want to use a default collection of tasks from an external lib, you
+can still add/override tasks locally:
+
+```clojure
+(ns tasks
+  (:require [com.biffweb.run :as biff.run]
+            [com.example.tasks :as example-tasks))
+
+(def tasks
+  (merge example-tasks/tasks
+         {"my-task" {:task '/my-task
+                     :doc  "Run my task"}
+          "nrepl"   {:task 'nrepl.cmdline/-main
+                     :doc  "Start an nREPL server"}}))
+
+(defn -main [& args]
+  (apply biff.run/main tasks args))
+```
+
+## Tips
+
+- I recommend using a shell alias like `alias cljrun='clj -M:run`
+
+- You could define global tasks by putting a `:run` alias in
+  `~/.clojure/deps.edn`

@@ -8,4 +8,4 @@
                    :doc  "Generate docs/error-examples.md"}))
 
 (defn -main [& args]
-  (apply biff.run/main* tasks args))
+  (apply biff.run/main tasks args))

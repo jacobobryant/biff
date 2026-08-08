@@ -140,7 +140,8 @@
                         (into {}
                               (filter (comp some? val))
                               (merge {:xt/id (or (:xt/id record) (random-uuid))}
-                                     (dissoc record :biff/on-insert :biff/on-update)
+                                     (dissoc record
+                                             :biff/on-insert :biff/on-update)
                                      (:biff/on-insert record))))))
               records)
 
@@ -159,7 +160,8 @@
             [(into [:put-docs table] new-records)])
           (when (seq existing)
             [(into [:patch-docs table] existing)])
-          (mapv #(assert-count-at-most-one table (select-keys % on)) records)))))
+          (mapv #(assert-count-at-most-one table (select-keys % on))
+                records)))))
 
 (defn expand-ops [ctx tx-ops]
   (loop [ops tx-ops

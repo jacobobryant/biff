@@ -112,5 +112,7 @@
              (is (= "from env" (:config-test/from-env ctx)))
              (is (= "super-secret" (force (:config-test/secret ctx)))))
            (finally
-             (.addMethod ^clojure.lang.MultiFn aero/reader 'biff/env original-env)
-             (.addMethod ^clojure.lang.MultiFn aero/reader 'biff/secret original-secret)))))))
+             (.addMethod ^clojure.lang.MultiFn aero/reader
+                         'biff/env original-env)
+             (.addMethod ^clojure.lang.MultiFn aero/reader
+                         'biff/secret original-secret)))))))
