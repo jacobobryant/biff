@@ -56,13 +56,15 @@
 
 (defn- default-code-email [{:biff.auth/keys [app-name]} {:keys [code]}]
   {:subject (str "Your sign-in code for " app-name)
-   :text    (str "Your sign-in code is: " code "\n\nThis code expires in a few minutes.")
+   :text    (str "Your sign-in code is: " code
+                 "\n\nThis code expires in a few minutes.")
    :html    (str "<p>Your sign-in code is: <strong>" code "</strong></p>"
                  "<p>This code expires in a few minutes.</p>")})
 
 (defn- default-link-email [{:biff.auth/keys [app-name]} {:keys [url]}]
   {:subject (str "Sign in to " app-name)
-   :text    (str "Click this link to sign in:\n\n" url "\n\nThis link expires in about an hour.")
+   :text    (str "Click this link to sign in:\n\n" url
+                 "\n\nThis link expires in about an hour.")
    :html    (str "<p><a href=\"" url "\">Click here to sign in</a></p>"
                  "<p>Or copy and paste this URL: " url "</p>"
                  "<p>This link expires in about an hour.</p>")})
@@ -77,7 +79,8 @@
           code-signin-path (:biff.auth/code-signin-path ctx)]
       (if (not (email-validator ctx email))
         {:status  303
-         :headers {"location" (append-query-params code-signin-path "error=invalid-email")}}
+         :headers {"location" (append-query-params
+                               code-signin-path "error=invalid-email")}}
         {:email           email
          :original-params params
          :code            [:biff.auth/new-code 6]
@@ -103,7 +106,8 @@
                                                        :code     code})]
           :biff.fx/next :check-send-result}]
         {:status  303
-         :headers {"location" (append-query-params code-signin-path "error=captcha")}})))
+         :headers {"location" (append-query-params
+                               code-signin-path "error=captcha")}})))
 
   :check-send-result
   (fn [{:keys [email sent] :as ctx}]
@@ -111,9 +115,11 @@
       (if sent
         {:status  303
          :headers {"location" (append-query-params code-signin-path
-                                                   (str "verify=code&email=" (url-encode email)))}}
+                                                   (str "verify=code&email="
+                                                        (url-encode email)))}}
         {:status  303
-         :headers {"location" (append-query-params code-signin-path "error=send-failed")}}))))
+         :headers {"location" (append-query-params
+                               code-signin-path "error=send-failed")}}))))
 
 ;; === Send link machine ===
 
@@ -125,7 +131,8 @@
           link-signin-path (:biff.auth/link-signin-path ctx)]
       (if (not (email-validator ctx email))
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=invalid-email")}}
+         :headers {"location" (append-query-params
+                               link-signin-path "error=invalid-email")}}
         {:email           email
          :original-params params
          :token           [:biff.auth/new-link-token 32]
@@ -134,12 +141,14 @@
          :biff.fx/next    :check-captcha})))
 
   :check-captcha
-  (fn [{:keys [email token state-token captcha-ok original-params biff.fx/now] :as ctx}]
+  (fn [{:keys [email token state-token captcha-ok original-params biff.fx/now]
+        :as   ctx}]
     (let [base-url         (:biff.auth/base-url ctx)
           link-signin-path (:biff.auth/link-signin-path ctx)
           captcha-param    (:biff.auth/captcha-param ctx)
           clean-p          (clean-params original-params captcha-param)
-          payload          (encode-payload {:token token :email email :state state-token})
+          payload          (encode-payload {:token token       :email email
+                                            :state state-token})
           link-url         (str base-url "/_biff/auth/verify-link/" payload)
           defaults         (default-link-email ctx {:url link-url})]
       (if (:success captcha-ok)
@@ -156,7 +165,8 @@
                                                        :url      link-url})]
           :biff.fx/next :check-send-result}]
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=captcha")}})))
+         :headers {"location" (append-query-params
+                               link-signin-path "error=captcha")}})))
 
   :check-send-result
   (fn [{:keys [email state-token sent session] :as ctx}]
@@ -164,10 +174,12 @@
       (if sent
         {:status  303
          :headers {"location" (append-query-params link-signin-path
-                                                   (str "verify=link&email=" (url-encode email)))}
+                                                   (str "verify=link&email="
+                                                        (url-encode email)))}
          :session (assoc session :biff.auth/state state-token)}
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=send-failed")}}))))
+         :headers {"location" (append-query-params
+                               link-signin-path "error=send-failed")}}))))
 
 ;; === Verify code machine ===
 
@@ -182,12 +194,14 @@
 
   :check-code
   (fn [{:keys [email submitted-code signin-record biff.fx/now] :as ctx}]
-    (let [{:biff-auth-signin/keys [code created-at failed-attempts params]} signin-record
-          max-attempts                                                      (:biff.auth/max-failed-attempts ctx)
-          max-minutes                                                       (:biff.auth/code-expiry-minutes ctx)
-          code-signin-path                                                  (:biff.auth/code-signin-path ctx)
-          elapsed-minutes                                                   (when created-at
-                                                                              (tick/minutes (tick/between created-at now)))]
+    (let [{:biff-auth-signin/keys [code created-at failed-attempts params]}
+          signin-record
+
+          max-attempts     (:biff.auth/max-failed-attempts ctx)
+          max-minutes      (:biff.auth/code-expiry-minutes ctx)
+          code-signin-path (:biff.auth/code-signin-path ctx)
+          elapsed-minutes  (when created-at
+                             (tick/minutes (tick/between created-at now)))]
       (cond
         (and signin-record
              (< failed-attempts max-attempts)
@@ -202,17 +216,21 @@
 
         (and signin-record (< failed-attempts max-attempts))
         {:_inc    [:biff.core/kv-set :biff.auth/signin email
-                   (update signin-record :biff-auth-signin/failed-attempts (fnil inc 0))]
+                   (update signin-record :biff-auth-signin/failed-attempts
+                           (fnil inc 0))]
          :status  303
          :headers {"location" (append-query-params code-signin-path
-                                                   (str "verify=code&error=invalid-code&email="
+                                                   (str "verify=code&error="
+                                                        "invalid-code&email="
                                                         (url-encode email)))}}
 
         :else
-        {:status  303
-         :headers {"location" (append-query-params code-signin-path
-                                                   (str "verify=code&error=invalid-code&email="
-                                                        (url-encode email)))}})))
+        (let [location (append-query-params
+                        code-signin-path
+                        (str "verify=code&error=invalid-code&email="
+                             (url-encode email)))]
+          {:status  303
+           :headers {"location" location}}))))
 
   :ensure-user
   (fn [{:keys [email saved-params existing-user-id session] :as ctx}]
@@ -225,7 +243,8 @@
                       (dissoc :biff.auth/state))}
         {:email        email
          :saved-params saved-params
-         :new-user-id  [:biff.auth/create-user! {:email email :params saved-params}]
+         :new-user-id  [:biff.auth/create-user!
+                        {:email email :params saved-params}]
          :biff.fx/next :finish-signup})))
 
   :finish-signup
@@ -246,31 +265,39 @@
           {:keys [token email state]} (when (map? payload) payload)
           session-state               (:biff.auth/state session)
           link-signin-path            (:biff.auth/link-signin-path ctx)
-          state-valid?                (and state session-state (= state session-state))]
+          state-valid?                (and state session-state
+                                           (= state session-state))]
       (cond
         (nil? payload)
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=invalid-link")}}
+         :headers {"location" (append-query-params
+                               link-signin-path "error=invalid-link")}}
 
         state-valid?
         {:email           (normalize-email email)
          :submitted-token token
-         :signin-record   [:biff.core/kv-get :biff.auth/signin (normalize-email email)]
+         :signin-record   [:biff.core/kv-get :biff.auth/signin
+                           (normalize-email email)]
          :biff.fx/next    :check-token}
 
         :else
-        {:status  303
-         :headers {"location" (append-query-params link-signin-path
-                                                   (str "verify=link-confirm&token="
-                                                        (url-encode token)))}})))
+        (let [location (append-query-params
+                        link-signin-path
+                        (str "verify=link-confirm&token="
+                             (url-encode token)))]
+          {:status  303
+           :headers {"location" location}}))))
 
   :check-token
   (fn [{:keys [email submitted-token signin-record biff.fx/now] :as ctx}]
     (let [{:biff-auth-signin/keys [code created-at params]} signin-record
-          max-minutes                                       (:biff.auth/link-expiry-minutes ctx)
-          link-signin-path                                  (:biff.auth/link-signin-path ctx)
-          elapsed-minutes                                   (when created-at
-                                                              (tick/minutes (tick/between created-at now)))]
+
+          max-minutes      (:biff.auth/link-expiry-minutes ctx)
+          link-signin-path (:biff.auth/link-signin-path ctx)
+
+          elapsed-minutes
+          (when created-at
+            (tick/minutes (tick/between created-at now)))]
       (if (and signin-record
                (some? elapsed-minutes)
                (< elapsed-minutes max-minutes)
@@ -281,7 +308,8 @@
          :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=invalid-link")}})))
+         :headers {"location" (append-query-params
+                               link-signin-path "error=invalid-link")}})))
 
   :ensure-user
   (fn [{:keys [email saved-params existing-user-id session] :as ctx}]
@@ -294,7 +322,8 @@
                       (dissoc :biff.auth/state))}
         {:email        email
          :saved-params saved-params
-         :new-user-id  [:biff.auth/create-user! {:email email :params saved-params}]
+         :new-user-id  [:biff.auth/create-user!
+                        {:email email :params saved-params}]
          :biff.fx/next :finish-signup})))
 
   :finish-signup
@@ -316,7 +345,8 @@
           link-signin-path (:biff.auth/link-signin-path ctx)]
       (if (not (string? email))
         {:status  303
-         :headers {"location" (append-query-params link-signin-path "error=invalid-link")}}
+         :headers {"location" (append-query-params
+                               link-signin-path "error=invalid-link")}}
         {:email           email
          :submitted-token token
          :signin-record   [:biff.core/kv-get :biff.auth/signin email]
@@ -325,10 +355,13 @@
   :check-token
   (fn [{:keys [email submitted-token signin-record biff.fx/now] :as ctx}]
     (let [{:biff-auth-signin/keys [code created-at params]} signin-record
-          max-minutes                                       (:biff.auth/link-expiry-minutes ctx)
-          link-signin-path                                  (:biff.auth/link-signin-path ctx)
-          elapsed-minutes                                   (when created-at
-                                                              (tick/minutes (tick/between created-at now)))]
+
+          max-minutes      (:biff.auth/link-expiry-minutes ctx)
+          link-signin-path (:biff.auth/link-signin-path ctx)
+
+          elapsed-minutes
+          (when created-at
+            (tick/minutes (tick/between created-at now)))]
       (if (and signin-record
                (some? elapsed-minutes)
                (< elapsed-minutes max-minutes)
@@ -338,10 +371,12 @@
          :_delete          [:biff.core/kv-set :biff.auth/signin email nil]
          :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
-        {:status  303
-         :headers {"location" (append-query-params link-signin-path
-                                                   (str "verify=link-confirm&error=invalid-link&token="
-                                                        (url-encode submitted-token)))}})))
+        (let [location (append-query-params
+                        link-signin-path
+                        (str "verify=link-confirm&error=invalid-link&token="
+                             (url-encode submitted-token)))]
+          {:status  303
+           :headers {"location" location}}))))
 
   :ensure-user
   (fn [{:keys [email saved-params existing-user-id session] :as ctx}]
@@ -354,7 +389,8 @@
                       (dissoc :biff.auth/state))}
         {:email        email
          :saved-params saved-params
-         :new-user-id  [:biff.auth/create-user! {:email email :params saved-params}]
+         :new-user-id  [:biff.auth/create-user!
+                        {:email email :params saved-params}]
          :biff.fx/next :finish-signup})))
 
   :finish-signup

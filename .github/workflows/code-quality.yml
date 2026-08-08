@@ -15,10 +15,5 @@ jobs:
       - uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: latest
-      - run: bin/test-all
-      - run: clojure -M:run update --cache-only
-      - run: clojure -M:run lint
-      - run: clojure -M:run format
+      - run: clj -M:run code-quality
       - run: git diff --quiet --exit-code
-      - run: bin/docs
-      - run: git diff --quiet --exit-code -- libs/*/docs/api

@@ -60,8 +60,9 @@
   (biff.core/register {:foo :string
                        :bar :int})
   (let [stopped     (atom [])
-        modules-var (atom [{:biff.core/init (fn [modules-var]
-                                              {:foo (str "modules:" (count @modules-var))})}
+        modules-var (atom [{:biff.core/init
+                            (fn [modules-var]
+                              {:foo (str "modules:" (count @modules-var))})}
                            {:biff.core/init (fn [_modules-var]
                                               {:bar 2})}])
         components  [(fn [ctx]
@@ -71,11 +72,13 @@
                                    conj
                                    #(swap! stopped conj :new-style))))
                      (fn [ctx]
-                       (-> ctx
-                           (assoc :legacy true)
-                           (assoc :biff/stop [#(swap! stopped conj :legacy-1)
-                                              #(swap! stopped conj :legacy-2)])))]
-        system      (biff.core/start {:foo "from-initial"} modules-var components)
+                       (let [stop-fns [#(swap! stopped conj :legacy-1)
+                                       #(swap! stopped conj :legacy-2)]]
+                         (-> ctx
+                             (assoc :legacy true)
+                             (assoc :biff/stop stop-fns))))]
+        system      (biff.core/start {:foo "from-initial"}
+                                     modules-var components)
         defaulted   (biff.core/start modules-var [])]
     (is (= "from-initial" (:foo system)))
     (is (= 2 (:bar system)))
@@ -95,7 +98,9 @@
                         #"Expected a map, got 1"
                         (biff.core/start (atom [1]) [])))
   (is (thrown-with-msg? AssertionError
-                        #"Conflicting keys were returned by multiple :biff.core/init functions"
+                        (re-pattern
+                         (str "Conflicting keys were returned by multiple "
+                              ":biff.core/init functions"))
                         (biff.core/start
                          (atom [{:biff.core/init (fn [_modules-var] {:bar 1})}
                                 {:biff.core/init (fn [_modules-var] {:bar 2})}])

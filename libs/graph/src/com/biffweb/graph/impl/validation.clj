@@ -37,7 +37,8 @@
       :join (assert (join-value? value)
                     (str "Input attr " attr " is a join but value is a scalar"))
       :scalar (assert (scalar-value? value)
-                      (str "Input attr " attr " is a scalar but value is a join")))))
+                      (str "Input attr " attr
+                           " is a scalar but value is a join")))))
 
 (defn validate-input [attr->shape-info input]
   (letfn [(visit [entity]

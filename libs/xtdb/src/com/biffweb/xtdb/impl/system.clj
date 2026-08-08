@@ -8,7 +8,8 @@
 (defn expand-config
   [{:biff.xtdb/keys [config storage log
                      storage-bucket storage-endpoint storage-access-key
-                     storage-secret-key disk-cache-max-bytes memory-cache-max-bytes
+                     storage-secret-key disk-cache-max-bytes
+                     memory-cache-max-bytes
                      log-bootstrap-servers log-topic log-epoch]
     :or             {storage               :local
                      log                   :local
@@ -17,28 +18,30 @@
                      log-epoch             0
                      disk-cache-max-bytes  (* 10 1024 1024 1024)}}]
   (or config
-      (merge
-       (when (and (#{:local :remote} storage) memory-cache-max-bytes)
-         {:memory-cache {:max-size-bytes memory-cache-max-bytes}})
-       (when (= storage :remote)
-         {:disk-cache (cond-> {:path "storage/xtdb2/storage-cache"}
-                        disk-cache-max-bytes
-                        (assoc :max-size-bytes disk-cache-max-bytes))})
-       (when-not (= storage :memory)
-         {:storage (case storage
-                     :local [:local {:path "storage/xtdb2/storage"}]
-                     :remote [:remote {:object-store [:s3
-                                                      {:bucket      storage-bucket
-                                                       :endpoint    storage-endpoint
-                                                       :credentials {:access-key storage-access-key
-                                                                     :secret-key (force storage-secret-key)}}]}])})
-       (when-not (= log :memory)
-         {:log (case log
-                 :local [:local {:path  "storage/xtdb2/log"
-                                 :epoch log-epoch}]
-                 :kafka [:kafka {:bootstrap-servers log-bootstrap-servers
-                                 :topic-name        log-topic
-                                 :epoch             log-epoch}])}))))
+      (let [credentials {:access-key storage-access-key
+                         :secret-key (force storage-secret-key)}]
+        (merge
+         (when (and (#{:local :remote} storage) memory-cache-max-bytes)
+           {:memory-cache {:max-size-bytes memory-cache-max-bytes}})
+         (when (= storage :remote)
+           {:disk-cache (cond-> {:path "storage/xtdb2/storage-cache"}
+                          disk-cache-max-bytes
+                          (assoc :max-size-bytes disk-cache-max-bytes))})
+         (when-not (= storage :memory)
+           {:storage (case storage
+                       :local [:local {:path "storage/xtdb2/storage"}]
+                       :remote [:remote
+                                {:object-store
+                                 [:s3 {:bucket      storage-bucket
+                                       :endpoint    storage-endpoint
+                                       :credentials credentials}]}])})
+         (when-not (= log :memory)
+           {:log (case log
+                   :local [:local {:path  "storage/xtdb2/log"
+                                   :epoch log-epoch}]
+                   :kafka [:kafka {:bootstrap-servers log-bootstrap-servers
+                                   :topic-name        log-topic
+                                   :epoch             log-epoch}])})))))
 
 (defn- start-connection-pool [node hikari-config]
   (HikariDataSource.
@@ -74,6 +77,7 @@
 
 (defn module []
   {:biff.fx/handlers fx-handlers
+
    :biff.core/init
    (fn [_modules-var]
      {:biff.core/kv-get           kv/get-value

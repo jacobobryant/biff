@@ -39,11 +39,15 @@
       (let [request (wrapped
                      {:request-method :get
                       :headers        {"datastar-request" "true"}
-                      :query-params   {"datastar"
-                                       (datastar/signals-json
-                                        {:biff.datastar/tab-id             tab-id
-                                         :biff.datastar/anti-forgery-token "token"
-                                         :profile/display-name             "Ada"})}})]
+
+                      :query-params {"datastar"
+                                     (datastar/signals-json
+                                      {:biff.datastar/tab-id tab-id
+
+                                       :biff.datastar/anti-forgery-token
+                                       "token"
+
+                                       :profile/display-name "Ada"})}})]
         (is (= {:biff.datastar/tab-id             tab-id
                 :biff.datastar/anti-forgery-token "token"
                 :profile/display-name             "Ada"}
@@ -54,8 +58,10 @@
       (let [request (wrapped
                      {:request-method :post
                       :headers        {"datastar-request" "true"}
-                      :body-params    {"profile_display-name" "Grace"
-                                       "nested"               {"account_active" true}}})]
+
+                      :body-params
+                      {"profile_display-name" "Grace"
+                       "nested"               {"account_active" true}}})]
         (is (= {:profile/display-name "Grace"
                 :nested               {:account/active true}}
                (:biff.datastar/signals request)))))))

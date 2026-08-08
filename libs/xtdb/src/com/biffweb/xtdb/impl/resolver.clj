@@ -33,15 +33,19 @@
            :let [primary-key (util/table-id-key table)
                  columns     (remove #(= primary-key (:id %)) columns)
                  mappings    (mapcat output-mapping columns)
-                 process-row (fn [row]
-                               (into {}
-                                     (keep (fn [{:keys [source-key output-key foreign-key]}]
-                                             (when-some [value (get row source-key)]
-                                               [output-key
-                                                (if foreign-key
-                                                  {foreign-key value}
-                                                  value)])))
-                                     mappings))]]
+
+                 process-row
+                 (fn [row]
+                   (into {}
+                         (keep (fn [{:keys [source-key output-key]
+                                     :as   column}]
+                                 (let [foreign-key (:foreign-key column)]
+                                   (when-some [value (get row source-key)]
+                                     [output-key
+                                      (if foreign-key
+                                        {foreign-key value}
+                                        value)]))))
+                         mappings))]]
        (biff.graph/resolver
         {:id     (keyword "com.biffweb.xtdb" (str (name table) "-resolver"))
          :input  [primary-key]
@@ -51,6 +55,7 @@
                            output-key))
                        mappings)
          :batch  true
+
          :resolve-fn
          (fn [ctx inputs]
            (let [ids     (mapv primary-key inputs)
@@ -62,7 +67,8 @@
                  id->row (into {}
                                (map (fn [row]
                                       [(:xt/id row)
-                                       (process-row (assoc row primary-key (:xt/id row)))]))
+                                       (process-row
+                                        (assoc row primary-key (:xt/id row)))]))
                                rows)]
              (mapv (fn [input]
                      (get id->row (get input primary-key) {}))

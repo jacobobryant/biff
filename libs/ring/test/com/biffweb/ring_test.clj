@@ -69,7 +69,9 @@
     (doseq [method [:get :head :options]]
       (is (= 204 (:status
                   (handler {:request-method method
-                            :headers        {"sec-fetch-site" "cross-site"}})))))))
+
+                            :headers
+                            {"sec-fetch-site" "cross-site"}})))))))
 
 (deftest cross-origin-protection-checks-fetch-metadata
   (let [handler (ring/wrap-csrf-protection
@@ -81,7 +83,9 @@
     (doseq [fetch-site ["same-site" "cross-site"]]
       (is (= 403 (:status
                   (handler {:request-method :post
-                            :headers        {"sec-fetch-site" fetch-site}})))))))
+
+                            :headers
+                            {"sec-fetch-site" fetch-site}})))))))
 
 (deftest cross-origin-protection-falls-back-to-origin
   (let [handler (ring/wrap-csrf-protection
@@ -204,6 +208,7 @@
           :body    "<!DOCTYPE html><span>loaded</span>"}
          ((get-in effect-route [1 :post])
           {:request-method :post
+
            :biff.fx/handlers
            {:test/value (constantly "loaded")}}))))
 

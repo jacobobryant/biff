@@ -30,7 +30,8 @@
 
 (defn- websocket-request? [{:keys [headers]}]
   (and (str/includes? (str/lower-case (get headers "upgrade" "")) "websocket")
-       (str/includes? (str/lower-case (get headers "connection" "")) "upgrade")))
+       (str/includes? (str/lower-case (get headers "connection" ""))
+                      "upgrade")))
 
 (defn- safe-request? [{:keys [request-method] :as ctx}]
   (and (contains? #{:get :head :options "GET" "HEAD" "OPTIONS"}
@@ -133,7 +134,8 @@
               fallback-session-store
               (memory/memory-store))]
       (when-not (or cookie-secret session-store)
-        (log/warn "No cookie secret configured. Using in-memory Ring sessions."))
+        (log/warn (str "No cookie secret configured. "
+                       "Using in-memory Ring sessions.")))
       ((session/wrap-session
         handler
         {:cookie-attrs {:max-age   session-max-age

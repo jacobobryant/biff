@@ -129,7 +129,8 @@
                  "     {:id :example/a"
                  "      :output [:a]"
                  "      :resolve-fn (fn [_ctx _input]"
-                 "                    (throw (ex-info \"Boom\" {:detail 1})))})]))"
+                 (str "                    (throw (ex-info \"Boom\" "
+                      "{:detail 1})))})]))")
                  ""
                  "(graph/query ctx [:a])")}
 
@@ -146,7 +147,8 @@
                  ""
                  "(graph/query {:biff.graph/attr->resolvers"
                  "              {:x [{:biff.graph/id :example/bad"
-                 "                    :biff.graph/output-ast {:x {:kind :scalar}}"
+                 (str "                    :biff.graph/output-ast "
+                      "{:x {:kind :scalar}}")
                  "                    :biff.graph/resolve-fn (fn [_ctx] {})}]}"
                  "              :biff.graph/attr->shape-info"
                  "              {:x {:biff.graph/id :example/bad"
@@ -260,7 +262,8 @@
                        (assoc :root-stack? true)
                        (update :lines conj line))
 
-                   (and root-stack? (str/includes? line "com.biffweb.graph.tasks"))
+                   (and root-stack?
+                        (str/includes? line "com.biffweb.graph.tasks"))
                    (assoc state :trimming? true)
 
                    (and trimming? (= line ">>> error >>>"))
@@ -321,7 +324,9 @@
 (defn- split-root-stack-trace [s]
   (let [lines          (str/split-lines s)
         [body stack]   (split-with #(not= "Root stack trace:" %) lines)
-        formatted-body (str/join "\n" (reverse (drop-while str/blank? (reverse body))))]
+        formatted-body (str/join "\n"
+                                 (reverse
+                                  (drop-while str/blank? (reverse body))))]
     (if (seq stack)
       [formatted-body (str/join "\n" stack)]
       [s nil])))

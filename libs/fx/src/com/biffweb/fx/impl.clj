@@ -62,7 +62,8 @@
         result      (try
                       (state-fn state-input)
                       (catch Exception e
-                        (error! "State function threw an exception" injected e)))
+                        (error! "State function threw an exception"
+                                injected e)))
         _           (biff.core/validate {::state-fn-result result})
         results     (if (sequential? result) result [result])]
     (reduce

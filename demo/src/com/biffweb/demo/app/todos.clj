@@ -39,7 +39,8 @@
             val)))
 
 (defn- boolean-param [ctx k]
-  (contains? #{"1" "true" "on" "yes"} (str/lower-case (str (param-value ctx k)))))
+  (contains? #{"1" "true" "on" "yes"}
+             (str/lower-case (str (param-value ctx k)))))
 
 (defn- todo-filter [value]
   (case value
@@ -151,12 +152,17 @@
        [:span (str "Created " (format-instant (:todo/created-at todo)))]
        [:span (str "Updated " (format-instant (:todo/updated-at todo)))]
        (when (:todo/completed todo)
-         [:span.rounded-full.bg-emerald-100.px-2.py-1.font-medium.text-emerald-700
+         [:span {:class (str "rounded-full bg-emerald-100 px-2 py-1 "
+                             "font-medium text-emerald-700")}
           "Completed"])]]]
-    [:button.rounded-lg.border.border-slate-300.px-3.py-2.text-sm.font-medium.text-slate-700.hover:border-slate-400.hover:text-slate-950
-     {:type          "button"
-      :data-on:click (str (set-signal "archived" true)
-                          (post (routes/todo-archive (:todo/id todo))))}
+    [:button {:class
+              (str "rounded-lg border border-slate-300 px-3 py-2 "
+                   "text-sm font-medium text-slate-700 "
+                   "hover:border-slate-400 hover:text-slate-950")
+
+              :type          "button"
+              :data-on:click (str (set-signal "archived" true)
+                                  (post (routes/todo-archive (:todo/id todo))))}
      "Archive"]]])
 
 (defn- archived-item [todo]
@@ -168,10 +174,14 @@
       [:span (str "Updated " (format-instant (:todo/updated-at todo)))]
       (when-let [archived-at (:todo/archived-at todo)]
         [:span (str "Archived " (format-instant archived-at))])]]
-    [:button.rounded-lg.border.border-slate-300.bg-white.px-3.py-2.text-sm.font-medium.text-slate-700.hover:border-slate-400.hover:text-slate-950
-     {:type          "button"
-      :data-on:click (str (set-signal "archived" false)
-                          (post (routes/todo-archive (:todo/id todo))))}
+    [:button {:class
+              (str "rounded-lg border border-slate-300 bg-white "
+                   "px-3 py-2 text-sm font-medium text-slate-700 "
+                   "hover:border-slate-400 hover:text-slate-950")
+
+              :type          "button"
+              :data-on:click (str (set-signal "archived" false)
+                                  (post (routes/todo-archive (:todo/id todo))))}
      "Restore"]]])
 
 (defn- filter-button [current-filter show-archived? value label]
@@ -210,19 +220,27 @@
      [:section.space-y-4
       [:div.flex.flex-wrap.items-center.justify-between.gap-4
        [:div.space-y-2
-        [:p {:class "text-sm font-semibold uppercase text-teal-700 tracking-[0.2em]"} "Biff demo"]
+        [:p {:class (str "text-sm font-semibold uppercase text-teal-700 "
+                         "tracking-[0.2em]")}
+         "Biff demo"]
         (ui/page-title "TodoMVC, but as a Biff smoke test")
         [:p.max-w-3xl.text-slate-600
-         "This app exercises Biff auth, graph, fx, Datastar live updates, background jobs, admin, and SQLite-backed ownership rules in one place."]]
+         (str "This app exercises Biff auth, graph, fx, Datastar live updates, "
+              "background jobs, admin, and SQLite-backed ownership rules "
+              "in one place.")]]
        [:div.flex.flex-wrap.items-center.gap-3
         (when show-admin-link?
           (ui/link {:href  "/_biff/admin"
-                    :class "rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 no-underline hover:border-slate-400 hover:text-slate-950"}
+                    :class (str "rounded-lg border border-slate-300 px-4 py-2 "
+                                "text-sm font-medium text-slate-700 "
+                                "no-underline hover:border-slate-400 "
+                                "hover:text-slate-950")}
                    "Admin dashboard"))
         (when show-admin-link?
           [:form {:data-on:submit (post (routes/todo-archive-batch))}
-           [:button.rounded-lg.bg-slate-900.px-4.py-2.text-sm.font-medium.text-white.hover:bg-slate-700
-            {:type "submit"}
+           [:button {:class (str "rounded-lg bg-slate-900 px-4 py-2 text-sm "
+                                 "font-medium text-white hover:bg-slate-700")
+                     :type  "submit"}
             "Archive in batches of 3"]])
         [:form {:method "post"
                 :action (routes/auth-signout)}
@@ -237,7 +255,8 @@
           [:span "\u00b7"]
           [:span "Archived items visible"]])]]
 
-     [:section.grid.gap-4.rounded-3xl.border.border-slate-200.bg-white.p-6.shadow-sm
+     [:section {:class (str "grid gap-4 rounded-3xl border border-slate-200 "
+                            "bg-white p-6 shadow-sm")}
       [:div.flex.flex-wrap.items-center.justify-between.gap-4
        [:div.flex.flex-wrap.items-center.gap-2
         (counter-pill "Remaining" remaining-count)
@@ -254,17 +273,23 @@
               (input-signal "newtodo" ""))
        [:label.text-sm.font-medium.text-slate-700
         "Add a todo"
-        [:input.mt-2.w-full.rounded-2xl.border.border-slate-300.px-4.py-3.text-base.outline-none.ring-0.placeholder:text-slate-400.focus:border-teal-500
-         {:type              "text"
-          :name              "newtodo"
-          :placeholder       "Open a second tab, then add something here"
-          :required          true
-          :data-bind:newtodo ""}]]
+        [:input {:class
+                 (str "mt-2 w-full rounded-2xl border border-slate-300 "
+                      "px-4 py-3 text-base outline-none ring-0 "
+                      "placeholder:text-slate-400 focus:border-teal-500")
+
+                 :type              "text"
+                 :name              "newtodo"
+                 :placeholder       "Open a second tab, then add something here"
+                 :required          true
+                 :data-bind:newtodo ""}]]
        [:div.flex.flex-wrap.items-center.justify-between.gap-3
         [:p.text-sm.text-slate-500
-         "Every database write wakes the Datastar SSE stream, so other tabs update immediately."]
-        [:button.rounded-2xl.bg-teal-600.px-4.py-3.text-sm.font-medium.text-white.hover:bg-teal-700
-         {:type "submit"}
+         (str "Every database write wakes the Datastar SSE stream, so other "
+              "tabs update immediately.")]
+        [:button {:class (str "rounded-2xl bg-teal-600 px-4 py-3 text-sm "
+                              "font-medium text-white hover:bg-teal-700")
+                  :type  "submit"}
          "Create todo"]]]]
 
      [:section#current-todos-section.space-y-4
@@ -276,21 +301,27 @@
          (for [todo items]
            [:div {:key (str (:todo/id todo))}
             (todo-item todo)])]
-        [:div.rounded-2xl.border.border-dashed.border-slate-300.bg-slate-50.p-6.text-sm.text-slate-500
-         "Nothing matches the current filter. Add a todo or reveal archived items."])]
+        [:div {:class (str "rounded-2xl border border-dashed border-slate-300 "
+                           "bg-slate-50 p-6 text-sm text-slate-500")}
+         (str "Nothing matches the current filter. Add a todo or reveal "
+              "archived items.")])]
 
      (when show-archived?
        [:section#archived-todos-section.space-y-4
         [:div.flex.items-center.justify-between
          [:h2.text-xl.font-semibold.text-slate-950 "Archived todos"]
-         [:span.text-sm.text-slate-500 (str (count archived-items) " archived")]]
+         [:span.text-sm.text-slate-500
+          (str (count archived-items) " archived")]]
         (if (seq archived-items)
           [:div.grid.gap-3
            (for [todo archived-items]
              [:div {:key (str (:todo/id todo))}
               (archived-item todo)])]
-          [:div.rounded-2xl.border.border-dashed.border-slate-300.bg-slate-50.p-6.text-sm.text-slate-500
-           "No archived todos yet. Use the archive queue button to see background jobs kick in."])])]))
+          [:div {:class (str "rounded-2xl border border-dashed "
+                             "border-slate-300 bg-slate-50 p-6 text-sm "
+                             "text-slate-500")}
+           (str "No archived todos yet. Use the archive queue button to see "
+                "background jobs kick in.")])])]))
 
 (defroute raw-app-page "/app"
   [:biff.graph.fx/query

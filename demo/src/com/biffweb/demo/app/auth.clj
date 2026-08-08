@@ -44,7 +44,8 @@
     :todo/updated-at (.minusSeconds now 1800)}
    {:todo/id          (random-uuid)
     :todo/user-id     user-id
-    :todo/title       "This archived example appears when you toggle archived items on"
+    :todo/title       (str "This archived example appears when you toggle "
+                           "archived items on")
     :todo/completed   true
     :todo/archived    true
     :todo/archived-at (.minusSeconds now 600)

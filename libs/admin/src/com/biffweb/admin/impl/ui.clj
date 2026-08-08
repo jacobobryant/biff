@@ -7,6 +7,7 @@
   [title & body]
   {:status  200
    :headers {"Content-Type" "text/html; charset=utf-8"}
+
    :body
    (str
     "<!DOCTYPE html>\n"
@@ -41,7 +42,9 @@
   "Format bytes as human-readable string."
   [bytes]
   (cond
-    (>= bytes (* 1024 1024 1024)) (format "%.1f GB" (/ bytes (* 1024.0 1024 1024)))
+    (>= bytes (* 1024 1024 1024))
+    (format "%.1f GB" (/ bytes (* 1024.0 1024 1024)))
+
     (>= bytes (* 1024 1024)) (format "%.1f MB" (/ bytes (* 1024.0 1024)))
     (>= bytes 1024) (format "%.1f KB" (/ bytes 1024.0))
     :else (str bytes " B")))
@@ -66,23 +69,28 @@
         [:td.text-right.p-2.border-b (get wau day 0)]
         [:td.text-right.p-2.border-b (get daily-signups day 0)]
         (when daily-revenue
-          [:td.text-right.p-2.border-b (format "$%.2f" (double (get daily-revenue day 0)))])])]]])
+          [:td.text-right.p-2.border-b
+           (format "$%.2f" (double (get daily-revenue day 0)))])])]]])
 
 (defn resource-usage-table
   "Render resource usage information."
-  [{:keys [ram-used ram-total ram-pct disk-used disk-total disk-pct cpu-load cpu-count]}]
+  [{:keys [ram-used ram-total ram-pct disk-used disk-total disk-pct
+           cpu-load cpu-count]}]
   [:div.grid.grid-cols-1.md:grid-cols-3.gap-4
    [:div.bg-white.p-4.rounded.shadow
     [:h3.text-sm.font-semibold.text-gray-500.mb-2 "RAM"]
     [:div.text-2xl.font-bold (format "%.1f%%" (double ram-pct))]
-    [:div.text-sm.text-gray-500 (str (format-bytes ram-used) " / " (format-bytes ram-total))]]
+    [:div.text-sm.text-gray-500
+     (str (format-bytes ram-used) " / " (format-bytes ram-total))]]
    [:div.bg-white.p-4.rounded.shadow
     [:h3.text-sm.font-semibold.text-gray-500.mb-2 "Disk"]
     [:div.text-2xl.font-bold (format "%.1f%%" (double disk-pct))]
-    [:div.text-sm.text-gray-500 (str (format-bytes disk-used) " / " (format-bytes disk-total))]]
+    [:div.text-sm.text-gray-500
+     (str (format-bytes disk-used) " / " (format-bytes disk-total))]]
    [:div.bg-white.p-4.rounded.shadow
     [:h3.text-sm.font-semibold.text-gray-500.mb-2 "CPU"]
-    [:div.text-2xl.font-bold (if (neg? cpu-load) "N/A" (format "%.2f" (double cpu-load)))]
+    [:div.text-2xl.font-bold
+     (if (neg? cpu-load) "N/A" (format "%.2f" (double cpu-load)))]
     [:div.text-sm.text-gray-500 (str cpu-count " cores")]]])
 
 (defn users-table
@@ -104,19 +112,24 @@
         [:td.p-2.border-b.font-mono.text-xs (str user-id)]
         [:td.p-2.border-b (str joined-at)]
         [:td.p-2.border-b
-         [:button.bg-indigo-600.text-white.px-2.py-1.rounded.text-xs.cursor-pointer
+         [:button {:class (str "bg-indigo-600 text-white px-2 py-1 rounded "
+                               "text-xs cursor-pointer")}
           {:data-user-id (pr-str user-id)
            :onclick      (str "var uid = this.dataset.userId;"
                               "fetch('/_biff/admin/generate-signin-code', {"
                               "method: 'POST',"
-                              "headers: {'Content-Type': 'application/x-www-form-urlencoded'},"
+                              "headers: {'Content-Type': "
+                              "'application/x-www-form-urlencoded'},"
                               "body: 'user-id=' + encodeURIComponent(uid)"
                               (when anti-forgery-token
-                                (str " + '&__anti-forgery-token=' + encodeURIComponent('" anti-forgery-token "')"))
+                                (str " + '&__anti-forgery-token=' + "
+                                     "encodeURIComponent('"
+                                     anti-forgery-token "')"))
                               "}).then(r => r.json()).then(d => {"
                               "navigator.clipboard.writeText(d.url);"
                               "this.textContent='Copied!';"
-                              "setTimeout(() => this.textContent='Copy sign-in link', 2000);"
+                              "setTimeout(() => this.textContent="
+                              "'Copy sign-in link', 2000);"
                               "});")}
           "Copy sign-in link"]]])]]])
 
@@ -132,11 +145,13 @@
       [:th.text-left.p-2.border-b "Error Message"]
       [:th.text-left.p-2.border-b ""]]]
     [:tbody
-     (for [[idx {:keys [message timestamp]}] (map-indexed vector (reverse errors))]
+     (for [[idx {:keys [message timestamp]}]
+           (map-indexed vector (reverse errors))]
        (let [real-idx (- (dec (count errors)) idx)]
          [:tr {:key (str real-idx)}
           [:td.p-2.border-b.text-xs.whitespace-nowrap (str timestamp)]
-          [:td.p-2.border-b.text-sm (subs (str message) 0 (min 120 (count (str message))))]
+          [:td.p-2.border-b.text-sm
+           (subs (str message) 0 (min 120 (count (str message))))]
           [:td.p-2.border-b
            [:a.text-blue-600.hover:underline.text-xs
             {:href (str "/_biff/admin/stacktrace/" real-idx)}

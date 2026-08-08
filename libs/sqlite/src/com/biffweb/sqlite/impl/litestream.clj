@@ -3,32 +3,51 @@
             [clojure.java.process :as process]
             [clojure.tools.logging :as log]
             [com.biffweb.core :as biff.core]
-            [com.biffweb.sqlite.impl.bin :as impl.bin]
+            [com.biffweb.stuff.bin :as stuff.bin]
             [com.biffweb.sqlite.impl.defaults :as impl.defaults]))
 
-(defn ensure-litestream-binary! [{:biff.sqlite/keys [litestream-version bin-dir]}]
-  (let [{:keys [os arch]} (impl.bin/platform-info)
-        filename          (str "litestream-" litestream-version "-"
-                               (case os
-                                 :linux "linux"
-                                 :macos "darwin"
-                                 :windows "windows")
-                               "-"
-                               (case arch
-                                 :amd64 "x86_64"
-                                 :arm64 "arm64")
-                               "."
-                               (if (= os :windows)
-                                 "zip"
-                                 "tar.gz"))
-        url               (str "https://github.com/benbjohnson/litestream/releases/download/v"
-                               litestream-version "/" filename)]
-    (impl.bin/ensure-binary!
+(def ^:private supported-platforms
+  #{[:linux :amd64]
+    [:linux :arm64]
+    [:macos :amd64]
+    [:macos :arm64]
+    [:windows :amd64]
+    [:windows :arm64]})
+
+(defn litestream-url [{:keys [os arch version]}]
+  (stuff.bin/check-platform {:supported-platforms supported-platforms
+                             :binary              "litestream"
+                             :version             version
+                             :os                  os
+                             :arch                arch})
+  (let [os-str   (case os
+                   :linux "linux"
+                   :macos "darwin"
+                   :windows "windows")
+        arch-str (case arch
+                   :amd64 "x86_64"
+                   :arm64 "arm64")
+        ext      (case os
+                   (:linux :macos) "tar.gz"
+                   :windows "zip")]
+    (str "https://github.com/benbjohnson/litestream/releases/download/v"
+         version "/litestream-" version "-" os-str "-" arch-str "." ext)))
+
+(defn- get-litestream-version [command]
+  (some->> (process/exec command "version")
+           (re-find #"[\d]+\.[\d]+\.[\d]+")))
+
+(defn ensure-litestream-binary! [ctx]
+  (let [{:biff.sqlite/keys [litestream-version]}
+        (merge impl.defaults/defaults ctx)
+
+        {:keys [os arch]} (stuff.bin/platform-info)
+        url               (litestream-url {:version litestream-version
+                                           :os      os
+                                           :arch    arch})]
+    (stuff.bin/ensure-binary
      {:executable-basename "litestream"
-      :bin-dir             bin-dir
-      :get-version         (fn [command]
-                             (some->> (process/exec command "version")
-                                      (re-find #"[\d]+\.[\d]+\.[\d]+")))
+      :get-version         get-litestream-version
       :target-version      litestream-version
       :url                 url})))
 

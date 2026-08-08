@@ -82,7 +82,8 @@
 
 (defn- process-insert! [{:keys [columns write-tx input builder-fn table]}]
   (let [returning-statement (assoc input :returning [:*])
-        results             (execute-statement! write-tx columns returning-statement builder-fn)]
+        results             (execute-statement! write-tx columns
+                                                returning-statement builder-fn)]
     (mapv (fn [row]
             {:table  table
              :op     :create
@@ -92,7 +93,8 @@
 
 (defn- process-delete! [{:keys [columns write-tx input builder-fn table]}]
   (let [returning-statement (assoc input :returning [:*])
-        results             (execute-statement! write-tx columns returning-statement builder-fn)]
+        results             (execute-statement! write-tx columns
+                                                returning-statement builder-fn)]
     (mapv (fn [row]
             {:table  table
              :op     :delete
@@ -107,18 +109,23 @@
                                                 columns
                                                 returning-statement
                                                 builder-fn)
-        after-by-pk         (into {} (map (juxt primary-key #(into {} %))) after-rows)
+        after-by-pk         (into {} (map (juxt primary-key #(into {} %)))
+                                  after-rows)
         pks                 (vec (keys after-by-pk))
         before-rows         (when (seq pks)
-                              (let [select-statement {:select [:*]
-                                                      :from   table
-                                                      :where  [:in primary-key pks]}]
+                              (let [select-statement
+                                    {:select [:*]
+                                     :from   table
+                                     :where  [:in primary-key pks]}]
                                 (execute-statement! read-tx
                                                     columns
                                                     select-statement
                                                     builder-fn)))
-        before-by-pk        (into {} (map (juxt primary-key #(into {} %))) before-rows)
-        all-pks             (distinct (concat (keys before-by-pk) (keys after-by-pk)))]
+        before-by-pk        (into {}
+                                  (map (juxt primary-key #(into {} %)))
+                                  before-rows)
+        all-pks             (distinct (concat (keys before-by-pk)
+                                              (keys after-by-pk)))]
     (into []
           (mapcat
            (fn [pk]
@@ -212,7 +219,8 @@
     (on-tx ctx)))
 
 (defn authorized-write*
-  [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx} statements]
+  [{:biff.sqlite/keys [columns write-conn read-pool authorize] :as ctx}
+   statements]
   (biff.core/validate ctx {:required [:biff.sqlite/authorize
                                       :biff.sqlite/write-conn
                                       :biff.sqlite/read-pool]})

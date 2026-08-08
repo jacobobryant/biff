@@ -23,7 +23,8 @@
 
 (defn- temp-db-path []
   (str (Files/createTempFile "biff-sqlite-test" ".db"
-                             (make-array java.nio.file.attribute.FileAttribute 0))))
+                             (make-array
+                              java.nio.file.attribute.FileAttribute 0))))
 
 (defn- split-sql [sql]
   (->> (str/split sql #";")
@@ -62,7 +63,8 @@
 (deftest schema-sql-translates-columns-to-strict-sql
   (is (= (str "CREATE TABLE pet (\n"
               "  id BLOB PRIMARY KEY NOT NULL,\n"
-              "  species INT CHECK (species IN (0, 1)) -- iguana (0), tardigrade (1)\n"
+              "  species INT CHECK (species IN (0, 1)) "
+              "-- iguana (0), tardigrade (1)\n"
               ") STRICT;\n\n"
               "CREATE TABLE user (\n"
               "  id BLOB PRIMARY KEY NOT NULL,\n"
@@ -88,8 +90,10 @@
             prefs     {:theme :dark :alerts [:email :sms]}]
         (sqlite/execute ctx
                         {:insert-into :pet
-                         :values      [{:pet/id      pet-id
-                                        :pet/species [:lift :pet.species/iguana]}]})
+                         :values      [{:pet/id pet-id
+
+                                        :pet/species
+                                        [:lift :pet.species/iguana]}]})
         (sqlite/execute ctx
                         {:insert-into :user
                          :values      [{:user/id        user-id
@@ -121,7 +125,8 @@
                                 :from   :pet})))
         (is (= [{:user/joined-at joined-at}]
                (sqlite/execute ctx
-                               {:select [[[:max :user/joined-at] :user/joined-at]]
+                               {:select [[[:max :user/joined-at]
+                                          :user/joined-at]]
                                 :from   :user})))))))
 
 (deftest execute-validates-honeysql-writes-and-rejects-unknown-enums
@@ -206,6 +211,7 @@
                              true)
                            :biff.core/on-tx
                            (fn [_] (swap! on-tx inc)))
+
             create-diff
             (sqlite/authorized-write
              ctx
@@ -226,8 +232,10 @@
                create-diff))
         (sqlite/execute ctx
                         {:insert-into :pet
-                         :values      [{:pet/id      pet-id
-                                        :pet/species [:lift :pet.species/tardigrade]}]})
+                         :values      [{:pet/id pet-id
+
+                                        :pet/species
+                                        [:lift :pet.species/tardigrade]}]})
         (is (= [{:table  :user
                  :op     :update
                  :before {:user/id        user-id
@@ -327,8 +335,10 @@
                            ctx)]
         (sqlite/execute ctx
                         {:insert-into :pet
-                         :values      [{:pet/id      pet-id
-                                        :pet/species [:lift :pet.species/iguana]}]})
+                         :values      [{:pet/id pet-id
+
+                                        :pet/species
+                                        [:lift :pet.species/iguana]}]})
         (sqlite/execute ctx
                         {:insert-into :user
                          :values      [{:user/id     user-id
@@ -348,7 +358,8 @@
                              :pet/species]}])))))))
 
 (deftest module-provides-fx-kv-schema-and-wrap-db-snapshot
-  (let [modules-var (atom [{:biff.sqlite/columns {:app/id {:type :uuid :primary-key true}}}])
+  (let [modules-var (atom [{:biff.sqlite/columns
+                            {:app/id {:type :uuid :primary-key true}}}])
         module      (sqlite/module)
         init        ((:biff.core/init module) modules-var)]
     (is (= #{:biff.sqlite.fx/execute

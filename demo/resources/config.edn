@@ -3,13 +3,15 @@
 
  :biff.auth/app-name           "Biff Demo App"
  :biff.auth/base-url           #ref [:biff.ring/base-url]
- :biff.auth/skip-captcha       #boolean #or [#biff/env BIFF_AUTH_SKIP_CAPTCHA "false"]
+ :biff.auth/skip-captcha       #boolean #or [#biff/env BIFF_AUTH_SKIP_CAPTCHA
+                                             "false"]
  :biff.auth/turnstile-secret   #biff/secret TURNSTILE_SECRET_KEY
  :biff.auth/turnstile-site-key #biff/env TURNSTILE_SITE_KEY
 
- :biff.config/system-properties {"clojure.main.report"                          "stderr"
-                                 "org.slf4j.simpleLogger.log.com.zaxxer.hikari" "error"
-                                 "org.slf4j.simpleLogger.log.org.eclipse.jetty" "error"}
+ :biff.config/system-properties
+ {"clojure.main.report"                          "stderr"
+  "org.slf4j.simpleLogger.log.com.zaxxer.hikari" "error"
+  "org.slf4j.simpleLogger.log.org.eclipse.jetty" "error"}
 
  :biff.ring/base-url      #or [#biff/env BASE_URL "http://localhost:8080"]
  :biff.ring/cookie-secret #biff/secret COOKIE_SECRET
@@ -19,15 +21,19 @@
 
  :biff.sqlite/db-path #or [#biff/env SQLITE_DB_PATH "storage/sqlite/main.db"]
 
- :biff.tasks/css-output             "target/resources/public/css/main.css"
- :biff.tasks/deployment-name        #or [#biff/env DEPLOYMENT_NAME "biff-demo"]
- :biff.tasks/deploy-untracked-files [#ref [:biff.tasks/css-output]
-                                     {:src "config.prod.env" :dest "config.env"}]
- :biff.tasks/domain                 #biff/env SERVER
- :biff.tasks/main-ns                com.biffweb.demo
- :biff.tasks/nrepl-port             #long #or [#biff/env NREPL_PORT "7888"]
+ :biff.tasks/css-output-path "target/resources/public/css/main.css"
+ :biff.tasks/deployment-name #or [#biff/env DEPLOYMENT_NAME "biff-demo"]
 
- :mailersend/api-key   #biff/secret MAILERSEND_API_KEY
+ :biff.tasks/deploy-untracked-files
+ [#ref [:biff.tasks/css-output-path]
+  {:src "config.prod.env" :dest "config.env"}]
+
+ :biff.tasks/domain     #biff/env SERVER
+ :biff.tasks/main-ns    com.biffweb.demo
+ :biff.tasks/nrepl-port #long #or [#biff/env NREPL_PORT "7888"]
+
+ :mailersend/api-key #biff/secret MAILERSEND_API_KEY
+
  :mailersend/from      #biff/env MAILERSEND_FROM
  :mailersend/from-name "Biff Demo App"
  :mailersend/reply-to  #biff/env MAILERSEND_REPLY_TO}

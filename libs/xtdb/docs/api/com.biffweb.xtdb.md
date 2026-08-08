@@ -2,7 +2,7 @@
 
 ### expand-config
 
-[view source](../../src/com/biffweb/xtdb.clj#L39)
+[view source](../../src/com/biffweb/xtdb.clj#L45)
 
 ```
 (expand-config #:biff.xtdb{:keys [config storage log storage-bucket storage-endpoint storage-access-key storage-secret-key disk-cache-max-bytes memory-cache-max-bytes log-bootstrap-servers log-topic log-epoch]})
@@ -18,7 +18,7 @@ map based on `storage` and `log` plus their related options.
 
 ### use-xtdb
 
-[view source](../../src/com/biffweb/xtdb.clj#L62)
+[view source](../../src/com/biffweb/xtdb.clj#L68)
 
 ```
 (use-xtdb ctx)
@@ -36,7 +36,7 @@ Sets :biff.xtdb/node and :biff.xtdb/connection-pool on ctx.
 
 ### q
 
-[view source](../../src/com/biffweb/xtdb.clj#L75)
+[view source](../../src/com/biffweb/xtdb.clj#L81)
 
 ```
 (q {:biff.xtdb/keys [connection-pool node snapshot-token], :as ctx} query)
@@ -52,7 +52,7 @@ Includes snapshot-token in the query opts.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/xtdb.clj#L89)
+[view source](../../src/com/biffweb/xtdb.clj#L98)
 
 ```
 (execute-tx ctx tx-ops)
@@ -70,7 +70,7 @@ Returns a map with :tx-id and :system-time.
 
 ### submit-tx
 
-[view source](../../src/com/biffweb/xtdb.clj#L107)
+[view source](../../src/com/biffweb/xtdb.clj#L116)
 
 ```
 (submit-tx ctx tx-ops)
@@ -88,7 +88,7 @@ Returns a map with :tx-id.
 
 ### authorized-write
 
-[view source](../../src/com/biffweb/xtdb.clj#L124)
+[view source](../../src/com/biffweb/xtdb.clj#L133)
 
 ```
 (authorized-write {:biff.xtdb/keys [authorize node], :as ctx} tx-ops)
@@ -107,7 +107,7 @@ On success, returns the result of submit-tx with :biff.xtdb/diff added.
 
 ### prefix-uuid
 
-[view source](../../src/com/biffweb/xtdb.clj#L141)
+[view source](../../src/com/biffweb/xtdb.clj#L150)
 
 ```
 (prefix-uuid uuid-prefix uuid-rest)
@@ -118,7 +118,7 @@ rest of `uuid-rest`.
 
 ### columns->schema
 
-[view source](../../src/com/biffweb/xtdb.clj#L147)
+[view source](../../src/com/biffweb/xtdb.clj#L156)
 
 ```
 (columns->schema columns)
@@ -132,7 +132,7 @@ calling execute-tx or submit-tx.
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/xtdb.clj#L156)
+[view source](../../src/com/biffweb/xtdb.clj#L165)
 
 ```
 (make-resolvers columns)
@@ -157,7 +157,7 @@ All resolvers have `:batch true`.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/xtdb.clj#L176)
+[view source](../../src/com/biffweb/xtdb.clj#L185)
 
 ```
 A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
@@ -166,7 +166,7 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 
 ### module
 
-[view source](../../src/com/biffweb/xtdb.clj#L182)
+[view source](../../src/com/biffweb/xtdb.clj#L191)
 
 ```
 (module)

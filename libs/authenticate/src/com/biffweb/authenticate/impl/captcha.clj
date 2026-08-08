@@ -11,8 +11,10 @@
     {:response     [:biff.fx/http
                     {:method           :post
                      :url              turnstile-url
-                     :form-params      {:secret   (turnstile-secret)
-                                        :response (:cf-turnstile-response params)}
+                     :form-params      {:secret (turnstile-secret)
+
+                                        :response
+                                        (:cf-turnstile-response params)}
                      :as               :json
                      :coerce           :always
                      :throw-exceptions false}]
@@ -40,8 +42,10 @@
     {:response     [:biff.fx/http
                     {:method           :post
                      :url              recaptcha-url
-                     :form-params      {:secret   (recaptcha-secret)
-                                        :response (:g-recaptcha-response params)}
+                     :form-params      {:secret (recaptcha-secret)
+
+                                        :response
+                                        (:g-recaptcha-response params)}
                      :as               :json
                      :coerce           :always
                      :throw-exceptions false}]

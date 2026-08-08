@@ -48,7 +48,8 @@
     (first path-or-route)
 
     :else
-    (throw (ex-info "Path helpers expect a string or a reitit-style route vector."
+    (throw (ex-info (str "Path helpers expect a string or a reitit-style "
+                         "route vector.")
                     {:path-or-route path-or-route}))))
 
 (defn- render-path [path args]

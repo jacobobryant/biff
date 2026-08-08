@@ -1,5 +1,6 @@
 (ns demo
   (:require [com.biffweb.authenticate :as auth]
+            [com.biffweb.authenticate.impl.backend :as backend]
             [clojure.string :as str]
             [dev.onionpancakes.chassis.core :as chassis]
             [ring.adapter.jetty :as jetty]
@@ -19,6 +20,7 @@
 (def auth-config
   (merge (store/atom-store)
          {:biff.auth/verify-captcha demo-captcha-verify
+          :biff.auth/send-email     backend/console-send-email
           :biff.auth/app-path       "/app"
           :biff.auth/app-name       "Biff Auth Demo"}))
 
@@ -36,9 +38,12 @@
        [:html {:lang "en"}
         [:head
          [:meta {:charset "utf-8"}]
-         [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+         [:meta {:name    "viewport"
+                 :content "width=device-width, initial-scale=1"}]
          [:title "Biff Auth Demo"]
-         [:style "body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }"]]
+         [:style (str "body { font-family: system-ui, sans-serif; "
+                      "max-width: 600px; margin: 2rem auto; "
+                      "padding: 0 1rem; }")]]
         [:body
          [:h1 "Welcome!"]
          [:p "You are signed in. User ID: " [:code (str uid)]]
@@ -76,8 +81,10 @@
 (defn -main [& _args]
   (let [port (Integer/parseInt (or (System/getenv "PORT") "8080"))]
     (println (str "Starting demo server on port " port "..."))
-    (jetty/run-jetty (defaults/wrap-defaults (make-handler)
-                                             (-> defaults/site-defaults
-                                                 (assoc-in [:security :anti-forgery] true)
-                                                 (assoc-in [:session :cookie-attrs :same-site] :lax)))
-                     {:port port :join? true})))
+    (let [cookie-path   [:session :cookie-attrs :same-site]
+          site-defaults (-> defaults/site-defaults
+                            (assoc-in [:security :anti-forgery] true)
+                            (assoc-in cookie-path :lax))]
+      (jetty/run-jetty (defaults/wrap-defaults (make-handler)
+                                               site-defaults)
+                       {:port port :join? true}))))

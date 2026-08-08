@@ -44,8 +44,8 @@ if ! id -u "$APP" >/dev/null 2>&1; then
 fi
 
 mkdir -p "/home/$APP/.ssh" "/home/$APP/repo"
-if compgen -G /root/.ssh/* >/dev/null 2>&1; then
-  cp -rn /root/.ssh/* "/home/$APP/.ssh/"
+if [ -f /root/.ssh/authorized_keys ]; then
+  cp -n /root/.ssh/authorized_keys "/home/$APP/.ssh/authorized_keys"
 fi
 chown -R "$APP:$APP" "/home/$APP/.ssh" "/home/$APP/repo"
 chmod 700 "/home/$APP/.ssh"

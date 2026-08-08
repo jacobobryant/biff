@@ -76,10 +76,12 @@
        :todo/archived-items  (if (:todo/show-archived ui-state)
                                archived-items
                                [])
-       :todo/active-count    (count (filter (complement :todo/completed) active-items))
+       :todo/active-count    (count (filter (complement :todo/completed)
+                                            active-items))
        :todo/completed-count (count (filter :todo/completed active-items))
        :todo/archived-count  (count archived-items)
-       :todo/remaining-count (count (filter (complement :todo/completed) active-items))})))
+       :todo/remaining-count (count (filter (complement :todo/completed)
+                                            active-items))})))
 
 (def module
   {:biff.graph/resolvers [todo-ui-state

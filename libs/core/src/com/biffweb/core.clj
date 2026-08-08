@@ -1,7 +1,7 @@
 (ns com.biffweb.core
   (:require [com.biffweb.core.impl.system :as impl.sys]
-            [com.biffweb.core.impl.secrets :as impl.sec]
-            [com.biffweb.core.impl.validation :as impl.v]))
+            [com.biffweb.core.impl.validation :as impl.v]
+            [com.biffweb.stuff.secret :as stuff.secret]))
 
 (impl.v/register
  {:biff.core/init             'fn?
@@ -146,7 +146,7 @@
    Note that this is a function, not a macro, and thus the arguments are
    evaluated immediately, unlike a normal Delay."
   [x]
-  (impl.sec/secret-delay x))
+  (stuff.secret/secret-delay x))
 
 ;; technically removing this would be a breaking change--might do it right
 ;; before the non-prerelease

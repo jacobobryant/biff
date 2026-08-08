@@ -91,7 +91,8 @@
         queues  (into {} (map (juxt :id :queue) configs))
         ctx     (-> ctx
                     (assoc :biff.background/queues queues)
-                    (update :biff.core/stop (fnil conj []) #(stop ctx configs)))]
+                    (update :biff.core/stop
+                            (fnil conj []) #(stop ctx configs)))]
     (doseq [{:keys [executor n-threads] :as config} configs
             _                                       (range n-threads)]
       (.submit executor ^Callable #(consume ctx config)))
@@ -122,6 +123,7 @@
            (mapcat (fn [module]
                      (:biff.background/tasks module [])))
            vec)
+
       :biff.background/queues
       (reduce (fn [acc module]
                 (reduce-kv (fn [acc id config]
@@ -134,4 +136,5 @@
                            (:biff.background/queues module {})))
               {}
               @modules-var)})
+
    :biff.fx/handlers fx-handlers})

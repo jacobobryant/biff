@@ -123,10 +123,12 @@
                  :user/email "b@example.com"
                  :user/score 2}]
                (sort-by :user/email
-                        (biff.xtdb/q ctx {:select [:xt/id :user/email :user/score]
+                        (biff.xtdb/q ctx {:select [:xt/id :user/email
+                                                   :user/score]
                                           :from   [:user]
-                                          :where  [:in :user/email ["a@example.com"
-                                                                    "b@example.com"]]}))))
+                                          :where  [:in :user/email
+                                                   ["a@example.com"
+                                                    "b@example.com"]]}))))
         (biff.xtdb/execute-tx
          ctx
          [[:biff/upsert :user [:user/email]
@@ -169,7 +171,8 @@
   (let [called (promise)
         ctx    (open-ctx {:biff.core/on-tx
                           (fn [ctx]
-                            (deliver called (:biff.xtdb/latest-system-time ctx)))})]
+                            (deliver called
+                                     (:biff.xtdb/latest-system-time ctx)))})]
     (try
       (let [result (biff.xtdb/submit-tx
                     ctx
@@ -183,7 +186,8 @@
         (is (= [{:user/email "submit@example.com"}]
                (biff.xtdb/q ctx {:select [:user/email]
                                  :from   [:user]
-                                 :where  [:= :user/email "submit@example.com"]}))))
+                                 :where  [:= :user/email
+                                          "submit@example.com"]}))))
       (finally
         (close-ctx ctx)))))
 
@@ -192,7 +196,8 @@
     (try
       (let [pet-id  (UUID/randomUUID)
             user-id (UUID/randomUUID)
-            ctx     (merge (biff.graph/new-ctx (biff.xtdb/make-resolvers columns))
+            ctx     (merge (biff.graph/new-ctx
+                            (biff.xtdb/make-resolvers columns))
                            base-ctx)]
         (biff.xtdb/execute-tx
          ctx

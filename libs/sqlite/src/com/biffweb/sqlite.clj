@@ -12,7 +12,8 @@
 (def ^:private column-schema
   (let [? {:optional true}]
     [:map
-     [:type           [:enum :int :real :text :boolean :inst :uuid :enum :edn :blob]]
+     [:type           [:enum :int :real :text :boolean :inst
+                       :uuid :enum :edn :blob]]
      [:primary-key  ? :boolean]
      [:unique       ? :boolean]
      [:unique-with  ? [:sequential :qualified-keyword]]
@@ -31,15 +32,21 @@
     [:after [:maybe [:map-of :keyword :any]]]]])
 
 (biff.core/register
- {:biff.sqlite/after-conn                   :any
-  :biff.sqlite/authorize                    'ifn?
-  :biff.sqlite/authorized-write-statement   impl.authorize/input-schema
-  :biff.sqlite/authorized-write-statements  [:sequential :biff.sqlite/authorized-write-statement]
-  :biff.sqlite/before-conn                  :any
-  :biff.sqlite/bin-dir                      :string
-  :biff.sqlite/columns                      [:map-of :qualified-keyword column-schema]
-  :biff.sqlite/db-path                      :string
-  :biff.sqlite/diff                         diff-schema
+ {:biff.sqlite/after-conn                 :any
+  :biff.sqlite/authorize                  'ifn?
+  :biff.sqlite/authorized-write-statement impl.authorize/input-schema
+
+  :biff.sqlite/authorized-write-statements
+  [:sequential :biff.sqlite/authorized-write-statement]
+
+  :biff.sqlite/before-conn :any
+
+  :biff.sqlite/columns
+  [:map-of :qualified-keyword column-schema]
+
+  :biff.sqlite/db-path :string
+  :biff.sqlite/diff    diff-schema
+
   :biff.sqlite/extra-init-sql               [:sequential :string]
   :biff.sqlite/litestream-access-key-id     :string
   :biff.sqlite/litestream-bucket            :string
@@ -81,8 +88,7 @@
    the DB from remote object storage. Then runs `litestream replicate` in the
    background to stream local database changes to remote object storage while
    your application runs."
-  {:arglists '([{:biff.sqlite/keys [bin-dir
-                                    db-path
+  {:arglists '([{:biff.sqlite/keys [db-path
                                     litestream-access-key-id
                                     litestream-bucket
                                     litestream-dir
@@ -102,8 +108,7 @@
 
    sqldef (sqlite3def, specifically) will be installed if the specified version
    isn't available."
-  {:arglists '([{:biff.sqlite/keys [bin-dir
-                                    columns
+  {:arglists '([{:biff.sqlite/keys [columns
                                     db-path
                                     extra-init-sql
                                     schema-path

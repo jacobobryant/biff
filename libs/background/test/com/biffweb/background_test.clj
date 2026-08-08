@@ -49,6 +49,7 @@
 (defn- queue-ctx [seen done]
   (background/use-queues
    {:biff.core/stop []
+
     :biff.background/queues
     {:default
      {:consumer (fn [{:keys [biff.background/job]}]

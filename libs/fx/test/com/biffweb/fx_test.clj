@@ -26,9 +26,12 @@
             :now?     true
             :seed?    true}
            (machine {:from-ctx "ctx"
+
                      :biff.fx/handlers
                      {:test/concat (fn [ctx suffix]
-                                     (swap! seen conj (select-keys ctx [:from-ctx :prefix]))
+                                     (swap! seen conj
+                                            (select-keys ctx
+                                                         [:from-ctx :prefix]))
                                      (str (:prefix ctx) suffix))}})))
     (is (= [{:from-ctx "ctx" :prefix "ctx"}]
            @seen))))
@@ -51,6 +54,7 @@
     (is (= {:response :from-get-handlers}
            (machine {:biff.fx/handlers
                      {:biff.fx/http (fn [_ _request] :from-ctx-handlers)}
+
                      :biff.fx/get-handlers
                      (fn []
                        {:biff.fx/http (fn [_ _request] :from-get-handlers)})})))))
@@ -84,17 +88,20 @@
                         "…"))))
 
 (deftest module-collects-handlers-from-modules
-  (let [modules-var (atom [{:biff.fx/handlers {:test/a      identity
-                                               :test/shared (constantly :first)}}
-                           {:biff.fx/handlers {:test/b      str
-                                               :test/shared (constantly :second)}}])
+  (let [modules-var (atom [{:biff.fx/handlers
+                            {:test/a      identity
+                             :test/shared (constantly :first)}}
+                           {:biff.fx/handlers
+                            {:test/b      str
+                             :test/shared (constantly :second)}}])
         init        ((:biff.core/init (biff.fx/module)) modules-var)]
     (is (= #{:test/a :test/b :test/shared}
            (set (keys ((:biff.fx/get-handlers init))))))
     (is (= :second
            ((get ((:biff.fx/get-handlers init)) :test/shared) nil)))
-    (swap! modules-var conj {:biff.fx/handlers {:test/c      keyword
-                                                :test/shared (constantly :third)}})
+    (swap! modules-var conj
+           {:biff.fx/handlers {:test/c      keyword
+                               :test/shared (constantly :third)}})
     (is (= #{:test/a :test/b :test/c :test/shared}
            (set (keys ((:biff.fx/get-handlers init))))))
     (is (= :third

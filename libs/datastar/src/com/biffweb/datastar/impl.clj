@@ -8,7 +8,8 @@
    [ring.core.protocols :as rp])
   (:import
    (com.aayushatharva.brotli4j Brotli4jLoader)
-   (com.aayushatharva.brotli4j.encoder BrotliOutputStream Encoder$Mode Encoder$Parameters)
+   (com.aayushatharva.brotli4j.encoder
+    BrotliOutputStream Encoder$Mode Encoder$Parameters)
    (java.io ByteArrayOutputStream IOException)
    (java.io ByteArrayOutputStream)
    (java.util.concurrent.locks Condition ReentrantLock)))
@@ -131,7 +132,8 @@
 (def ^:private open-sse-action
   (str "@get("
        "window.location.pathname + "
-       "(window.location.search + '&biff-datastar-sse=true').replace(/^&/,'?'), "
+       "(window.location.search + '&biff-datastar-sse=true')"
+       ".replace(/^&/,'?'), "
        "{openWhenHidden: false, retryMaxCount: Infinity})"))
 
 (defn init-opts

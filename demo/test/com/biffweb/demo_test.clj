@@ -117,7 +117,8 @@
             :cookie cookie
             :headers {"datastar-request" "true"}))
 
-(defn- datastar-post [path tab-id & {:keys [cookie headers form-params signals]}]
+(defn- datastar-post
+  [path tab-id & {:keys [cookie headers form-params signals]}]
   (let [headers (merge {"datastar-request" "true"} headers)
         tab-id  {:biff.datastar/tab-id tab-id}]
     (if signals
@@ -128,7 +129,8 @@
       (http-post path
                  :cookie cookie
                  :headers headers
-                 :form-params (merge {(biff.datastar/signal-name :biff.datastar/tab-id)
+                 :form-params (merge {(biff.datastar/signal-name
+                                       :biff.datastar/tab-id)
                                       (:biff.datastar/tab-id tab-id)}
                                      form-params)))))
 
@@ -181,13 +183,21 @@
     (is (contains? handlers :biff.sqlite.fx/authorized-write))))
 
 (deftest landing-signin-and-admin-flow-test
-  (let [home                                                             (http-get "/")
-        {:keys [app-page cookie email send-code sent-email verify-code]} (sign-in!)
-        users                                                            (db-query "SELECT id, email FROM user ORDER BY joined_at DESC")
-        todos                                                            (db-query "SELECT archived FROM todo t JOIN user u ON t.user_id = u.id WHERE u.email = ? ORDER BY created_at ASC"
-                                                                                   email)
-        user-row                                                         (some #(when (= email (or (:email %) (:user/email %))) %) users)
-        admin-page                                                       (http-get "/_biff/admin" :cookie cookie)]
+  (let [home (http-get "/")
+
+        {:keys [app-page cookie email send-code sent-email verify-code]}
+        (sign-in!)
+
+        users (db-query "SELECT id, email FROM user ORDER BY joined_at DESC")
+
+        todos (db-query (str "SELECT archived FROM todo t JOIN user u "
+                             "ON t.user_id = u.id WHERE u.email = ? "
+                             "ORDER BY created_at ASC")
+                        email)
+
+        user-row   (some #(when (= email (or (:email %) (:user/email %))) %)
+                         users)
+        admin-page (http-get "/_biff/admin" :cookie cookie)]
     (is (= 200 (:status home)))
     (is (str/includes? (:body home) "Biff Demo App"))
     (is (str/includes? (:body home) "/signin"))
@@ -217,25 +227,30 @@
                                                 :form-params {"newtodo" title})
         todo-row                     (first (biff.sqlite/execute
                                              *system*
-                                             {:select [:todo/id :todo/completed :todo/archived]
+                                             {:select [:todo/id :todo/completed
+                                                       :todo/archived]
                                               :from   :todo
                                               :where  [:= :todo/title title]}))
         toggle-resp                  (http-post (routes/todo-toggle (:todo/id todo-row))
                                                 :cookie cookie
-                                                :form-params {"completed" "true"})
+                                                :form-params
+                                                {"completed" "true"})
         toggled-row                  (first (biff.sqlite/execute
                                              *system*
                                              {:select [:todo/completed]
                                               :from   :todo
-                                              :where  [:= :todo/id (:todo/id todo-row)]}))
+                                              :where  [:= :todo/id
+                                                       (:todo/id todo-row)]}))
         archive-resp                 (http-post (routes/todo-archive (:todo/id todo-row))
                                                 :cookie cookie
-                                                :form-params {"archived" "true"})
+                                                :form-params
+                                                {"archived" "true"})
         archived-row                 (first (biff.sqlite/execute
                                              *system*
                                              {:select [:todo/archived]
                                               :from   :todo
-                                              :where  [:= :todo/id (:todo/id todo-row)]}))
+                                              :where  [:= :todo/id
+                                                       (:todo/id todo-row)]}))
         app-page                     (http-get "/app" :cookie cookie)]
     (is (= 200 (:status create-resp)))
     (is (str/includes? (:body create-resp) "datastar-patch-signals"))
@@ -263,7 +278,8 @@
     (is (not (str/includes? body "data-signals:show-archived")))))
 
 (deftest param-value-preserves-false-signal-values-test
-  (is (false? (#'todos/param-value {:biff.datastar/signals {:showArchived false}}
+  (is (false? (#'todos/param-value {:biff.datastar/signals
+                                    {:showArchived false}}
                                    :show-archived)))
   (is (some? (#'todos/param-value {:biff.datastar/signals {:showArchived false}}
                                   :show-archived))))
@@ -280,9 +296,10 @@
                                    {:select [:todo/id]
                                     :from   :todo
                                     :where  [:= :todo/title title]}))
-        toggle-resp        (datastar-post (routes/todo-toggle (:todo/id todo-row))
-                                          tab-id
-                                          :cookie cookie)
+        toggle-resp        (datastar-post
+                            (routes/todo-toggle (:todo/id todo-row))
+                            tab-id
+                            :cookie cookie)
         toggle-row         (first (biff.sqlite/execute
                                    *system*
                                    {:select [:todo/completed]
@@ -292,10 +309,12 @@
                                           tab-id
                                           :cookie cookie
                                           :form-params {"filter" "completed"})
-        filtered-page      (datastar-get (datastar-app-path tab-id) :cookie cookie)
-        archive-resp       (datastar-post (routes/todo-archive (:todo/id todo-row))
-                                          tab-id
-                                          :cookie cookie)
+        filtered-page      (datastar-get (datastar-app-path tab-id)
+                                         :cookie cookie)
+        archive-resp       (datastar-post
+                            (routes/todo-archive (:todo/id todo-row))
+                            tab-id
+                            :cookie cookie)
         archived-row       (first (biff.sqlite/execute
                                    *system*
                                    {:select [:todo/archived]
@@ -306,13 +325,15 @@
                                           :cookie cookie
                                           :signals {"filter"       "all"
                                                     "showArchived" true})
-        archived-page      (datastar-get (datastar-app-path tab-id) :cookie cookie)
+        archived-page      (datastar-get (datastar-app-path tab-id)
+                                         :cookie cookie)
         hide-archived-resp (datastar-post (routes/tab-state)
                                           tab-id
                                           :cookie cookie
                                           :signals {"filter"       "all"
                                                     "showArchived" false})
-        hidden-page        (datastar-get (datastar-app-path tab-id) :cookie cookie)]
+        hidden-page        (datastar-get (datastar-app-path tab-id)
+                                         :cookie cookie)]
     (is (= 200 (:status create-resp)))
     (is (= 204 (:status toggle-resp)))
     (is (true? (:todo/completed toggle-row)))

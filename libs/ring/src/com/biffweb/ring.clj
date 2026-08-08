@@ -7,25 +7,31 @@
             [ring.middleware.session.store :as session.store]))
 
 (biff.core/register
- {:biff.ring/api-middleware         [:sequential 'ifn?]
-  :biff.ring/api-routes             [:sequential 'ifn?]
-  :biff.ring/base-middleware        [:sequential 'ifn?]
-  :biff.ring/cookie-secret          :biff.core/secret
-  :biff.ring/fallback-session-store [:fn #(satisfies? session.store/SessionStore %)]
-  :biff.ring/handler                'ifn?
-  :biff.ring/host                   'string?
-  :biff.ring/hsts                   'boolean?
-  :biff.ring/index-files            [:sequential 'string?]
-  :biff.ring/on-error               'ifn?
-  :biff.ring/port                   'integer?
-  :biff.ring/root                   'string?
-  :biff.ring/routes                 'sequential?
-  :biff.ring/secure                 'boolean?
-  :biff.ring/session-max-age        'integer?
-  :biff.ring/session-same-site      'keyword?
-  :biff.ring/session-store          [:fn #(satisfies? session.store/SessionStore %)]
-  :biff.ring/site-middleware        [:sequential 'ifn?]
-  :biff.ring/ssl-redirect           'boolean?})
+ {:biff.ring/api-middleware  [:sequential 'ifn?]
+  :biff.ring/api-routes      [:sequential 'ifn?]
+  :biff.ring/base-middleware [:sequential 'ifn?]
+  :biff.ring/cookie-secret   :biff.core/secret
+
+  :biff.ring/fallback-session-store
+  [:fn #(satisfies? session.store/SessionStore %)]
+
+  :biff.ring/handler           'ifn?
+  :biff.ring/host              'string?
+  :biff.ring/hsts              'boolean?
+  :biff.ring/index-files       [:sequential 'string?]
+  :biff.ring/on-error          'ifn?
+  :biff.ring/port              'integer?
+  :biff.ring/root              'string?
+  :biff.ring/routes            'sequential?
+  :biff.ring/secure            'boolean?
+  :biff.ring/session-max-age   'integer?
+  :biff.ring/session-same-site 'keyword?
+
+  :biff.ring/session-store
+  [:fn #(satisfies? session.store/SessionStore %)]
+
+  :biff.ring/site-middleware [:sequential 'ifn?]
+  :biff.ring/ssl-redirect    'boolean?})
 
 (def
   ^{:dynamic true

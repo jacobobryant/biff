@@ -1,6 +1,0 @@
-#!/bin/bash
-set -e
-clojure -M:run format
-bin/docs
-clojure -M:run lint
-bin/test-all

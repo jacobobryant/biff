@@ -96,7 +96,8 @@
                            (into [] (mapcat identity) join-values))
         flat-results     (if (empty? flat-join-values)
                            []
-                           (resolve-entities ctx flat-join-values children-ast #{}))]
+                           (resolve-entities ctx flat-join-values
+                                             children-ast #{}))]
     (if all-maps?
       flat-results
       (mapv (fn [results]
@@ -189,12 +190,15 @@
 
          sequential-input (sequential? input)
          input            (if sequential-input (vec input) [input])
-         _                (impl.v/validate-input (:biff.graph/attr->shape-info ctx)
-                                                 input)
+         _                (impl.v/validate-input
+                           (:biff.graph/attr->shape-info ctx)
+                           input)
          resolving-attrs  #{}
          execute          (fn [ctx]
-                            (resolve-entities ctx input query-ast resolving-attrs))
-         execute          (if-some [wrap-db-snapshot (:biff.core/wrap-db-snapshot ctx)]
+                            (resolve-entities ctx input query-ast
+                                              resolving-attrs))
+         execute          (if-some [wrap-db-snapshot
+                                    (:biff.core/wrap-db-snapshot ctx)]
                             (wrap-db-snapshot execute)
                             execute)
          results          (execute ctx)]

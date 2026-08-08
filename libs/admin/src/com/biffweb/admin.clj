@@ -18,8 +18,9 @@
             [taoensso.telemere :as tel]
             [taoensso.telemere.tools-logging :as tel.tl]
             [tick.core :as t])
-  (:import [java.security SecureRandom]
-           [java.io File]
+  (:import [java.io File]
+           [java.lang.management ManagementFactory]
+           [java.security SecureRandom]
            [java.time ZoneOffset ZonedDateTime]
            [java.time.temporal ChronoUnit]))
 
@@ -73,7 +74,8 @@
 (defn- pstats->stored-value [pstats]
   (into {} @pstats))
 
-(defn- get-stored-pstats [{:keys [biff.core/kv-get biff.core/kv-set] :as ctx} day-key]
+(defn- get-stored-pstats
+  [{:keys [biff.core/kv-get biff.core/kv-set] :as ctx} day-key]
   (when kv-get
     (let [value (kv-get ctx pstats-kv-namespace day-key)]
       (cond
@@ -109,7 +111,8 @@
           [all-pstats _new] (swap-vals! pstats #(select-keys % [current-day]))]
       (doseq [[day day-pstats] all-pstats
               :when            day-pstats]
-        (kv-set ctx pstats-kv-namespace day (pstats->stored-value day-pstats))))))
+        (kv-set ctx pstats-kv-namespace day
+                (pstats->stored-value day-pstats))))))
 
 (defn- hourly-schedule-from [now]
   (let [start (-> now
@@ -192,8 +195,8 @@
 
 (defn- compute-wau
   "Compute Weekly Active Users (rolling 7-day window).
-   For each day in the last 30 days, count unique users from that day and previous 6 days.
-   Filters out events older than 37 days."
+   For each day in the last 30 days, count unique users from that day and
+   previous 6 days. Filters out events older than 37 days."
   [events tz now]
   (let [today         (t/date (t/in now tz))
         cutoff        (t/<< today (t/new-period 37 :days))
@@ -268,7 +271,7 @@
                      (catch Exception _
                        (try
                          (.getSystemLoadAverage
-                          (java.lang.management.ManagementFactory/getOperatingSystemMXBean))
+                          (ManagementFactory/getOperatingSystemMXBean))
                          (catch Exception _ -1.0))))
         cpu-count  (.availableProcessors runtime)]
     {:ram-used   used-mem
@@ -276,7 +279,8 @@
      :ram-pct    (if (pos? max-mem) (* 100.0 (/ used-mem (double max-mem))) 0)
      :disk-used  disk-used
      :disk-total disk-total
-     :disk-pct   (if (pos? disk-total) (* 100.0 (/ disk-used (double disk-total))) 0)
+     :disk-pct   (if (pos? disk-total)
+                   (* 100.0 (/ disk-used (double disk-total))) 0)
      :cpu-load   load-avg
      :cpu-count  cpu-count}))
 
@@ -307,29 +311,43 @@
           formatted          (try
                                ((tel/format-signal-fn {}) signal)
                                (catch Exception e
-                                 (str "Error formatting signal: " e "\n" (pr-str signal))))
-          error-entry        {:message     (or (some-> signal :error .getMessage) "Unknown error")
+                                 (str "Error formatting signal: " e "\n"
+                                      (pr-str signal))))
+          error-entry        {:message
+                              (or (some-> signal :error .getMessage)
+                                  "Unknown error")
+
                               :stack-trace formatted
                               :timestamp   (t/now)}]
       ;; Store in errors atom (keep last 20)
       (when errors-atom
         (swap! errors-atom (fn [errors]
-                             (vec (take-last max-errors (conj errors error-entry))))))
-      ;; Handle batched email alerting (only if both send-email and alert-email are set)
+                             (vec (take-last max-errors
+                                             (conj errors error-entry))))))
+      ;; Handle batched email alerting (only if both send-email and alert-email
+      ;; are set)
       (when (and send-email alert-email alert-state)
         (let [{:keys [batch]} (swap! alert-state
                                      (fn [{:keys [pending last-sent-at]}]
-                                       (let [pending (conj (or pending []) formatted)]
-                                         (if (< rate-limit-seconds (- now-seconds (or last-sent-at 0)))
+                                       (let [pending (conj (or pending [])
+                                                           formatted)]
+                                         (if (< rate-limit-seconds
+                                                (- now-seconds
+                                                   (or last-sent-at 0)))
                                            {:batch        pending
                                             :pending      []
                                             :last-sent-at now-seconds}
-                                           {:pending      pending
-                                            :last-sent-at (or last-sent-at 0)}))))]
+
+                                           {:pending pending
+
+                                            :last-sent-at
+                                            (or last-sent-at 0)}))))]
           (when (not-empty batch)
             (try
-              (let [error-text (str/join "\n\n---\n\n" (take-last max-errors batch))
-                    preview    (subs error-text 0 (min 1000 (count error-text)))]
+              (let [error-text     (str/join "\n\n---\n\n"
+                                             (take-last max-errors batch))
+                    preview-length (min 1000 (count error-text))
+                    preview        (subs error-text 0 preview-length)]
                 (send-email ctx
                             {:to      alert-email
                              :subject "Application error alert"
@@ -338,7 +356,8 @@
               (catch Exception e
                 ;; Log but don't re-throw to avoid infinite loops
                 (binding [*out* *err*]
-                  (println "Failed to send error alert email:" (.getMessage e)))))))))))
+                  (println "Failed to send error alert email:"
+                           (.getMessage e)))))))))))
 
 (defn use-alerts
   "Biff component that sets up error alerting via telemere.
@@ -355,7 +374,8 @@
                            :biff.admin/alert-state alert-state)]
     (tel/add-handler! :biff.admin/alerts
                       (fn [signal] (handle-error ctx signal)))
-    (update ctx :biff.core/stop conj #(tel/remove-handler! :biff.admin/alerts))))
+    (update ctx :biff.core/stop conj
+            #(tel/remove-handler! :biff.admin/alerts))))
 
 ;; ============================================================
 ;; Health check
@@ -425,27 +445,35 @@
    is not set, returns 403 if UIDs don't match, otherwise calls handler."
   [handler]
   (fn [{:biff.admin/keys [user-id] :keys [session] :as ctx}]
-    (let [current-uid (str (:uid session))
-          admin-uid   (str user-id)]
+    (let [current-uid  (str (:uid session))
+          admin-uid    (str user-id)
+          button-class (str "bg-blue-600 text-white px-3 py-1 "
+                            "rounded text-sm cursor-pointer")
+          copy-script  (str "navigator.clipboard.writeText('"
+                            current-uid "');"
+                            "this.textContent='Copied!';"
+                            "setTimeout(()=>this.textContent='Copy',2000)")]
       (cond
         (str/blank? admin-uid)
         (ui/admin-page "Admin Setup"
                        [:div
                         (ui/heading "Admin Setup")
-                        [:p.mb-4 ":biff.admin/user-id is not set. Your current user ID is:"]
+                        [:p.mb-4 (str ":biff.admin/user-id is not set. "
+                                      "Your current user ID is:")]
                         [:div.flex.items-center.gap-2.mb-4
-                         [:code.bg-gray-100.p-2.rounded.text-sm.break-all {:id "uid-display"} current-uid]
-                         [:button.bg-blue-600.text-white.px-3.py-1.rounded.text-sm.cursor-pointer
-                          {:onclick (str "navigator.clipboard.writeText('" current-uid "');"
-                                         "this.textContent='Copied!';"
-                                         "setTimeout(()=>this.textContent='Copy',2000)")}
+                         [:code.bg-gray-100.p-2.rounded.text-sm.break-all
+                          {:id "uid-display"} current-uid]
+                         [:button {:class   button-class
+                                   :onclick copy-script}
                           "Copy"]]
                         [:p.text-sm.text-gray-600
-                         "Set :biff.admin/user-id to enable the admin dashboard."]])
+                         (str "Set :biff.admin/user-id to enable the admin "
+                              "dashboard.")]])
 
         (or (str/blank? current-uid)
             (not= current-uid admin-uid))
-        {:status 403 :headers {"content-type" "text/html"} :body "<h1>Forbidden</h1>"}
+        {:status 403                  :headers {"content-type" "text/html"}
+         :body   "<h1>Forbidden</h1>"}
 
         :else
         (handler ctx)))))
@@ -454,7 +482,8 @@
   [{:biff.admin/keys [get-user-events get-revenue-events get-users errors-atom]
     :as              ctx}
    timezone]
-  (let [tz                 (try (t/zone timezone) (catch Exception _ (t/zone "UTC")))
+  (let [tz                 (try (t/zone timezone)
+                                (catch Exception _ (t/zone "UTC")))
         now                (t/now)
         user-events        (when get-user-events (get-user-events ctx))
         revenue-events     (when get-revenue-events (get-revenue-events ctx))
@@ -462,19 +491,40 @@
         dau                (compute-dau (or user-events []) tz now)
         wau                (compute-wau (or user-events []) tz now)
         daily-signups      (when users (compute-daily-signups users tz now))
-        daily-revenue      (when revenue-events (compute-daily-revenue revenue-events tz now))
+        daily-revenue      (when revenue-events
+                             (compute-daily-revenue revenue-events tz now))
         pstats-data        (recent-pstats-data ctx)
         pstats-formatted   (some-> pstats-data tufte/format-grouped-pstats)
         recent-days        (->> (keys dau) (take-last 30))
         resource-usage     (get-resource-usage)
         errors             (when errors-atom @errors-atom)
-        anti-forgery-token (:anti-forgery-token ctx)]
+        anti-forgery-token (:anti-forgery-token ctx)
+        button-class       (str "bg-red-600 text-white px-3 py-1 "
+                                "rounded text-sm cursor-pointer mb-4")
+        alert-script       (str "fetch('/_biff/admin/test-alert', {"
+                                "method: 'POST',"
+                                "headers: {'Content-Type': "
+                                "'application/x-www-form-urlencoded'}"
+                                (when anti-forgery-token
+                                  (str ",body: '__anti-forgery-token=' + "
+                                       "encodeURIComponent('"
+                                       anti-forgery-token "')"))
+                                "}).then(() => {"
+                                "this.textContent='Alert sent!';"
+                                "setTimeout(() => { this.textContent="
+                                "'Test alert'; location.reload(); }, 2000);"
+                                "}).catch(() => {"
+                                "this.textContent='Alert sent!';"
+                                "setTimeout(() => { this.textContent="
+                                "'Test alert'; location.reload(); }, 2000);"
+                                "});")]
     (ui/admin-fragment
      [:div
       ;; Usage Metrics
       (ui/section "Usage Metrics"
                   (when (seq recent-days)
-                    (ui/metrics-table recent-days dau wau daily-signups daily-revenue))
+                    (ui/metrics-table recent-days dau wau
+                                      daily-signups daily-revenue))
                   (when-not (seq recent-days)
                     [:p.text-gray-500 "No activity data available."]))
 
@@ -499,19 +549,8 @@
       (when errors-atom
         (ui/section "Recent Exceptions"
                     [:div
-                     [:button.bg-red-600.text-white.px-3.py-1.rounded.text-sm.cursor-pointer.mb-4
-                      {:onclick (str "fetch('/_biff/admin/test-alert', {"
-                                     "method: 'POST',"
-                                     "headers: {'Content-Type': 'application/x-www-form-urlencoded'}"
-                                     (when anti-forgery-token
-                                       (str ",body: '__anti-forgery-token=' + encodeURIComponent('" anti-forgery-token "')"))
-                                     "}).then(() => {"
-                                     "this.textContent='Alert sent!';"
-                                     "setTimeout(() => { this.textContent='Test alert'; location.reload(); }, 2000);"
-                                     "}).catch(() => {"
-                                     "this.textContent='Alert sent!';"
-                                     "setTimeout(() => { this.textContent='Test alert'; location.reload(); }, 2000);"
-                                     "});")}
+                     [:button {:class   button-class
+                               :onclick alert-script}
                       "Test alert"]
                      (if (seq errors)
                        (ui/exceptions-table errors)
@@ -525,11 +564,15 @@
                   [:div {:id "admin-content"}
                    [:p.text-gray-500 "Loading..."]]
                   [:script
-                   (str "document.addEventListener('DOMContentLoaded', function() {"
-                        "  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';"
-                        "  fetch('/_biff/admin/content?timezone=' + encodeURIComponent(tz))"
+                   (str "document.addEventListener('DOMContentLoaded', "
+                        "function() {"
+                        "  var tz = Intl.DateTimeFormat().resolvedOptions()"
+                        ".timeZone || 'UTC';"
+                        "  fetch('/_biff/admin/content?timezone=' + "
+                        "encodeURIComponent(tz))"
                         "    .then(function(r) { return r.text(); })"
-                        "    .then(function(html) { document.getElementById('admin-content').innerHTML = html; });"
+                        "    .then(function(html) { document.getElementById("
+                        "'admin-content').innerHTML = html; });"
                         "});")]]))
 
 (defn- admin-content-handler
@@ -541,27 +584,42 @@
 
 (defn- stacktrace-page-handler
   [{:biff.admin/keys [errors-atom] :as ctx}]
-  (let [index  (try (Integer/parseInt (or (get-in ctx [:params :index])
-                                          (get-in ctx [:query-params "index"])
-                                          (get-in ctx [:path-params :index])
-                                          "0"))
-                    (catch Exception _ 0))
-        errors (when errors-atom @errors-atom)
-        error  (get (vec errors) index)]
+  (let [index (try
+                (Integer/parseInt
+                 (or (get-in ctx [:params :index])
+                     (get-in ctx [:query-params "index"])
+                     (get-in ctx [:path-params :index])
+                     "0"))
+                (catch Exception _ 0))
+
+        errors      (when errors-atom @errors-atom)
+        error       (get (vec errors) index)
+        copy-script (str "navigator.clipboard.writeText("
+                         "document.getElementById('stacktrace')"
+                         ".textContent);"
+                         "this.textContent='Copied!';"
+                         "setTimeout(()=>this.textContent="
+                         "'Copy to clipboard',2000)")]
     (if error
       (ui/admin-page "Stack Trace"
                      [:div
                       (ui/heading "Stack Trace")
-                      [:p.text-sm.text-gray-600.mb-2 (str "Error at " (:timestamp error))]
+                      [:p.text-sm.text-gray-600.mb-2
+                       (str "Error at " (:timestamp error))]
                       [:p.font-semibold.mb-4 (:message error)]
-                      [:button.bg-blue-600.text-white.px-4.py-2.rounded.mb-4.cursor-pointer
-                       {:onclick (str "navigator.clipboard.writeText(document.getElementById('stacktrace').textContent);"
-                                      "this.textContent='Copied!';"
-                                      "setTimeout(()=>this.textContent='Copy to clipboard',2000)")}
+                      [:button {:class
+                                (str "bg-blue-600 text-white px-4 py-2 "
+                                     "rounded mb-4 cursor-pointer")
+
+                                :onclick copy-script}
                        "Copy to clipboard"]
-                      [:pre#stacktrace.bg-gray-100.p-4.rounded.text-xs.overflow-x-auto.whitespace-pre-wrap
+                      [:pre#stacktrace
+                       {:class (str "bg-gray-100 p-4 rounded text-xs "
+                                    "overflow-x-auto whitespace-pre-wrap")}
                        (:stack-trace error)]])
-      {:status 404 :headers {"content-type" "text/plain"} :body "Not found"})))
+      {:status  404
+       :headers {"content-type" "text/plain"}
+       :body    "Not found"})))
 
 (defn- wrap-admin-params
   "Middleware that merges admin parameters into the request.
@@ -579,23 +637,14 @@
 ;; Module
 ;; ============================================================
 
-(defn module
-  "Creates a biff.admin module. Takes a map of options:
-   - :biff.admin/get-user-events - fn [ctx] -> [{:user-id ... :instant ...} ...]
-   - :biff.admin/get-revenue-events - (optional) fn [ctx] -> [{:revenue ... :instant ...} ...]
-   - :biff.admin/get-users - (optional) fn [ctx] -> [{:user-id ... :joined-at ... :email ...} ...]
-   - :biff.admin/get-route-id - (optional) fn [ctx] -> string, overrides default route ID extraction
-   - :biff.admin/healthy? - (optional) fn [ctx] -> truthy, for health endpoint
-
-   Returns a module map with :biff.ring/routes, :biff.ring/base-middleware,
-   :biff.graph/middleware, and :biff.core/init."
-  [params]
+(defn module [params]
   {:biff.core/init            (fn [_modules-var]
                                 {:biff.admin/pstats       (atom {})
                                  :biff.admin/signin-codes (atom {})})
    :biff.background/tasks     [{:schedule hourly-schedule
                                 :task     flush-pstats!}]
-   :biff.ring/routes          ["/_biff/admin" {:middleware [[wrap-admin-params params]]}
+   :biff.ring/routes          ["/_biff/admin"
+                               {:middleware [[wrap-admin-params params]]}
                                ["/health" {:get  health-handler
                                            :name ::health}]
                                ["/signin/:code" {:get  signin-handler
@@ -605,10 +654,12 @@
                                      :name ::dashboard}]
                                 ["/content" {:get  admin-content-handler
                                              :name ::content}]
-                                ["/stacktrace/:index" {:get  stacktrace-page-handler
-                                                       :name ::stacktrace}]
-                                ["/generate-signin-code" {:post generate-signin-code-handler
-                                                          :name ::generate-signin-code}]
+                                ["/stacktrace/:index"
+                                 {:get  stacktrace-page-handler
+                                  :name ::stacktrace}]
+                                ["/generate-signin-code"
+                                 {:post generate-signin-code-handler
+                                  :name ::generate-signin-code}]
                                 ["/test-alert" {:post test-alert-handler
                                                 :name ::test-alert}]]]
    :biff.ring/base-middleware [wrap-profiling]
