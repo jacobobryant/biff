@@ -53,8 +53,15 @@ Some resources:
 
 ## Example
 
-Run `clj -M:demo` to start the demo app, which is, of course, a chat app. Open
-multiple tabs to see the realtime updates in action.
+Start the demo app, which is, of course, a chat app:
+
+```clojure
+git checkout v2.x
+cd libs/datastar
+clj -M:demo
+```
+
+Open multiple tabs to see the realtime updates in action.
 
 View the [demo app source](demo/com/biffweb/datastar/demo.clj). Some parts to
 take note of:
