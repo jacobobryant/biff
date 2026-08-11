@@ -61,7 +61,7 @@ a list of the default middleware, all of which can be used individually.
 Reitit routes that are backed by [biff.fx machines](/libs/fx/):
 
 ```clojure
-(defroute my-route \"/posts/:id\"
+(defroute my-route "/posts/:id"
   [:example.fx/query ...]
 
   :get
@@ -70,7 +70,7 @@ Reitit routes that are backed by [biff.fx machines](/libs/fx/):
 
   :next
   (fn [ctx]
-    [:div \"hello\"]))
+    [:div "hello"]))
 
 (def module
   {:biff.ring/routes [my-route
