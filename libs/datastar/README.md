@@ -169,7 +169,7 @@ be initialized with `__ifmissing`:
   ...]
 ```
 
-This will prevent the input values from being overwritten whan `wrap-sse-render`
+This will prevent the input values from being overwritten when `wrap-sse-render`
 pushes new page HTML.
 
 I recommend using namespaced signal names, since signals are essentially a
