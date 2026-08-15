@@ -15,7 +15,7 @@
            nrepl/nrepl                   {:mvn/version "1.7.0"}
            org.clojure/data.json         {:mvn/version "2.5.2"}
            org.clojure/tools.namespace   {:mvn/version "1.5.1"}
-           slipset/deps-deploy           {:mvn/version "0.2.4"
+           slipset/deps-deploy           {:mvn/version "0.2.5"
                                           :exclusions  [org.slf4j/slf4j-nop]}}
  :aliases {:run {:extra-paths ["test" "dev"]
                  :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

@@ -4,6 +4,7 @@
             [clojure.tools.build.api :as build]
             [com.biffweb.tasks.impl.util :as util]
             [deps-deploy.deps-deploy :as deps-deploy]
+            [deps-deploy.gpg :as gpg]
             [hato.client :as hato]))
 
 (def ^:private clojars-repo-url "https://clojars.org/repo")
@@ -121,6 +122,12 @@
 (defn- versioned-pom-filename [{:keys [artifact-id version]}]
   (str artifact-id "-" version ".pom"))
 
+(defn- run-deploy! [options sign-key-id]
+  (if sign-key-id
+    (with-redefs [gpg/read-passphrase (constantly nil)]
+      (deps-deploy/deploy options))
+    (deps-deploy/deploy options)))
+
 (defn- deploy! [{:biff.tasks/keys [clojars-secret
                                    clojars-username
                                    gpg-sign-key-id
@@ -132,13 +139,14 @@
                                   :username clojars-username
                                   :password (force clojars-secret)}}]
     (try
-      (deps-deploy/deploy
+      (run-deploy!
        {:artifact       jar-file
         :installer      :remote
         :pom-file       pom-file
         :repository     repository
         :sign-key-id    gpg-sign-key-id
-        :sign-releases? (or (some? gpg-sign-key-id) gpg-sign-with-passphrase)})
+        :sign-releases? (or (some? gpg-sign-key-id) gpg-sign-with-passphrase)}
+       gpg-sign-key-id)
       (finally
         (doseq [path [(str versioned-pom ".asc")
                       (str jar-file ".asc")]]
