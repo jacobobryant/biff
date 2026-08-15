@@ -10,6 +10,7 @@
     (with-redefs [deps-deploy/deploy
                   (fn [options]
                     (swap! calls conj [options (gpg/read-passphrase)]))
+
                   gpg/read-passphrase (constantly "secret")]
       (#'publish/run-deploy! {:artifact "foo.jar"} nil)
       (#'publish/run-deploy! {:artifact "bar.jar"} "key-id"))
