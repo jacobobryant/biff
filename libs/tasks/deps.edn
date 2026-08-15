@@ -7,9 +7,7 @@
            com.nextjournal/beholder      {:mvn/version "1.0.3"}
            com.biffweb/core              {:local/root "../core"}
            hato/hato                     {:mvn/version "1.0.0"}
-           io.github.clojure/tools.build {:git/tag    "v0.10.13"
-                                          :git/sha    "ae52edf"
-                                          :exclusions [org.slf4j/slf4j-nop]}
+           io.github.clojure/tools.build {:mvn/version "0.10.14"}
            lambdaisland/kaocha           {:mvn/version "1.91.1392"}
            com.biffweb/run               {:local/root "../run"}
            com.biffweb/config            {:local/root "../config"}
