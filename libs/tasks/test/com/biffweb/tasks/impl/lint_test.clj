@@ -1,5 +1,5 @@
 (ns com.biffweb.tasks.impl.lint-test
-  (:require [clojure.test :refer [deftest]]
+  (:require [clojure.test :refer [deftest is]]
             [com.biffweb.stuff.bin :as bin]
             [com.biffweb.tasks.impl.lint :as lint]
             [com.biffweb.tasks.impl.util :as tasks.util]))
@@ -33,3 +33,6 @@
     :unsupported-urls   unsupported-urls
     :url-fn             lint/clj-kondo-url
     :version            version}))
+
+(deftest installs-binary-for-current-platform
+  (is (some? (lint/ensure-clj-kondo-binary! version))))

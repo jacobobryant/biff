@@ -1,12 +1,14 @@
 (ns com.biffweb.tasks.impl.format
   (:refer-clojure :exclude [format])
-  (:require [clojure.java.shell :as sh]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :as sh]
             [com.biffweb.stuff.bin :as stuff.bin]
             [com.biffweb.tasks.impl.util :as util]))
 
 (def ^:private supported-platforms
   #{[:linux :amd64]
     [:linux :arm64]
+    [:macos :amd64]
     [:macos :arm64]
     [:windows :amd64]})
 
@@ -27,8 +29,10 @@
         ext        (case os
                      (:linux :macos) "tar.gz"
                      :windows "zip")
-        asset-name (str "cljfmt-" version "-" os-str "-"
-                        arch-str variant "." ext)]
+        asset-name (if (= [os arch] [:macos :amd64])
+                     (str "cljfmt-" version "-standalone.jar")
+                     (str "cljfmt-" version "-" os-str "-"
+                          arch-str variant "." ext))]
     (str "https://github.com/weavejester/cljfmt/releases/download/"
          version "/" asset-name)))
 
@@ -39,15 +43,31 @@
                (re-find #"cljfmt\s+v?([^\s]+)")
                second))))
 
+(defn- install-cljfmt-jar! [url]
+  (let [jar-path    (io/file stuff.bin/bin-dir "cljfmt.jar")
+        script-path (io/file stuff.bin/bin-dir "cljfmt")]
+    (io/make-parents jar-path)
+    (with-open [in  (io/input-stream url)
+                out (io/output-stream jar-path)]
+      (io/copy in out))
+    (spit script-path
+          "#!/bin/sh\nexec java -jar \"$(dirname \"$0\")/cljfmt.jar\" \"$@\"\n")
+    (.setExecutable script-path true)
+    (.getPath script-path)))
+
 (defn ensure-cljfmt-binary! [target-version]
   (let [{:keys [os arch]} (stuff.bin/platform-info)
+        intel-mac?        (= [os arch] [:macos :amd64])
         url               (cljfmt-url {:version target-version
-                                       :os      os             :arch arch})]
+                                       :os      os
+                                       :arch    arch})]
     (stuff.bin/ensure-binary
-     {:executable-basename "cljfmt"
-      :get-version         get-cljfmt-version
-      :target-version      target-version
-      :url                 url})))
+     (merge {:executable-basename "cljfmt"
+             :get-version         get-cljfmt-version
+             :target-version      target-version}
+            (if intel-mac?
+              {:install #(install-cljfmt-jar! url)}
+              {:url url})))))
 
 (defn format
   []

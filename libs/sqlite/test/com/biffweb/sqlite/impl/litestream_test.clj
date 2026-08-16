@@ -1,5 +1,5 @@
 (ns com.biffweb.sqlite.impl.litestream-test
-  (:require [clojure.test :refer [deftest]]
+  (:require [clojure.test :refer [deftest is]]
             [com.biffweb.stuff.bin :as bin]
             [com.biffweb.sqlite.impl.defaults :as defaults]
             [com.biffweb.sqlite.impl.litestream :as litestream]))
@@ -48,3 +48,6 @@
     :unsupported-urls   unsupported-urls
     :url-fn             litestream/litestream-url
     :version            version}))
+
+(deftest installs-binary-for-current-platform
+  (is (some? (litestream/ensure-litestream-binary! {}))))

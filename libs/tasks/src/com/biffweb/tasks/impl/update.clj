@@ -9,6 +9,8 @@
 (def ^:private valid-flags #{"--deps-only"
                              "--clj-kondo-files-only"})
 
+(def ^:private max-classpath-batch-length 16000)
+
 (defn- upgradeable-deps [{:keys [deps aliases]}]
   (->> (concat deps (mapcat :extra-deps (vals aliases)))
        (remove (fn [[_dep coord]] (contains? coord :local/root)))
@@ -22,15 +24,30 @@
                       {:exit exit :err err :result result})))
     classpath))
 
+(defn- classpath-batches [classpath]
+  (let [separator java.io.File/pathSeparator]
+    (reduce
+     (fn [batches path]
+       (let [current  (peek batches)
+             combined (str current (when-not (str/blank? current) separator)
+                           path)]
+         (if (<= (count combined) max-classpath-batch-length)
+           (conj (pop batches) combined)
+           (conj batches path))))
+     [""]
+     (str/split classpath
+                (re-pattern (java.util.regex.Pattern/quote separator))))))
+
 (defn- update-clj-kondo-cache! [version deps-updated]
   (.mkdirs (io/file (util/project-root) ".clj-kondo"))
   (let [binary    (tasks-lint/ensure-clj-kondo-binary! version)
         classpath (if deps-updated
                     (refreshed-classpath)
                     (System/getProperty "java.class.path"))]
-    (util/shell binary
-                "--parallel" "--dependencies" "--copy-configs"
-                "--lint" classpath)))
+    (doseq [batch (classpath-batches classpath)]
+      (util/shell binary
+                  "--parallel" "--dependencies" "--copy-configs"
+                  "--lint" batch))))
 
 (defn- update-deps! []
   (let [outdated-deps (requiring-resolve 'antq.api/outdated-deps)

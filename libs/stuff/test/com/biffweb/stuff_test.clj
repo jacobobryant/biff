@@ -71,6 +71,30 @@
                  :path                installed-path}
                 (ex-data ex)))))))
 
+(deftest custom-installer-takes-precedence-over-url
+  (let [calls (atom [])]
+    (with-redefs-fn {#'com.biffweb.stuff.bin/preferred-bin-path
+                     (constantly nil)
+
+                     #'com.biffweb.stuff.bin/local-bin-installed?
+                     (constantly true)
+
+                     #'com.biffweb.stuff.bin/local-bin-path
+                     (constantly "target/bin/example")
+
+                     #'com.biffweb.stuff.bin/install-binary!
+                     (fn [_] (swap! calls conj :url))}
+      #(is (= "target/bin/example"
+              (stuff.bin/ensure-binary
+               {:executable-basename "example"
+                :get-version         (constantly "1.0.0")
+                :install             (fn []
+                                       (swap! calls conj :install)
+                                       "target/bin/example")
+                :target-version      "1.0.0"
+                :url                 "https://example.com/example"}))))
+    (is (= [:install] @calls))))
+
 (deftest download-times-out-on-stalled-response
   (let [server (com.sun.net.httpserver.HttpServer/create
                 (java.net.InetSocketAddress. "127.0.0.1" 0)

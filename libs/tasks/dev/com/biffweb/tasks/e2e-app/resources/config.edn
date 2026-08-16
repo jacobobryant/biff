@@ -1,0 +1,12 @@
+{:biff.tasks/css-output-path        "target/resources/public/css/main.css"
+ :biff.tasks/clj-kondo-version      "2026.04.15"
+ :biff.tasks/cljfmt-version         "0.16.3"
+ :biff.tasks/deployment-name        "e2e-app"
+ :biff.tasks/deploy-untracked-files ["target/resources/public/css/main.css"]
+ :biff.tasks/docs-directory         "target/docs"
+ :biff.tasks/docs-namespaces        [com.example.app]
+ :biff.tasks/domain                 #biff/env SERVER
+ :biff.tasks/main-ns                com.example.app
+ :biff.tasks/nrepl-port             17888
+ :biff.tasks/skip-ssh-agent         true
+ :biff.tasks/tailwind-version       "4.2.4"}

@@ -402,20 +402,6 @@
                     (assoc :uid new-user-id)
                     (dissoc :biff.auth/state))})))
 
-;; === Console email (default when send-email not configured) ===
-
-(defn console-send-email [_ctx {:keys [template to] :as params}]
-  (println "=== EMAIL ===")
-  (println "  To:" to)
-  (println "  Template:" template)
-  (println "  Subject:" (:subject params))
-  (case template
-    :signin-code (println "  Code:" (:code params))
-    :signin-link (println "  URL:" (:url params))
-    nil)
-  (println "=============")
-  true)
-
 ;; === Base URL inference ===
 
 (defn infer-base-url

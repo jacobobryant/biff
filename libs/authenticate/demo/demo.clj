@@ -1,6 +1,5 @@
 (ns demo
   (:require [com.biffweb.authenticate :as auth]
-            [com.biffweb.authenticate.impl.backend :as backend]
             [clojure.string :as str]
             [dev.onionpancakes.chassis.core :as chassis]
             [ring.adapter.jetty :as jetty]
@@ -16,11 +15,22 @@
                       str/lower-case)]
     {:success (not= email "fail@example.com")}))
 
+(defn send-email [_ctx {:keys [subject text to]}]
+  (println)
+  (println "---")
+  (println "To:     " to)
+  (println "Subject:" subject)
+  (println)
+  (println text)
+  (println "---")
+  (println)
+  true)
+
 ;; Set up auth module
 (def auth-config
   (merge (store/atom-store)
          {:biff.auth/verify-captcha demo-captcha-verify
-          :biff.auth/send-email     backend/console-send-email
+          :biff.auth/send-email     send-email
           :biff.auth/app-path       "/app"
           :biff.auth/app-name       "Biff Auth Demo"}))
 

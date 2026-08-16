@@ -165,10 +165,10 @@
   (str deployment-name "@" domain))
 
 (defn ssh-run [ctx & args]
-  (apply shell "ssh" (ssh-target ctx) args))
+  (shell "ssh" (ssh-target ctx) (str/join " " (map shell-quote args))))
 
 (defn ssh-run-shell [ctx command]
-  (shell "ssh" (ssh-target ctx) "sh" "-lc" command))
+  (shell "ssh" (ssh-target ctx) (str "sh -lc " (shell-quote command))))
 
 ;;;; project files =============================================================
 

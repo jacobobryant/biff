@@ -35,7 +35,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc14"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc15"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
@@ -54,12 +54,12 @@ Released:
 - [biff.datastar](/libs/datastar/)
 - [biff.run](/libs/run/)
 - [biff.tasks](/libs/tasks/)
+- [biff.background](/libs/background/)
 
 Remaining (see [libs/](/libs/)):
 
 - biff.authenticate
 - biff.admin
-- biff.background
 - [demo app](/demo)
 
 And then I have a few more things to make that won't be/aren't yet in this repo:

@@ -42,6 +42,15 @@ fi
 if ! id -u "$APP" >/dev/null 2>&1; then
   useradd -m "$APP"
 fi
+# On Debian the new account starts out "locked" and won't accept SSH logins.
+# Setting a password unlocks it.
+if passwd -S "$APP" | grep -q '^[^ ]* L '; then
+  printf '%s:%s\n' "$APP" "$(head -c 32 /dev/urandom | base64)" | chpasswd
+fi
+# Ensure the app user can see the logs
+if getent group systemd-journal >/dev/null; then
+  usermod -a -G systemd-journal "$APP"
+fi
 
 mkdir -p "/home/$APP/.ssh" "/home/$APP/repo"
 if [ -f /root/.ssh/authorized_keys ]; then

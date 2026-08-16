@@ -1,5 +1,6 @@
 (ns com.biffweb.run-test
-  (:require [clojure.test :as t :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :as t :refer [deftest is testing]]
             [com.biffweb.run :as biff.run]))
 
 (defn preserve-tasks [f]
@@ -43,8 +44,8 @@
                          biff.run/*testing* true]
                  (apply biff.run/main tasks args))]
     {:result result
-     :out    (str out)
-     :err    (str err)}))
+     :out    (str/replace (str out) "\r\n" "\n")
+     :err    (str/replace (str err) "\r\n" "\n")}))
 
 (defn- call-main [& args]
   (apply call-main-with tasks args))
