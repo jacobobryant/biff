@@ -15,5 +15,5 @@ jobs:
       - uses: DeLaGuardo/setup-clojure@13.2
         with:
           cli: latest
-      - run: clj -M:run code-quality
+      - run: clojure -M:run code-quality
       - run: git diff --quiet --exit-code
