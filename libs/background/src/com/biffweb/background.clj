@@ -5,33 +5,33 @@
 (def ^:private ? {:optional true})
 
 (biff.core/register
- {:biff.background/job             [:map
-                                    [:biff.background/priority ?]]
-  :biff.background/jobs            [:sequential :biff.background/jobs]
-  :biff.background/priority        :int
-  :biff.background/queue           [:fn #(instance? java.util.AbstractQueue %)]
-  :biff.background/queue-id        'qualified-keyword?
-  :biff.background/queue-ids       [:sequential :biff.background/queue-id]
-  :biff.background/queue-map       [:map
-                                    [:consumer    'ifn?]
-                                    [:queue     ? :biff.background/queue]
-                                    [:n-threads ? 'pos-int?]
-                                    [:executor  ? 'any?]
-                                    [:state     ?
-                                     [:fn #(instance? clojure.lang.IAtom %)]]]
-  :biff.background/queue-state     [:map
-                                    [:continue :boolean]
-                                    [:processing 'set?]]
-  :biff.background/queues          [:map-of
-                                    :biff.background/queue-id
-                                    :biff.background/queue-map]
-  :biff.background/tasks           [:sequential :biff.background/task]
-  :biff.background/task            [:map
-                                    [:schedule        'ifn?]
-                                    [:task            'ifn?]
-                                    [:error-handler ? 'ifn?]
-                                    [:on-finished   ? 'ifn?]]
-  :biff.background/stop-timeout    :int})
+ {:biff.background/job          [:map
+                                 [:biff.background/priority ?]]
+  :biff.background/jobs         [:sequential :biff.background/jobs]
+  :biff.background/priority     :int
+  :biff.background/queue        [:fn #(instance? java.util.AbstractQueue %)]
+  :biff.background/queue-id     'qualified-keyword?
+  :biff.background/queue-ids    [:sequential :biff.background/queue-id]
+  :biff.background/queue-map    [:map
+                                 [:consumer    'ifn?]
+                                 [:queue     ? :biff.background/queue]
+                                 [:n-threads ? 'pos-int?]
+                                 [:executor  ? 'any?]
+                                 [:state     ?
+                                  [:fn #(instance? clojure.lang.IAtom %)]]]
+  :biff.background/queue-state  [:map
+                                 [:continue :boolean]
+                                 [:processing 'set?]]
+  :biff.background/queues       [:map-of
+                                 :biff.background/queue-id
+                                 :biff.background/queue-map]
+  :biff.background/tasks        [:sequential :biff.background/task]
+  :biff.background/task         [:map
+                                 [:schedule        'ifn?]
+                                 [:task            'ifn?]
+                                 [:error-handler ? 'ifn?]
+                                 [:on-finished   ? 'ifn?]]
+  :biff.background/stop-timeout :int})
 
 (defn use-scheduled-tasks
   "Calls chime.core/chime-at for each `task`.
@@ -45,7 +45,8 @@
   "Initializes a queue and fixed executor thread pool for each entry in
    `queues`.
 
-   See :biff.background/queues."
+   See :biff.background/queues. `conj`s a shutdown function on the
+   :biff.core/stop key."
   {:arglists '([{:keys [biff.background/queues] :as ctx}])}
   [ctx]
   (impl/use-queues ctx))
@@ -54,7 +55,9 @@
   "Adds `jobs` to the specified queue.
 
    queue-id - :biff.background/queue-id
-   jobs     - Sequence of :biff.background/job"
+   jobs     - Sequence of :biff.background/job
+
+   `conj`s a shutdown function on the :biff.core/stop key."
   {:arglists '([{:biff.background/keys [queues]} queue-id jobs])}
   [ctx queue-id jobs]
   (impl/submit-jobs ctx queue-id jobs))
