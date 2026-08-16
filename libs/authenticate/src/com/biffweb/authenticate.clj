@@ -1,12 +1,4 @@
 (ns com.biffweb.authenticate
-  "Database-agnostic and captcha-provider-agnostic email authentication
-   module for Biff web applications.
- 
-   Public API:
-   - module           — creates the auth module with routes
-   - turnstile-config — Cloudflare Turnstile captcha config
-   - recaptcha-config — Google reCAPTCHA v2/v3 captcha config
-   - hcaptcha-config  — hCaptcha captcha config"
   (:require [com.biffweb.authenticate.impl.backend :as backend]
             [com.biffweb.authenticate.impl.frontend :as frontend]
             [com.biffweb.authenticate.impl.captcha :as captcha]))
@@ -19,11 +11,6 @@
   (every? #(some? (get ctx %)) ks))
 
 (def turnstile-config
-  "Cloudflare Turnstile captcha configuration map.
-   Merge this into the options passed to `module`.
-
-   The caller must also provide :biff.auth/turnstile-secret and
-   :biff.auth/turnstile-site-key in the module options."
   {:biff.auth/verify-captcha      captcha/turnstile-verify
    :biff.auth/captcha-head        captcha/turnstile-head
    :biff.auth/captcha-widget      captcha/turnstile-widget
@@ -33,13 +20,6 @@
                                        :biff.auth/turnstile-site-key])})
 
 (def recaptcha-config
-  "Google reCAPTCHA v2/v3 captcha configuration map.
-   Merge this into the options passed to `module`.
-
-   Supports both reCAPTCHA v2 (pass/fail) and v3 (score-based).
-   The caller must also provide :biff.auth/recaptcha-secret and
-   :biff.auth/recaptcha-site-key in the module options.
-   Optionally set :biff.auth/recaptcha-threshold (default 0.5, v3 only)."
   {:biff.auth/verify-captcha       captcha/recaptcha-verify
    :biff.auth/captcha-head         captcha/recaptcha-head
    :biff.auth/captcha-button-attrs captcha/recaptcha-button-attrs
@@ -49,11 +29,6 @@
                                         :biff.auth/recaptcha-site-key])})
 
 (def hcaptcha-config
-  "hCaptcha captcha configuration map.
-   Merge this into the options passed to `module`.
-
-   The caller must also provide :biff.auth/hcaptcha-secret and
-   :biff.auth/hcaptcha-site-key in the module options."
   {:biff.auth/verify-captcha      captcha/hcaptcha-verify
    :biff.auth/captcha-head        captcha/hcaptcha-head
    :biff.auth/captcha-widget      captcha/hcaptcha-widget
@@ -63,7 +38,6 @@
                                        :biff.auth/hcaptcha-site-key])})
 
 (def ^:private handler-keys
-  "Keys that map to biff.fx effect handler functions."
   #{:biff.auth/get-user-id
     :biff.auth/create-user!
     :biff.auth/send-email
@@ -72,17 +46,14 @@
     :biff.auth/new-link-token})
 
 (def ^:private required-handler-keys
-  "Handler keys that must be present in the options."
   #{:biff.auth/get-user-id
     :biff.auth/create-user!})
 
 (def ^:private required-option-keys
-  "Non-handler option keys that must be present in the options."
   #{:biff.auth/app-name
     :biff.auth/send-email})
 
 (def ^:private required-runtime-handler-keys
-  "Handler keys that must be present in the request ctx."
   #{:biff.core/kv-get
     :biff.core/kv-set})
 
