@@ -37,7 +37,9 @@ As input to `use-queues`, only `:consumer` is required while `:queue` and
 Map containing the keys:
 
 ```clojure
-:continue  ; Default true, used as a shutdown signal for queue consumers.
+:continue   ; Default true, used as a shutdown signal for queue consumers.
+:processing ; A set of indices, each between 0 and :n-threads, denoting which
+            ; executor threads are currently processing jobs.
 ```
 
 ### :biff.background/queues

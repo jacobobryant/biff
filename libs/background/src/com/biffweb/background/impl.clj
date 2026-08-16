@@ -61,7 +61,7 @@
             :queue     (default-queue)}
            queue-map
            {:executor (Executors/newFixedThreadPool n-threads)
-            :state    (atom {:continue true
+            :state    (atom {:continue   true
                              :processing #{}})})))
 
 (defn use-queues [{:keys [biff.background/queues] :as ctx}]
@@ -76,9 +76,9 @@
     ctx))
 
 (defn submit-jobs [{:biff.background/keys [queues]} queue-id jobs]
-  (biff.core/validate {:biff.background/queues queues
+  (biff.core/validate {:biff.background/queues   queues
                        :biff.background/queue-id queue-id
-                       :biff.background/jobs jobs})
+                       :biff.background/jobs     jobs})
   (if-some [queue (get-in queues [queue-id :queue])]
     (do
       (run! #(.add queue %) jobs)

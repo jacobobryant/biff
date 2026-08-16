@@ -7,7 +7,7 @@
 (biff.core/register
  {:biff.background/job          [:map
                                  [:biff.background/priority ?]]
-  :biff.background/jobs         [:sequential :biff.background/jobs]
+  :biff.background/jobs         [:sequential :biff.background/job]
   :biff.background/priority     :int
   :biff.background/queue        [:fn #(instance? java.util.AbstractQueue %)]
   :biff.background/queue-id     'qualified-keyword?
@@ -21,7 +21,7 @@
                                   [:fn #(instance? clojure.lang.IAtom %)]]]
   :biff.background/queue-state  [:map
                                  [:continue :boolean]
-                                 [:processing 'set?]]
+                                 [:processing [:set :int]]]
   :biff.background/queues       [:map-of
                                  :biff.background/queue-id
                                  :biff.background/queue-map]
