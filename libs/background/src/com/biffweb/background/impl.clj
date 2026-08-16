@@ -1,6 +1,7 @@
 (ns com.biffweb.background.impl
   (:require [chime.core :as chime]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [com.biffweb.core :as biff.core])
   (:import [java.util.concurrent
             Callable
             Executors
@@ -74,21 +75,23 @@
       (.submit executor ^Callable #(consume ctx queue-map index)))
     ctx))
 
-(defn submit-jobs [ctx queue-id jobs]
-  (if-some [queue (get-in ctx [:biff.background/queues queue-id :queue])]
+(defn submit-jobs [{:biff.background/keys [queues]} queue-id jobs]
+  (biff.core/validate {:biff.background/queues queues
+                       :biff.background/queue-id queue-id
+                       :biff.background/jobs jobs})
+  (if-some [queue (get-in queues [queue-id :queue])]
     (do
       (run! #(.add queue %) jobs)
       jobs)
     (throw (ex-info "Queue not found"
                     {:biff.background/queue-id  queue-id
                      :biff.background/jobs      jobs
-                     :biff.background/queue-ids (-> ctx
-                                                    :biff.background/queues
-                                                    keys
-                                                    vec)}))))
+                     :biff.background/queue-ids (vec (keys queues))}))))
+
+;;;; integration ===============================================================
 
 (def fx-handlers
-  {:biff.background/submit-jobs submit-jobs})
+  {:biff.background.fx/submit-jobs submit-jobs})
 
 (defn module []
   {:biff.core/init
