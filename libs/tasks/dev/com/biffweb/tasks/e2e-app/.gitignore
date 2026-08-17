@@ -1,0 +1,12 @@
+/.cpcache/
+/.clj-kondo/.cache/
+/.nrepl-port
+/bin/
+/config.env
+/config.prod.env
+/id_ed25519*
+/prod-logs.out
+/ssh-config
+/ssh-bin/
+/target/
+/task.env

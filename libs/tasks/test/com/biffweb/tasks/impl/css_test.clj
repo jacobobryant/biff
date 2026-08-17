@@ -1,5 +1,5 @@
 (ns com.biffweb.tasks.impl.css-test
-  (:require [clojure.test :refer [deftest]]
+  (:require [clojure.test :refer [deftest is]]
             [com.biffweb.stuff.bin :as bin]
             [com.biffweb.tasks.impl.css :as css]
             [com.biffweb.tasks.impl.util :as tasks.util]))
@@ -25,3 +25,6 @@
     :unsupported-urls   unsupported-urls
     :url-fn             css/tailwindcss-url
     :version            version}))
+
+(deftest installs-binary-for-current-platform
+  (is (some? (css/ensure-tailwind-binary! version))))

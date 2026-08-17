@@ -6,7 +6,8 @@
   (str "root@" domain))
 
 (defn- ssh-root-run-shell [ctx command]
-  (util/shell "ssh" (root-ssh-target ctx) "sh" "-lc" command))
+  (util/shell "ssh" (root-ssh-target ctx)
+              (str "sh -lc " (util/shell-quote command))))
 
 (defn- resource->temp-file [resource-path]
   (let [tmp (java.io.File/createTempFile "biff-server-setup-" ".sh")]
@@ -78,4 +79,7 @@
   ([n-lines]
    (let [{:biff.tasks/keys [deployment-name] :as ctx}
          (util/read-config {:select '[deployment-name domain]})]
-     (util/ssh-run ctx "journalctl" "-u" deployment-name "-n" n-lines "-f"))))
+     (util/ssh-run-shell
+      ctx
+      (str "journalctl -u " (util/shell-quote deployment-name)
+           " -n " (util/shell-quote n-lines) " -f")))))

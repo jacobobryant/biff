@@ -188,16 +188,18 @@
         (delete-recursively! temp-dir)))))
 
 (defn ensure-binary
-  [{:keys [executable-basename target-version get-version] :as opts}]
+  [{:keys [executable-basename target-version get-version install] :as opts}]
   (let [current (preferred-bin-path executable-basename)]
     (when (or (nil? current)
               (and target-version
                    (not= target-version
                          (installed-version get-version current))))
-      (let [installed-path (install-binary!
-                            (select-keys opts
-                                         [:executable-basename
-                                          :target-version :url]))
+      (let [installed-path (if install
+                             (install)
+                             (install-binary!
+                              (select-keys opts
+                                           [:executable-basename
+                                            :target-version :url])))
             actual-version (installed-version get-version installed-path)]
         (when (and target-version
                    (not= target-version actual-version))

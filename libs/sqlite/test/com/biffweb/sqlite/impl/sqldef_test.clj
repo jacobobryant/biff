@@ -1,5 +1,5 @@
 (ns com.biffweb.sqlite.impl.sqldef-test
-  (:require [clojure.test :refer [deftest]]
+  (:require [clojure.test :refer [deftest is]]
             [com.biffweb.stuff.bin :as bin]
             [com.biffweb.sqlite.impl.defaults :as defaults]
             [com.biffweb.sqlite.impl.sqldef :as sqldef]))
@@ -44,3 +44,6 @@
     :unsupported-urls   unsupported-urls
     :url-fn             sqldef/sqlite3def-url
     :version            version}))
+
+(deftest installs-binary-for-current-platform
+  (is (some? (sqldef/ensure-sqldef-binary! {}))))
