@@ -3,6 +3,7 @@
            com.biffweb/fx            {:local/root "../fx"}
            tick/tick                 {:mvn/version "1.0.1"}
            hato/hato                 {:mvn/version "1.0.0"}
+           ring/ring-anti-forgery    {:mvn/version "1.4.0"}
            dev.onionpancakes/chassis {:mvn/version "1.0.365"}}
  :aliases {:run  {:extra-paths ["test" "demo" "dev"]
                   :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}

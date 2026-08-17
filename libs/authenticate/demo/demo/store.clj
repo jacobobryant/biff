@@ -14,7 +14,7 @@
      (fn [_ctx email]
        (get-in @store [:users email :user/id]))
 
-     :biff.auth/create-user!
+     :biff.auth/create-user
      (fn [_ctx {:keys [email params]}]
        (let [user-id (random-uuid)]
          (swap! store assoc-in [:users email]

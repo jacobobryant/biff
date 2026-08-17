@@ -29,9 +29,10 @@
 ;; Set up auth module
 (def auth-config
   (merge (store/atom-store)
-         {:biff.auth/verify-captcha demo-captcha-verify
+         {:biff.auth/captcha-verify demo-captcha-verify
           :biff.auth/send-email     send-email
           :biff.auth/app-path       "/app"
+          :biff.auth/base-url       "http://localhost:8080"
           :biff.auth/app-name       "Biff Auth Demo"}))
 
 (def auth-module (auth/module auth-config))
