@@ -1,8 +1,8 @@
 (ns com.biffweb.authenticate.impl.frontend
-  (:require [com.biffweb.authenticate.impl.backend :as backend]
+  (:require [com.biffweb.authenticate.impl.routes :as routes]
             [dev.onionpancakes.chassis.core :as chassis]))
 
-;; === Style helpers (inline styles instead of CSS classes) ===
+;;;; style helpers =============================================================
 
 (defn- error-banner [error-code]
   (when error-code
@@ -36,7 +36,7 @@
                      :font-size     "0.875rem"}}
        (get errors error-code "An error occurred. Please try again.")])))
 
-(defn- auth-label [for-id text]
+(defn- label [for-id text]
   [:label {:for   for-id
            :style {:display       "block"
                    :font-size     "0.875rem"
@@ -44,7 +44,7 @@
                    :margin-bottom "0.375rem"}}
    text])
 
-(defn- auth-input [attrs]
+(defn- input [attrs]
   [:input (merge {:style {:width         "100%"
                           :padding       "0.625rem 0.75rem"
                           :border        "1px solid #d1d5db"
@@ -54,7 +54,7 @@
                           :box-sizing    "border-box"}}
                  attrs)])
 
-(defn- auth-button [primary-color extra-attrs text]
+(defn- button [primary-color extra-attrs text]
   [:button (merge {:type  "submit"
                    :style {:display       "block"
                            :width         "100%"
@@ -71,30 +71,29 @@
                   extra-attrs)
    text])
 
-(defn- auth-footer [_primary-color & children]
-  (into [:div {:style {:text-align "center"
-                       :margin-top "1rem"
-                       :font-size  "0.875rem"
-                       :color      "#6b7280"}}]
-        children))
+(defn- footer [_primary-color & children]
+  [:div {:style {:text-align "center"
+                 :margin-top "1rem"
+                 :font-size  "0.875rem"
+                 :color      "#6b7280"}}
+   children])
 
-(defn- auth-link [primary-color attrs text]
+(defn- link [primary-color attrs text]
   [:a (merge {:style {:color           primary-color
                       :text-decoration "underline"}} attrs)
    text])
 
-(defn- captcha-enabled? [ctx]
-  (boolean
-   (when (not (:biff.auth/skip-captcha ctx))
-     (when-let [configured? (:biff.auth/captcha-configured? ctx)]
-       (configured? ctx)))))
+(defn- captcha-enabled?
+  [{:biff.auth/keys [skip-captcha captcha-configured?] :as ctx}]
+  (and (not skip-captcha)
+       captcha-configured?
+       (captcha-configured? ctx)))
 
-(defn- captcha-area [ctx]
-  (when (and (captcha-enabled? ctx)
-             (:biff.auth/captcha-widget ctx))
-    (let [widget-fn (:biff.auth/captcha-widget ctx)]
-      [:div {:style {:margin-top "0.75rem"}}
-       (widget-fn ctx)])))
+(defn- captcha-area [{:biff.auth/keys [captcha-widget] :as ctx}]
+  (when-let [widget (and (captcha-enabled? ctx)
+                         (captcha-widget ctx))]
+    [:div {:style {:margin-top "0.75rem"}}
+     widget]))
 
 (defn- hidden-field [name value]
   [:input {:type "hidden" :name name :value value}])
@@ -111,38 +110,36 @@
    label])
 
 (defn- tab-bar [primary-color tabs]
-  (into [:div {:style {:display         "flex"
-                       :justify-content "center"
-                       :gap             "0.5rem"
-                       :margin-bottom   "1.5rem"
-                       :border-bottom   "1px solid #e5e7eb"}}]
-        (map #(tab-link primary-color %) tabs)))
+  [:div {:style {:display         "flex"
+                 :justify-content "center"
+                 :gap             "0.5rem"
+                 :margin-bottom   "1.5rem"
+                 :border-bottom   "1px solid #e5e7eb"}}
+   (mapv #(tab-link primary-color %) tabs)])
 
-;; === Page rendering ===
+;;;; Page rendering ============================================================
 
-(defn- base-page [{:biff.auth/keys [app-name font-family] :as opts} & content]
-  (let [captcha-head-fn (:biff.auth/captcha-head opts)]
-    [:html {:lang "en"}
-     [:head
-      [:meta {:charset "utf-8"}]
-      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-      [:title (str "Sign in | " app-name)]
-      [:style (str "*, *::before, *::after { box-sizing: border-box; } "
-                   "body { margin: 0; padding: 0; }")]
-      (when (and (captcha-enabled? opts) captcha-head-fn)
-        (captcha-head-fn opts))]
-     (into
-      [:body {:style {:font-family     font-family
-                      :background      "#f3f4f6"
-                      :color           "#111827"
-                      :min-height      "100vh"
-                      :display         "flex"
-                      :flex-direction  "column"
-                      :align-items     "center"
-                      :justify-content "center"
-                      :padding         "1rem"
-                      :margin          "0"}}]
-      content)]))
+(defn- base-page
+  [{:biff.auth/keys [app-name font-family captcha-head] :as opts} & content]
+  [:html {:lang "en"}
+   [:head
+    [:meta {:charset "utf-8"}]
+    [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+    [:title (str "Sign in | " app-name)]
+    [:style (str "*, *::before, *::after { box-sizing: border-box; } "
+                 "body { margin: 0; padding: 0; }")]
+    (captcha-head opts)]
+   [:body {:style {:font-family     font-family
+                   :background      "#f3f4f6"
+                   :color           "#111827"
+                   :min-height      "100vh"
+                   :display         "flex"
+                   :flex-direction  "column"
+                   :align-items     "center"
+                   :justify-content "center"
+                   :padding         "1rem"
+                   :margin          "0"}}
+    content]])
 
 (defn- card [{:biff.auth/keys [app-name logo-url]} & content]
   (into
@@ -174,195 +171,164 @@
    text])
 
 (defn- render-signin-form
-  [{:biff.auth/keys [primary-color] :keys [anti-forgery-token] :as ctx}]
-  (let [captcha-btn-fn    (:biff.auth/captcha-button-attrs ctx)
-        captcha-btn-attrs (when (and (captcha-enabled? ctx) captcha-btn-fn)
-                            (captcha-btn-fn ctx))]
-    [:form {:method "post" :action "/_biff/auth/send-code" :id "signin-form"}
-     (when anti-forgery-token
-       (hidden-field "__anti-forgery-token" anti-forgery-token))
-     (auth-label "email" "Email address")
-     (auth-input {:type        "email"           :name      "email" :id "email"
-                  :placeholder "you@example.com"
-                  :required    true              :autofocus true})
-     (captcha-area ctx)
-     (auth-button primary-color (or captcha-btn-attrs {})
-                  "Send sign-in code")]))
+  [{:biff.auth/keys [primary-color
+                     captcha-button-attrs]
+    :keys           [anti-forgery-token]
+    :as             ctx}]
+  [:form {:method "post" :action (routes/send-code) :id "signin-form"}
+   (when anti-forgery-token
+     (hidden-field "__anti-forgery-token" anti-forgery-token))
+   (label "email" "Email address")
+   (input {:type        "email"
+           :name        "email"
+           :id          "email"
+           :placeholder "you@example.com"
+           :required    true
+           :autofocus   true})
+   (captcha-area ctx)
+   (button primary-color (captcha-button-attrs ctx)
+           "Send sign-in code")])
 
 (defn- render-signup-form
-  [{:biff.auth/keys [primary-color] :keys [anti-forgery-token] :as ctx}]
-  (let [captcha-btn-fn    (:biff.auth/captcha-button-attrs ctx)
-        captcha-btn-attrs (when (and (captcha-enabled? ctx) captcha-btn-fn)
-                            (captcha-btn-fn ctx))]
-    [:form {:method "post" :action "/_biff/auth/send-link" :id "signup-form"}
-     (when anti-forgery-token
-       (hidden-field "__anti-forgery-token" anti-forgery-token))
-     (auth-label "signup-email" "Email address")
-     (auth-input {:type "email"
-
-                  :name "email"
-
-                  :id "signup-email"
-
-                  :placeholder "you@example.com"
-
-                  :required true
-
-                  :autofocus true})
-     (captcha-area ctx)
-     (auth-button primary-color (or captcha-btn-attrs {})
-                  "Send sign-in link")]))
+  [{:biff.auth/keys [primary-color
+                     captcha-button-attrs]
+    :keys           [anti-forgery-token]
+    :as             ctx}]
+  [:form {:method "post" :action (routes/send-link) :id "signup-form"}
+   (when anti-forgery-token
+     (hidden-field "__anti-forgery-token" anti-forgery-token))
+   (label "signup-email" "Email address")
+   (input {:type        "email"
+           :name        "email"
+           :id          "signup-email"
+           :placeholder "you@example.com"
+           :required    true
+           :autofocus   true})
+   (captcha-area ctx)
+   (button primary-color (captcha-button-attrs ctx)
+           "Send sign-in link")])
 
 (defn- render-verify-code
   [{:biff.auth/keys [primary-color code-signin-path]
     :keys           [anti-forgery-token params]}]
   (let [email (:email params)]
-    (list
-     (title "Check your email")
+    [(title "Check your email")
      [:p {:style {:text-align "center"  :margin "0 0 1rem 0"
                   :font-size  "0.95rem"}}
       "We sent a 6-digit code to " [:strong email] "."]
-     [:form {:method "post"             :action "/_biff/auth/verify-code"
+     [:form {:method "post"
+             :action (routes/verify-code)
              :id     "verify-code-form"}
       (when anti-forgery-token
         (hidden-field "__anti-forgery-token" anti-forgery-token))
       (hidden-field "email" email)
-      (auth-label "code" "Verification code")
-      (auth-input {:type "text"
-
-                   :name "code"
-
-                   :id "code"
-
-                   :required true
-
-                   :autocomplete "one-time-code"
-
-                   :pattern "[0-9]{6}"
-
-                   :maxlength "6"
-
-                   :placeholder "000000"
-
-                   :style {:width          "100%"
-                           :padding        "0.625rem 0.75rem"
-                           :border         "1px solid #d1d5db"
-                           :border-radius  "0.375rem"
-                           :font-size      "1.25rem"
-                           :outline        "none"
-                           :box-sizing     "border-box"
-                           :letter-spacing "0.2em"
-                           :text-align     "center"}})
-      (auth-button primary-color {} "Verify")]
-     (auth-footer primary-color
-                  (auth-link primary-color {:href code-signin-path}
-                             "← Use a different email")))))
+      (label "code" "Verification code")
+      (input {:type         "text"
+              :name         "code"
+              :id           "code"
+              :required     true
+              :autocomplete "one-time-code"
+              :pattern      "[0-9]{6}"
+              :maxlength    "6"
+              :placeholder  "000000"
+              :style        {:width          "100%"
+                             :padding        "0.625rem 0.75rem"
+                             :border         "1px solid #d1d5db"
+                             :border-radius  "0.375rem"
+                             :font-size      "1.25rem"
+                             :outline        "none"
+                             :box-sizing     "border-box"
+                             :letter-spacing "0.2em"
+                             :text-align     "center"}})
+      (button primary-color {} "Verify")]
+     (footer primary-color
+             (link primary-color {:href code-signin-path}
+                   "← Use a different email"))]))
 
 (defn- render-link-sent
-  [{:biff.auth/keys [primary-color link-signin-path] :keys [params] :as _ctx}]
+  [{:biff.auth/keys [primary-color link-signin-path] :keys [params]}]
   (let [email (:email params)]
-    (list
-     (title "Check your email")
+    [(title "Check your email")
      [:p {:style {:text-align "center" :font-size "0.95rem" :margin "0"}}
       (if email
-        (list "We sent a sign-in link to " [:strong email] ".")
+        ["We sent a sign-in link to " [:strong email] "."]
         "We sent you a sign-in link.")]
-     (auth-footer primary-color
-                  (auth-link primary-color {:href link-signin-path}
-                             "← Back to sign in")))))
+     (footer primary-color
+             (link primary-color {:href link-signin-path}
+                   "← Back to sign in"))]))
 
 (defn- render-link-confirm
-  "Renders a form asking the user to enter their email for session fixation
-   protection."
   [{:biff.auth/keys [primary-color link-signin-path]
-    :keys           [anti-forgery-token params]      :as _ctx}]
+    :keys           [anti-forgery-token params]}]
   (let [token (:token params)]
-    (list
-     (title "Confirm your email")
-     [:p {:style {:text-align "center"  :margin "0 0 1rem 0"
+    [(title "Confirm your email")
+     [:p {:style {:text-align "center"
+                  :margin     "0 0 1rem 0"
                   :font-size  "0.95rem"}}
       "Please enter your email address to complete sign-in."]
      [:form {:method "post"
-             :action "/_biff/auth/verify-link-confirm"
+             :action (routes/verify-link-confirm)
              :id     "link-confirm-form"}
       (when anti-forgery-token
         (hidden-field "__anti-forgery-token" anti-forgery-token))
       (hidden-field "token" token)
-      (auth-label "confirm-email" "Email address")
-      (auth-input {:type "email"
-
-                   :name "email"
-
-                   :id "confirm-email"
-
-                   :placeholder "you@example.com"
-
-                   :required true
-
-                   :autofocus true})
-      (auth-button primary-color {} "Confirm & sign in")]
-     (auth-footer primary-color
-                  (auth-link primary-color {:href link-signin-path}
-                             "← Back to sign in")))))
+      (label "confirm-email" "Email address")
+      (input {:type        "email"
+              :name        "email"
+              :id          "confirm-email"
+              :placeholder "you@example.com"
+              :required    true
+              :autofocus   true})
+      (button primary-color {} "Confirm & sign in")]
+     (footer primary-color
+             (link primary-color {:href link-signin-path}
+                   "← Back to sign in"))]))
 
 (defn- render-tabs
   [{:biff.auth/keys [primary-color code-signin-path link-signin-path]
-    :keys           [params]                                          :as ctx}]
+    :keys           [params]
+    :as             ctx}]
   (let [active-tab (or (:tab params) "signin")]
-    (list
-     (tab-bar primary-color
+    [(tab-bar primary-color
               [{:active? (= active-tab "signin")
-                :href    (backend/append-query-params
+                :href    (routes/append-query-params
                           code-signin-path "tab=signin")
                 :label   "Sign In"}
                {:active? (= active-tab "signup")
-                :href    (backend/append-query-params
+                :href    (routes/append-query-params
                           link-signin-path "tab=signup")
                 :label   "Sign Up"}])
      (if (= active-tab "signup")
        (render-signup-form ctx)
        (render-signin-form ctx))
-     (auth-footer primary-color
-                  (if (= active-tab "signup")
-                    (list "Already have an account? "
-                          (auth-link primary-color
-                                     {:href (backend/append-query-params
-                                             code-signin-path "tab=signin")}
-                                     "Sign in"))
-                    (list "Don't have an account? "
-                          (auth-link primary-color
-                                     {:href (backend/append-query-params
-                                             link-signin-path "tab=signup")}
-                                     "Sign up")))))))
+     (footer primary-color
+             (if (= active-tab "signup")
+               ["Already have an account? "
+                (link primary-color
+                      {:href (routes/append-query-params
+                              code-signin-path "tab=signin")}
+                      "Sign in")]
+               ["Don't have an account? "
+                (link primary-color
+                      {:href (routes/append-query-params
+                              link-signin-path "tab=signup")}
+                      "Sign up")]))]))
 
-;; === Main page handler ===
+;;;; Main page handler =========================================================
 
-(defn signin-page
-  "Renders the signin page. Looks at query params to decide the view:
-   - ?verify=code&email=... → verify code form
-   - ?verify=link&email=... → link sent message
-   - ?verify=link-confirm&token=... → email confirmation form
-   - ?tab=signup → sign up form (send link)
-   - default → sign in form (send code)
-  Returns a Ring response map with rendered HTML."
-  [{:keys [params] :as ctx}]
-  (let [verify (:verify params)
-        error  (:error params)
-        html   (base-page ctx
-                          (card ctx
-                                (error-banner error)
-                                (cond
-                                  (= verify "code")
-                                  (render-verify-code ctx)
-
-                                  (= verify "link")
-                                  (render-link-sent ctx)
-
-                                  (= verify "link-confirm")
-                                  (render-link-confirm ctx)
-
-                                  :else
-                                  (render-tabs ctx))))]
+(defn signin-page [{:keys [params] :as ctx}]
+  (let [{:keys [verify error]} params]
     {:status  200
      :headers {"content-type" "text/html"}
-     :body    (chassis/html [chassis/doctype-html5 html])}))
+     :body    (chassis/html
+               [chassis/doctype-html5
+                (base-page
+                 ctx
+                 (card
+                  ctx
+                  (error-banner error)
+                  (case verify
+                    "code"         (render-verify-code ctx)
+                    "link"         (render-link-sent ctx)
+                    "link-confirm" (render-link-confirm ctx)
+                    (render-tabs ctx))))])}))

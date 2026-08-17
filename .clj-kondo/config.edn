@@ -1,9 +1,10 @@
 {:linters {:line-length {:level           :warning
                          :max-line-length 80
                          :exclude-urls    true}}
- :lint-as {com.biffweb.fx/defmachine     clojure.core/def
-           com.biffweb.ring/defpath      clojure.core/def
-           com.biffweb.ring/defroute     clojure.core/def}
+ :lint-as {com.biffweb.authenticate.impl.routes/defpath clojure.core/def
+           com.biffweb.fx/defmachine                      clojure.core/def
+           com.biffweb.ring/defpath                       clojure.core/def
+           com.biffweb.ring/defroute                      clojure.core/def}
  :hooks   {:analyze-call {com.biffweb.tasks.setup-test/with-temp-dir hooks.biff/with-temp-dir
                           com.biffweb.tasks.tasks-test/with-temp-dir hooks.biff/with-temp-dir
                           com.biffweb.graph/defresolver              hooks.biff/defresolver}}}

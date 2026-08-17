@@ -11,9 +11,7 @@
 (fx/defmachine turnstile-verify
   :start
   (fn [{:keys [biff.auth/turnstile-secret params]}]
-    ;; :biff.fx/http isn't provided by biff.fx and should thus be renamed to
-    ;; something else like :biff.auth/http
-    {:response     [:biff.fx/http
+    {:response     [:fx/http
                     {:method           :post
                      :url              turnstile-url
                      :form-params      {:secret (force turnstile-secret)
@@ -38,8 +36,7 @@
   [:div.cf-turnstile {:data-sitekey turnstile-site-key}])
 
 (def turnstile-config
-  {;; rename to :biff.auth/captcha-verify to match the other keys
-   :biff.auth/verify-captcha      turnstile-verify
+  {:biff.auth/captcha-verify      turnstile-verify
    :biff.auth/captcha-head        turnstile-head
    :biff.auth/captcha-widget      turnstile-widget
    :biff.auth/captcha-param       :cf-turnstile-response
@@ -54,7 +51,7 @@
 (fx/defmachine recaptcha-verify
   :start
   (fn [{:keys [params biff.auth/recaptcha-secret]}]
-    {:response     [:biff.fx/http
+    {:response     [:fx/http
                     {:method           :post
                      :url              recaptcha-url
                      :form-params      {:secret (force recaptcha-secret)
@@ -90,7 +87,7 @@
    :data-action   "signin"})
 
 (def recaptcha-config
-  {:biff.auth/verify-captcha       recaptcha-verify
+  {:biff.auth/captcha-verify       recaptcha-verify
    :biff.auth/captcha-head         recaptcha-head
    :biff.auth/captcha-button-attrs recaptcha-button-attrs
    :biff.auth/captcha-param        :g-recaptcha-response
@@ -105,7 +102,7 @@
 (fx/defmachine hcaptcha-verify
   :start
   (fn [{:keys [biff.auth/hcaptcha-secret params]}]
-    {:response     [:biff.fx/http
+    {:response     [:fx/http
                     {:method           :post
                      :url              hcaptcha-url
                      :form-params      {:secret   (force hcaptcha-secret)
@@ -126,10 +123,19 @@
   [:div.h-captcha {:data-sitekey hcaptcha-site-key}])
 
 (def hcaptcha-config
-  {:biff.auth/verify-captcha      hcaptcha-verify
+  {:biff.auth/captcha-verify      hcaptcha-verify
    :biff.auth/captcha-head        hcaptcha-head
    :biff.auth/captcha-widget      hcaptcha-widget
    :biff.auth/captcha-param       :h-captcha-response
    :biff.auth/captcha-configured? #(configured?
                                     % [:biff.auth/hcaptcha-secret
                                        :biff.auth/hcaptcha-site-key])})
+
+;;;; no-op =====================================================================
+
+(def noop-config
+  {:biff.auth/captcha-verify       (constantly true)
+   :biff.auth/captcha-head         (constantly nil)
+   :biff.auth/captcha-widget       (constantly nil)
+   :biff.auth/captcha-configured?  (constantly false)
+   :biff.auth/captcha-button-attrs (constantly nil)})
