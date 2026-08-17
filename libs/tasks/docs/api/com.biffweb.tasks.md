@@ -186,11 +186,16 @@ listed in `deploy-untracked-files` (such as the compiled CSS), then runs the
 The local git repo must have a clean worktree. If you pass --soft, the server
 must be running an nREPL server on `nrepl-port` and it must have the `trench`
 command installed (handled by `prod-setup`).
+
+The deployed application must:
+
+- Include a :prod alias in deps.edn that starts the app in production.
+- Use the PORT environment variable for the webserver port.
 ```
 
 ### dev
 
-[view source](../../src/com/biffweb/tasks.clj#L155)
+[view source](../../src/com/biffweb/tasks.clj#L160)
 
 ```
 (dev)
@@ -210,7 +215,7 @@ Then calls the `-main` function in the `main-ns` namespace.
 
 ### docs
 
-[view source](../../src/com/biffweb/tasks.clj#L170)
+[view source](../../src/com/biffweb/tasks.clj#L175)
 
 ```
 (docs)
@@ -230,7 +235,7 @@ Each namespace will be required and thus must be on the classpath.
 
 ### format
 
-[view source](../../src/com/biffweb/tasks.clj#L185)
+[view source](../../src/com/biffweb/tasks.clj#L190)
 
 ```
 (format)
@@ -253,7 +258,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### lint
 
-[view source](../../src/com/biffweb/tasks.clj#L203)
+[view source](../../src/com/biffweb/tasks.clj#L208)
 
 ```
 (lint)
@@ -277,7 +282,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L222)
+[view source](../../src/com/biffweb/tasks.clj#L227)
 
 ```
 (nrepl & args)
@@ -297,7 +302,7 @@ If the first arg is `--`, calls `-main` without setting `--port` or
 
 ### prod-logs
 
-[view source](../../src/com/biffweb/tasks.clj#L237)
+[view source](../../src/com/biffweb/tasks.clj#L242)
 
 ```
 (prod-logs & args)
@@ -315,7 +320,7 @@ Accepts a single, optional `n-lines` CLI argument, default 300. Runs
 
 ### prod-nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L250)
+[view source](../../src/com/biffweb/tasks.clj#L255)
 
 ```
 (prod-nrepl & args)
@@ -334,7 +339,7 @@ The server is expected to already have an nREPL server running on
 
 ### prod-restart
 
-[view source](../../src/com/biffweb/tasks.clj#L264)
+[view source](../../src/com/biffweb/tasks.clj#L269)
 
 ```
 (prod-restart & args)
@@ -351,7 +356,7 @@ Runs `systemctl restart` on the server.
 
 ### prod-setup
 
-[view source](../../src/com/biffweb/tasks.clj#L276)
+[view source](../../src/com/biffweb/tasks.clj#L281)
 
 ```
 (prod-setup & args)
@@ -373,14 +378,14 @@ You must have SSH access as root to the (Ubuntu) server pointed to by
 
 - Installs packages with apt-get.
 
-- Creates a user (named `deployment-name`).
+- Creates a user (named by `deployment-name`).
 
 - Copies /root/.ssh/authorized_keys to ~/.ssh for the new user.
 
-- Creates a systemd service (named `deployment-name`) that runs `clj -M:prod`
-  in the ~/repo directory for the new user on system startup. The PORT env
-  variable is set to a unique port (in case you setup multiple apps on this
-  server).
+- Creates a systemd service (named by `deployment-name`) that runs `clj
+  -M:prod` in the ~/repo directory for the new user on system startup. The
+  PORT env variable is set to a unique port (in case you setup multiple apps
+  on this server).
 
 - Installs Caddy and configures it to forward requests for `domain` to the
   app's unique port.
@@ -397,7 +402,7 @@ distros.
 
 ### publish
 
-[view source](../../src/com/biffweb/tasks.clj#L317)
+[view source](../../src/com/biffweb/tasks.clj#L322)
 
 ```
 (publish & args)
@@ -423,7 +428,7 @@ And the following optional keys:
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L338)
+[view source](../../src/com/biffweb/tasks.clj#L343)
 
 ```
 (init)
@@ -458,7 +463,7 @@ Then runs the `update --clj-kondo-files-only` task.
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L368)
+[view source](../../src/com/biffweb/tasks.clj#L373)
 
 ```
 (test & args)
@@ -470,7 +475,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L375)
+[view source](../../src/com/biffweb/tasks.clj#L380)
 
 ```
 (uberjar)
@@ -489,7 +494,7 @@ include "resources" in their name are copied into the jar.
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L389)
+[view source](../../src/com/biffweb/tasks.clj#L394)
 
 ```
 (update & args)

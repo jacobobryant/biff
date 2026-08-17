@@ -102,6 +102,7 @@
 (defn deploy [& args]
   (when-some [invalid-arg (first (remove #{"--soft"} args))]
     (throw (ex-info (str "Invalid argument: " invalid-arg) {})))
+  (util/ensure-prod-alias!)
   (let [soft   (some #{"--soft"} args)
         ctx    (util/read-config {:required
                                   (into '[domain] (when soft '[nrepl-port]))

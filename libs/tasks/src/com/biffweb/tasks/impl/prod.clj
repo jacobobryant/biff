@@ -20,6 +20,7 @@
 (defn prod-setup [& args]
   (when-some [invalid-arg (first (remove #{"--copy-only"} args))]
     (throw (ex-info (str "Invalid argument: " invalid-arg) {})))
+  (util/ensure-prod-alias!)
   (let [{:biff.tasks/keys [deployment-name domain] :as ctx}
         (util/read-config '{:required [domain]
                             :select   [deployment-name skip-ssh-agent]})
@@ -79,7 +80,5 @@
   ([n-lines]
    (let [{:biff.tasks/keys [deployment-name] :as ctx}
          (util/read-config {:select '[deployment-name domain]})]
-     (util/ssh-run-shell
-      ctx
-      (str "journalctl -u " (util/shell-quote deployment-name)
-           " -n " (util/shell-quote n-lines) " -f")))))
+     (util/ssh-run ctx "journalctl" "-u" deployment-name
+                   "-n" n-lines "-f" "--no-pager"))))

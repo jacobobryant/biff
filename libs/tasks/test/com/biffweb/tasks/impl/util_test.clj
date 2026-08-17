@@ -58,6 +58,19 @@
     (is (= ["src" "resources"] (util/deps-paths)))
     (is (= ["src" "resources" "dev" "test"] (util/all-deps-paths)))))
 
+(deftest ensure-prod-alias-test
+  (doseq [deps [{:aliases {}}
+                {:aliases {:prod {}}}
+                {:aliases {:prod {:main-opts []}}}]]
+    (with-redefs [util/read-deps-edn (constantly deps)]
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"deps.edn must have a :prod alias with :main-opts set\."
+           (util/ensure-prod-alias!)))))
+  (with-redefs [util/read-deps-edn
+                (constantly {:aliases {:prod {:main-opts ["-m" "app"]}}})]
+    (is (nil? (util/ensure-prod-alias!)))))
+
 (deftest clojure-files-test
   (with-redefs [util/project-files
                 (constantly (mapv io/file ["a.clj" "b.cljc" "c.cljs"

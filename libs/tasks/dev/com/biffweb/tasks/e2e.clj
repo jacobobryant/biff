@@ -157,14 +157,25 @@
              (str/includes? code-quality-output "linting took"))
     (verify! "code-quality runs tests"
              (str/includes? code-quality-output "1 tests, 1 assertions")))
-  (let [dev-process (process! work-dir "clojure" "-M:run" "dev")]
+  (fs/delete-tree (fs/path work-dir "target/resources"))
+  (let [source      (io/file (str work-dir) "src/com/example/app.clj")
+        source-code (slurp source)
+        dev-process (process! work-dir "clojure" "-M:run" "dev")]
     (try
       (wait-for! "the dev server"
                  #(try
                     (= "ok" (output! work-dir "curl" "-fsS"
                                      "http://localhost:18080"))
                     (catch Exception _ false)))
+      (spit source (str/replace source-code "(atom \"ok\")"
+                                "(atom \"dev-ok\")"))
+      (wait-for! "the dev server to reload source changes"
+                 #(try
+                    (= "dev-ok" (output! work-dir "curl" "-fsS"
+                                         "http://localhost:18080"))
+                    (catch Exception _ false)))
       (finally
+        (spit source source-code)
         (stop-process! dev-process))))
   (let [nrepl-process (process! work-dir "clojure" "-M:run" "nrepl"
                                 "--bind" "localhost")]
