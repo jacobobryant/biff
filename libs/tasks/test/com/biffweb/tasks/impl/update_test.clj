@@ -1,5 +1,6 @@
 (ns com.biffweb.tasks.impl.update-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [com.biffweb.tasks.impl.lint :as lint]
             [com.biffweb.tasks.impl.update :as update]
             [com.biffweb.tasks.impl.util :as util]))
@@ -29,8 +30,10 @@
                     (fn [& args]
                       (swap! shell-calls conj (vec args)))]
         (update/update "--clj-kondo-files-only"))
-      (is (= [["kondo" "--parallel" "--dependencies" "--copy-configs"
-               "--lint" (System/getProperty "java.class.path")]]
+      (is (= (mapv #(vector "kondo" "--parallel" "--dependencies"
+                            "--copy-configs" "--lint" %)
+                   (#'update/classpath-batches
+                    (System/getProperty "java.class.path")))
              @shell-calls))))
   (testing "deps-only mode skips clj-kondo"
     (let [outdated-calls (atom 0)]
@@ -51,6 +54,14 @@
                           (throw (AssertionError. "unexpected upgrade")))))]
         (update/update "--deps-only"))
       (is (= 1 @outdated-calls)))))
+
+(deftest classpath-batches-stay-under-the-windows-command-limit
+  (let [separator java.io.File/pathSeparator
+        paths     [(apply str (repeat 10000 "a"))
+                   (apply str (repeat 10000 "b"))]
+        batches   (#'update/classpath-batches (str/join separator paths))]
+    (is (= paths batches))
+    (is (every? #(<= (count %) 16000) batches))))
 
 (deftest upgradeable-dependencies-exclude-local-roots
   (let [deps    {'one/lib {:mvn/version "1"}
