@@ -1,8 +1,8 @@
 {:paths ["src" "resources" "target/resources"]
  :deps  {org.clojure/clojure {:mvn/version "1.12.5"}
          nrepl/nrepl         {:mvn/version "1.7.0"}}
- :aliases
 
+ :aliases
  {:prod {:main-opts ["-m" "com.example.app"]}
   :run  {:extra-paths ["test" "dev"]
          :extra-deps  {com.biffweb/tasks {:local/root "TASKS_ROOT"}}

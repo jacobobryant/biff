@@ -5,6 +5,7 @@
             [com.biffweb.authenticate.impl.backend :as backend]
             [com.biffweb.authenticate.impl.frontend :as frontend]
             [com.biffweb.authenticate.impl.captcha :as captcha]
+            [com.biffweb.core :as biff]
             [demo.store :as store]))
 
 ;; =============================================================================
@@ -765,7 +766,7 @@
                         :biff.auth/font-family        "sans-serif"
                         :biff.auth/code-signin-path   "/signin"
                         :biff.auth/link-signin-path   "/signin"
-                        :biff.auth/turnstile-secret   (constantly "   ")
+                        :biff.auth/turnstile-secret   (biff/secret-delay "   ")
                         :biff.auth/turnstile-site-key ""}))]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "cf-turnstile"))
@@ -867,7 +868,7 @@
     (is (vector? ((:biff.auth/captcha-widget auth/hcaptcha-config)
                   {:biff.auth/hcaptcha-site-key "test-key"})))))
 
-(deftest captcha-verify-start-state-uses-secret-functions-test
+(deftest captcha-verify-start-state-forces-secrets-test
   (testing "turnstile"
     (is (= {:response     [:biff.fx/http
                            {:method           :post
@@ -879,7 +880,7 @@
                             :throw-exceptions false}]
             :biff.fx/next :check-response}
            (captcha/turnstile-verify
-            {:biff.auth/turnstile-secret (constantly "turnstile-secret")
+            {:biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
 
              :params {:cf-turnstile-response "turnstile-token"}}
             :start))))
@@ -894,7 +895,7 @@
                             :throw-exceptions false}]
             :biff.fx/next :check-response}
            (captcha/recaptcha-verify
-            {:biff.auth/recaptcha-secret (constantly "recaptcha-secret")
+            {:biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
 
              :params {:g-recaptcha-response "recaptcha-token"}}
             :start))))
@@ -909,7 +910,7 @@
                             :throw-exceptions false}]
             :biff.fx/next :check-response}
            (captcha/hcaptcha-verify
-            {:biff.auth/hcaptcha-secret (constantly "hcaptcha-secret")
+            {:biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
              :params                    {:h-captcha-response "hcaptcha-token"}}
             :start)))))
 
@@ -918,11 +919,11 @@
                {:biff.auth/turnstile-secret   nil
                 :biff.auth/turnstile-site-key ""})))
   (is (true? ((:biff.auth/captcha-configured? auth/recaptcha-config)
-              {:biff.auth/recaptcha-secret   (constantly "secret")
+              {:biff.auth/recaptcha-secret   (biff/secret-delay "secret")
                :biff.auth/recaptcha-site-key "   "})))
   (is (false? ((:biff.auth/captcha-configured? auth/hcaptcha-config)
-               {:biff.auth/hcaptcha-secret   (constantly "secret")
+               {:biff.auth/hcaptcha-secret   (biff/secret-delay "secret")
                 :biff.auth/hcaptcha-site-key nil})))
   (is (true? ((:biff.auth/captcha-configured? auth/turnstile-config)
-              {:biff.auth/turnstile-secret   (constantly "secret")
+              {:biff.auth/turnstile-secret   (biff/secret-delay "secret")
                :biff.auth/turnstile-site-key "site-key"}))))

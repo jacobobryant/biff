@@ -8,15 +8,16 @@
   (.await latch 2 TimeUnit/SECONDS))
 
 (deftest scheduled-tasks-test
-  (let [called (promise)
+  (let [called   (promise)
         finished (promise)
-        ctx    {:biff.background/tasks
-                [{:schedule    #(vector (Instant/now))
-                  :task        #(deliver called %)
-                  :on-finished #(deliver finished true)}]
-                :biff.core/stop []
-                :foo            :bar}
-        result (background/use-scheduled-tasks ctx)]
+        ctx      {:biff.background/tasks
+                  [{:schedule    #(vector (Instant/now))
+                    :task        #(deliver called %)
+                    :on-finished #(deliver finished true)}]
+
+                  :biff.core/stop []
+                  :foo            :bar}
+        result   (background/use-scheduled-tasks ctx)]
     (try
       (is (= :bar (:foo (deref called 2000 nil))))
       (is (= 1 (count (:biff.core/stop result))))
@@ -26,22 +27,24 @@
         ((first (:biff.core/stop result)))))))
 
 (deftest queues-process-jobs-in-priority-order-test
-  (let [started   (CountDownLatch. 1)
-        release   (CountDownLatch. 1)
-        consumed  (CountDownLatch. 3)
-        seen      (atom [])
-        consumer  (fn [{:keys [biff.background/job
-                               biff.background/queue]}]
-                    (when (= :blocking (:id job))
-                      (.countDown started)
-                      (await-latch release))
-                    (swap! seen conj [(:id job) queue])
-                    (.countDown consumed))
-        result    (background/use-queues
-                   {:biff.background/queues {:queue/email {:consumer consumer}}
-                    :biff.background/stop-timeout 100
-                    :biff.core/stop []})
-        queue     (get-in result [:biff.background/queues :queue/email :queue])]
+  (let [started  (CountDownLatch. 1)
+        release  (CountDownLatch. 1)
+        consumed (CountDownLatch. 3)
+        seen     (atom [])
+        consumer (fn [{:keys [biff.background/job
+                              biff.background/queue]}]
+                   (when (= :blocking (:id job))
+                     (.countDown started)
+                     (await-latch release))
+                   (swap! seen conj [(:id job) queue])
+                   (.countDown consumed))
+        result   (background/use-queues
+                  {:biff.background/queues
+                   {:queue/email {:consumer consumer}}
+
+                   :biff.background/stop-timeout 100
+                   :biff.core/stop               []})
+        queue    (get-in result [:biff.background/queues :queue/email :queue])]
     (try
       (is (= [{:id :blocking}]
              (background/submit-jobs result :queue/email [{:id :blocking}])))
@@ -94,9 +97,9 @@
 (deftest integration-test
   (is (fn? (:biff.background.fx/submit-jobs background/fx-handlers)))
   (let [module      (background/module)
-        modules-var (atom [{:biff.background/tasks [:task-1]
+        modules-var (atom [{:biff.background/tasks  [:task-1]
                             :biff.background/queues {:queue/one :one}}
-                           {:biff.background/tasks [:task-2 :task-3]
+                           {:biff.background/tasks  [:task-2 :task-3]
                             :biff.background/queues {:queue/two :two}}])]
     (is (= background/fx-handlers (:biff.fx/handlers module)))
     (is (= {:biff.background/tasks  [:task-1 :task-2 :task-3]
