@@ -1,5 +1,6 @@
 (ns com.biffweb.tasks.impl.css-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
             [com.biffweb.stuff.bin :as bin]
             [com.biffweb.tasks.impl.css :as css]
             [com.biffweb.tasks.impl.util :as tasks.util]))
@@ -28,3 +29,14 @@
 
 (deftest installs-binary-for-current-platform
   (is (some? (css/ensure-tailwind-binary! version))))
+
+(deftest skips-compilation-when-input-is-missing
+  (let [shell-called? (atom false)]
+    (with-redefs [io/file          (constantly (proxy [java.io.File] ["missing"]
+                                                 (exists [] false)))
+                  tasks.util/shell (fn [& _] (reset! shell-called? true))]
+      (is (= (str "resources/tailwind.css doesn't exist, "
+                  "skipping CSS compilation"
+                  (System/lineSeparator))
+             (with-out-str (css/css "--watch"))))
+      (is (false? @shell-called?)))))

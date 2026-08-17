@@ -191,6 +191,11 @@
       slurp
       edn/read-string))
 
+(defn ensure-prod-alias! []
+  (when-not (seq (get-in (read-deps-edn) [:aliases :prod :main-opts]))
+    (throw (ex-info "deps.edn must have a :prod alias with :main-opts set."
+                    {}))))
+
 (defn deps-paths []
   (let [{:keys [paths]} (read-deps-edn)]
     (into [] (distinct) paths)))

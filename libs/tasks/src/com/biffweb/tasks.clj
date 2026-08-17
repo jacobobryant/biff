@@ -148,7 +148,12 @@
 
    The local git repo must have a clean worktree. If you pass --soft, the server
    must be running an nREPL server on `nrepl-port` and it must have the `trench`
-   command installed (handled by `prod-setup`)."
+   command installed (handled by `prod-setup`).
+
+   The deployed application must:
+
+   - Include a :prod alias in deps.edn that starts the app in production.
+   - Use the PORT environment variable for the webserver port."
   [& args]
   (apply (requiring-resolve 'com.biffweb.tasks.impl.deploy/deploy) args))
 
@@ -291,14 +296,14 @@
 
    - Installs packages with apt-get.
 
-   - Creates a user (named `deployment-name`).
+   - Creates a user (named by `deployment-name`).
 
    - Copies /root/.ssh/authorized_keys to ~/.ssh for the new user.
 
-   - Creates a systemd service (named `deployment-name`) that runs `clj -M:prod`
-     in the ~/repo directory for the new user on system startup. The PORT env
-     variable is set to a unique port (in case you setup multiple apps on this
-     server).
+   - Creates a systemd service (named by `deployment-name`) that runs `clj
+     -M:prod` in the ~/repo directory for the new user on system startup. The
+     PORT env variable is set to a unique port (in case you setup multiple apps
+     on this server).
 
    - Installs Caddy and configures it to forward requests for `domain` to the
      app's unique port.

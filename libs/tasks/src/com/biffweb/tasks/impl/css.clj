@@ -1,5 +1,6 @@
 (ns com.biffweb.tasks.impl.css
-  (:require [clojure.java.shell :as sh]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :as sh]
             [com.biffweb.stuff.bin :as stuff.bin]
             [com.biffweb.tasks.impl.util :as util]))
 
@@ -49,10 +50,13 @@
       :url                 url})))
 
 (defn css [& tailwind-args]
-  (let [{:biff.tasks/keys [css-output-path tailwind-version]} (util/read-config)
+  (if-not (.exists (io/file "resources/tailwind.css"))
+    (println "resources/tailwind.css doesn't exist, skipping CSS compilation")
+    (let [{:biff.tasks/keys [css-output-path tailwind-version]}
+          (util/read-config)
 
-        command (ensure-tailwind-binary! tailwind-version)]
-    (apply util/shell
-           (concat [command]
-                   ["-i" "resources/tailwind.css" "-o" css-output-path]
-                   tailwind-args))))
+          command (ensure-tailwind-binary! tailwind-version)]
+      (apply util/shell
+             (concat [command]
+                     ["-i" "resources/tailwind.css" "-o" css-output-path]
+                     tailwind-args)))))

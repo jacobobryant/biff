@@ -5,8 +5,14 @@
             [com.biffweb.tasks.impl.reload :as reload]
             [com.biffweb.tasks.impl.util :as util]
             [nextjournal.beholder :as beholder])
-  (:import [clojure.lang DynamicClassLoader RT]
-           [java.util.concurrent ArrayBlockingQueue Executors TimeUnit]))
+  (:import [java.util.concurrent ArrayBlockingQueue Executors TimeUnit]))
+
+(defn- run-with-printed-exceptions [f]
+  (try
+    (f)
+    (catch Exception e
+      (binding [*err* *out*]
+        (st/print-stack-trace e)))))
 
 (defn- start-file-watcher!
   [{:keys [directories on-change debounce-ms]
@@ -24,33 +30,22 @@
                  (while true
                    (.take queue)
                    (while (.poll queue debounce-ms TimeUnit/MILLISECONDS))
-                   (on-change)))))
+                   (run-with-printed-exceptions
+                    on-change)))))
     {:executor executor
      :watcher  watcher}))
 
-(defn- add-classpath! [path]
-  (let [loader (RT/baseLoader)]
-    (when-not (instance? DynamicClassLoader loader)
-      (throw (ex-info "The base classloader cannot add paths"
-                      {:class (class loader)
-                       :path  path})))
-    (.addURL ^DynamicClassLoader loader
-             (-> path io/file .toURI .toURL))
-    (.setContextClassLoader (Thread/currentThread) loader)))
-
 (defn dev []
-  (let [{:biff.tasks/keys [main-ns]} (util/read-config)
-        paths                        (util/all-deps-paths)]
-    (doseq [path  paths
-            :when (not (.exists (io/file path)))]
-      (io/make-parents (io/file path "_"))
-      (add-classpath! path))
-    (future
-      (try
-        (biff.run/run-task "css" "--watch")
-        (catch Exception e
-          (binding [*err* *out*]
-            (st/print-stack-trace e)))))
-    (start-file-watcher! {:directories paths
-                          :on-change   #'reload/refresh})
-    ((requiring-resolve (symbol (str main-ns) "-main")))))
+  (let [paths         (util/all-deps-paths)
+        missing-paths (filterv #(not (.exists (io/file %))) paths)]
+    (doseq [path missing-paths]
+      (io/make-parents (io/file path "_")))
+    (if (not-empty missing-paths)
+      (util/shell "clojure" "-M:run" "dev")
+      (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
+        (future
+          (run-with-printed-exceptions
+           #(biff.run/run-task "css" "--watch")))
+        (start-file-watcher! {:directories paths
+                              :on-change   #'reload/refresh})
+        ((requiring-resolve (symbol (str main-ns) "-main")))))))

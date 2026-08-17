@@ -31,13 +31,10 @@
     :ok))
 
 (defn- classpath-entries []
-  (->> (concat (str/split (System/getProperty "java.class.path")
-                          (re-pattern
-                           (java.util.regex.Pattern/quote
-                            java.io.File/pathSeparator)))
-               (mapv (comp #(.getPath ^java.net.URI %)
-                           #(.toURI ^java.net.URL %))
-                     (.getURLs (clojure.lang.RT/baseLoader))))
+  (->> (str/split (System/getProperty "java.class.path")
+                  (re-pattern
+                   (java.util.regex.Pattern/quote
+                    java.io.File/pathSeparator)))
        (mapv #(.getCanonicalPath (io/file %)))
        set))
 
