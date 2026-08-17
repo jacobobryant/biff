@@ -1,6 +1,6 @@
 (ns com.biffweb.authenticate.impl.routes
   (:require
-    [clojure.string :as str]))
+   [clojure.string :as str]))
 
 (defn append-query-params [path params-str]
   (if (str/includes? path "?")

@@ -134,8 +134,8 @@
 ;;;; no-op =====================================================================
 
 (def noop-config
-  {:biff.auth/captcha-verify      (constantly true)
-   :biff.auth/captcha-head        (constantly nil)
-   :biff.auth/captcha-widget      (constantly nil)
-   :biff.auth/captcha-configured? (constantly false)
+  {:biff.auth/captcha-verify       (constantly true)
+   :biff.auth/captcha-head         (constantly nil)
+   :biff.auth/captcha-widget       (constantly nil)
+   :biff.auth/captcha-configured?  (constantly false)
    :biff.auth/captcha-button-attrs (constantly nil)})

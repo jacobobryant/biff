@@ -18,7 +18,7 @@
 
 (defn validate-record [record]
   (biff.core/validate record {:extra-schema record-schema
-                              :required (keys record-schema)}))
+                              :required     (keys record-schema)}))
 
 (defn normalize-email [email]
   (some-> email str/trim str/lower-case))
@@ -111,8 +111,8 @@
   :start
   (fn [{:biff.auth/keys [email-validator
                          code-signin-path]
-        :keys [params]
-        :as ctx}]
+        :keys           [params]
+        :as             ctx}]
     (let [email (normalize-email (:email params))]
       (if-not (email-validator ctx email)
         {:status  303
@@ -127,8 +127,8 @@
   :check-captcha
   (fn [{:biff.auth/keys [code-signin-path
                          captcha-param]
-        :keys [email code captcha-ok original-params biff.fx/now]
-        :as ctx}]
+        :keys           [email code captcha-ok original-params biff.fx/now]
+        :as             ctx}]
     (let [defaults (default-code-email ctx {:code code})
           clean-p  (params-to-save original-params captcha-param)]
       (if (:success captcha-ok)
@@ -173,7 +173,7 @@
   (fn [{:biff.auth/keys [max-failed-attempts
                          code-expiry-minutes
                          code-signin-path]
-        :keys [email submitted-code signin-record biff.fx/now]}]
+        :keys           [email submitted-code signin-record biff.fx/now]}]
     (let [{:biff-auth-signin/keys [code-hash created-at failed-attempts flow
                                    params]}
           signin-record
@@ -213,7 +213,8 @@
 (fx/defmachine send-link-handler
   :start
   (fn [{:biff.auth/keys [email-validator link-signin-path]
-        :keys [params] :as ctx}]
+        :keys           [params]
+        :as             ctx}]
     (let [email (normalize-email (:email params))]
       (if-not (email-validator ctx email)
         {:status  303
@@ -228,8 +229,9 @@
 
   :check-captcha
   (fn [{:biff.auth/keys [base-url link-signin-path captcha-param]
-        :keys [email token state-token captcha-ok original-params biff.fx/now]
-        :as   ctx}]
+        :keys           [email token state-token captcha-ok original-params
+                         biff.fx/now]
+        :as             ctx}]
     (let [clean-p  (params-to-save original-params captcha-param)
           payload  (encode-payload {:token token
                                     :email email
@@ -257,7 +259,7 @@
 
   :check-send-result
   (fn [{:biff.auth/keys [link-signin-path]
-        :keys [email state-token sent session]}]
+        :keys           [email state-token sent session]}]
     (if sent
       {:status  303
        :headers {"location" (routes/append-query-params
@@ -288,9 +290,9 @@
                                 link-signin-path "error=invalid-link")}}
 
          (confirmed-from-user? (assoc ctx :auth-params auth-params))
-         {:auth-params     auth-params
-          :signin-record   [:fx/kv-get :biff.auth/signin email]
-          :biff.fx/next    :check-token}
+         {:auth-params   auth-params
+          :signin-record [:fx/kv-get :biff.auth/signin email]
+          :biff.fx/next  :check-token}
 
          :else
          {:status  303
@@ -301,7 +303,7 @@
 
    :check-token
    (fn [{:biff.auth/keys [link-expiry-minutes link-signin-path]
-         :keys [auth-params signin-record biff.fx/now]}]
+         :keys           [auth-params signin-record biff.fx/now]}]
      (let [{:biff-auth-signin/keys [code-hash created-at flow params]}
            signin-record
 

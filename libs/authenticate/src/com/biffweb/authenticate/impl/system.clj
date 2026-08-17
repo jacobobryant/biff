@@ -80,13 +80,13 @@
       [["" {:middleware middleware}
         [(routes/send-code)   {:post backend/send-code-handler}]
         [(routes/send-link)   {:post backend/send-link-handler}]
-        [(routes/verify-code) {:middleware [(wrap-lock ReentrantLock.)]
+        [(routes/verify-code) {:middleware [(wrap-lock (ReentrantLock.))]
                                :post       backend/verify-code-handler}]
-        [(routes/verify-link) {:middleware [(wrap-lock ReentrantLock.)]
+        [(routes/verify-link) {:middleware [(wrap-lock (ReentrantLock.))]
                                :get        backend/verify-link-handler}]
 
         [(routes/verify-link-confirm)
-         {:middleware [(wrap-lock ReentrantLock.)]
+         {:middleware [(wrap-lock (ReentrantLock.))]
           :post       backend/verify-link-handler-confirm}]
 
         [routes/signout-link          {:post backend/signout-handler}]]]

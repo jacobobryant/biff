@@ -173,8 +173,8 @@
 (defn- render-signin-form
   [{:biff.auth/keys [primary-color
                      captcha-button-attrs]
-    :keys [anti-forgery-token]
-    :as ctx}]
+    :keys           [anti-forgery-token]
+    :as             ctx}]
   [:form {:method "post" :action (routes/send-code) :id "signin-form"}
    (when anti-forgery-token
      (hidden-field "__anti-forgery-token" anti-forgery-token))
@@ -187,26 +187,26 @@
            :autofocus   true})
    (captcha-area ctx)
    (button primary-color (captcha-button-attrs ctx)
-     "Send sign-in code")])
+           "Send sign-in code")])
 
 (defn- render-signup-form
   [{:biff.auth/keys [primary-color
                      captcha-button-attrs]
-    :keys [anti-forgery-token]
-    :as ctx}]
+    :keys           [anti-forgery-token]
+    :as             ctx}]
   [:form {:method "post" :action (routes/send-link) :id "signup-form"}
    (when anti-forgery-token
      (hidden-field "__anti-forgery-token" anti-forgery-token))
    (label "signup-email" "Email address")
-   (input {:type "email"
-           :name "email"
-           :id "signup-email"
+   (input {:type        "email"
+           :name        "email"
+           :id          "signup-email"
            :placeholder "you@example.com"
-           :required true
-           :autofocus true})
+           :required    true
+           :autofocus   true})
    (captcha-area ctx)
    (button primary-color (captcha-button-attrs ctx)
-     "Send sign-in link")])
+           "Send sign-in link")])
 
 (defn- render-verify-code
   [{:biff.auth/keys [primary-color code-signin-path]
@@ -223,23 +223,23 @@
         (hidden-field "__anti-forgery-token" anti-forgery-token))
       (hidden-field "email" email)
       (label "code" "Verification code")
-      (input {:type "text"
-              :name "code"
-              :id "code"
-              :required true
+      (input {:type         "text"
+              :name         "code"
+              :id           "code"
+              :required     true
               :autocomplete "one-time-code"
-              :pattern "[0-9]{6}"
-              :maxlength "6"
-              :placeholder "000000"
-              :style {:width          "100%"
-                      :padding        "0.625rem 0.75rem"
-                      :border         "1px solid #d1d5db"
-                      :border-radius  "0.375rem"
-                      :font-size      "1.25rem"
-                      :outline        "none"
-                      :box-sizing     "border-box"
-                      :letter-spacing "0.2em"
-                      :text-align     "center"}})
+              :pattern      "[0-9]{6}"
+              :maxlength    "6"
+              :placeholder  "000000"
+              :style        {:width          "100%"
+                             :padding        "0.625rem 0.75rem"
+                             :border         "1px solid #d1d5db"
+                             :border-radius  "0.375rem"
+                             :font-size      "1.25rem"
+                             :outline        "none"
+                             :box-sizing     "border-box"
+                             :letter-spacing "0.2em"
+                             :text-align     "center"}})
       (button primary-color {} "Verify")]
      (footer primary-color
              (link primary-color {:href code-signin-path}
@@ -263,7 +263,7 @@
   (let [token (:token params)]
     [(title "Confirm your email")
      [:p {:style {:text-align "center"
-                  :margin "0 0 1rem 0"
+                  :margin     "0 0 1rem 0"
                   :font-size  "0.95rem"}}
       "Please enter your email address to complete sign-in."]
      [:form {:method "post"
@@ -273,12 +273,12 @@
         (hidden-field "__anti-forgery-token" anti-forgery-token))
       (hidden-field "token" token)
       (label "confirm-email" "Email address")
-      (input {:type "email"
-              :name "email"
-              :id "confirm-email"
+      (input {:type        "email"
+              :name        "email"
+              :id          "confirm-email"
               :placeholder "you@example.com"
-              :required true
-              :autofocus true})
+              :required    true
+              :autofocus   true})
       (button primary-color {} "Confirm & sign in")]
      (footer primary-color
              (link primary-color {:href link-signin-path}
@@ -287,7 +287,7 @@
 (defn- render-tabs
   [{:biff.auth/keys [primary-color code-signin-path link-signin-path]
     :keys           [params]
-    :as ctx}]
+    :as             ctx}]
   (let [active-tab (or (:tab params) "signin")]
     [(tab-bar primary-color
               [{:active? (= active-tab "signin")
