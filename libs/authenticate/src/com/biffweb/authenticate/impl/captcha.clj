@@ -1,17 +1,22 @@
 (ns com.biffweb.authenticate.impl.captcha
   (:require [com.biffweb.fx :as fx]))
 
-;; === Cloudflare Turnstile ===
+(defn- configured? [ctx ks]
+  (every? #(some? (get ctx %)) ks))
+
+;;;; turnstile =================================================================
 
 (def turnstile-url "https://challenges.cloudflare.com/turnstile/v0/siteverify")
 
 (fx/defmachine turnstile-verify
   :start
   (fn [{:keys [biff.auth/turnstile-secret params]}]
+    ;; :biff.fx/http isn't provided by biff.fx and should thus be renamed to
+    ;; something else like :biff.auth/http
     {:response     [:biff.fx/http
                     {:method           :post
                      :url              turnstile-url
-                     :form-params      {:secret (turnstile-secret)
+                     :form-params      {:secret (force turnstile-secret)
 
                                         :response
                                         (:cf-turnstile-response params)}
@@ -32,7 +37,17 @@
 (defn turnstile-widget [{:biff.auth/keys [turnstile-site-key]}]
   [:div.cf-turnstile {:data-sitekey turnstile-site-key}])
 
-;; === Google reCAPTCHA v2/v3 ===
+(def turnstile-config
+  {;; rename to :biff.auth/captcha-verify to match the other keys
+   :biff.auth/verify-captcha      turnstile-verify
+   :biff.auth/captcha-head        turnstile-head
+   :biff.auth/captcha-widget      turnstile-widget
+   :biff.auth/captcha-param       :cf-turnstile-response
+   :biff.auth/captcha-configured? #(configured?
+                                    % [:biff.auth/turnstile-secret
+                                       :biff.auth/turnstile-site-key])})
+
+;;;; recaptcha v2/v3 ===========================================================
 
 (def recaptcha-url "https://www.google.com/recaptcha/api/siteverify")
 
@@ -42,7 +57,7 @@
     {:response     [:biff.fx/http
                     {:method           :post
                      :url              recaptcha-url
-                     :form-params      {:secret (recaptcha-secret)
+                     :form-params      {:secret (force recaptcha-secret)
 
                                         :response
                                         (:g-recaptcha-response params)}
@@ -74,7 +89,16 @@
    :data-callback "biffAuthRecaptchaSubmit"
    :data-action   "signin"})
 
-;; === hCaptcha ===
+(def recaptcha-config
+  {:biff.auth/verify-captcha       recaptcha-verify
+   :biff.auth/captcha-head         recaptcha-head
+   :biff.auth/captcha-button-attrs recaptcha-button-attrs
+   :biff.auth/captcha-param        :g-recaptcha-response
+   :biff.auth/captcha-configured?  #(configured?
+                                     % [:biff.auth/recaptcha-secret
+                                        :biff.auth/recaptcha-site-key])})
+
+;;;; hcaptcha ==================================================================
 
 (def hcaptcha-url "https://hcaptcha.com/siteverify")
 
@@ -84,7 +108,7 @@
     {:response     [:biff.fx/http
                     {:method           :post
                      :url              hcaptcha-url
-                     :form-params      {:secret   (hcaptcha-secret)
+                     :form-params      {:secret   (force hcaptcha-secret)
                                         :response (:h-captcha-response params)}
                      :as               :json
                      :coerce           :always
@@ -100,3 +124,12 @@
 
 (defn hcaptcha-widget [{:biff.auth/keys [hcaptcha-site-key]}]
   [:div.h-captcha {:data-sitekey hcaptcha-site-key}])
+
+(def hcaptcha-config
+  {:biff.auth/verify-captcha      hcaptcha-verify
+   :biff.auth/captcha-head        hcaptcha-head
+   :biff.auth/captcha-widget      hcaptcha-widget
+   :biff.auth/captcha-param       :h-captcha-response
+   :biff.auth/captcha-configured? #(configured?
+                                    % [:biff.auth/hcaptcha-secret
+                                       :biff.auth/hcaptcha-site-key])})
