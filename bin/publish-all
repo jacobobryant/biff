@@ -22,7 +22,7 @@ projects=(
   "$root/libs/datastar"
   "$root/libs/run"
   "$root/libs/tasks"
-  #"$root/libs/background"
+  "$root/libs/background"
   #"$root/libs/authenticate"
   #"$root/libs/admin"
   #"$root"
