@@ -29,10 +29,25 @@
     (throw (ex-info (str "Verification failed: " description) {}))))
 
 (defn- task! [dir & args]
-  (apply run-command! dir "clj" "-M:run" args))
+  (let [command                (concat ["clojure" "-M:run"] args)
+        {:keys [exit out err]} (apply process/sh {:dir (str dir) :in ""}
+                                      command)]
+    (print out)
+    (binding [*out* *err*]
+      (print err))
+    (when-not (zero? exit)
+      (throw (ex-info (str "Command failed: " (str/join " " command))
+                      {:command command :exit exit :out out :err err})))))
 
 (defn- task-output! [dir & args]
-  (apply output! dir "clj" "-M:run" args))
+  (let [{:keys [exit out err]}
+        (apply process/sh {:dir (str dir) :in ""}
+               "clojure" "-M:run" args)]
+    (when-not (zero? exit)
+      (throw (ex-info (str "Command failed: clojure -M:run "
+                           (str/join " " args))
+                      {:command args :exit exit :out out :err err})))
+    (str/trim out)))
 
 (defn- wait-for! [description f]
   (loop [attempts 30]
@@ -46,7 +61,7 @@
                 (recur (dec attempts))))))
 
 (defn- process! [dir & command]
-  (process/process command {:dir (str dir) :inherit true}))
+  (process/process command {:dir (str dir) :in "" :out :inherit :err :inherit}))
 
 (defn- stop-process! [p]
   (when p
@@ -142,7 +157,7 @@
              (str/includes? code-quality-output "linting took"))
     (verify! "code-quality runs tests"
              (str/includes? code-quality-output "1 tests, 1 assertions")))
-  (let [dev-process (process! work-dir "clj" "-M:run" "dev")]
+  (let [dev-process (process! work-dir "clojure" "-M:run" "dev")]
     (try
       (wait-for! "the dev server"
                  #(try
@@ -151,7 +166,7 @@
                     (catch Exception _ false)))
       (finally
         (stop-process! dev-process))))
-  (let [nrepl-process (process! work-dir "clj" "-M:run" "nrepl"
+  (let [nrepl-process (process! work-dir "clojure" "-M:run" "nrepl"
                                 "--bind" "localhost")]
     (try
       (wait-for! "the local nREPL server"
@@ -208,10 +223,32 @@
           (str "SERVER=" ip "\n"
                "PATH='" bin-dir "':$PATH\n"))))
 
+(defn- task-env-result [work-dir & args]
+  (let [{:keys [out err] :as result}
+        (process/sh {:dir (str work-dir) :in ""}
+                    "bash" "-c"
+                    (str "set -a; . ./task.env; set +a; exec clojure -M:run "
+                         (str/join " " args)))]
+    (print out)
+    (binding [*out* *err*]
+      (print err))
+    result))
+
 (defn- task-env! [work-dir & args]
-  (run-command! work-dir "bash" "-c"
-                (str "set -a; . ./task.env; set +a; exec clj -M:run "
-                     (str/join " " args))))
+  (let [{:keys [exit out err]} (apply task-env-result work-dir args)]
+    (when-not (zero? exit)
+      (throw (ex-info (str "Command failed: clojure -M:run "
+                           (str/join " " args))
+                      {:command args :exit exit :out out :err err})))))
+
+(defn- soft-deploy! [work-dir]
+  (let [{:keys [exit out err]} (task-env-result work-dir "deploy" "--soft")
+        output                 (str out err)]
+    (when-not (or (zero? exit)
+                  (and (str/includes? output ":ok")
+                       (str/includes? output "Connection reset")))
+      (throw (ex-info "Command failed: clojure -M:run deploy --soft"
+                      {:exit exit :out out :err err})))))
 
 (defn- run-production-tasks!
   [work-dir container-name image nrepl-port]
@@ -274,7 +311,7 @@
           logs-process (process!
                         work-dir "bash" "-c"
                         (str "set -a; . ./task.env; set +a; "
-                             "exec clj -M:run prod-logs 100 "
+                             "exec clojure -M:run prod-logs 100 "
                              "> prod-logs.out 2>&1"))]
       (try
         (wait-for! "prod-logs to start journalctl"
@@ -294,7 +331,7 @@
     (let [tunnel-process
           (process! work-dir "bash" "-c"
                     (str "set -a; . ./task.env; set +a; "
-                         "exec clj -M:run prod-nrepl"))]
+                         "exec clojure -M:run prod-nrepl"))]
       (try
         (wait-for! "the production nREPL tunnel"
                    #(try
@@ -310,7 +347,7 @@
                                 "(atom \"soft-ok\")"))
       (run-command! work-dir "git" "add" ".")
       (run-command! work-dir "git" "commit" "-m" "Change response")
-      (task-env! work-dir "deploy" "--soft")
+      (soft-deploy! work-dir)
       (wait-for! "the soft-deployed application"
                  #(try
                     (= "soft-ok" (output! work-dir "incus" "exec"
