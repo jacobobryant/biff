@@ -36,6 +36,7 @@
                                                  (exists [] false)))
                   tasks.util/shell (fn [& _] (reset! shell-called? true))]
       (is (= (str "resources/tailwind.css doesn't exist, "
-                  "skipping CSS compilation\n")
+                  "skipping CSS compilation"
+                  (System/lineSeparator))
              (with-out-str (css/css "--watch"))))
       (is (false? @shell-called?)))))

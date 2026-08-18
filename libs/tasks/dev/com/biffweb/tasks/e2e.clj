@@ -71,12 +71,14 @@
       (.destroyForcibly ^Process (:proc p)))
     @p))
 
-(defn- verify-nrepl! [port]
-  (with-open [connection (nrepl/connect :host "localhost" :port port)]
-    (let [client (nrepl/client connection 5000)]
-      (verify! "nREPL evaluates code"
-               (= [5] (nrepl/response-values
-                       (nrepl/message client {:op "eval" :code "(+ 2 3)"})))))))
+(defn- nrepl-working? [port]
+  (try
+    (with-open [connection (nrepl/connect :host "localhost" :port port)]
+      (let [client (nrepl/client connection 5000)]
+        (= [5] (nrepl/response-values
+                (nrepl/message client {:op "eval" :code "(+ 2 3)"})))))
+    (catch Exception _
+      false)))
 
 (defn- copy-fixture! [work-dir]
   (let [source (io/file (io/resource "com/biffweb/tasks/e2e-app"))]
@@ -181,12 +183,7 @@
                                 "--bind" "localhost")]
     (try
       (wait-for! "the local nREPL server"
-                 #(try
-                    (run-command! work-dir "bash" "-c"
-                                  "</dev/tcp/localhost/17888")
-                    true
-                    (catch Exception _ false)))
-      (verify-nrepl! 17888)
+                 #(nrepl-working? 17888))
       (finally
         (stop-process! nrepl-process))))
   (run-command! work-dir "git" "add" ".")
@@ -345,12 +342,7 @@
                          "exec clojure -M:run prod-nrepl"))]
       (try
         (wait-for! "the production nREPL tunnel"
-                   #(try
-                      (run-command! work-dir "bash" "-c"
-                                    (str "</dev/tcp/localhost/" nrepl-port))
-                      true
-                      (catch Exception _ false)))
-        (verify-nrepl! nrepl-port)
+                   #(nrepl-working? nrepl-port))
         (finally
           (stop-process! tunnel-process))))
     (let [source (io/file (str work-dir) "src/com/example/app.clj")]
