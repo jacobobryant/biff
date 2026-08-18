@@ -34,13 +34,13 @@
   true)
 
 (def auth-config
-  (merge {:biff.auth/send-email     send-email
+  (merge {:biff.auth/send-email send-email
           ;; where to redirect after a successful signin
-          :biff.auth/app-path       "/app"
+          :biff.auth/app-path   "/app"
           ;; the base URL to use for email signin links
-          :biff.auth/base-url       "http://localhost:8080"
+          :biff.auth/base-url   "http://localhost:8080"
           ;; Set these keys to customize the signin page's appearance.
-          :biff.auth/app-name       "Biff Auth Demo"
+          :biff.auth/app-name   "Biff Auth Demo"
           ;; :biff.auth/logo-url      "https://example.com/logo.png"
           ;; :biff.auth/primary-color "blue"
           ;; :biff.auth/accent-color  "green"
@@ -81,7 +81,7 @@
          [:p "You are signed in. User ID: " [:code (str uid)]]
          [:form {:method "post" :action biff.auth/signout-link}
           [:input {:type  "hidden"
-                   :name :__anti-forgery-token
+                   :name  :__anti-forgery-token
                    :value (:anti-forgery-token req)}]
           [:button {:type  "submit"
                     :style {:padding       "0.5rem 1rem"
@@ -102,9 +102,9 @@
   {:status 404 :body "Not found"})
 
 (def handler
-  (let [app-routes  [["/" {:get home-page}]
-                     ["/app" {:get app-page}]]
-        all-routes  (into auth-routes app-routes)]
+  (let [app-routes [["/" {:get home-page}]
+                    ["/app" {:get app-page}]]
+        all-routes (into auth-routes app-routes)]
     (reitit-ring/ring-handler
      (reitit-ring/router all-routes)
      not-found)))
