@@ -5,7 +5,7 @@ Convenience functions or using in-memory scheduled tasks and queues.
 ### Dependency
 
 ```clojure
-com.biffweb/background {:mvn/version "2.0.0-rc15"}
+com.biffweb/background {:mvn/version "2.0.0-rc16"}
 ```
 
 ### Status
