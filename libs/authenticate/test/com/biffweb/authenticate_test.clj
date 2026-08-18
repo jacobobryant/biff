@@ -951,7 +951,9 @@
                              :biff.auth/code-signin-path "/signin"
                              :biff.auth/link-signin-path "/signin"})]
     (is (= 200 (:status result)))
-    (is (str/includes? (:body result) "test@example.com"))))
+    (is (str/includes? (:body result) "test@example.com"))
+    (is (str/includes? (:body result) "inputmode=\"numeric\""))
+    (is (not (str/includes? (:body result) "pattern=")))))
 
 (deftest signin-page-link-sent-view-test
   (let [result (signin-page {:params

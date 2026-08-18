@@ -5,13 +5,12 @@
            hato/hato                 {:mvn/version "1.0.0"}
            ring/ring-anti-forgery    {:mvn/version "1.4.0"}
            dev.onionpancakes/chassis {:mvn/version "1.0.365"}}
- :aliases {:run  {:extra-paths ["test" "demo" "dev"]
-                  :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
-                  :main-opts   ["-m" "com.biffweb.tasks.lib"]}
-           :demo {:extra-paths ["demo"]
 
-                  :extra-deps {ring/ring-jetty-adapter {:mvn/version "1.15.4"}
-                               ring/ring-defaults      {:mvn/version "0.7.0"}
-
-                               metosin/reitit-ring
-                               {:mvn/version "0.10.1"}}}}}
+ :aliases
+ {:run  {:extra-paths ["test" "demo" "dev"]
+         :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}
+                       ring/ring-jetty-adapter {:mvn/version "1.15.4"}
+                       ring/ring-defaults      {:mvn/version "0.7.0"}
+                       metosin/reitit-ring     {:mvn/version "0.10.1"}}
+         :main-opts   ["-m" "com.biffweb.tasks.lib"]}
+  :demo {:main-opts ["-m" "demo"]}}}

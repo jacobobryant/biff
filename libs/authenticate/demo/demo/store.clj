@@ -1,12 +1,6 @@
 (ns demo.store)
 
-(defn atom-store
-  "Returns a map of atom-backed storage handler functions for development
-   and testing. Each call creates a fresh store.
-
-   The returned map includes ::store with the underlying atom
-   for direct access in tests."
-  []
+(defn atom-store []
   (let [store (atom {:users {} :kv {}})]
     {::store store
 

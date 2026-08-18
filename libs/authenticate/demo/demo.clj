@@ -1,11 +1,12 @@
 (ns demo
-  (:require [com.biffweb.authenticate :as auth]
+  (:require [com.biffweb.authenticate :as biff.auth]
             [clojure.string :as str]
             [dev.onionpancakes.chassis.core :as chassis]
             [ring.adapter.jetty :as jetty]
             [ring.middleware.defaults :as defaults]
             [reitit.ring :as reitit-ring]
-            [demo.store :as store])
+            [demo.store :as store]
+            [nrepl.cmdline :as nrepl])
   (:gen-class))
 
 ;; Demo captcha: fails for fail@example.com, passes for everything else
@@ -15,7 +16,13 @@
                       str/lower-case)]
     {:success (not= email "fail@example.com")}))
 
-(defn send-email [_ctx {:keys [subject text to]}]
+(def demo-captcha-config
+  {:biff.auth/captcha-verify      demo-captcha-verify
+   :biff.auth/captcha-configured? (fn [_ctx] true)})
+
+(defn send-email [_ctx
+                  ;; also includes :template, :to, :code OR :url, :html
+                  {:keys [subject text to]}]
   (println)
   (println "---")
   (println "To:     " to)
@@ -26,16 +33,30 @@
   (println)
   true)
 
-;; Set up auth module
 (def auth-config
-  (merge (store/atom-store)
-         {:biff.auth/captcha-verify demo-captcha-verify
-          :biff.auth/send-email     send-email
+  (merge {:biff.auth/send-email     send-email
+          ;; where to redirect after a successful signin
           :biff.auth/app-path       "/app"
+          ;; the base URL to use for email signin links
           :biff.auth/base-url       "http://localhost:8080"
-          :biff.auth/app-name       "Biff Auth Demo"}))
+          ;; Set these keys to customize the signin page's appearance.
+          :biff.auth/app-name       "Biff Auth Demo"
+          ;; :biff.auth/logo-url      "https://example.com/logo.png"
+          ;; :biff.auth/primary-color "blue"
+          ;; :biff.auth/accent-color  "green"
+          ;; :biff.auth/font-family   "green"
+          }
+         ;; For a real app, you can use one of the provider captcha
+         ;; integrations:
+         ;; - biff.auth/turnstile-config
+         ;; - biff.auth/recaptcha-config
+         ;; - biff.auth/hcaptcha-config
+         demo-captcha-config))
 
-(def auth-module (auth/module auth-config))
+;; Config known at compile time can be passed to biff.auth/routes (or
+;; biff.auth/module) here; other config can be constructed at startup time and
+;; merged into incoming Ring requests. See (store/atom-store).
+(def auth-routes (biff.auth/routes auth-config))
 
 (defn render [hiccup-form]
   {:status  200
@@ -58,8 +79,9 @@
         [:body
          [:h1 "Welcome!"]
          [:p "You are signed in. User ID: " [:code (str uid)]]
-         [:form {:method "post" :action "/_biff/auth/signout"}
-          [:input {:type  "hidden"                  :name "__anti-forgery-token"
+         [:form {:method "post" :action biff.auth/signout-link}
+          [:input {:type  "hidden"
+                   :name :__anti-forgery-token
                    :value (:anti-forgery-token req)}]
           [:button {:type  "submit"
                     :style {:padding       "0.5rem 1rem"
@@ -79,23 +101,25 @@
 (defn not-found [_req]
   {:status 404 :body "Not found"})
 
-;; Build reitit router from auth module routes + app routes
-(defn make-handler []
-  (let [auth-routes (:biff.ring/routes auth-module)
-        app-routes  [["/" {:get home-page}]
+(def handler
+  (let [app-routes  [["/" {:get home-page}]
                      ["/app" {:get app-page}]]
         all-routes  (into auth-routes app-routes)]
     (reitit-ring/ring-handler
      (reitit-ring/router all-routes)
      not-found)))
 
+(defn wrap-merge [handler m]
+  (fn [request]
+    (handler (merge m request))))
+
 (defn -main [& _args]
   (let [port (Integer/parseInt (or (System/getenv "PORT") "8080"))]
-    (println (str "Starting demo server on port " port "..."))
-    (let [cookie-path   [:session :cookie-attrs :same-site]
-          site-defaults (-> defaults/site-defaults
-                            (assoc-in [:security :anti-forgery] true)
-                            (assoc-in cookie-path :lax))]
-      (jetty/run-jetty (defaults/wrap-defaults (make-handler)
-                                               site-defaults)
-                       {:port port :join? true}))))
+    (jetty/run-jetty (-> #'handler
+                         (defaults/wrap-defaults defaults/site-defaults)
+                         (wrap-merge (store/atom-store)))
+                     {:port port :join? false})
+    (println "Started webserver on http://localhost:" port)
+    (nrepl/-main "--port" "7888"
+                 "--middleware" (pr-str '[cider.nrepl/cider-middleware]))
+    @(promise)))

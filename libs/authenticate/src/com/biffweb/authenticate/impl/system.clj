@@ -21,7 +21,6 @@
               :email-validator     backend/email-valid?
               :primary-color       "#4F46E5"
               :accent-color        "#818CF8"
-              :font-family         "'Inter', system-ui, sans-serif"
               :max-failed-attempts 5
               :code-expiry-minutes 10
               :link-expiry-minutes 60

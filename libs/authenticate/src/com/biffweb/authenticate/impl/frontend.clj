@@ -120,7 +120,7 @@
 ;;;; Page rendering ============================================================
 
 (defn- base-page
-  [{:biff.auth/keys [app-name font-family captcha-head] :as opts} & content]
+  [{:biff.auth/keys [app-name captcha-head] :as opts} & content]
   [:html {:lang "en"}
    [:head
     [:meta {:charset "utf-8"}]
@@ -129,7 +129,7 @@
     [:style (str "*, *::before, *::after { box-sizing: border-box; } "
                  "body { margin: 0; padding: 0; }")]
     (captcha-head opts)]
-   [:body {:style {:font-family     font-family
+   [:body {:style {:font-family     "'Inter', system-ui, sans-serif"
                    :background      "#f3f4f6"
                    :color           "#111827"
                    :min-height      "100vh"
@@ -228,7 +228,7 @@
               :id           "code"
               :required     true
               :autocomplete "one-time-code"
-              :pattern      "[0-9]{6}"
+              :inputmode    "numeric"
               :maxlength    "6"
               :placeholder  "000000"
               :style        {:width          "100%"
