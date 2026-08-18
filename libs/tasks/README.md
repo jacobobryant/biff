@@ -27,7 +27,7 @@ Includes tasks for:
 ### Dependency
 
 ```clojure
-com.biffweb/tasks {:mvn/version "2.0.0-rc16"}
+com.biffweb/tasks {:mvn/version "2.0.0-rc17"}
 ```
 
 ### Status
@@ -52,7 +52,7 @@ application projects) or `-m com.biffweb.tasks.lib` (for library projects):
 ```clojure
 :aliases
 {:run {:extra-paths ["test"]
-       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.0-rc16"}
+       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.0-rc17"}
                      ...}
        ;; Replace with com.biffweb.tasks.lib for library projects
        :main-opts   ["-m" "com.biffweb.tasks.app"]}}
