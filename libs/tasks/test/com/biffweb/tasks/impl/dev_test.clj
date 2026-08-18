@@ -11,7 +11,7 @@
         path       (.getPath (io/file root "target/resources"))
         calls      (atom [])]
     (with-redefs [util/all-deps-paths (constantly [path])
-                  util/shell          (fn [& args]
+                  util/shell-inherit  (fn [& args]
                                         (swap! calls conj (vec args)))]
       (dev/dev))
     (is (.isDirectory (io/file path)))

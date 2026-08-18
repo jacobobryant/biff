@@ -41,7 +41,7 @@
     (doseq [path missing-paths]
       (io/make-parents (io/file path "_")))
     (if (not-empty missing-paths)
-      (util/shell "clojure" "-M:run" "dev")
+      (util/shell-inherit "clojure" "-M:run" "dev")
       (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
         (future
           (run-with-printed-exceptions

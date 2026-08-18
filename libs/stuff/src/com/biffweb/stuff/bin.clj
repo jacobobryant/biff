@@ -222,10 +222,16 @@
 (defn- github-release-urls [fixture-path github-release-url]
   (let [fixture-file (if-let [resource (io/resource fixture-path)]
                        (io/file (.toURI resource))
-                       (let [separator (.lastIndexOf fixture-path "/")
-                             parent    (subs fixture-path 0 separator)
-                             filename  (subs fixture-path (inc separator))]
-                         (io/file (.toURI (io/resource parent)) filename)))]
+                       (let [separator  (.lastIndexOf fixture-path "/")
+                             parent     (subs fixture-path 0 separator)
+                             source-dir (reduce (fn [file _]
+                                                  (.getParentFile file))
+                                                (io/file (.toURI
+                                                          (io/resource parent)))
+                                                (str/split parent #"/"))]
+                         (io/file (.getParentFile source-dir)
+                                  "test"
+                                  fixture-path)))]
     (when-not (.exists fixture-file)
       (let [urls (->> (slurp github-release-url)
                       (re-seq #"\"browser_download_url\"\s*:\s*\"([^\"]+)\"")

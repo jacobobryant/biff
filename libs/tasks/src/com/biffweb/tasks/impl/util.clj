@@ -124,6 +124,12 @@
       (.flush ^java.io.Writer *out*)
       (.flush ^java.io.Writer *err*))))
 
+(defn shell-inherit [& args]
+  (apply (requiring-resolve 'babashka.process/shell)
+         {:extra-env *shell-env*
+          :inherit   true}
+         args))
+
 (defn- get-env-from [cmd]
   (let [{:keys [exit out]} (sh/sh "sh" "-c" (str cmd "; printenv"))]
     (when (= 0 exit)
