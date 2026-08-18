@@ -24,7 +24,7 @@ Includes tasks for:
   ([example](docs/api/com.biffweb.tasks.md)), publish to Clojars with
   [deps-deploy](https://github.com/slipset/deps-deploy).
 
-[![Deploy an app with biff.tasks](https://github.com/user-attachments/assets/2b2432e8-c7bb-467b-a4be-5e5f4eb4a054)](https://vimeo.com/1219253956)
+[![Deploy an app with biff.tasks](https://github.com/user-attachments/assets/2b2432e8-c7bb-467b-a4be-5e5f4eb4a054)](https://biffweb.com/p/deploy-biff-tasks/)
 
 ### Dependency
 
