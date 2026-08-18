@@ -28,7 +28,7 @@
       (prn :error-while-loading (::reload/error-ns tracker))
       (repl/pst e)
       e)
-    :ok))
+    (doto :ok prn)))
 
 (defn- classpath-entries []
   (->> (str/split (System/getProperty "java.class.path")
