@@ -147,7 +147,7 @@ maps are exposed as `com.biffweb.tasks/app-tasks` and
 (def tasks
   (merge biff.tasks/app-tasks
          {"my-task" {:task 'tasks.my-task/my-task
-                     :doc "Do something."}}))
+                     :doc  "Do something."}}))
 
 (defn -main [& args]
   (apply biff.run/main tasks args))
@@ -168,7 +168,7 @@ maps are exposed as `com.biffweb.tasks/app-tasks` and
 
 ;; deps.edn
 :aliases
-{:run {:paths ["dev" "test" ...]
+{:run {:paths     ["dev" "test" ...]
        :main-opts ["-m" "tasks"]
        ...}}
 ```
@@ -191,7 +191,14 @@ file your agent uses:
 
 ## Recommended tool config
 
-I use these configurations in my own projects:
+Here are some default tool configuration files you can use as a starting point:
+
+`resources/tailwind.css`:
+
+```css
+@import "tailwindcss";
+@source "../src/**/*.clj";
+```
 
 `.github/workflows/code-quality.yml`:
 
@@ -236,12 +243,9 @@ jobs:
 
 ```clojure
 {:linters {:line-length {:level           :warning
-                         :max-line-length 80
+                         :max-line-length 100
                          :exclude-urls    true}}}
 ```
-
-(I would use 100 characters except I do a lot of coding on my tablet which only
-fits 80.)
 
 I also have a [custom, vibe-coded `lint` task](/dev/tasks/lint.clj) which
 ensures that form pairs on separate lines are separated with blank lines:
