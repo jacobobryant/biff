@@ -61,7 +61,7 @@
 (defn refresh
   "Similar to c.t.n.r/refresh but doesn't unload namespaces first."
   []
-  (let [directories  (classpath-directories (util/all-deps-paths))
+  (let [directories  (classpath-directories (util/src-paths))
         new-tracker  (-> (dir/scan-dirs @global-tracker directories)
                          remove-disabled
                          (assoc ::track/unload []))

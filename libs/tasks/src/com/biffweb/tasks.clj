@@ -18,6 +18,7 @@
 
      Included tasks:
 
+     - add
      - code-quality (see `app-code-quality`)
      - css
      - deploy
@@ -44,6 +45,7 @@
 
      Included tasks:
 
+     - add
      - code-quality (see `lib-code-quality`)
      - docs
      - format
@@ -165,7 +167,7 @@
    - :biff.tasks/main-ns (required)
 
    Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
-   `css --watch` task in the background. Starts another file watcher that
+   `css --watch=always` task in the background. Starts another file watcher that
    evaluates source files and their dependants when saved.
 
    Then calls the `-main` function in the `main-ns` namespace."

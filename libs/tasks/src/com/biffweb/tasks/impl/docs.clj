@@ -52,11 +52,14 @@
          (mapv #(render-arglist var-name %))
          (str/join "\n"))))
 
+(defn- escape-var-name [var-name]
+  (str/replace (str var-name) "*" "\\*"))
+
 (defn- var-section
   [{:keys [doc line] var-name :name :as var-meta} source-link]
   (let [signature (signature-lines var-meta)]
     (str "### "
-         var-name
+         (escape-var-name var-name)
          "\n\n"
          "[view source]("
          (if line

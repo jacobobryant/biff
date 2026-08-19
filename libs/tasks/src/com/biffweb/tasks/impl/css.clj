@@ -1,6 +1,7 @@
 (ns com.biffweb.tasks.impl.css
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as sh]
+            [clojure.string :as str]
             [com.biffweb.stuff.bin :as stuff.bin]
             [com.biffweb.tasks.impl.util :as util]))
 
@@ -55,8 +56,11 @@
     (let [{:biff.tasks/keys [css-output-path tailwind-version]}
           (util/read-config)
 
-          command (ensure-tailwind-binary! tailwind-version)]
-      (apply util/shell
+          command (ensure-tailwind-binary! tailwind-version)
+          shell   (if (some #(str/starts-with? % "--watch") tailwind-args)
+                    util/shell-inherit
+                    util/shell)]
+      (apply shell
              (concat [command]
                      ["-i" "resources/tailwind.css" "-o" css-output-path]
                      tailwind-args)))))

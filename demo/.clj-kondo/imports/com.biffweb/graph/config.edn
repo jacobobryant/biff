@@ -1,1 +1,3 @@
-{:lint-as {com.biffweb.graph/defresolver clojure.core/defn}}
+{:hooks
+ {:analyze-call
+  {com.biffweb.graph/defresolver hooks.biff.graph/defresolver}}}

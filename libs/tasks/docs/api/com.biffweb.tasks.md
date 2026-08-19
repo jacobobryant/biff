@@ -4,7 +4,7 @@
 A collection of CLI tasks for use with biff.run. See docs/config.md.
 ```
 
-### *extra-config*
+### \*extra-config\*
 
 [view source](../../src/com/biffweb/tasks.clj#L7)
 
@@ -21,6 +21,7 @@ A collection of tasks for applications.
 
 Included tasks:
 
+- add
 - code-quality (see `app-code-quality`)
 - css
 - deploy
@@ -43,13 +44,14 @@ these tasks.
 
 ### lib-tasks
 
-[view source](../../src/com/biffweb/tasks.clj#L41)
+[view source](../../src/com/biffweb/tasks.clj#L42)
 
 ```
 A collection of tasks for libraries.
 
 Included tasks:
 
+- add
 - code-quality (see `lib-code-quality`)
 - docs
 - format
@@ -65,7 +67,7 @@ these tasks.
 
 ### agent-refresh
 
-[view source](../../src/com/biffweb/tasks.clj#L60)
+[view source](../../src/com/biffweb/tasks.clj#L62)
 
 ```
 (agent-refresh)
@@ -82,7 +84,7 @@ Returns a map containing either `:status :ok` or `:status :error, :exception
 
 ### add
 
-[view source](../../src/com/biffweb/tasks.clj#L72)
+[view source](../../src/com/biffweb/tasks.clj#L74)
 
 ```
 (add & args)
@@ -97,7 +99,7 @@ Usage:
 
 ### app-code-quality
 
-[view source](../../src/com/biffweb/tasks.clj#L82)
+[view source](../../src/com/biffweb/tasks.clj#L84)
 
 ```
 (app-code-quality)
@@ -117,7 +119,7 @@ unstaged changes (e.g. from formatting changes etc).
 
 ### lib-code-quality
 
-[view source](../../src/com/biffweb/tasks.clj#L97)
+[view source](../../src/com/biffweb/tasks.clj#L99)
 
 ```
 (lib-code-quality)
@@ -138,7 +140,7 @@ unstaged changes (e.g. from formatting changes etc).
 
 ### css
 
-[view source](../../src/com/biffweb/tasks.clj#L113)
+[view source](../../src/com/biffweb/tasks.clj#L115)
 
 ```
 (css & args)
@@ -159,7 +161,7 @@ Writes the generated CSS to `css-output-path`. `args` are passed to the
 
 ### deploy
 
-[view source](../../src/com/biffweb/tasks.clj#L129)
+[view source](../../src/com/biffweb/tasks.clj#L131)
 
 ```
 (deploy & args)
@@ -195,7 +197,7 @@ The deployed application must:
 
 ### dev
 
-[view source](../../src/com/biffweb/tasks.clj#L160)
+[view source](../../src/com/biffweb/tasks.clj#L162)
 
 ```
 (dev)
@@ -207,7 +209,7 @@ Reads the following config keys:
 - :biff.tasks/main-ns (required)
 
 Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
-`css --watch` task in the background. Starts another file watcher that
+`css --watch=always` task in the background. Starts another file watcher that
 evaluates source files and their dependants when saved.
 
 Then calls the `-main` function in the `main-ns` namespace.
@@ -215,7 +217,7 @@ Then calls the `-main` function in the `main-ns` namespace.
 
 ### docs
 
-[view source](../../src/com/biffweb/tasks.clj#L175)
+[view source](../../src/com/biffweb/tasks.clj#L177)
 
 ```
 (docs)
@@ -235,7 +237,7 @@ Each namespace will be required and thus must be on the classpath.
 
 ### format
 
-[view source](../../src/com/biffweb/tasks.clj#L190)
+[view source](../../src/com/biffweb/tasks.clj#L192)
 
 ```
 (format)
@@ -258,7 +260,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### lint
 
-[view source](../../src/com/biffweb/tasks.clj#L208)
+[view source](../../src/com/biffweb/tasks.clj#L210)
 
 ```
 (lint)
@@ -282,7 +284,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L227)
+[view source](../../src/com/biffweb/tasks.clj#L229)
 
 ```
 (nrepl & args)
@@ -302,7 +304,7 @@ If the first arg is `--`, calls `-main` without setting `--port` or
 
 ### prod-logs
 
-[view source](../../src/com/biffweb/tasks.clj#L242)
+[view source](../../src/com/biffweb/tasks.clj#L244)
 
 ```
 (prod-logs & args)
@@ -320,7 +322,7 @@ Accepts a single, optional `n-lines` CLI argument, default 300. Runs
 
 ### prod-nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L255)
+[view source](../../src/com/biffweb/tasks.clj#L257)
 
 ```
 (prod-nrepl & args)
@@ -339,7 +341,7 @@ The server is expected to already have an nREPL server running on
 
 ### prod-restart
 
-[view source](../../src/com/biffweb/tasks.clj#L269)
+[view source](../../src/com/biffweb/tasks.clj#L271)
 
 ```
 (prod-restart & args)
@@ -356,7 +358,7 @@ Runs `systemctl restart` on the server.
 
 ### prod-setup
 
-[view source](../../src/com/biffweb/tasks.clj#L281)
+[view source](../../src/com/biffweb/tasks.clj#L283)
 
 ```
 (prod-setup & args)
@@ -402,7 +404,7 @@ distros.
 
 ### publish
 
-[view source](../../src/com/biffweb/tasks.clj#L322)
+[view source](../../src/com/biffweb/tasks.clj#L324)
 
 ```
 (publish & args)
@@ -428,7 +430,7 @@ And the following optional keys:
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L343)
+[view source](../../src/com/biffweb/tasks.clj#L345)
 
 ```
 (init)
@@ -463,7 +465,7 @@ Then runs the `update --clj-kondo-files-only` task.
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L373)
+[view source](../../src/com/biffweb/tasks.clj#L375)
 
 ```
 (test & args)
@@ -475,7 +477,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L380)
+[view source](../../src/com/biffweb/tasks.clj#L382)
 
 ```
 (uberjar)
@@ -494,7 +496,7 @@ include "resources" in their name are copied into the jar.
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L394)
+[view source](../../src/com/biffweb/tasks.clj#L396)
 
 ```
 (update & args)

@@ -38,5 +38,20 @@
       (is (= (str "resources/tailwind.css doesn't exist, "
                   "skipping CSS compilation"
                   (System/lineSeparator))
-             (with-out-str (css/css "--watch"))))
+             (with-out-str (css/css "--watch=always"))))
       (is (false? @shell-called?)))))
+
+(deftest watch-mode-inherits-process-output
+  (let [calls  (atom [])
+        config {:biff.tasks/css-output-path  "main.css"
+                :biff.tasks/tailwind-version version}]
+    (with-redefs [io/file                     (constantly
+                                               (proxy [java.io.File] ["input"]
+                                                 (exists [] true)))
+                  css/ensure-tailwind-binary! (constantly "tailwindcss")
+                  tasks.util/read-config      (constantly config)
+                  tasks.util/shell            #(swap! calls conj [:shell %&])
+                  tasks.util/shell-inherit    #(swap! calls conj [:inherit %&])]
+      (css/css "--minify")
+      (css/css "--watch=always"))
+    (is (= [:shell :inherit] (mapv first @calls)))))

@@ -1,6 +1,6 @@
 # com.biffweb.ring API
 
-### *testing*
+### \*testing\*
 
 [view source](../../src/com/biffweb/ring.clj#L36)
 
