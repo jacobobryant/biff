@@ -56,7 +56,14 @@
                              :aliases {:dev  {:extra-paths ["dev" "src"]}
                                        :test {:extra-paths ["test"]}}})]
     (is (= ["src" "resources"] (util/deps-paths)))
-    (is (= ["src" "resources" "dev" "test"] (util/all-deps-paths)))))
+    (is (= ["src" "resources" "dev" "test"] (util/all-deps-paths)))
+    (is (= ["src" "dev" "test"] (util/src-paths)))))
+
+(deftest src-paths-test
+  (with-redefs [util/all-deps-paths
+                (constantly ["src" "target/classes" "resources"
+                             "resources/public" "targeted" "resources-dev"])]
+    (is (= ["src"] (util/src-paths)))))
 
 (deftest ensure-prod-alias-test
   (doseq [deps [{:aliases {}}

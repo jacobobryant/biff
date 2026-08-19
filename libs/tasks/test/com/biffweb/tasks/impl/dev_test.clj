@@ -10,9 +10,9 @@
                              "biff-dev-test" attributes))
         path       (.getPath (io/file root "target/resources"))
         calls      (atom [])]
-    (with-redefs [util/all-deps-paths (constantly [path])
-                  util/shell-inherit  (fn [& args]
-                                        (swap! calls conj (vec args)))]
+    (with-redefs [util/src-paths     (constantly [path])
+                  util/shell-inherit (fn [& args]
+                                       (swap! calls conj (vec args)))]
       (dev/dev))
     (is (.isDirectory (io/file path)))
     (is (= [["clojure" "-M:run" "dev"]] @calls))))

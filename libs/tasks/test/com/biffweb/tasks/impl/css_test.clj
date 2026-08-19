@@ -38,5 +38,5 @@
       (is (= (str "resources/tailwind.css doesn't exist, "
                   "skipping CSS compilation"
                   (System/lineSeparator))
-             (with-out-str (css/css "--watch"))))
+             (with-out-str (css/css "--watch=always"))))
       (is (false? @shell-called?)))))

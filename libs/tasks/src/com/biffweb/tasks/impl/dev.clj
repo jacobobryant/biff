@@ -36,7 +36,7 @@
      :watcher  watcher}))
 
 (defn dev []
-  (let [paths         (util/all-deps-paths)
+  (let [paths         (util/src-paths)
         missing-paths (filterv #(not (.exists (io/file %))) paths)]
     (doseq [path missing-paths]
       (io/make-parents (io/file path "_")))
@@ -45,7 +45,7 @@
       (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
         (future
           (run-with-printed-exceptions
-           #(biff.run/run-task "css" "--watch")))
+           #(biff.run/run-task "css" "--watch=always")))
         (start-file-watcher! {:directories paths
                               :on-change   #'reload/refresh})
         ((requiring-resolve (symbol (str main-ns) "-main")))))))

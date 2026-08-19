@@ -23,7 +23,7 @@
                       :args []}
    'css              {:fn   tasks/css
                       :impl 'com.biffweb.tasks.impl.css/css
-                      :args ["--watch"]}
+                      :args ["--watch=always"]}
    'deploy           {:fn   tasks/deploy
                       :impl 'com.biffweb.tasks.impl.deploy/deploy
                       :args ["--soft"]}

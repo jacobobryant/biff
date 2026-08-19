@@ -212,6 +212,12 @@
           (distinct)
           (concat paths (mapcat :extra-paths (vals aliases))))))
 
+(defn src-paths []
+  (into []
+        (remove #(or (str/starts-with? % "target")
+                     (str/starts-with? % "resources")))
+        (all-deps-paths)))
+
 (defn project-files []
   (let [root    (project-root)
         tracked (try
