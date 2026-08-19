@@ -160,22 +160,37 @@
     (verify! "code-quality runs tests"
              (str/includes? code-quality-output "1 tests, 1 assertions")))
   (fs/delete-tree (fs/path work-dir "target/resources"))
-  (let [source      (io/file (str work-dir) "src/com/example/app.clj")
-        source-code (slurp source)
-        dev-process (process! work-dir "clojure" "-M:run" "dev")]
+  (let [source        (io/file (str work-dir) "src/com/example/app.clj")
+        source-code   (slurp source)
+        dev-out       (io/file (str work-dir) "target/dev.out")
+        dev-err       (io/file (str work-dir) "target/dev.err")
+        tailwind-runs #(count (re-seq #"Done in"
+                                      (str (when (.exists dev-out)
+                                             (slurp dev-out))
+                                           (when (.exists dev-err)
+                                             (slurp dev-err)))))
+        dev-process   (process/process ["clojure" "-M:run" "dev"]
+                                       {:dir (str work-dir)
+                                        :in  ""
+                                        :out dev-out
+                                        :err dev-err})]
     (try
       (wait-for! "the dev server"
                  #(try
                     (= "ok" (output! work-dir "curl" "-fsS"
                                      "http://localhost:18080"))
                     (catch Exception _ false)))
-      (spit source (str/replace source-code "(atom \"ok\")"
-                                "(atom \"dev-ok\")"))
-      (wait-for! "the dev server to reload source changes"
-                 #(try
-                    (= "dev-ok" (output! work-dir "curl" "-fsS"
-                                         "http://localhost:18080"))
-                    (catch Exception _ false)))
+      (wait-for! "initial Tailwind output" #(pos? (tailwind-runs)))
+      (let [initial-tailwind-runs (tailwind-runs)]
+        (spit source (str/replace source-code "(atom \"ok\")"
+                                  "(atom \"dev-ok\")"))
+        (wait-for! "the dev server to reload source changes"
+                   #(try
+                      (= "dev-ok" (output! work-dir "curl" "-fsS"
+                                           "http://localhost:18080"))
+                      (catch Exception _ false)))
+        (wait-for! "Tailwind output after recompiling a source change"
+                   #(< initial-tailwind-runs (tailwind-runs))))
       (finally
         (spit source source-code)
         (stop-process! dev-process))))

@@ -124,6 +124,8 @@
       (.flush ^java.io.Writer *out*)
       (.flush ^java.io.Writer *err*))))
 
+;; this makes the output print to the console immediately instead of buffering,
+;; but it also means callers can't capture the output.
 (defn shell-inherit [& args]
   (apply (requiring-resolve 'babashka.process/shell)
          {:extra-env *shell-env*
