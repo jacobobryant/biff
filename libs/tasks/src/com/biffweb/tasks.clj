@@ -18,6 +18,7 @@
 
      Included tasks:
 
+     - add
      - code-quality (see `app-code-quality`)
      - css
      - deploy
@@ -44,6 +45,7 @@
 
      Included tasks:
 
+     - add
      - code-quality (see `lib-code-quality`)
      - docs
      - format

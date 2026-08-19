@@ -13,9 +13,10 @@ Includes tasks for:
   [clj-kondo](https://github.com/clj-kondo/clj-kondo), run tests with
   [kaocha](https://github.com/lambdaisland/kaocha).
 
-- development: run your project with eval-on-file-save, compile CSS with
-  Tailwind, update dependencies with [antq](https://github.com/liquidz/antq),
-  start a local nREPL server, add dependencies to deps.edn.
+- development: run your project with eval-on-file-save, add new dependencies to
+  deps.edn, update old dependencies with
+  [antq](https://github.com/liquidz/antq), compile CSS with Tailwind, start a
+  local nREPL server.
 
 - production: provision an Ubuntu server, deploy to that server, tail logs from
   the server, start an nREPL connection to the server.
