@@ -12,7 +12,7 @@ Features:
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "2.0.0-rc18"}
+com.biffweb/ring {:mvn/version "2.0.0-rc19"}
 ```
 
 If you don't want to use Jetty, you can do `com.biffweb/ring {:mvn/version ...,
