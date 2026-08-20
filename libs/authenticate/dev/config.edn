@@ -1,2 +1,3 @@
 #merge [#include "../../../dev/config.edn"
-        {:biff.tasks/lib-name "authenticate"}]
+        {:biff.tasks/lib-name        "authenticate"
+         :biff.tasks/docs-namespaces [com.biffweb.authenticate]}]

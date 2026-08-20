@@ -1,6 +1,6 @@
 # Biff 2 (WIP)
 
-See [Biff 2.0 sneak peak](biffweb.com/p/biff2/).
+See [Biff 2.0 sneak peak](https://biffweb.com/p/biff2/).
 
 This repo contains the code for Biff 2.0: libraries and a demo app (though not
 the starter app, which will be in a separate repo). I've completed a "rough
@@ -35,7 +35,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the released libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc19"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc20"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. After all the libs are published, the
@@ -55,11 +55,11 @@ Released:
 - [biff.run](/libs/run/)
 - [biff.tasks](/libs/tasks/)
 - [biff.background](/libs/background/)
+- [biff.authenticate](/libs/authenticate)
 
-Remaining (see [libs/](/libs/)):
+Remaining:
 
-- biff.authenticate
-- biff.admin
+- [biff.admin](/libs/admin)
 - [demo app](/demo)
 
 And then I have a few more things to make that won't be/aren't yet in this repo:

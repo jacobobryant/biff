@@ -12,7 +12,7 @@ applications.
 ### Dependency
 
 ```clojure
-com.biffweb/xtdb {:mvn/version "2.0.0-rc19"}
+com.biffweb/xtdb {:mvn/version "2.0.0-rc20"}
 ```
 
 biff.xtdb depends on XTDB 2.1.0 which requires Java <25. Per the XTDB docs,
@@ -137,7 +137,7 @@ to an `authorize` function which you define:
 ```
 
 See [`authorized-write`](docs/api/com.biffweb.xtdb.md#authorized-write) and
-[`:biff.xtdb/authorize`](docs/reference/library-schema.md#biff-xtdb-authorize).
+[`:biff.xtdb/authorize`](docs/reference/library-schema.md#biffxtdbauthorize).
 
 ### biff.graph resolvers
 

@@ -23,7 +23,7 @@ projects=(
   "$root/libs/run"
   "$root/libs/tasks"
   "$root/libs/background"
-  #"$root/libs/authenticate"
+  "$root/libs/authenticate"
   #"$root/libs/admin"
   #"$root"
 )

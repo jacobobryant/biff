@@ -195,17 +195,20 @@
                              "ORDER BY created_at ASC")
                         email)
 
-        user-row   (some #(when (= email (or (:email %) (:user/email %))) %)
-                         users)
-        admin-page (http-get "/_biff/admin" :cookie cookie)]
+        user-row          (some #(when (= email (or (:email %)
+                                                    (:user/email %))) %)
+                                users)
+        admin-page        (http-get "/_biff/admin" :cookie cookie)
+        signout           (http-post (routes/auth-signout) :cookie cookie)
+        signed-out-cookie (response-cookie cookie signout)
+        signed-out-app    (http-get "/app" :cookie signed-out-cookie)]
     (is (= 200 (:status home)))
     (is (str/includes? (:body home) "Biff Demo App"))
     (is (str/includes? (:body home) "/signin"))
 
     (is (= 303 (:status send-code)))
-    (is (str/includes? (get-in send-code [:headers "location"]) "verify=code"))
+    (is (str/includes? (get-in send-code [:headers "location"]) "sent-to="))
     (is (= email (:to sent-email)))
-    (is (= :signin-code (:template sent-email)))
 
     (is (= 303 (:status verify-code)))
     (is (= "/app" (get-in verify-code [:headers "location"])))
@@ -216,8 +219,12 @@
     (is (= 5 (count todos)))
     (is (= 1 (count (filter :todo/archived todos))))
     (is (= 200 (:status admin-page)))
-    (is (= 200 (:status admin-page)))
-    (is (str/includes? (:body admin-page) "Admin Setup"))))
+    (is (str/includes? (:body admin-page) "Admin Setup"))
+
+    (is (= 303 (:status signout)))
+    (is (= "/" (get-in signout [:headers "location"])))
+    (is (= 303 (:status signed-out-app)))
+    (is (= "/signin" (get-in signed-out-app [:headers "location"])))))
 
 (deftest todo-mutations-work-over-http-test
   (let [{:keys [cookie] :as _signin} (sign-in!)

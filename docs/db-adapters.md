@@ -24,7 +24,7 @@ should provide at least these things:
   reference](/libs/core/docs/reference/schema.md).
 
 - The module should also include a
-  [`:biff.fx/handlers`](/libs/fx/docs/reference-schema.md#biff-fx-handlers) map
+  [`:biff.fx/handlers`](/libs/fx/docs/reference/schema.md#bifffxhandlers) map
   containing function(s) for reading/writing to the database. The value of
   `:biff.fx/handlers` can also be exposed as a standalone `fx-handlers` var for
   biff.fx users who aren't using biff.core.
@@ -52,7 +52,7 @@ should provide at least these things:
 
 - There should be a function that generates biff.graph resolvers based on an
   application's database schema, as [described
-  here](/docs/graph/README.md#defining-resolvers).
+  here](/libs/graph/README.md#defining-resolvers).
 
 If you provide wrapper functions for reading/writing, these should generally
 take a `ctx` map as the first parameter which can be expected to contain any

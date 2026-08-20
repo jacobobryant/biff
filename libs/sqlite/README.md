@@ -30,7 +30,7 @@ This library wraps [next.jdbc](https://github.com/seancorfield/next-jdbc) and
 ### Dependency
 
 ```clojure
-com.biffweb/sqlite {:mvn/version "2.0.0-rc19"}
+com.biffweb/sqlite {:mvn/version "2.0.0-rc20"}
 ```
 
 ### Status
@@ -188,7 +188,7 @@ and it will pass a "diff" value to an `authorize` function which you define:
 ```
 
 See [`authorized-write`](docs/api/com.biffweb.sqlite.md#authorized-write) and
-[`:biff.sqlite/authorize`](docs/reference/library-schema.md#biff-sqlite-authorize).
+[`:biff.sqlite/authorize`](docs/reference/library-schema.md#biffsqliteauthorize).
 
 ### Transactions
 

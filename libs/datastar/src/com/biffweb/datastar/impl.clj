@@ -66,6 +66,7 @@
                               request-method
                               query-params
                               body-params
+                              json-params
                               body
                               params]}]
   (cond
@@ -77,10 +78,11 @@
             (json/read-str :key-fn parse-signal-str))
 
     :else
-    (walk/postwalk #(cond-> %
-                      (map? %)
-                      (update-keys (comp parse-signal-str name)))
-                   (first (filterv map? [body-params body params])))))
+    (walk/postwalk
+     #(cond-> %
+        (map? %)
+        (update-keys (comp parse-signal-str name)))
+     (first (filterv map? [body-params json-params body params])))))
 
 (defn- merge-signals [request]
   (let [signals    (parse-signals request)
@@ -207,18 +209,15 @@
                                         (hash body)
                                         previous-body-hash)
 
-                   _
-                   (when (not= body-hash previous-body-hash)
-                     (->> (patch-elements-event body)
-                          (compress-chunk compressed-buffer brotli-stream)
-                          (.write response-output))
-                     (.flush response-output))
+                   _ (when (not= body-hash previous-body-hash)
+                       (->> (patch-elements-event body)
+                            (compress-chunk compressed-buffer brotli-stream)
+                            (.write response-output))
+                       (.flush response-output))
 
-                   observed-epoch
-                   (wait-for-refresh request observed-epoch)
-
-                   elapsed-ms (- (System/currentTimeMillis)
-                                 iteration-start-ms)]
+                   observed-epoch (wait-for-refresh request observed-epoch)
+                   elapsed-ms     (- (System/currentTimeMillis)
+                                     iteration-start-ms)]
                (when (< elapsed-ms rate-limit-ms)
                  (Thread/sleep (- rate-limit-ms elapsed-ms)))
                (recur body-hash observed-epoch))))

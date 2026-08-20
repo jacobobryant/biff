@@ -1,6 +1,7 @@
 {:paths ["src"]
  :deps  {org.clojure/clojure       {:mvn/version "1.12.5"}
          com.biffweb/fx            {:local/root "../fx"}
+         com.biffweb/stuff         {:local/root "../stuff"}
          tick/tick                 {:mvn/version "1.0.1"}
          hato/hato                 {:mvn/version "1.0.0"}
          ring/ring-anti-forgery    {:mvn/version "1.4.0"}

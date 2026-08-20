@@ -1,8 +1,30 @@
 (ns com.biffweb.stuff-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
+            [com.biffweb.stuff :as stuff]
             [com.biffweb.stuff.bin :as stuff.bin]
             [com.biffweb.stuff.secret :as stuff.secret]))
+
+(deftest wrap-params-normalizes-and-combines-params
+  (let [request {:query-params {"query"  "query"
+                                "shared" "query"}
+                 :params       {'generic "generic"
+                                "shared" "generic"}
+                 :form-params  {"form" "form"}
+                 :json-params  {"json" {"nested" true
+                                        1        :ignored}}
+                 :body         {"body" "body"}
+                 :body-params  {:shared "body"
+                                :final  "final"}}
+        result  ((stuff/wrap-params identity) request)]
+    (is (= {:query   "query"
+            :generic "generic"
+            :form    "form"
+            :json    {:nested true}
+            :body    "body"
+            :shared  "generic"
+            :final   "final"}
+           (:biff.stuff/params result)))))
 
 (deftest secret-delay-redacts-its-value
   (let [secret (stuff.secret/secret-delay "super-secret")]
