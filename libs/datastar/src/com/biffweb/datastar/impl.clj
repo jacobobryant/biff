@@ -72,7 +72,7 @@
     (not= "true" (get headers "datastar-request"))
     nil
 
-    (= request-method :get)
+    (contains? #{:get :delete} request-method)
     (some-> (get query-params "datastar")
             (json/read-str :key-fn parse-signal-str))
 

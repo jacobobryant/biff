@@ -54,6 +54,15 @@
                (:biff.datastar/signals request)))
         (is (= tab-id (:biff.datastar/tab-id request)))
         (is (= "token" (get-in request [:headers "x-csrf-token"])))))
+    (testing "parses DELETE signals from query parameters"
+      (let [request (wrapped
+                     {:request-method :delete
+                      :headers        {"datastar-request" "true"}
+                      :query-params   {"datastar"
+                                       (datastar/signals-json
+                                        {:profile/display-name "Grace"})}})]
+        (is (= {:profile/display-name "Grace"}
+               (:biff.datastar/signals request)))))
     (testing "parses non-GET body parameters recursively"
       (let [request (wrapped
                      {:request-method :post
