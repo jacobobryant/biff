@@ -332,3 +332,6 @@
                     "link"         (render-link-sent ctx)
                     "link-confirm" (render-link-confirm ctx)
                     (render-tabs ctx))))])}))
+
+(def routes
+  [[routes/default-signin-page {:get signin-page}]])

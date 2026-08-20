@@ -7,7 +7,8 @@
             [com.biffweb.authenticate.impl.routes :as routes]
             [dev.onionpancakes.chassis.core :as chassis])
   (:import [java.security MessageDigest]
-           [java.util Base64]))
+           [java.util Base64]
+           [java.util.concurrent.locks ReentrantLock]))
 
 (def record-schema
   {:biff-auth-signin/code-hash       :string
@@ -22,22 +23,6 @@
 
 (defn normalize-email [email]
   (some-> email str/trim str/lower-case))
-
-(defn email-valid? [_ctx email]
-  (and (string? email)
-       (re-matches #".+@.+\..+" email)
-       (not (re-find #"\s" email))))
-
-(defn new-code [_ctx length]
-  (let [rng (java.security.SecureRandom.)]
-    (format (str "%0" length "d")
-            (.nextInt rng (dec (int (Math/pow 10 length)))))))
-
-(defn new-link-token [_ctx n-bytes]
-  (let [bytes (byte-array n-bytes)
-        rng   (java.security.SecureRandom.)]
-    (.nextBytes rng bytes)
-    (apply str (map #(format "%02x" %) bytes))))
 
 (defn hash-secret [secret]
   (let [digest (.digest (MessageDigest/getInstance "SHA-256")
@@ -360,3 +345,30 @@
   {:status  303
    :headers {"location" "/"}
    :session (dissoc session :uid)})
+
+;; Prevent attackers from getting around the max-failed-attempts limit by
+;; submitting a bunch of concurrent requests. If you have N web servers, an
+;; attacker could get up to (N - 1) extra attempts. Not a big deal.
+;; Also helps to avoid race conditions with :biff.auth/create-user, although
+;; that function is supposed to handle that.
+(defn wrap-lock [lock]
+  (fn [handler]
+    (fn [request]
+      (.lock lock)
+      (try
+        (handler request)
+        (finally
+          (.unlock lock))))))
+
+(def routes
+  [[routes/signout-link  {:post signout-handler}]
+   [(routes/send-code)   {:post send-code-handler}]
+   [(routes/send-link)   {:post send-link-handler}]
+   [(routes/verify-code) {:middleware [(wrap-lock (ReentrantLock.))]
+                          :post       verify-code-handler}]
+   [(routes/verify-link) {:middleware [(wrap-lock (ReentrantLock.))]
+                          :get        verify-link-handler}]
+
+   [(routes/verify-link-confirm)
+    {:middleware [(wrap-lock (ReentrantLock.))]
+     :post       verify-link-handler-confirm}]])

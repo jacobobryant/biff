@@ -3,10 +3,10 @@
             [com.biffweb.authenticate.impl.frontend :as frontend]
             [com.biffweb.authenticate.impl.captcha :as captcha]
             [com.biffweb.authenticate.impl.routes :as routes]
+            [com.biffweb.authenticate.impl.util :as util]
             [com.biffweb.core :as biff.core]
             [hato.client :as hato]
-            [ring.middleware.anti-forgery :as anti-forgery])
-  (:import [java.util.concurrent.locks ReentrantLock]))
+            [ring.middleware.anti-forgery :as anti-forgery]))
 
 (def ^:private fx-handler-keys
   [:biff.auth/get-user-id
@@ -18,7 +18,7 @@
 
 (def ^:private default-options
   #:biff.auth{:app-path            routes/default-app-page
-              :email-validator     backend/email-valid?
+              :email-validator     util/email-valid?
               :primary-color       "#4F46E5"
               :accent-color        "#818CF8"
               :max-failed-attempts 5
@@ -46,25 +46,11 @@
               (update-keys #(keyword "fx" (name %)))
               (merge (when skip-captcha
                        {:fx/captcha-verify (constantly {:success true})})
-                     {:fx/new-code       backend/new-code
-                      :fx/new-link-token backend/new-link-token
+                     {:fx/new-code       util/new-code
+                      :fx/new-link-token util/new-link-token
                       :fx/http           hato/request}))]
       (handler (cond-> (update ctx :biff.fx/handlers merge fx-handlers)
                  skip-captcha (merge captcha/noop-config))))))
-
-;; Prevent attackers from getting around the max-failed-attempts limit by
-;; submitting a bunch of concurrent requests. If you have N web servers, an
-;; attacker could get up to (N - 1) extra attempts. Not a big deal.
-;; Also helps to avoid race conditions with :biff.auth/create-user, although
-;; that function is supposed to handle that.
-(defn wrap-lock [lock]
-  (fn [handler]
-    (fn [request]
-      (.lock lock)
-      (try
-        (handler request)
-        (finally
-          (.unlock lock))))))
 
 (defn routes [options]
   (biff.core/validate options)
@@ -74,24 +60,10 @@
                           [wrap-fx-handlers]]
                          (when-not (:biff.auth/skip-csrf-protection options)
                            [[anti-forgery/wrap-anti-forgery]])))]
-    (vec
-     (concat
-      [["" {:middleware middleware}
-        [(routes/send-code)   {:post backend/send-code-handler}]
-        [(routes/send-link)   {:post backend/send-link-handler}]
-        [(routes/verify-code) {:middleware [(wrap-lock (ReentrantLock.))]
-                               :post       backend/verify-code-handler}]
-        [(routes/verify-link) {:middleware [(wrap-lock (ReentrantLock.))]
-                               :get        backend/verify-link-handler}]
-
-        [(routes/verify-link-confirm)
-         {:middleware [(wrap-lock (ReentrantLock.))]
-          :post       backend/verify-link-handler-confirm}]
-
-        [routes/signout-link          {:post backend/signout-handler}]]]
+    [["" {:middleware middleware}
+      backend/routes
       (when (get options :biff.auth/include-signin-page true)
-        [[routes/default-signin-page {:middleware middleware
-                                      :get        frontend/signin-page}]])))))
+        frontend/routes)]]))
 
 (defn module [options]
   {:biff.ring/routes (routes options)})

@@ -6,6 +6,7 @@
             [com.biffweb.authenticate.impl.frontend :as frontend]
             [com.biffweb.authenticate.impl.captcha :as captcha]
             [com.biffweb.authenticate.impl.routes :as routes]
+            [com.biffweb.authenticate.impl.util :as util]
             [com.biffweb.core :as biff]
             [demo.store :as store]))
 
@@ -17,26 +18,26 @@
   (is (nil? (backend/normalize-email nil))))
 
 (deftest email-valid-test
-  (is (true? (backend/email-valid? {} "test@example.com")))
-  (is (true? (backend/email-valid? {} "a@b.co")))
-  (is (not (backend/email-valid? {} nil)))
-  (is (not (backend/email-valid? {} "not-an-email")))
-  (is (not (backend/email-valid? {} "has space@test.com")))
-  (is (not (backend/email-valid? {} "@no-local.com")))
-  (is (not (backend/email-valid? {} "no-tld@test")))
+  (is (true? (util/email-valid? {} "test@example.com")))
+  (is (true? (util/email-valid? {} "a@b.co")))
+  (is (not (util/email-valid? {} nil)))
+  (is (not (util/email-valid? {} "not-an-email")))
+  (is (not (util/email-valid? {} "has space@test.com")))
+  (is (not (util/email-valid? {} "@no-local.com")))
+  (is (not (util/email-valid? {} "no-tld@test")))
   ;; not a string
-  (is (not (backend/email-valid? {} 123))))
+  (is (not (util/email-valid? {} 123))))
 
 (deftest new-code-test
-  (let [code (backend/new-code {} 6)]
+  (let [code (util/new-code {} 6)]
     (is (= 6 (count code)))
     (is (re-matches #"\d{6}" code)))
-  (let [code (backend/new-code {} 4)]
+  (let [code (util/new-code {} 4)]
     (is (= 4 (count code)))
     (is (re-matches #"\d{4}" code))))
 
 (deftest new-link-token-test
-  (let [token (backend/new-link-token {} 32)]
+  (let [token (util/new-link-token {} 32)]
     (is (= 64 (count token)))
     (is (re-matches #"[0-9a-f]{64}" token))))
 
@@ -111,7 +112,7 @@
                    :or   {send-result true}}]
   {:params                     {:email email}
    :biff.auth/app-name         "Test App"
-   :biff.auth/email-validator  backend/email-valid?
+   :biff.auth/email-validator  util/email-valid?
    :biff.auth/code-signin-path "/signin"
 
    :biff.fx/handlers
@@ -129,8 +130,8 @@
 
     :fx/captcha-verify (constantly {:success true})
     :fx/send-email     (fn [_ _] send-result)
-    :fx/new-code       backend/new-code
-    :fx/new-link-token backend/new-link-token}})
+    :fx/new-code       util/new-code
+    :fx/new-link-token util/new-link-token}})
 
 (deftest send-code-invalid-email-test
   (let [config (store/atom-store)
@@ -206,7 +207,7 @@
   {:params                     {:email email}
    :session                    {}
    :biff.auth/app-name         "Test App"
-   :biff.auth/email-validator  backend/email-valid?
+   :biff.auth/email-validator  util/email-valid?
    :biff.auth/base-url         "https://example.com"
    :biff.auth/link-signin-path "/signin"
 
@@ -225,8 +226,8 @@
 
     :fx/captcha-verify (constantly {:success true})
     :fx/send-email     (fn [_ _] send-result)
-    :fx/new-code       backend/new-code
-    :fx/new-link-token backend/new-link-token}})
+    :fx/new-code       util/new-code
+    :fx/new-link-token util/new-link-token}})
 
 (deftest send-link-invalid-email-test
   (let [config (store/atom-store)
@@ -298,8 +299,8 @@
     :fx/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/new-code       backend/new-code
-    :fx/new-link-token backend/new-link-token}})
+    :fx/new-code       util/new-code
+    :fx/new-link-token util/new-link-token}})
 
 (deftest verify-code-success-test
   (let [config (store/atom-store)
@@ -445,13 +446,13 @@
       :fx/kv-set
       (:biff.core/kv-set store-config)
 
-      :fx/new-code       backend/new-code
-      :fx/new-link-token backend/new-link-token}}))
+      :fx/new-code       util/new-code
+      :fx/new-link-token util/new-link-token}}))
 
 (deftest verify-link-success-test
   (let [config      (store/atom-store)
         now         (java.time.Instant/now)
-        token       (backend/new-link-token {} 32)
+        token       (util/new-link-token {} 32)
         state-token "test-state-123"]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
@@ -475,7 +476,7 @@
 (deftest verify-link-wrong-token-test
   (let [config      (store/atom-store)
         now         (java.time.Instant/now)
-        token       (backend/new-link-token {} 32)
+        token       (util/new-link-token {} 32)
         state-token "test-state-123"]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
@@ -497,7 +498,7 @@
   (let [config       (store/atom-store)
         expired-time (.minus (java.time.Instant/now)
                              (java.time.Duration/ofMinutes 120))
-        token        (backend/new-link-token {} 32)
+        token        (util/new-link-token {} 32)
         state-token  "test-state-123"]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
@@ -518,7 +519,7 @@
 (deftest verify-link-session-fixation-redirect-test
   (let [config (store/atom-store)
         now    (java.time.Instant/now)
-        token  (backend/new-link-token {} 32)]
+        token  (util/new-link-token {} 32)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
                   :biff-auth-signin/created-at      now
@@ -580,13 +581,13 @@
     :fx/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/new-code       backend/new-code
-    :fx/new-link-token backend/new-link-token}})
+    :fx/new-code       util/new-code
+    :fx/new-link-token util/new-link-token}})
 
 (deftest verify-link-confirm-success-test
   (let [config (store/atom-store)
         now    (java.time.Instant/now)
-        token  (backend/new-link-token {} 32)]
+        token  (util/new-link-token {} 32)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
                   :biff-auth-signin/created-at      now
@@ -604,7 +605,7 @@
 (deftest verify-link-confirm-wrong-email-test
   (let [config (store/atom-store)
         now    (java.time.Instant/now)
-        token  (backend/new-link-token {} 32)]
+        token  (util/new-link-token {} 32)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret token)
                   :biff-auth-signin/created-at      now
@@ -624,7 +625,7 @@
 
 (deftest verify-link-confirm-nil-email-test
   (let [config (store/atom-store)
-        token  (backend/new-link-token {} 32)
+        token  (util/new-link-token {} 32)
         ctx    (make-verify-link-confirm-ctx config :email nil :token token)
         result (backend/verify-link-handler-confirm ctx)]
     ;; Non-string email should redirect with error
@@ -647,6 +648,10 @@
             (apply wrap handler args))
           handler
           (reverse middleware)))
+
+(defn- route-nodes [module]
+  (filter #(and (vector? %) (string? (first %)))
+          (tree-seq coll? seq (:biff.ring/routes module))))
 
 (def module-defaults
   {:biff.auth/base-url             "https://example.com"
@@ -674,7 +679,7 @@
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/app-name   "Test App"
                                     :biff.auth/send-email (constantly true)}))]
-    (is (some #(= "/signin" (first %)) (:biff.ring/routes m)))))
+    (is (some #(= "/signin" (first %)) (route-nodes m)))))
 
 (deftest module-omits-signin-when-disabled-test
   (let [config (store/atom-store)
@@ -685,7 +690,7 @@
                                     (constantly true)
 
                                     :biff.auth/include-signin-page false}))]
-    (is (not (some #(= "/signin" (first %)) (:biff.ring/routes m))))))
+    (is (not (some #(= "/signin" (first %)) (route-nodes m))))))
 
 (deftest module-throws-on-missing-required-keys-test
   (let [[_ route-data] (first (:biff.ring/routes
@@ -764,11 +769,10 @@
                                      (merge config
                                             auth/turnstile-config
                                             opts))
-        routes                      (first (:biff.ring/routes module))
-        [_ route-data & sub-routes] routes
+        [_ route-data]              (first (:biff.ring/routes module))
         [_ send-code-route]         (first
                                      (filter #(= (routes/send-code) (first %))
-                                             sub-routes))
+                                             (route-nodes module)))
         handler                     (apply-middleware
                                      (:post send-code-route)
                                      (:middleware route-data))
@@ -898,9 +902,7 @@
 
                                          :biff.auth/send-email
                                          (constantly true)}))
-        auth-routes (first (:biff.ring/routes m))
-        sub-routes  (drop 2 auth-routes)
-        paths       (map first sub-routes)]
+        paths       (map first (route-nodes m))]
     (is (some #(= (routes/verify-link-confirm) %) paths))))
 
 ;;;; Page rendering ============================================================

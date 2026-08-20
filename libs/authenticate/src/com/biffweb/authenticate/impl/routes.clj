@@ -13,9 +13,9 @@
      ([params-str#]
       (append-query-params ~path params-str#))))
 
-(defpath send-code "/_biff/auth/send-code")
-(defpath send-link "/_biff/auth/send-link")
-(defpath verify-code "/_biff/auth/verify-code")
+(defpath send-code           "/_biff/auth/send-code")
+(defpath send-link           "/_biff/auth/send-link")
+(defpath verify-code         "/_biff/auth/verify-code")
 (defpath verify-link-confirm "/_biff/auth/verify-link-confirm")
 
 (defn verify-link
@@ -26,8 +26,6 @@
   ([base-url payload]
    (str base-url (verify-link payload))))
 
-(def signout-link "/_biff/auth/signout")
-
+(def signout-link        "/_biff/auth/signout")
 (def default-signin-page "/signin")
-
-(def default-app-page "/app")
+(def default-app-page    "/app")
