@@ -27,8 +27,9 @@
                :max-failed-attempts 5
                :code-expiry-minutes 10
                :link-expiry-minutes 60
-               :code-signin-path    routes/default-signin-page
-               :link-signin-path    routes/default-signin-page}))
+               :code-page           routes/default-code-page
+               :link-page           routes/default-link-page
+               :verify-link-page    routes/default-verify-link-page}))
 
 (defn- wrap-options [handler options]
   (fn [ctx]

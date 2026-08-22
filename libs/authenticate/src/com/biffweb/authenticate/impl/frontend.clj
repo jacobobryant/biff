@@ -1,6 +1,13 @@
 (ns com.biffweb.authenticate.impl.frontend
-  (:require [com.biffweb.authenticate.impl.routes :as routes]
-            [dev.onionpancakes.chassis.core :as chassis]))
+  (:require [dev.onionpancakes.chassis.core :as chassis]))
+
+(def send-code-path           "/_biff/auth/send-code")
+(def send-link-path           "/_biff/auth/send-link")
+(def verify-code-path         "/_biff/auth/verify-code")
+(def verify-link-confirm-path "/_biff/auth/verify-link-confirm")
+(def code-page-path           "/signin")
+(def link-page-path           "/signup")
+(def verify-link-page-path    "/signup/verify")
 
 ;;;; style helpers =============================================================
 
@@ -175,7 +182,7 @@
                      captcha-button-attrs]
     :keys           [anti-forgery-token]
     :as             ctx}]
-  [:form {:method "post" :action (routes/send-code) :id "signin-form"}
+  [:form {:method "post" :action send-code-path :id "signin-form"}
    (when anti-forgery-token
      (hidden-field "__anti-forgery-token" anti-forgery-token))
    (label "email" "Email address")
@@ -194,7 +201,7 @@
                      captcha-button-attrs]
     :keys           [anti-forgery-token]
     :as             ctx}]
-  [:form {:method "post" :action (routes/send-link) :id "signup-form"}
+  [:form {:method "post" :action send-link-path :id "signup-form"}
    (when anti-forgery-token
      (hidden-field "__anti-forgery-token" anti-forgery-token))
    (label "signup-email" "Email address")
@@ -209,7 +216,7 @@
            "Send sign-in link")])
 
 (defn- render-verify-code
-  [{:biff.auth/keys [primary-color code-signin-path]
+  [{:biff.auth/keys [primary-color code-page]
     :keys           [anti-forgery-token params]}]
   (let [email (:email params)]
     [(title "Check your email")
@@ -217,7 +224,7 @@
                   :font-size  "0.95rem"}}
       "We sent a 6-digit code to " [:strong email] "."]
      [:form {:method "post"
-             :action (routes/verify-code)
+             :action verify-code-path
              :id     "verify-code-form"}
       (when anti-forgery-token
         (hidden-field "__anti-forgery-token" anti-forgery-token))
@@ -242,11 +249,11 @@
                              :text-align     "center"}})
       (button primary-color {} "Verify")]
      (footer primary-color
-             (link primary-color {:href code-signin-path}
+             (link primary-color {:href code-page}
                    "← Use a different email"))]))
 
 (defn- render-link-sent
-  [{:biff.auth/keys [primary-color link-signin-path] :keys [params]}]
+  [{:biff.auth/keys [primary-color link-page] :keys [params]}]
   (let [email (:email params)]
     [(title "Check your email")
      [:p {:style {:text-align "center" :font-size "0.95rem" :margin "0"}}
@@ -254,11 +261,11 @@
         ["We sent a sign-in link to " [:strong email] "."]
         "We sent you a sign-in link.")]
      (footer primary-color
-             (link primary-color {:href link-signin-path}
+             (link primary-color {:href link-page}
                    "← Back to sign in"))]))
 
 (defn- render-link-confirm
-  [{:biff.auth/keys [primary-color link-signin-path]
+  [{:biff.auth/keys [primary-color link-page]
     :keys           [anti-forgery-token params]}]
   (let [token (:token params)]
     [(title "Confirm your email")
@@ -267,7 +274,7 @@
                   :font-size  "0.95rem"}}
       "Please enter your email address to complete sign-in."]
      [:form {:method "post"
-             :action (routes/verify-link-confirm)
+             :action verify-link-confirm-path
              :id     "link-confirm-form"}
       (when anti-forgery-token
         (hidden-field "__anti-forgery-token" anti-forgery-token))
@@ -281,57 +288,55 @@
               :autofocus   true})
       (button primary-color {} "Confirm & sign in")]
      (footer primary-color
-             (link primary-color {:href link-signin-path}
+             (link primary-color {:href link-page}
                    "← Back to sign in"))]))
 
 (defn- render-tabs
-  [{:biff.auth/keys [primary-color code-signin-path link-signin-path]
-    :keys           [params]
-    :as             ctx}]
-  (let [active-tab (or (:tab params) "signin")]
-    [(tab-bar primary-color
-              [{:active? (= active-tab "signin")
-                :href    (routes/append-query-params
-                          code-signin-path "tab=signin")
-                :label   "Sign In"}
-               {:active? (= active-tab "signup")
-                :href    (routes/append-query-params
-                          link-signin-path "tab=signup")
-                :label   "Sign Up"}])
-     (if (= active-tab "signup")
-       (render-signup-form ctx)
-       (render-signin-form ctx))
-     (footer primary-color
-             (if (= active-tab "signup")
-               ["Already have an account? "
-                (link primary-color
-                      {:href (routes/append-query-params
-                              code-signin-path "tab=signin")}
-                      "Sign in")]
-               ["Don't have an account? "
-                (link primary-color
-                      {:href (routes/append-query-params
-                              link-signin-path "tab=signup")}
-                      "Sign up")]))]))
+  [{:biff.auth/keys [primary-color code-page link-page] :as ctx} active-tab]
+  [(tab-bar primary-color
+            [{:active? (= active-tab :code)
+              :href    code-page
+              :label   "Sign In"}
+             {:active? (= active-tab :link)
+              :href    link-page
+              :label   "Sign Up"}])
+   (if (= active-tab :link)
+     (render-signup-form ctx)
+     (render-signin-form ctx))
+   (footer primary-color
+           (if (= active-tab :link)
+             ["Already have an account? "
+              (link primary-color {:href code-page} "Sign in")]
+             ["Don't have an account? "
+              (link primary-color {:href link-page} "Sign up")]))])
 
 ;;;; Main page handler =========================================================
 
-(defn signin-page [{:keys [params] :as ctx}]
-  (let [{:keys [verify error]} params]
-    {:status  200
-     :headers {"content-type" "text/html"}
-     :body    (chassis/html
-               [chassis/doctype-html5
-                (base-page
-                 ctx
-                 (card
-                  ctx
-                  (error-banner error)
-                  (case verify
-                    "code"         (render-verify-code ctx)
-                    "link"         (render-link-sent ctx)
-                    "link-confirm" (render-link-confirm ctx)
-                    (render-tabs ctx))))])}))
+(defn- page [ctx content]
+  {:status  200
+   :headers {"content-type" "text/html"}
+   :body    (chassis/html
+             [chassis/doctype-html5
+              (base-page
+               ctx
+               (card ctx
+                     (error-banner (get-in ctx [:params :error]))
+                     content))])})
+
+(defn code-page [{:keys [params] :as ctx}]
+  (page ctx (if (:email params)
+              (render-verify-code ctx)
+              (render-tabs ctx :code))))
+
+(defn link-page [{:keys [params] :as ctx}]
+  (page ctx (if (:email params)
+              (render-link-sent ctx)
+              (render-tabs ctx :link))))
+
+(defn verify-link-page [ctx]
+  (page ctx (render-link-confirm ctx)))
 
 (def routes
-  [[routes/default-signin-page {:get signin-page}]])
+  [[code-page-path        {:get code-page}]
+   [link-page-path        {:get link-page}]
+   [verify-link-page-path {:get verify-link-page}]])

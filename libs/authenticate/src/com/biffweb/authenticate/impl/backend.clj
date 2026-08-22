@@ -96,21 +96,21 @@
 (fx/defmachine send-code-handler
   :start
   (fn [{:biff.auth/keys [email-validator
-                         code-signin-path]
+                         code-page]
         :keys           [params]
         :as             ctx}]
     (let [email (normalize-email (:email params))]
       (if-not (email-validator ctx email)
         {:status  303
          :headers {"location" (routes/append-query-params
-                               code-signin-path "error=invalid-email")}}
+                               code-page "error=invalid-email")}}
         {:email          email
          :code           [:biff.auth/new-code 6]
          :captcha-passed [:biff.auth/captcha-verify]
          :biff.fx/next   :check-captcha})))
 
   :check-captcha
-  (fn [{:biff.auth/keys [code-signin-path
+  (fn [{:biff.auth/keys [code-page
                          captcha-param]
         :keys           [email code captcha-passed params biff.fx/now]
         :as             ctx}]
@@ -132,18 +132,18 @@
           :biff.fx/next :check-send-result}]
         {:status  303
          :headers {"location" (routes/append-query-params
-                               code-signin-path "error=captcha")}})))
+                               code-page "error=captcha")}})))
 
   :check-send-result
-  (fn [{:biff.auth/keys [code-signin-path] :keys [email sent]}]
+  (fn [{:biff.auth/keys [code-page] :keys [email sent]}]
     (if sent
       {:status  303
        :headers {"location" (routes/append-query-params
-                             code-signin-path
-                             (str "verify=code&email=" (url-encode email)))}}
+                             code-page
+                             (str "email=" (url-encode email)))}}
       {:status  303
        :headers {"location" (routes/append-query-params
-                             code-signin-path "error=send-failed")}})))
+                             code-page "error=send-failed")}})))
 
 (fx/defmachine verify-code-handler
   :start
@@ -157,7 +157,7 @@
   :check-code
   (fn [{:biff.auth/keys [max-failed-attempts
                          code-expiry-minutes
-                         code-signin-path]
+                         code-page]
         :keys           [email submitted-code signin-record biff.fx/now]}]
     (let [{:biff-auth-signin/keys [code-hash created-at failed-attempts flow
                                    params]}
@@ -179,8 +179,8 @@
         (merge
          {:status  303
           :headers {"location" (routes/append-query-params
-                                code-signin-path
-                                (str "verify=code&error=invalid-code&email="
+                                code-page
+                                (str "error=invalid-code&email="
                                      (url-encode email)))}}
          (when (and signin-record
                     (= flow :code)
@@ -197,14 +197,14 @@
 
 (fx/defmachine send-link-handler
   :start
-  (fn [{:biff.auth/keys [email-validator link-signin-path]
+  (fn [{:biff.auth/keys [email-validator link-page]
         :keys           [params]
         :as             ctx}]
     (let [email (normalize-email (:email params))]
       (if-not (email-validator ctx email)
         {:status  303
          :headers {"location" (routes/append-query-params
-                               link-signin-path "error=invalid-email")}}
+                               link-page "error=invalid-email")}}
         {:email          email
          :token          [:biff.auth/new-link-token 32]
          :state-token    [:biff.auth/new-link-token 16]
@@ -212,7 +212,7 @@
          :biff.fx/next   :check-captcha})))
 
   :check-captcha
-  (fn [{:biff.auth/keys [base-url link-signin-path captcha-param]
+  (fn [{:biff.auth/keys [base-url link-page captcha-param]
         :keys           [email token state-token captcha-passed params
                          biff.fx/now]
         :as             ctx}]
@@ -239,29 +239,29 @@
           :biff.fx/next :check-send-result}]
         {:status  303
          :headers {"location" (routes/append-query-params
-                               link-signin-path "error=captcha")}})))
+                               link-page "error=captcha")}})))
 
   :check-send-result
-  (fn [{:biff.auth/keys [link-signin-path]
+  (fn [{:biff.auth/keys [link-page]
         :keys           [email state-token sent session]}]
     (if sent
       {:status  303
        :headers {"location" (routes/append-query-params
-                             link-signin-path
-                             (str "verify=link&email=" (url-encode email)))}
+                             link-page
+                             (str "email=" (url-encode email)))}
        :session (assoc session :biff.auth/state state-token)}
       {:status  303
        :headers {"location" (routes/append-query-params
-                             link-signin-path "error=send-failed")}})))
+                             link-page "error=send-failed")}})))
 
 ;; This handler is used for both when the user clicks the link (GET) and for the
 ;; confirmation form post (POST) which happens if they open the link on a
 ;; different device/browser from the one they requested it on.
 (defn- verify-link-machine [{:keys [get-params
                                     confirmed-from-user?
-                                    invalid-token-params]}]
+                                    invalid-token-location]}]
   {:start
-   (fn [{:biff.auth/keys [link-signin-path] :as ctx}]
+   (fn [{:biff.auth/keys [link-page verify-link-page] :as ctx}]
      (let [{:keys [token email] :as auth-params} (get-params ctx)
 
            {:keys [email] :as auth-params}
@@ -271,7 +271,7 @@
          (not (every? string? [token email]))
          {:status  303
           :headers {"location" (routes/append-query-params
-                                link-signin-path "error=invalid-link")}}
+                                link-page "error=invalid-link")}}
 
          (confirmed-from-user? (assoc ctx :auth-params auth-params))
          {:auth-params   auth-params
@@ -282,12 +282,13 @@
          {:status  303
           :headers {"location"
                     (routes/append-query-params
-                     link-signin-path
-                     (str "verify=link-confirm&token=" (url-encode token)))}})))
+                     verify-link-page
+                     (str "token=" (url-encode token)))}})))
 
    :check-token
-   (fn [{:biff.auth/keys [link-expiry-minutes link-signin-path]
-         :keys           [auth-params signin-record biff.fx/now]}]
+   (fn [{:biff.auth/keys [link-expiry-minutes]
+         :keys           [auth-params signin-record biff.fx/now]
+         :as             ctx}]
      (let [{:biff-auth-signin/keys [code-hash created-at flow params]}
            signin-record
 
@@ -304,9 +305,7 @@
           :existing-user-id [:biff.auth/get-user-id (:email auth-params)]
           :biff.fx/next     :ensure-user}
          {:status  303
-          :headers {"location" (routes/append-query-params
-                                link-signin-path
-                                (invalid-token-params auth-params))}})))
+          :headers {"location" (invalid-token-location ctx auth-params)}})))
 
    :ensure-user      ensure-user
    :success-redirect success-redirect})
@@ -323,8 +322,10 @@
                             (and (not-empty (:biff.auth/state session))
                                  (= (:biff.auth/state session)
                                     (:state auth-params))))
-    :invalid-token-params (fn [_]
-                            "error=invalid-link")}))
+
+    :invalid-token-location
+    (fn [{:keys [biff.auth/link-page]} _]
+      (routes/append-query-params link-page "error=invalid-link"))}))
 
 ;; If the (:biff.auth/state session) didn't match what was in the link payload,
 ;; we ask the user to submit a form to this handler, and in that form we have
@@ -334,9 +335,12 @@
   (verify-link-machine
    {:get-params           :params
     :confirmed-from-user? (fn [_] true) ; CSRF protection ensures this
-    :invalid-token-params (fn [{:keys [token]}]
-                            (str "verify=link-confirm&error=invalid-link&token="
-                                 (url-encode token)))}))
+
+    :invalid-token-location
+    (fn [{:keys [biff.auth/verify-link-page]} {:keys [token]}]
+      (routes/append-query-params
+       verify-link-page
+       (str "error=invalid-link&token=" (url-encode token))))}))
 
 ;;;; signout ===================================================================
 

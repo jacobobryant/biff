@@ -110,10 +110,10 @@
 (defn- make-send-code-ctx
   [store-config & {:keys [email send-result]
                    :or   {send-result true}}]
-  {:params                     {:email email}
-   :biff.auth/app-name         "Test App"
-   :biff.auth/email-validator  util/email-valid?
-   :biff.auth/code-signin-path "/signin"
+  {:params                    {:email email}
+   :biff.auth/app-name        "Test App"
+   :biff.auth/email-validator util/email-valid?
+   :biff.auth/code-page       "/signin"
 
    :biff.fx/handlers
    {:biff.auth/get-user-id
@@ -153,7 +153,8 @@
                                 true))
         result      (backend/send-code-handler ctx)]
     (is (= 303 (:status result)))
-    (is (str/includes? (get-in result [:headers "location"]) "verify=code"))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "/signin?email="))
     (is (str/includes? (get-in result [:headers "location"])
                        "email=test%40example.com"))
     (is (= 1 (count @sent-emails)))
@@ -204,12 +205,12 @@
 (defn- make-send-link-ctx
   [store-config & {:keys [email send-result]
                    :or   {send-result true}}]
-  {:params                     {:email email}
-   :session                    {}
-   :biff.auth/app-name         "Test App"
-   :biff.auth/email-validator  util/email-valid?
-   :biff.auth/base-url         "https://example.com"
-   :biff.auth/link-signin-path "/signin"
+  {:params                    {:email email}
+   :session                   {}
+   :biff.auth/app-name        "Test App"
+   :biff.auth/email-validator util/email-valid?
+   :biff.auth/base-url        "https://example.com"
+   :biff.auth/link-page       "/signup"
 
    :biff.fx/handlers
    {:biff.auth/get-user-id
@@ -249,7 +250,8 @@
                                 true))
         result      (backend/send-link-handler ctx)]
     (is (= 303 (:status result)))
-    (is (str/includes? (get-in result [:headers "location"]) "verify=link"))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "/signup?email="))
     (is (str/includes? (get-in result [:headers "location"])
                        "email=test%40example.com"))
     (is (= 1 (count @sent-emails)))
@@ -284,7 +286,7 @@
    :biff.auth/app-path            "/app"
    :biff.auth/max-failed-attempts 5
    :biff.auth/code-expiry-minutes 10
-   :biff.auth/code-signin-path    "/signin"
+   :biff.auth/code-page           "/signin"
 
    :biff.fx/handlers
    {:biff.auth/get-user-id
@@ -431,7 +433,8 @@
                                       (assoc :biff.auth/state session-state))
      :biff.auth/app-path            "/app"
      :biff.auth/link-expiry-minutes 60
-     :biff.auth/link-signin-path    "/signin"
+     :biff.auth/link-page           "/signup"
+     :biff.auth/verify-link-page    "/signup/verify"
 
      :biff.fx/handlers
      {:biff.auth/get-user-id
@@ -535,7 +538,7 @@
           result (backend/verify-link-handler ctx)]
       (is (= 303 (:status result)))
       (is (str/includes? (get-in result [:headers "location"])
-                         "verify=link-confirm")))))
+                         "/signup/verify?token=")))))
 
 (deftest verify-link-rejects-code-record-test
   (let [config      (store/atom-store)
@@ -566,7 +569,8 @@
    :session                       {}
    :biff.auth/app-path            "/app"
    :biff.auth/link-expiry-minutes 60
-   :biff.auth/link-signin-path    "/signin"
+   :biff.auth/link-page           "/signup"
+   :biff.auth/verify-link-page    "/signup/verify"
 
    :biff.fx/handlers
    {:biff.auth/get-user-id
@@ -679,7 +683,25 @@
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/app-name   "Test App"
                                     :biff.auth/send-email (constantly true)}))]
-    (is (some #(= "/signin" (first %)) (route-nodes m)))))
+    (is (every? (set (map first (route-nodes m)))
+                ["/signin" "/signup" "/signup/verify"]))))
+
+(deftest module-signin-routes-ignore-redirect-page-options-test
+  (let [config (store/atom-store)
+        m      (auth/module
+                (merge config auth/turnstile-config module-defaults
+                       {:biff.auth/app-name         "Test App"
+                        :biff.auth/send-email       (constantly true)
+                        :biff.auth/code-page        "/custom/code"
+                        :biff.auth/link-page        "/custom/link"
+                        :biff.auth/verify-link-page "/custom/verify"}))
+        paths  (set (map first (route-nodes m)))]
+    (is (every? paths ["/signin"
+                       "/signup"
+                       "/signup/verify"]))
+    (is (not-any? paths ["/custom/code"
+                         "/custom/link"
+                         "/custom/verify"]))))
 
 (deftest module-omits-signin-when-disabled-test
   (let [config (store/atom-store)
@@ -690,7 +712,8 @@
                                     (constantly true)
 
                                     :biff.auth/include-signin-page false}))]
-    (is (not (some #(= "/signin" (first %)) (route-nodes m))))))
+    (is (not-any? (set (map first (route-nodes m)))
+                  ["/signin" "/signup" "/signup/verify"]))))
 
 (deftest module-throws-on-missing-required-keys-test
   (let [[_ route-data] (first (:biff.ring/routes
@@ -786,7 +809,8 @@
 
                                :biff.auth/app-name "Test App"}))]
     (is (= 303 (:status result)))
-    (is (str/includes? (get-in result [:headers "location"]) "verify=code"))))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "/signin?email="))))
 
 (deftest module-requires-send-email-test
   (let [config         (store/atom-store)
@@ -858,7 +882,8 @@
                                   :biff.auth/create-user])
                                 {:params {:email "test@example.com"}}))]
     (is (= 303 (:status result)))
-    (is (str/includes? (get-in result [:headers "location"]) "verify=code"))
+    (is (str/includes? (get-in result [:headers "location"])
+                       "/signin?email="))
     (is (= 1 (count @sent-emails)))
     (is (= :signin-code (:template (first @sent-emails))))
     (is (= "test@example.com" (:to (first @sent-emails))))
@@ -907,24 +932,26 @@
 
 ;;;; Page rendering ============================================================
 
-(defn- signin-page [ctx]
-  (frontend/signin-page (merge captcha/noop-config ctx)))
+(defn- render-page [handler ctx]
+  (handler (merge captcha/noop-config ctx)))
 
 (deftest signin-page-renders-test
-  (let [result (signin-page {:params                     {}
-                             :anti-forgery-token         "test-token"
-                             :biff.auth/app-name         "Test"
-                             :biff.auth/primary-color    "#4F46E5"
-                             :biff.auth/accent-color     "#818CF8"
-                             :biff.auth/font-family      "sans-serif"
-                             :biff.auth/code-signin-path "/signin"
-                             :biff.auth/link-signin-path "/signin"})]
+  (let [result (render-page frontend/code-page
+                            {:params                  {}
+                             :anti-forgery-token      "test-token"
+                             :biff.auth/app-name      "Test"
+                             :biff.auth/primary-color "#4F46E5"
+                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/font-family   "sans-serif"
+                             :biff.auth/code-page     "/signin"
+                             :biff.auth/link-page     "/signup"})]
     (is (= 200 (:status result)))
     (is (string? (:body result)))
     (is (str/includes? (:body result) "<!DOCTYPE html>"))))
 
 (deftest signin-page-renders-captcha-when-config-is-present
-  (let [result (signin-page
+  (let [result (render-page
+                frontend/code-page
                 (merge auth/turnstile-config
                        {:params                       {}
                         :anti-forgery-token           "test-token"
@@ -932,8 +959,8 @@
                         :biff.auth/primary-color      "#4F46E5"
                         :biff.auth/accent-color       "#818CF8"
                         :biff.auth/font-family        "sans-serif"
-                        :biff.auth/code-signin-path   "/signin"
-                        :biff.auth/link-signin-path   "/signin"
+                        :biff.auth/code-page          "/signin"
+                        :biff.auth/link-page          "/signup"
                         :biff.auth/turnstile-secret   (biff/secret-delay "   ")
                         :biff.auth/turnstile-site-key ""}))]
     (is (= 200 (:status result)))
@@ -941,61 +968,59 @@
     (is (str/includes? (:body result) "challenges.cloudflare.com"))))
 
 (deftest signin-page-verify-code-view-test
-  (let [result (signin-page {:params
-                             {:verify "code"
-                              :email  "test@example.com"}
+  (let [result (render-page frontend/code-page
+                            {:params {:email "test@example.com"}
 
-                             :anti-forgery-token         "test-token"
-                             :biff.auth/app-name         "Test"
-                             :biff.auth/primary-color    "#4F46E5"
-                             :biff.auth/accent-color     "#818CF8"
-                             :biff.auth/font-family      "sans-serif"
-                             :biff.auth/code-signin-path "/signin"
-                             :biff.auth/link-signin-path "/signin"})]
+                             :anti-forgery-token      "test-token"
+                             :biff.auth/app-name      "Test"
+                             :biff.auth/primary-color "#4F46E5"
+                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/font-family   "sans-serif"
+                             :biff.auth/code-page     "/signin"
+                             :biff.auth/link-page     "/signup"})]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "test@example.com"))
     (is (str/includes? (:body result) "inputmode=\"numeric\""))
     (is (not (str/includes? (:body result) "pattern=")))))
 
 (deftest signin-page-link-sent-view-test
-  (let [result (signin-page {:params
-                             {:verify "link"
-                              :email  "test@example.com"}
+  (let [result (render-page frontend/link-page
+                            {:params {:email "test@example.com"}
 
-                             :biff.auth/app-name         "Test"
-                             :biff.auth/primary-color    "#4F46E5"
-                             :biff.auth/accent-color     "#818CF8"
-                             :biff.auth/font-family      "sans-serif"
-                             :biff.auth/code-signin-path "/signin"
-                             :biff.auth/link-signin-path "/signin"})]
+                             :biff.auth/app-name      "Test"
+                             :biff.auth/primary-color "#4F46E5"
+                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/font-family   "sans-serif"
+                             :biff.auth/code-page     "/signin"
+                             :biff.auth/link-page     "/signup"})]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "test@example.com"))))
 
 (deftest signin-page-signup-tab-test
-  (let [result (signin-page {:params {:tab "signup"}
+  (let [result (render-page frontend/link-page
+                            {:params {}
 
-                             :anti-forgery-token         "test-token"
-                             :biff.auth/app-name         "Test"
-                             :biff.auth/primary-color    "#4F46E5"
-                             :biff.auth/accent-color     "#818CF8"
-                             :biff.auth/font-family      "sans-serif"
-                             :biff.auth/code-signin-path "/signin"
-                             :biff.auth/link-signin-path "/signin"})]
+                             :anti-forgery-token      "test-token"
+                             :biff.auth/app-name      "Test"
+                             :biff.auth/primary-color "#4F46E5"
+                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/font-family   "sans-serif"
+                             :biff.auth/code-page     "/signin"
+                             :biff.auth/link-page     "/signup"})]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "send-link"))))
 
 (deftest signin-page-link-confirm-view-test
-  (let [result (signin-page {:params
-                             {:verify "link-confirm"
-                              :token  "abc123"}
+  (let [result (render-page frontend/verify-link-page
+                            {:params {:token "abc123"}
 
-                             :anti-forgery-token         "test-token"
-                             :biff.auth/app-name         "Test"
-                             :biff.auth/primary-color    "#4F46E5"
-                             :biff.auth/accent-color     "#818CF8"
-                             :biff.auth/font-family      "sans-serif"
-                             :biff.auth/code-signin-path "/signin"
-                             :biff.auth/link-signin-path "/signin"})]
+                             :anti-forgery-token      "test-token"
+                             :biff.auth/app-name      "Test"
+                             :biff.auth/primary-color "#4F46E5"
+                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/font-family   "sans-serif"
+                             :biff.auth/code-page     "/signin"
+                             :biff.auth/link-page     "/signup"})]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "Confirm your email"))))
 

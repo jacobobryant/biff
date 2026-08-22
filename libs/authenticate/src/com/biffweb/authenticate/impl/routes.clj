@@ -27,5 +27,7 @@
    (str base-url (verify-link payload))))
 
 (def signout-link        "/_biff/auth/signout")
-(def default-signin-page "/signin")
-(def default-app-page    "/app")
+(def default-code-page        "/signin")
+(def default-link-page        "/signup")
+(def default-verify-link-page "/signup/verify")
+(def default-app-page         "/app")

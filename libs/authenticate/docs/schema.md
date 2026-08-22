@@ -180,7 +180,7 @@ String, example `"https://example.com"`. The base URL to use for signin links.
 
 Int, default 10. The number of minutes a new signin code is valid.
 
-### :biff.auth/code-signin-path
+### :biff.auth/code-page
 
 String, default `/signin`. The path for the signin-via-code page. Used for
 redirects.
@@ -205,9 +205,9 @@ in Reitit routes.
 
 Int, default 60. The number of minutes a new signin link is valid.
 
-### :biff.auth/link-signin-path
+### :biff.auth/link-page
 
-String, default `/signin`. The path for the signin-via-link page. Used for
+String, default `/signup`. The path for the signin-via-link page. Used for
 redirects.
 
 ### :biff.auth/max-failed-attempts
@@ -225,3 +225,8 @@ signin code or link. This setting is only meant for development.
 Boolean, default false. When true, the Reitit routes will not be wrapped with
 `ring.middleware.anti-forgery`. You should only set this if you have other CSRF
 protection in place.
+
+### :biff.auth/verify-link-page
+
+String, default `/signup/verify`. The path for the signin-via-link verification
+page. Used for redirects.

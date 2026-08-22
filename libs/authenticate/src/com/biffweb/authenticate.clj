@@ -35,11 +35,12 @@
   :biff.auth/app-path             :string
   :biff.auth/base-url             :string
   :biff.auth/code-expiry-minutes  :int
-  :biff.auth/code-signin-path     :string
+  :biff.auth/code-page            :string
   :biff.auth/email-validator      'ifn?
   :biff.auth/include-signin-page  :boolean
   :biff.auth/link-expiry-minutes  :int
-  :biff.auth/link-signin-path     :string
+  :biff.auth/link-page            :string
+  :biff.auth/verify-link-page     :string
   :biff.auth/max-failed-attempts  :int
   :biff.auth/skip-captcha         :boolean
   :biff.auth/skip-csrf-protection :boolean})
