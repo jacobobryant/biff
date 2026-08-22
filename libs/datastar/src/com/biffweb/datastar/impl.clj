@@ -207,18 +207,15 @@
                                         (hash body)
                                         previous-body-hash)
 
-                   _
-                   (when (not= body-hash previous-body-hash)
-                     (->> (patch-elements-event body)
-                          (compress-chunk compressed-buffer brotli-stream)
-                          (.write response-output))
-                     (.flush response-output))
+                   _ (when (not= body-hash previous-body-hash)
+                       (->> (patch-elements-event body)
+                            (compress-chunk compressed-buffer brotli-stream)
+                            (.write response-output))
+                       (.flush response-output))
 
-                   observed-epoch
-                   (wait-for-refresh request observed-epoch)
-
-                   elapsed-ms (- (System/currentTimeMillis)
-                                 iteration-start-ms)]
+                   observed-epoch (wait-for-refresh request observed-epoch)
+                   elapsed-ms     (- (System/currentTimeMillis)
+                                     iteration-start-ms)]
                (when (< elapsed-ms rate-limit-ms)
                  (Thread/sleep (- rate-limit-ms elapsed-ms)))
                (recur body-hash observed-epoch))))

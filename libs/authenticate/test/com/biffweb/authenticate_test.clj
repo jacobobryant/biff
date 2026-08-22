@@ -116,22 +116,22 @@
    :biff.auth/code-signin-path "/signin"
 
    :biff.fx/handlers
-   {:fx/get-user-id
+   {:biff.auth/get-user-id
     (:biff.auth/get-user-id store-config)
 
-    :fx/create-user
+    :biff.auth/create-user
     (:biff.auth/create-user store-config)
 
-    :fx/kv-get
+    :biff.core/kv-get
     (:biff.core/kv-get store-config)
 
-    :fx/kv-set
+    :biff.core/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/captcha-verify (constantly {:success true})
-    :fx/send-email     (fn [_ _] send-result)
-    :fx/new-code       util/new-code
-    :fx/new-link-token util/new-link-token}})
+    :biff.auth/captcha-verify (constantly true)
+    :biff.auth/send-email     (fn [_ _] send-result)
+    :biff.auth/new-code       util/new-code
+    :biff.auth/new-link-token util/new-link-token}})
 
 (deftest send-code-invalid-email-test
   (let [config (store/atom-store)
@@ -147,7 +147,7 @@
         sent-emails (atom [])
         ctx         (assoc-in (make-send-code-ctx
                                config :email "test@example.com")
-                              [:biff.fx/handlers :fx/send-email]
+                              [:biff.fx/handlers :biff.auth/send-email]
                               (fn [_ params]
                                 (swap! sent-emails conj params)
                                 true))
@@ -193,8 +193,8 @@
 (deftest send-code-captcha-fail-test
   (let [config (store/atom-store)
         ctx    (-> (make-send-code-ctx config :email "test@example.com")
-                   (assoc-in [:biff.fx/handlers :fx/captcha-verify]
-                             (constantly {:success false})))
+                   (assoc-in [:biff.fx/handlers :biff.auth/captcha-verify]
+                             (constantly false)))
         result (backend/send-code-handler ctx)]
     (is (= 303 (:status result)))
     (is (str/includes? (get-in result [:headers "location"]) "error=captcha"))))
@@ -212,22 +212,22 @@
    :biff.auth/link-signin-path "/signin"
 
    :biff.fx/handlers
-   {:fx/get-user-id
+   {:biff.auth/get-user-id
     (:biff.auth/get-user-id store-config)
 
-    :fx/create-user
+    :biff.auth/create-user
     (:biff.auth/create-user store-config)
 
-    :fx/kv-get
+    :biff.core/kv-get
     (:biff.core/kv-get store-config)
 
-    :fx/kv-set
+    :biff.core/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/captcha-verify (constantly {:success true})
-    :fx/send-email     (fn [_ _] send-result)
-    :fx/new-code       util/new-code
-    :fx/new-link-token util/new-link-token}})
+    :biff.auth/captcha-verify (constantly true)
+    :biff.auth/send-email     (fn [_ _] send-result)
+    :biff.auth/new-code       util/new-code
+    :biff.auth/new-link-token util/new-link-token}})
 
 (deftest send-link-invalid-email-test
   (let [config (store/atom-store)
@@ -243,7 +243,7 @@
         sent-emails (atom [])
         ctx         (assoc-in (make-send-link-ctx
                                config :email "test@example.com")
-                              [:biff.fx/handlers :fx/send-email]
+                              [:biff.fx/handlers :biff.auth/send-email]
                               (fn [_ params]
                                 (swap! sent-emails conj params)
                                 true))
@@ -269,8 +269,8 @@
 (deftest send-link-captcha-fail-test
   (let [config (store/atom-store)
         ctx    (-> (make-send-link-ctx config :email "test@example.com")
-                   (assoc-in [:biff.fx/handlers :fx/captcha-verify]
-                             (constantly {:success false})))
+                   (assoc-in [:biff.fx/handlers :biff.auth/captcha-verify]
+                             (constantly false)))
         result (backend/send-link-handler ctx)]
     (is (= 303 (:status result)))
     (is (str/includes? (get-in result [:headers "location"]) "error=captcha"))))
@@ -287,20 +287,20 @@
    :biff.auth/code-signin-path    "/signin"
 
    :biff.fx/handlers
-   {:fx/get-user-id
+   {:biff.auth/get-user-id
     (:biff.auth/get-user-id store-config)
 
-    :fx/create-user
+    :biff.auth/create-user
     (:biff.auth/create-user store-config)
 
-    :fx/kv-get
+    :biff.core/kv-get
     (:biff.core/kv-get store-config)
 
-    :fx/kv-set
+    :biff.core/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/new-code       util/new-code
-    :fx/new-link-token util/new-link-token}})
+    :biff.auth/new-code       util/new-code
+    :biff.auth/new-link-token util/new-link-token}})
 
 (deftest verify-code-success-test
   (let [config (store/atom-store)
@@ -434,20 +434,20 @@
      :biff.auth/link-signin-path    "/signin"
 
      :biff.fx/handlers
-     {:fx/get-user-id
+     {:biff.auth/get-user-id
       (:biff.auth/get-user-id store-config)
 
-      :fx/create-user
+      :biff.auth/create-user
       (:biff.auth/create-user store-config)
 
-      :fx/kv-get
+      :biff.core/kv-get
       (:biff.core/kv-get store-config)
 
-      :fx/kv-set
+      :biff.core/kv-set
       (:biff.core/kv-set store-config)
 
-      :fx/new-code       util/new-code
-      :fx/new-link-token util/new-link-token}}))
+      :biff.auth/new-code       util/new-code
+      :biff.auth/new-link-token util/new-link-token}}))
 
 (deftest verify-link-success-test
   (let [config      (store/atom-store)
@@ -569,20 +569,20 @@
    :biff.auth/link-signin-path    "/signin"
 
    :biff.fx/handlers
-   {:fx/get-user-id
+   {:biff.auth/get-user-id
     (:biff.auth/get-user-id store-config)
 
-    :fx/create-user
+    :biff.auth/create-user
     (:biff.auth/create-user store-config)
 
-    :fx/kv-get
+    :biff.core/kv-get
     (:biff.core/kv-get store-config)
 
-    :fx/kv-set
+    :biff.core/kv-set
     (:biff.core/kv-set store-config)
 
-    :fx/new-code       util/new-code
-    :fx/new-link-token util/new-link-token}})
+    :biff.auth/new-code       util/new-code
+    :biff.auth/new-link-token util/new-link-token}})
 
 (deftest verify-link-confirm-success-test
   (let [config (store/atom-store)
@@ -757,34 +757,34 @@
                   (handler {:request-method :get :session {}}))))))
 
 (deftest module-allows-send-code-without-captcha-test
-  (let [config                      (store/atom-store)
-        opts                        {:biff.auth/app-name             "Test App"
-                                     :biff.auth/base-url             "https://example.com"
-                                     :biff.auth/skip-captcha         true
-                                     :biff.auth/skip-csrf-protection true
+  (let [config              (store/atom-store)
+        opts                {:biff.auth/app-name             "Test App"
+                             :biff.auth/base-url             "https://example.com"
+                             :biff.auth/skip-captcha         true
+                             :biff.auth/skip-csrf-protection true
 
-                                     :biff.auth/send-email
-                                     (constantly true)}
-        module                      (auth/module
-                                     (merge config
-                                            auth/turnstile-config
-                                            opts))
-        [_ route-data]              (first (:biff.ring/routes module))
-        [_ send-code-route]         (first
-                                     (filter #(= (routes/send-code) (first %))
-                                             (route-nodes module)))
-        handler                     (apply-middleware
-                                     (:post send-code-route)
-                                     (:middleware route-data))
-        result                      (handler
-                                     (merge
-                                      (select-keys config
-                                                   [:biff.core/kv-get
-                                                    :biff.core/kv-set])
+                             :biff.auth/send-email
+                             (constantly true)}
+        module              (auth/module
+                             (merge config
+                                    auth/turnstile-config
+                                    opts))
+        [_ route-data]      (first (:biff.ring/routes module))
+        [_ send-code-route] (first
+                             (filter #(= (routes/send-code) (first %))
+                                     (route-nodes module)))
+        handler             (apply-middleware
+                             (:post send-code-route)
+                             (:middleware route-data))
+        result              (handler
+                             (merge
+                              (select-keys config
+                                           [:biff.core/kv-get
+                                            :biff.core/kv-set])
 
-                                      {:params {:email "test@example.com"}
+                              {:params {:email "test@example.com"}
 
-                                       :biff.auth/app-name "Test App"}))]
+                               :biff.auth/app-name "Test App"}))]
     (is (= 303 (:status result)))
     (is (str/includes? (get-in result [:headers "location"]) "verify=code"))))
 
@@ -828,7 +828,7 @@
                                        :biff.auth/app-name "Test App"
                                        :system-marker      :present}))
         fx-send-email (get-in ctx [:biff.fx/handlers
-                                   :fx/send-email])]
+                                   :biff.auth/send-email])]
     (is (true? (fx-send-email ctx {:to "test@example.com"})))
     (is (= :present (:system-marker @captured)))))
 
@@ -895,14 +895,14 @@
     (is (str/includes? (ex-message ex) "Captcha is not configured"))))
 
 (deftest module-includes-verify-link-confirm-route-test
-  (let [config      (store/atom-store)
-        m           (auth/module (merge config auth/turnstile-config
-                                        module-defaults
-                                        {:biff.auth/app-name "Test App"
+  (let [config (store/atom-store)
+        m      (auth/module (merge config auth/turnstile-config
+                                   module-defaults
+                                   {:biff.auth/app-name "Test App"
 
-                                         :biff.auth/send-email
-                                         (constantly true)}))
-        paths       (map first (route-nodes m))]
+                                    :biff.auth/send-email
+                                    (constantly true)}))
+        paths  (map first (route-nodes m))]
     (is (some #(= (routes/verify-link-confirm) %) paths))))
 
 ;;;; Page rendering ============================================================
@@ -1038,7 +1038,7 @@
 
 (deftest captcha-verify-start-state-forces-secrets-test
   (testing "turnstile"
-    (is (= {:response     [:fx/http
+    (is (= {:response     [:biff.auth/http
                            {:method           :post
                             :url              captcha/turnstile-url
                             :form-params      {:secret   "turnstile-secret"
@@ -1053,7 +1053,7 @@
              :params {:cf-turnstile-response "turnstile-token"}}
             :start))))
   (testing "recaptcha"
-    (is (= {:response     [:fx/http
+    (is (= {:response     [:biff.auth/http
                            {:method           :post
                             :url              captcha/recaptcha-url
                             :form-params      {:secret   "recaptcha-secret"
@@ -1068,7 +1068,7 @@
              :params {:g-recaptcha-response "recaptcha-token"}}
             :start))))
   (testing "hcaptcha"
-    (is (= {:response     [:fx/http
+    (is (= {:response     [:biff.auth/http
                            {:method           :post
                             :url              captcha/hcaptcha-url
                             :form-params      {:secret   "hcaptcha-secret"

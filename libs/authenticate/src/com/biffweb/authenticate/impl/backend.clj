@@ -66,7 +66,7 @@
                  "\n\nThis code expires in 10 minutes.")
    :html    (chassis/html
              [[:p "Your sign-in code is: " [:strong code]]
-              [:p "This code expries in 10 minutes."]])})
+              [:p "This code expires in 10 minutes."]])})
 
 (defn- default-link-email [{:biff.auth/keys [app-name]} {:keys [url]}]
   {:subject (str "Sign in to " app-name)
@@ -80,7 +80,8 @@
 
 (defn ensure-user [{:keys [email saved-params existing-user-id]}]
   {:user-id      (or existing-user-id
-                     [:fx/create-user {:email email :params saved-params}])
+                     [:biff.auth/create-user
+                      {:email email :params saved-params}])
    :biff.fx/next :success-redirect})
 
 (defn success-redirect [{:biff.auth/keys [app-path] :keys [user-id session]}]
@@ -103,21 +104,20 @@
         {:status  303
          :headers {"location" (routes/append-query-params
                                code-signin-path "error=invalid-email")}}
-        {:email           email
-         :original-params params
-         :code            [:fx/new-code 6]
-         :captcha-ok      [:fx/captcha-verify]
-         :biff.fx/next    :check-captcha})))
+        {:email          email
+         :code           [:biff.auth/new-code 6]
+         :captcha-passed [:biff.auth/captcha-verify]
+         :biff.fx/next   :check-captcha})))
 
   :check-captcha
   (fn [{:biff.auth/keys [code-signin-path
                          captcha-param]
-        :keys           [email code captcha-ok original-params biff.fx/now]
+        :keys           [email code captcha-passed params biff.fx/now]
         :as             ctx}]
     (let [defaults (default-code-email ctx {:code code})
-          clean-p  (params-to-save original-params captcha-param)]
-      (if (:success captcha-ok)
-        [{:_upsert [:fx/kv-set :biff.auth/signin email
+          clean-p  (params-to-save params captcha-param)]
+      (if captcha-passed
+        [{:_upsert [:biff.core/kv-set :biff.auth/signin email
                     (validate-record
                      {:biff-auth-signin/code-hash       (hash-secret code)
                       :biff-auth-signin/created-at      now
@@ -125,10 +125,10 @@
                       :biff-auth-signin/flow            :code
                       :biff-auth-signin/params          clean-p})]}
          {:email        email
-          :sent         [:fx/send-email (merge defaults
-                                               {:template :signin-code
-                                                :to       email
-                                                :code     code})]
+          :sent         [:biff.auth/send-email (merge defaults
+                                                      {:template :signin-code
+                                                       :to       email
+                                                       :code     code})]
           :biff.fx/next :check-send-result}]
         {:status  303
          :headers {"location" (routes/append-query-params
@@ -151,7 +151,7 @@
     (let [email (normalize-email (:email params))]
       {:email          email
        :submitted-code (:code params)
-       :signin-record  [:fx/kv-get :biff.auth/signin email]
+       :signin-record  [:biff.core/kv-get :biff.auth/signin email]
        :biff.fx/next   :check-code}))
 
   :check-code
@@ -173,8 +173,8 @@
       (if success
         {:email            email
          :saved-params     params
-         :_delete          [:fx/kv-set :biff.auth/signin email nil]
-         :existing-user-id [:fx/get-user-id email]
+         :_delete          [:biff.core/kv-set :biff.auth/signin email nil]
+         :existing-user-id [:biff.auth/get-user-id email]
          :biff.fx/next     :ensure-user}
         (merge
          {:status  303
@@ -185,7 +185,7 @@
          (when (and signin-record
                     (= flow :code)
                     (< failed-attempts max-failed-attempts))
-           {:_inc [:fx/kv-set :biff.auth/signin email
+           {:_inc [:biff.core/kv-set :biff.auth/signin email
                    (-> signin-record
                        (update :biff-auth-signin/failed-attempts inc)
                        validate-record)]})))))
@@ -205,26 +205,25 @@
         {:status  303
          :headers {"location" (routes/append-query-params
                                link-signin-path "error=invalid-email")}}
-        {:email           email
-         :original-params params
-         :token           [:fx/new-link-token 32]
-         :state-token     [:fx/new-link-token 16]
-         :captcha-ok      [:fx/captcha-verify]
-         :biff.fx/next    :check-captcha})))
+        {:email          email
+         :token          [:biff.auth/new-link-token 32]
+         :state-token    [:biff.auth/new-link-token 16]
+         :captcha-passed [:biff.auth/captcha-verify]
+         :biff.fx/next   :check-captcha})))
 
   :check-captcha
   (fn [{:biff.auth/keys [base-url link-signin-path captcha-param]
-        :keys           [email token state-token captcha-ok original-params
+        :keys           [email token state-token captcha-passed params
                          biff.fx/now]
         :as             ctx}]
-    (let [clean-p  (params-to-save original-params captcha-param)
+    (let [clean-p  (params-to-save params captcha-param)
           payload  (encode-payload {:token token
                                     :email email
                                     :state state-token})
           link-url (routes/verify-link base-url payload)
           defaults (default-link-email ctx {:url link-url})]
-      (if (:success captcha-ok)
-        [{:_upsert [:fx/kv-set :biff.auth/signin email
+      (if captcha-passed
+        [{:_upsert [:biff.core/kv-set :biff.auth/signin email
                     (validate-record
                      {:biff-auth-signin/code-hash       (hash-secret token)
                       :biff-auth-signin/created-at      now
@@ -233,10 +232,10 @@
                       :biff-auth-signin/params          clean-p})]}
          {:email        email
           :state-token  state-token
-          :sent         [:fx/send-email (merge defaults
-                                               {:template :signin-link
-                                                :to       email
-                                                :url      link-url})]
+          :sent         [:biff.auth/send-email (merge defaults
+                                                      {:template :signin-link
+                                                       :to       email
+                                                       :url      link-url})]
           :biff.fx/next :check-send-result}]
         {:status  303
          :headers {"location" (routes/append-query-params
@@ -276,7 +275,7 @@
 
          (confirmed-from-user? (assoc ctx :auth-params auth-params))
          {:auth-params   auth-params
-          :signin-record [:fx/kv-get :biff.auth/signin email]
+          :signin-record [:biff.core/kv-get :biff.auth/signin email]
           :biff.fx/next  :check-token}
 
          :else
@@ -300,9 +299,9 @@
                 (secret-matches? (:token auth-params) code-hash))
          {:email            (:email auth-params)
           :saved-params     params
-          :_delete          [:fx/kv-set :biff.auth/signin (:email auth-params)
-                             nil]
-          :existing-user-id [:fx/get-user-id (:email auth-params)]
+          :_delete          [:biff.core/kv-set :biff.auth/signin
+                             (:email auth-params) nil]
+          :existing-user-id [:biff.auth/get-user-id (:email auth-params)]
           :biff.fx/next     :ensure-user}
          {:status  303
           :headers {"location" (routes/append-query-params

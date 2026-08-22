@@ -17,19 +17,22 @@
    :biff.core/kv-set])
 
 (def ^:private default-options
-  #:biff.auth{:app-path            routes/default-app-page
-              :email-validator     util/email-valid?
-              :primary-color       "#4F46E5"
-              :accent-color        "#818CF8"
-              :max-failed-attempts 5
-              :code-expiry-minutes 10
-              :link-expiry-minutes 60
-              :code-signin-path    routes/default-signin-page
-              :link-signin-path    routes/default-signin-page})
+  (merge
+   captcha/noop-config
+   #:biff.auth{:app-path            routes/default-app-page
+               :email-validator     util/email-valid?
+               :primary-color       "#4F46E5"
+               :accent-color        "#818CF8"
+               :include-signin-page true
+               :max-failed-attempts 5
+               :code-expiry-minutes 10
+               :link-expiry-minutes 60
+               :code-signin-path    routes/default-signin-page
+               :link-signin-path    routes/default-signin-page}))
 
 (defn- wrap-options [handler options]
   (fn [ctx]
-    (handler (biff.core/validate (merge captcha/noop-config options ctx)
+    (handler (biff.core/validate (merge options ctx)
                                  {:required (into fx-handler-keys
                                                   [:biff.auth/app-name
                                                    :biff.auth/base-url])}))))
@@ -41,16 +44,14 @@
                 (and captcha-configured?
                      (captcha-configured? ctx)))
             "Captcha is not configured")
-    (let [fx-handlers
+    (let [ctx (merge ctx (when skip-captcha captcha/noop-config))
+
+          fx-handlers
           (-> (select-keys ctx fx-handler-keys)
-              (update-keys #(keyword "fx" (name %)))
-              (merge (when skip-captcha
-                       {:fx/captcha-verify (constantly {:success true})})
-                     {:fx/new-code       util/new-code
-                      :fx/new-link-token util/new-link-token
-                      :fx/http           hato/request}))]
-      (handler (cond-> (update ctx :biff.fx/handlers merge fx-handlers)
-                 skip-captcha (merge captcha/noop-config))))))
+              (merge {:biff.auth/new-code       util/new-code
+                      :biff.auth/new-link-token util/new-link-token
+                      :biff.auth/http           hato/request}))]
+      (handler (update ctx :biff.fx/handlers merge fx-handlers)))))
 
 (defn routes [options]
   (biff.core/validate options)
@@ -62,7 +63,7 @@
                            [[anti-forgery/wrap-anti-forgery]])))]
     [["" {:middleware middleware}
       backend/routes
-      (when (get options :biff.auth/include-signin-page true)
+      (when (get options :biff.auth/include-signin-page)
         frontend/routes)]]))
 
 (defn module [options]

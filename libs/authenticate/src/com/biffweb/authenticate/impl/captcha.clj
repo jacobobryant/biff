@@ -11,7 +11,7 @@
 (fx/defmachine turnstile-verify
   :start
   (fn [{:keys [biff.auth/turnstile-secret params]}]
-    {:response     [:fx/http
+    {:response     [:biff.auth/http
                     {:method           :post
                      :url              turnstile-url
                      :form-params      {:secret (force turnstile-secret)
@@ -25,7 +25,7 @@
 
   :check-response
   (fn [{:keys [response]}]
-    {:success (boolean (get-in response [:body :success]))}))
+    {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn turnstile-head [_ctx]
   [:script {:src   "https://challenges.cloudflare.com/turnstile/v0/api.js"
@@ -51,7 +51,7 @@
 (fx/defmachine recaptcha-verify
   :start
   (fn [{:keys [params biff.auth/recaptcha-secret]}]
-    {:response     [:fx/http
+    {:response     [:biff.auth/http
                     {:method           :post
                      :url              recaptcha-url
                      :form-params      {:secret (force recaptcha-secret)
@@ -68,9 +68,9 @@
         :or   {recaptcha-threshold 0.5}}]
     (let [{:keys [success score]} (:body response)]
       ;; Supports both v2 (no score, just success) and v3 (success + score)
-      {:success (boolean (and success
-                              (or (nil? score)
-                                  (<= recaptcha-threshold score))))})))
+      {:biff.fx/return (boolean (and success
+                                     (or (nil? score)
+                                         (<= recaptcha-threshold score))))})))
 
 (defn recaptcha-head [_ctx]
   [:<>
@@ -102,7 +102,7 @@
 (fx/defmachine hcaptcha-verify
   :start
   (fn [{:keys [biff.auth/hcaptcha-secret params]}]
-    {:response     [:fx/http
+    {:response     [:biff.auth/http
                     {:method           :post
                      :url              hcaptcha-url
                      :form-params      {:secret   (force hcaptcha-secret)
@@ -114,7 +114,7 @@
 
   :check-response
   (fn [{:keys [response]}]
-    {:success (boolean (get-in response [:body :success]))}))
+    {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn hcaptcha-head [_ctx]
   [:script {:src "https://js.hcaptcha.com/1/api.js" :async true :defer true}])
