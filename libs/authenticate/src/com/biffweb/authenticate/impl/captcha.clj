@@ -10,8 +10,8 @@
 
 (fx/defmachine turnstile-verify
   :start
-  (fn [{:keys [biff.auth/turnstile-secret params]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.auth/turnstile-secret biff.stuff/params]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              turnstile-url
                      :form-params      {:secret (force turnstile-secret)
@@ -24,7 +24,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response]}]
+  (fn [{::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn turnstile-head [_ctx]
@@ -39,7 +39,6 @@
   {:biff.auth/captcha-verify      turnstile-verify
    :biff.auth/captcha-head        turnstile-head
    :biff.auth/captcha-widget      turnstile-widget
-   :biff.auth/captcha-param       :cf-turnstile-response
    :biff.auth/captcha-configured? #(configured?
                                     % [:biff.auth/turnstile-secret
                                        :biff.auth/turnstile-site-key])})
@@ -50,8 +49,8 @@
 
 (fx/defmachine recaptcha-verify
   :start
-  (fn [{:keys [params biff.auth/recaptcha-secret]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.stuff/params biff.auth/recaptcha-secret]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              recaptcha-url
                      :form-params      {:secret (force recaptcha-secret)
@@ -64,8 +63,9 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response biff.auth/recaptcha-threshold]
-        :or   {recaptcha-threshold 0.5}}]
+  (fn [{::keys [response]
+        :keys  [biff.auth/recaptcha-threshold]
+        :or    {recaptcha-threshold 0.5}}]
     (let [{:keys [success score]} (:body response)]
       ;; Supports both v2 (no score, just success) and v3 (success + score)
       {:biff.fx/return (boolean (and success
@@ -74,7 +74,8 @@
 
 (defn recaptcha-head [_ctx]
   [:<>
-   [:script {:src "https://www.google.com/recaptcha/api.js" :async true :defer true}]
+   [:script {:src   "https://www.google.com/recaptcha/api.js"
+             :async true                                      :defer true}]
    [:script (str "function biffAuthRecaptchaSubmit(token){"
                  "var b=document.querySelector('.g-recaptcha');"
                  "if(b&&b.form)b.form.submit();"
@@ -90,7 +91,6 @@
   {:biff.auth/captcha-verify       recaptcha-verify
    :biff.auth/captcha-head         recaptcha-head
    :biff.auth/captcha-button-attrs recaptcha-button-attrs
-   :biff.auth/captcha-param        :g-recaptcha-response
    :biff.auth/captcha-configured?  #(configured?
                                      % [:biff.auth/recaptcha-secret
                                         :biff.auth/recaptcha-site-key])})
@@ -101,8 +101,8 @@
 
 (fx/defmachine hcaptcha-verify
   :start
-  (fn [{:keys [biff.auth/hcaptcha-secret params]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.auth/hcaptcha-secret biff.stuff/params]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              hcaptcha-url
                      :form-params      {:secret   (force hcaptcha-secret)
@@ -113,7 +113,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response]}]
+  (fn [{::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn hcaptcha-head [_ctx]
@@ -126,7 +126,6 @@
   {:biff.auth/captcha-verify      hcaptcha-verify
    :biff.auth/captcha-head        hcaptcha-head
    :biff.auth/captcha-widget      hcaptcha-widget
-   :biff.auth/captcha-param       :h-captcha-response
    :biff.auth/captcha-configured? #(configured?
                                     % [:biff.auth/hcaptcha-secret
                                        :biff.auth/hcaptcha-site-key])})
@@ -134,7 +133,7 @@
 ;;;; no-op =====================================================================
 
 (def noop-config
-  {:biff.auth/captcha-verify       (constantly true)
+  {:biff.auth/captcha-verify       (constantly false)
    :biff.auth/captcha-head         (constantly nil)
    :biff.auth/captcha-widget       (constantly nil)
    :biff.auth/captcha-configured?  (constantly false)

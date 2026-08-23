@@ -2,11 +2,20 @@
   (:require [com.biffweb.authenticate.impl.backend :as backend]
             [com.biffweb.authenticate.impl.frontend :as frontend]
             [com.biffweb.authenticate.impl.captcha :as captcha]
-            [com.biffweb.authenticate.impl.routes :as routes]
-            [com.biffweb.authenticate.impl.util :as util]
             [com.biffweb.core :as biff.core]
+            [com.biffweb.stuff :as stuff]
             [hato.client :as hato]
             [ring.middleware.anti-forgery :as anti-forgery]))
+
+(defn email-valid? [_ctx email]
+  (and (string? email)
+       (re-matches #".+@.+\..+" email)
+       (not (re-find #"\s" email))))
+
+(defn new-code [_ctx length]
+  (let [rng (java.security.SecureRandom.)]
+    (format (str "%0" length "d")
+            (.nextInt rng (dec (int (Math/pow 10 length)))))))
 
 (def ^:private fx-handler-keys
   [:biff.auth/get-user-id
@@ -19,24 +28,19 @@
 (def ^:private default-options
   (merge
    captcha/noop-config
-   #:biff.auth{:app-path            routes/default-app-page
-               :email-validator     util/email-valid?
+   #:biff.auth{:app-path            "/app"
+               :email-valid?        email-valid?
                :primary-color       "#4F46E5"
                :accent-color        "#818CF8"
                :include-signin-page true
                :max-failed-attempts 5
                :code-expiry-minutes 10
-               :link-expiry-minutes 60
-               :code-page           routes/default-code-page
-               :link-page           routes/default-link-page
-               :verify-link-page    routes/default-verify-link-page}))
+               :signin-page         "/signin"}))
 
 (defn- wrap-options [handler options]
   (fn [ctx]
     (handler (biff.core/validate (merge options ctx)
-                                 {:required (into fx-handler-keys
-                                                  [:biff.auth/app-name
-                                                   :biff.auth/base-url])}))))
+                                 {:required fx-handler-keys}))))
 
 (defn- wrap-fx-handlers [handler]
   (fn [{:biff.auth/keys [captcha-configured? skip-captcha]
@@ -45,23 +49,25 @@
                 (and captcha-configured?
                      (captcha-configured? ctx)))
             "Captcha is not configured")
-    (let [ctx (merge ctx (when skip-captcha captcha/noop-config))
+    (let [ctx (cond-> ctx
+                skip-captcha
+                (merge captcha/noop-config
+                       {:biff.auth/captcha-verify (fn [_] true)}))
 
           fx-handlers
           (-> (select-keys ctx fx-handler-keys)
-              (merge {:biff.auth/new-code       util/new-code
-                      :biff.auth/new-link-token util/new-link-token
-                      :biff.auth/http           hato/request}))]
+              (merge {:biff.auth/new-code new-code
+                      :biff.auth/http     hato/request}))]
       (handler (update ctx :biff.fx/handlers merge fx-handlers)))))
 
 (defn routes [options]
   (biff.core/validate options)
   (let [options    (merge default-options options)
-        middleware (vec (concat
-                         [[wrap-options options]
+        middleware (into [[stuff/wrap-params]
+                          [wrap-options options]
                           [wrap-fx-handlers]]
                          (when-not (:biff.auth/skip-csrf-protection options)
-                           [[anti-forgery/wrap-anti-forgery]])))]
+                           [[anti-forgery/wrap-anti-forgery]]))]
     [["" {:middleware middleware}
       backend/routes
       (when (get options :biff.auth/include-signin-page)

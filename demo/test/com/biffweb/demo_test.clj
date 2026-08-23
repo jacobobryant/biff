@@ -205,7 +205,6 @@
     (is (= 303 (:status send-code)))
     (is (str/includes? (get-in send-code [:headers "location"]) "verify=code"))
     (is (= email (:to sent-email)))
-    (is (= :signin-code (:template sent-email)))
 
     (is (= 303 (:status verify-code)))
     (is (= "/app" (get-in verify-code [:headers "location"])))

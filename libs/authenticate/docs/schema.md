@@ -36,7 +36,7 @@ value is used as the value for `(:uid session)`.
 
 ### :biff.auth/send-email
 
-`(fn [ctx {:keys [to subject html text template url code]}]) -> boolean`
+`(fn [ctx {:keys [to subject html text code]}]) -> boolean`
 
 Sends a signin email to a user who may or may not have an account already.
 Returns `true` if the email was sent successfully and `false` otherwise.
@@ -46,33 +46,31 @@ Returns `true` if the email was sent successfully and `false` otherwise.
 :subject   ; string, subject line
 :html      ; string, html email body
 :text      ; string, text email body
-:template  ; one of #{:signin-link :signin-code}
-:url       ; string, the signin link. Set when :template is :signin-link.
-:code      ; string, the signin code. Set when :template is :signin-code.
+:code      ; string, the signin code.
 ```
 
 `:subject`, `:html`, and `:text` are provided by the default template. You can
-use these and ignore `:template`, `:url`, and `:code`, or you can instead use
-the latter parameters to generate your own subject / html / text.
+use these and ignore `:code`, or you can instead use `:code` to generate your
+own subject / html / text.
 
 ## Appearance
 
 ### :biff.auth/app-name
 
-String. The user-visible name of the application, used on the signin form and in
-signin emails.
+String. The user-visible name of the application. When provided, it is shown on
+the signin page.
 
 ### :biff.auth/primary-color
 
-String, default `#4F46E5` (indigo). The primary color for the signin form.
+String, default `#4F46E5` (indigo). The primary color for the signin page.
 
 ### :biff.auth/accent-color
 
-String, default `#818CF8` (light indigo). The accent color for the signin form.
+String, default `#818CF8` (light indigo). The accent color for the signin page.
 
 ### :biff.auth/logo-url
 
-String. If set, used to display a logo on the signin form.
+String. If set, used to display a logo on the signin page.
 
 ## Captcha
 
@@ -105,11 +103,6 @@ provider. For example:
 [:head ... (captcha-head ctx)]
 ```
 
-### :biff.auth/captcha-param
-
-Keyword. A key in `(:params ctx)` that will be omitted from the `params` map
-passed to `create-user`.
-
 ### :biff.auth/captcha-verify
 
 `(fn [ctx]) -> boolean`
@@ -133,7 +126,7 @@ captcha provider, above the submit button. For example:
 
 ### :biff.auth/hcaptcha-secret
 
-String wrapped with `#biff/secret` /
+String optionally wrapped with `#biff/secret` /
 [`biff.core/secret-delay`](/libs/core/docs/api/com.biffweb.core.md#secret-delay).
 Required when using `hcaptcha-config`.
 
@@ -143,7 +136,7 @@ String. Required when using `hcaptcha-config`.
 
 ### :biff.auth/recaptcha-secret
 
-String wrapped with `#biff/secret` /
+String optionally wrapped with `#biff/secret` /
 [`biff.core/secret-delay`](/libs/core/docs/api/com.biffweb.core.md#secret-delay).
 Required when using `recaptcha-config`.
 
@@ -158,7 +151,7 @@ v3, the minimum score for a recaptcha request to be considered successful.
 
 ### :biff.auth/turnstile-secret
 
-String wrapped with `#biff/secret` /
+String optionally wrapped with `#biff/secret` /
 [`biff.core/secret-delay`](/libs/core/docs/api/com.biffweb.core.md#secret-delay).
 Required when using `turnstile-config`.
 
@@ -172,20 +165,15 @@ String. Required when using `turnstile-config`.
 
 String, default `/app`. The path to redirect to after a successful signin.
 
-### :biff.auth/base-url
-
-String, example `"https://example.com"`. The base URL to use for signin links.
-
 ### :biff.auth/code-expiry-minutes
 
 Int, default 10. The number of minutes a new signin code is valid.
 
-### :biff.auth/code-page
+### :biff.auth/signin-page
 
-String, default `/signin`. The path for the signin-via-code page. Used for
-redirects.
+String, default `/signin`. The path for the signin page. Used for redirects.
 
-### :biff.auth/email-validator
+### :biff.auth/email-valid?
 
 `(fn [ctx email]) -> boolean`
 
@@ -201,15 +189,6 @@ function ensures that `email`:
 Boolean, default true. If `false`, the default signin page will not be included
 in Reitit routes.
 
-### :biff.auth/link-expiry-minutes
-
-Int, default 60. The number of minutes a new signin link is valid.
-
-### :biff.auth/link-page
-
-String, default `/signup`. The path for the signin-via-link page. Used for
-redirects.
-
 ### :biff.auth/max-failed-attempts
 
 Int, default 5. The number of times an incorrect signin code can be provided for
@@ -218,15 +197,11 @@ a particular email address before a new signin code must be requested.
 ### :biff.auth/skip-captcha
 
 Boolean, default false. When true, a captcha test is not required to request a
-signin code or link. This setting is only meant for development.
+signin code. This setting should only be used in development.
 
 ### :biff.auth/skip-csrf-protection
 
 Boolean, default false. When true, the Reitit routes will not be wrapped with
 `ring.middleware.anti-forgery`. You should only set this if you have other CSRF
-protection in place.
-
-### :biff.auth/verify-link-page
-
-String, default `/signup/verify`. The path for the signin-via-link verification
-page. Used for redirects.
+protection in place. CSRF protection prevents an attacker from getting victims
+to sign in to the attacker's account.

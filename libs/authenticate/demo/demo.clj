@@ -21,7 +21,7 @@
    :biff.auth/captcha-configured? (fn [_ctx] true)})
 
 (defn send-email [_ctx
-                  ;; also includes :template, :to, :code OR :url, :html
+                  ;; also includes :to, :code, :html
                   {:keys [subject text to]}]
   (println)
   (println "---")
@@ -37,8 +37,6 @@
   (merge {:biff.auth/send-email send-email
           ;; where to redirect after a successful signin
           :biff.auth/app-path   "/app"
-          ;; the base URL to use for email signin links
-          :biff.auth/base-url   "http://localhost:8080"
           ;; Set these keys to customize the signin page's appearance.
           :biff.auth/app-name   "Biff Auth Demo"
           ;; :biff.auth/logo-url      "https://example.com/logo.png"
@@ -79,7 +77,7 @@
         [:body
          [:h1 "Welcome!"]
          [:p "You are signed in. User ID: " [:code (str uid)]]
-         [:form {:method "post" :action biff.auth/signout-link}
+         [:form {:method "post" :action biff.auth/signout-path}
           [:input {:type  "hidden"
                    :name  :__anti-forgery-token
                    :value (:anti-forgery-token req)}]
