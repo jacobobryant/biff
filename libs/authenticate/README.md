@@ -4,9 +4,12 @@ A collection of Reitit routes which provide sign-in-via-email (6-digit code)
 functionality to your web app, including a default signin page and pluggable
 captcha/email providers.
 
-| Sign in / sign up | Verify code |
-| --- | --- |
-| ![Sign in and sign up form](docs/images/signin.png) | ![Verify signin code form](docs/images/verify.png) |
+<table>
+  <tr>
+    <td><img src="docs/images/signin.png" alt="Sign in and sign up form"></td>
+    <td><img src="docs/images/verify.png" alt="Verify signin code form"></td>
+  </tr>
+</table>
 
 ### Dependency
 
