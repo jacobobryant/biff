@@ -217,7 +217,7 @@
 
 (defn- render-verify-code
   [{:biff.auth/keys [primary-color code-page]
-    :keys           [anti-forgery-token params]}]
+    :keys           [anti-forgery-token biff.stuff/params]}]
   (let [email (:email params)]
     [(title "Check your email")
      [:p {:style {:text-align "center"  :margin "0 0 1rem 0"
@@ -253,7 +253,8 @@
                    "← Use a different email"))]))
 
 (defn- render-link-sent
-  [{:biff.auth/keys [primary-color link-page] :keys [params]}]
+  [{:biff.auth/keys [primary-color link-page]
+    :keys           [biff.stuff/params]}]
   (let [email (:email params)]
     [(title "Check your email")
      [:p {:style {:text-align "center" :font-size "0.95rem" :margin "0"}}
@@ -266,7 +267,7 @@
 
 (defn- render-link-confirm
   [{:biff.auth/keys [primary-color link-page]
-    :keys           [anti-forgery-token params]}]
+    :keys           [anti-forgery-token biff.stuff/params]}]
   (let [token (:token params)]
     [(title "Confirm your email")
      [:p {:style {:text-align "center"
@@ -312,7 +313,7 @@
 
 ;;;; Main page handler =========================================================
 
-(defn- page [ctx content]
+(defn- page [{:keys [biff.stuff/params] :as ctx} content]
   {:status  200
    :headers {"content-type" "text/html"}
    :body    (chassis/html
@@ -320,15 +321,15 @@
               (base-page
                ctx
                (card ctx
-                     (error-banner (get-in ctx [:params :error]))
+                     (error-banner (:error params))
                      content))])})
 
-(defn code-page [{:keys [params] :as ctx}]
+(defn code-page [{:keys [biff.stuff/params] :as ctx}]
   (page ctx (if (:email params)
               (render-verify-code ctx)
               (render-tabs ctx :code))))
 
-(defn link-page [{:keys [params] :as ctx}]
+(defn link-page [{:keys [biff.stuff/params] :as ctx}]
   (page ctx (if (:email params)
               (render-link-sent ctx)
               (render-tabs ctx :link))))

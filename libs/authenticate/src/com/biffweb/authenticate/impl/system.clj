@@ -5,6 +5,7 @@
             [com.biffweb.authenticate.impl.routes :as routes]
             [com.biffweb.authenticate.impl.util :as util]
             [com.biffweb.core :as biff.core]
+            [com.biffweb.stuff :as stuff]
             [hato.client :as hato]
             [ring.middleware.anti-forgery :as anti-forgery]))
 
@@ -58,7 +59,8 @@
   (biff.core/validate options)
   (let [options    (merge default-options options)
         middleware (vec (concat
-                         [[wrap-options options]
+                         [[stuff/wrap-params]
+                          [wrap-options options]
                           [wrap-fx-handlers]]
                          (when-not (:biff.auth/skip-csrf-protection options)
                            [[anti-forgery/wrap-anti-forgery]])))]

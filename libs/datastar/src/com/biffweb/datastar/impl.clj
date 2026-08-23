@@ -66,6 +66,7 @@
                               request-method
                               query-params
                               body-params
+                              json-params
                               body
                               params]}]
   (cond
@@ -77,10 +78,11 @@
             (json/read-str :key-fn parse-signal-str))
 
     :else
-    (walk/postwalk #(cond-> %
-                      (map? %)
-                      (update-keys (comp parse-signal-str name)))
-                   (first (filterv map? [body-params body params])))))
+    (walk/postwalk
+     #(cond-> %
+        (map? %)
+        (update-keys (comp parse-signal-str name)))
+     (first (filterv map? [body-params json-params body params])))))
 
 (defn- merge-signals [request]
   (let [signals    (parse-signals request)

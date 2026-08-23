@@ -8,6 +8,7 @@
             [com.biffweb.authenticate.impl.routes :as routes]
             [com.biffweb.authenticate.impl.util :as util]
             [com.biffweb.core :as biff]
+            [com.biffweb.stuff :as stuff]
             [demo.store :as store]))
 
 ;;;; Helpers (backend) =========================================================
@@ -110,7 +111,7 @@
 (defn- make-send-code-ctx
   [store-config & {:keys [email send-result]
                    :or   {send-result true}}]
-  {:params                    {:email email}
+  {:biff.stuff/params         {:email email}
    :biff.auth/app-name        "Test App"
    :biff.auth/email-validator util/email-valid?
    :biff.auth/code-page       "/signin"
@@ -173,10 +174,11 @@
   (let [config (store/atom-store)
         store  (::store/store config)
         ctx    (assoc (make-send-code-ctx config :email "test@example.com")
-                      :params {:email                 "test@example.com"
-                               :extra                 "data"
-                               :__anti-forgery-token  "keyword-token"
-                               "__anti-forgery-token" "string-token"})
+                      :biff.stuff/params
+                      {:email                 "test@example.com"
+                       :extra                 "data"
+                       :__anti-forgery-token  "keyword-token"
+                       "__anti-forgery-token" "string-token"})
         result (backend/send-code-handler ctx)]
     (is (= 303 (:status result)))
     (let [signin-record (get-in @store [:kv signin-ns "test@example.com"])]
@@ -205,7 +207,7 @@
 (defn- make-send-link-ctx
   [store-config & {:keys [email send-result]
                    :or   {send-result true}}]
-  {:params                    {:email email}
+  {:biff.stuff/params         {:email email}
    :session                   {}
    :biff.auth/app-name        "Test App"
    :biff.auth/email-validator util/email-valid?
@@ -281,7 +283,7 @@
 
 (defn- make-verify-code-ctx
   [store-config & {:keys [email code]}]
-  {:params                        {:email email :code code}
+  {:biff.stuff/params             {:email email :code code}
    :session                       {}
    :biff.auth/app-path            "/app"
    :biff.auth/max-failed-attempts 5
@@ -491,11 +493,11 @@
                                        :email "test@example.com"
                                        :token "wrong-token"
                                        :state-token state-token
-                                       :session-state state-token)
+                                       :session-state "different-state")
           result (backend/verify-link-handler ctx)]
       (is (= 303 (:status result)))
-      (is (str/includes? (get-in result [:headers "location"])
-                         "error=invalid-link")))))
+      (is (= "/signup?error=invalid-link"
+             (get-in result [:headers "location"]))))))
 
 (deftest verify-link-expired-test
   (let [config       (store/atom-store)
@@ -564,7 +566,7 @@
 
 (defn- make-verify-link-confirm-ctx
   [store-config & {:keys [email token]}]
-  {:params                        {:email email :token token}
+  {:biff.stuff/params             {:email email :token token}
    :request-method                :post
    :session                       {}
    :biff.auth/app-path            "/app"
@@ -622,10 +624,8 @@
                                                :token token)
           result (backend/verify-link-handler-confirm ctx)]
       (is (= 303 (:status result)))
-      (is (str/includes? (get-in result [:headers "location"])
-                         "error=invalid-link"))
-      (is (str/includes? (get-in result [:headers "location"])
-                         (str "token=" token))))))
+      (is (= "/signup?error=invalid-link"
+             (get-in result [:headers "location"]))))))
 
 (deftest verify-link-confirm-nil-email-test
   (let [config (store/atom-store)
@@ -634,8 +634,8 @@
         result (backend/verify-link-handler-confirm ctx)]
     ;; Non-string email should redirect with error
     (is (= 303 (:status result)))
-    (is (str/includes? (get-in result [:headers "location"])
-                       "error=invalid-link"))))
+    (is (= "/signup?error=invalid-link"
+           (get-in result [:headers "location"])))))
 
 ;;;; Signout ===================================================================
 
@@ -933,7 +933,7 @@
 ;;;; Page rendering ============================================================
 
 (defn- render-page [handler ctx]
-  (handler (merge captcha/noop-config ctx)))
+  ((stuff/wrap-params handler) (merge captcha/noop-config ctx)))
 
 (deftest signin-page-renders-test
   (let [result (render-page frontend/code-page
@@ -1063,48 +1063,48 @@
 
 (deftest captcha-verify-start-state-forces-secrets-test
   (testing "turnstile"
-    (is (= {:response     [:biff.auth/http
-                           {:method           :post
-                            :url              captcha/turnstile-url
-                            :form-params      {:secret   "turnstile-secret"
-                                               :response "turnstile-token"}
-                            :as               :json
-                            :coerce           :always
-                            :throw-exceptions false}]
-            :biff.fx/next :check-response}
+    (is (= {::captcha/response [:biff.auth/http
+                                {:method           :post
+                                 :url              captcha/turnstile-url
+                                 :form-params      {:secret   "turnstile-secret"
+                                                    :response "turnstile-token"}
+                                 :as               :json
+                                 :coerce           :always
+                                 :throw-exceptions false}]
+            :biff.fx/next      :check-response}
            (captcha/turnstile-verify
             {:biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
 
-             :params {:cf-turnstile-response "turnstile-token"}}
+             :biff.stuff/params {:cf-turnstile-response "turnstile-token"}}
             :start))))
   (testing "recaptcha"
-    (is (= {:response     [:biff.auth/http
-                           {:method           :post
-                            :url              captcha/recaptcha-url
-                            :form-params      {:secret   "recaptcha-secret"
-                                               :response "recaptcha-token"}
-                            :as               :json
-                            :coerce           :always
-                            :throw-exceptions false}]
-            :biff.fx/next :check-response}
+    (is (= {::captcha/response [:biff.auth/http
+                                {:method           :post
+                                 :url              captcha/recaptcha-url
+                                 :form-params      {:secret   "recaptcha-secret"
+                                                    :response "recaptcha-token"}
+                                 :as               :json
+                                 :coerce           :always
+                                 :throw-exceptions false}]
+            :biff.fx/next      :check-response}
            (captcha/recaptcha-verify
             {:biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
 
-             :params {:g-recaptcha-response "recaptcha-token"}}
+             :biff.stuff/params {:g-recaptcha-response "recaptcha-token"}}
             :start))))
   (testing "hcaptcha"
-    (is (= {:response     [:biff.auth/http
-                           {:method           :post
-                            :url              captcha/hcaptcha-url
-                            :form-params      {:secret   "hcaptcha-secret"
-                                               :response "hcaptcha-token"}
-                            :as               :json
-                            :coerce           :always
-                            :throw-exceptions false}]
-            :biff.fx/next :check-response}
+    (is (= {::captcha/response [:biff.auth/http
+                                {:method           :post
+                                 :url              captcha/hcaptcha-url
+                                 :form-params      {:secret   "hcaptcha-secret"
+                                                    :response "hcaptcha-token"}
+                                 :as               :json
+                                 :coerce           :always
+                                 :throw-exceptions false}]
+            :biff.fx/next      :check-response}
            (captcha/hcaptcha-verify
             {:biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
-             :params                    {:h-captcha-response "hcaptcha-token"}}
+             :biff.stuff/params         {:h-captcha-response "hcaptcha-token"}}
             :start)))))
 
 (deftest captcha-configured-requires-secret-and-site-key-presence-test

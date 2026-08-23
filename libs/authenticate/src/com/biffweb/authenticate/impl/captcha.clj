@@ -10,8 +10,8 @@
 
 (fx/defmachine turnstile-verify
   :start
-  (fn [{:keys [biff.auth/turnstile-secret params]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.auth/turnstile-secret biff.stuff/params]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              turnstile-url
                      :form-params      {:secret (force turnstile-secret)
@@ -24,7 +24,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response]}]
+  (fn [{::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn turnstile-head [_ctx]
@@ -50,8 +50,8 @@
 
 (fx/defmachine recaptcha-verify
   :start
-  (fn [{:keys [params biff.auth/recaptcha-secret]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.stuff/params biff.auth/recaptcha-secret]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              recaptcha-url
                      :form-params      {:secret (force recaptcha-secret)
@@ -64,8 +64,9 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response biff.auth/recaptcha-threshold]
-        :or   {recaptcha-threshold 0.5}}]
+  (fn [{::keys [response]
+        :keys  [biff.auth/recaptcha-threshold]
+        :or    {recaptcha-threshold 0.5}}]
     (let [{:keys [success score]} (:body response)]
       ;; Supports both v2 (no score, just success) and v3 (success + score)
       {:biff.fx/return (boolean (and success
@@ -101,8 +102,8 @@
 
 (fx/defmachine hcaptcha-verify
   :start
-  (fn [{:keys [biff.auth/hcaptcha-secret params]}]
-    {:response     [:biff.auth/http
+  (fn [{:keys [biff.auth/hcaptcha-secret biff.stuff/params]}]
+    {::response    [:biff.auth/http
                     {:method           :post
                      :url              hcaptcha-url
                      :form-params      {:secret   (force hcaptcha-secret)
@@ -113,7 +114,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{:keys [response]}]
+  (fn [{::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn hcaptcha-head [_ctx]
