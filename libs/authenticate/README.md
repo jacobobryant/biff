@@ -6,8 +6,8 @@ captcha/email providers.
 
 <table>
   <tr>
-    <td><img src="docs/images/signin.png" alt="Sign in and sign up form"></td>
-    <td><img src="docs/images/verify.png" alt="Verify signin code form"></td>
+    <td><img src="docs/images/signin-form.png" alt="Sign in and sign up form"></td>
+    <td><img src="docs/images/verify-code-form.png" alt="Verify signin code form"></td>
   </tr>
 </table>
 
