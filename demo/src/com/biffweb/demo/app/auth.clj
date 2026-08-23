@@ -74,7 +74,7 @@
    (merge
     {:biff.auth/app-path             (routes/app)
      :biff.auth/app-name             "Biff Demo App"
-     :biff.auth/primary-color "#0f766e"
+     :biff.auth/primary-color        "#0f766e"
      ;; We're using com.biffweb.ring/wrap-csrf-protection.
      :biff.auth/skip-csrf-protection true
      :biff.auth/send-email           #'email/send-email
