@@ -62,8 +62,8 @@ only to use the signin form without needing to set up captcha / email providers:
 You will also need to provide implementations of these functions (see the linked
 docs):
 
-- [:biff.core/kv-get](/libs/core/docs/reference/schema.md#biff-core-kv-get)
-- [:biff.core/kv-set](/libs/core/docs/reference/schema.md#biff-core-kv-set)
+- [:biff.core/kv-get](/libs/core/docs/reference/schema.md#biffcorekv-get)
+- [:biff.core/kv-set](/libs/core/docs/reference/schema.md#biffcorekv-set)
 - [:biff.auth/create-user](docs/config.md#biffauthcreate-user)
 - [:biff.auth/get-user-id](docs/config.md#biffauthget-user-id)
 

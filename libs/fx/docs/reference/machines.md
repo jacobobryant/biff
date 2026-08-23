@@ -2,7 +2,7 @@
 
 Machines (the functions returned by
 [machine](../api/com.biffweb.fx.md#machine) / defined by
-[defmachine](#defmachine)) have the form:
+[defmachine](../api/com.biffweb.fx.md#defmachine)) have the form:
 
 ```clojure
 (fn [ctx & [state]])

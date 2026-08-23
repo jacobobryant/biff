@@ -6,7 +6,7 @@ Notes:
   `:params`, `:body`, `:body-params`, `:json-params`, `:form-params`, and
   `:query-params`, in that order. Parameter keys may be keywords or strings.
 
-- See the [configuration reference](configuration.md) for details about
+- See the [configuration reference](config.md) for details about
   configuration keys. Configuration keys can be passed to `routes` / `module` or
   included on the Ring request map.
 

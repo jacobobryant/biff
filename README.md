@@ -1,6 +1,6 @@
 # Biff 2 (WIP)
 
-See [Biff 2.0 sneak peak](biffweb.com/p/biff2/).
+See [Biff 2.0 sneak peak](https://biffweb.com/p/biff2/).
 
 This repo contains the code for Biff 2.0: libraries and a demo app (though not
 the starter app, which will be in a separate repo). I've completed a "rough

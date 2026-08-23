@@ -108,7 +108,7 @@ application:
 
 If you're using [biff.core](/libs/core), [biff.ring](/libs/ring), and a Biff
 [database adapter](/docs/db-adapters.md) that implements
-[`:biff.core/on-tx`](/libs/core/docs/reference/schema.md#biff-core-on-tx) (such
+[`:biff.core/on-tx`](/libs/core/docs/reference/schema.md#biffcoreon-tx) (such
 as [biff.sqlite](/libs/sqlite) or [biff.xtdb](/libs/xtdb)), you can simply add
 [`(module)`](docs/api/com.biffweb.datastar.md#module) to your modules vector.
 
@@ -273,7 +273,7 @@ default middleware stack.
 
 Alternatively, if you're using
 [ring-anti-forgery](https://github.com/ring-clojure/ring-anti-forgery), you can
-add [`wrap-signals`](/libs/ring/docs/api/com.biffweb.ring.md#wrap-signals) to your
+add [`wrap-signals`](docs/api/com.biffweb.datastar.md#wrap-signals) to your
 middleware so it runs before `wrap-anti-forgery`, and then have your page
 rendering code pass the CSRF token to `init-opts`:
 

@@ -6,7 +6,7 @@ A database connection (transaction) that includes writes made by
 [authorized-write](../api/com.biffweb.sqlite.md#authorized-write). Passed to the
 `:biff.sqlite/authorize` function.
 
-### :biff.sqlite/aeuthorize
+### :biff.sqlite/authorize
 
 `(fn [ctx diff]) -> boolean`. This function is defined by the application and
 passed to [authorized-write](../api/com.biffweb.sqlite.md#authorized-write),

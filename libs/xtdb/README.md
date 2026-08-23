@@ -137,7 +137,7 @@ to an `authorize` function which you define:
 ```
 
 See [`authorized-write`](docs/api/com.biffweb.xtdb.md#authorized-write) and
-[`:biff.xtdb/authorize`](docs/reference/library-schema.md#biff-xtdb-authorize).
+[`:biff.xtdb/authorize`](docs/reference/library-schema.md#biffxtdbauthorize).
 
 ### biff.graph resolvers
 
