@@ -1,6 +1,6 @@
 # biff.authenticate
 
-A collection of Reitit routes which provide sign-in-via-email (6 digit code)
+A collection of Reitit routes which provide sign-in-via-email (6-digit code)
 functionality to your web app, including a default signin page and pluggable
 captcha/email providers.
 
@@ -21,6 +21,7 @@ changes, but I don't anticipate any.
 ## Reference
 
 - [Configuration](docs/config.md)
+- [Routes](docs/routes.md)
 - [API](docs/api/com.biffweb.authenticate.md)
 
 ## Usage
@@ -64,7 +65,7 @@ docs):
 - [:biff.core/kv-get](/libs/core/docs/reference/schema.md#biff-core-kv-get)
 - [:biff.core/kv-set](/libs/core/docs/reference/schema.md#biff-core-kv-set)
 - [:biff.auth/create-user](docs/config.md#biff-auth-create-user)
-- [:biff.auth/get-user-id](docs/config.md#biff-auth-user-id)
+- [:biff.auth/get-user-id](docs/config.md#biff-auth-get-user-id)
 
 If you're using [biff.sqlite](/libs/sqlite) or [biff.xtdb](/libs/xtdb), then
 `kv-get` and `kv-set` should already be configured. Since `create-user` and
@@ -82,29 +83,29 @@ secret key:
   set
   [:biff.auth/turnstile-site-key](docs/config.md#biff-auth-turnstile-site-key)
   and
-  [:biff.auth/turnstile-secret-key](docs/config.md#biff-auth-turnstile-secret-key)
+  [:biff.auth/turnstile-secret](docs/config.md#biff-auth-turnstile-secret)
 - [`recaptcha-config`](docs/api/com.biffweb.authenticate.md#recaptcha-config):
   set
   [:biff.auth/recaptcha-site-key](docs/config.md#biff-auth-recaptcha-site-key)
   and
-  [:biff.auth/recaptcha-secret-key](docs/config.md#biff-auth-recaptcha-secret-key)
+  [:biff.auth/recaptcha-secret](docs/config.md#biff-auth-recaptcha-secret)
 - [`hcaptcha-config`](docs/api/com.biffweb.authenticate.md#hcaptcha-config):
   set
   [:biff.auth/hcaptcha-site-key](docs/config.md#biff-auth-hcaptcha-site-key)
   and
-  [:biff.auth/hcaptcha-secret-key](docs/config.md#biff-auth-hcaptcha-secret-key)
+  [:biff.auth/hcaptcha-secret](docs/config.md#biff-auth-hcaptcha-secret)
 
 For example:
 
 ```clojure
 (biff.auth/routes (merge biff.auth/turnstile-config
-                         {:biff.auth/application-name "My Application",
+                         {:biff.auth/app-name "My Application",
                           ...}))
 ```
 
 [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile) provides
-"invisible captcha" in its free tier which improves signup conversion rates,
-whereas [hCaptcha](https://www.hcaptcha.com) is a more
+"invisible"/non-interactive captcha in its free tier which improves signup
+conversion rates, whereas [hCaptcha](https://www.hcaptcha.com) is a more
 privacy-preserving/not-Cloudflare option. I would only use reCAPTCHA if you
 already have it set up.
 
@@ -113,7 +114,7 @@ If you would like to use a different provider, set
 [:biff.auth/captcha-configured?](docs/config.md#biff-auth-captcha-configured),
 and whatever other [captcha config keys](docs/config.md#captcha) are needed by
 your provider. See
-[com.biffweb.authenticate.impl.captcha](src/com/biffweb/authenticate/impl/captcha)
+[com.biffweb.authenticate.impl.captcha](src/com/biffweb/authenticate/impl/captcha.clj)
 for example implementations.
 
 ### Email
