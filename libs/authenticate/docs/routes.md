@@ -1,4 +1,4 @@
-# Backend Routes
+# Routes
 
 Notes:
 
@@ -79,3 +79,29 @@ with the query parameters `sent-to={email}&error=invalid-code`.
 `POST /_biff/auth/signout`
 
 Removes all keys from `:session` and redirects to `/`.
+
+## Signin page
+
+`GET /signin`
+
+Renders a default signin page backend by [send signin code](#send-signin-code)
+and [verify signin code](#verify-signin-code). Parameters:
+
+```clojure
+:sent-to  ; Email address.
+:error    ; One of "invalid-email", "captcha", "send-failed", "invalid-code".
+```
+
+Configuration:
+
+```clojure
+:biff.auth/app-name
+:biff.auth/captcha-button-attrs
+:biff.auth/captcha-configured
+:biff.auth/captcha-head
+:biff.auth/captcha-widget
+:biff.auth/logo-url
+:biff.auth/primary-color
+:biff.auth/signin-page
+:biff.auth/skip-captcha
+```

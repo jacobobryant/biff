@@ -39,16 +39,51 @@
   :biff.auth/skip-captcha         :boolean
   :biff.auth/skip-csrf-protection :boolean})
 
-(def turnstile-config captcha/turnstile-config)
+(def
+  ^{:doc
+    "Captcha config keys for Cloudflare Turnstile.
 
-(def recaptcha-config captcha/recaptcha-config)
+     Include this map in the options passed to `routes` / `module`."}
+  turnstile-config captcha/turnstile-config)
 
-(def hcaptcha-config captcha/hcaptcha-config)
+(def
+  ^{:doc
+    "Captcha config keys for Google reCAPTCHA.
 
-(def signout-path "/_biff/auth/signout")
+     Include this map in the options passed to `routes` / `module`."}
+  recaptcha-config captcha/recaptcha-config)
 
-(defn routes [options]
+(def
+  ^{:doc
+    "Captcha config keys for hCaptcha.
+
+     Include this map in the options passed to `routes` / `module`."}
+  hcaptcha-config captcha/hcaptcha-config)
+
+(def
+  ^{:doc
+    "The URI path for the signout handler provided by `routes` / `module`.
+
+     To sign out, send a POST request to this path."}
+  signout-path "/_biff/auth/signout")
+
+(defn routes
+  "Returns a collection of Reitit routes with `options` merged into requests.
+
+   Configuration:
+
+   - :biff.auth/captcha-configured?
+   - :biff.auth/include-signin-page
+   - :biff.auth/skip-captcha
+   - :biff.auth/skip-csrf-protection
+   - Additional configuration keys recognized by the individual routes
+
+   See docs/routes.md and docs/config.md. Configuration may be passed in
+   `options` or included in Ring request maps."
+  [options]
   (system/routes options))
 
-(defn module [options]
+(defn module
+  "A biff.core module that includes `routes` under :biff.ring/routes."
+  [options]
   (system/module options))
