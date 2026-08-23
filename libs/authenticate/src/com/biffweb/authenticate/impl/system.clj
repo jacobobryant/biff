@@ -31,7 +31,6 @@
    #:biff.auth{:app-path            "/app"
                :email-valid?        email-valid?
                :primary-color       "#4F46E5"
-               :accent-color        "#818CF8"
                :include-signin-page true
                :max-failed-attempts 5
                :code-expiry-minutes 10

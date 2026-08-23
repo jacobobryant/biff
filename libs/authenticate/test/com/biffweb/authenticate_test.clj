@@ -573,7 +573,6 @@
                              :anti-forgery-token      "test-token"
                              :biff.auth/app-name      "Test"
                              :biff.auth/primary-color "#4F46E5"
-                             :biff.auth/accent-color  "#818CF8"
                              :biff.auth/font-family   "sans-serif"
                              :biff.auth/signin-page   "/signin"})]
     (is (= 200 (:status result)))
@@ -586,11 +585,12 @@
                             {:params                  {}
                              :anti-forgery-token      "test-token"
                              :biff.auth/primary-color "#4F46E5"
-                             :biff.auth/accent-color  "#818CF8"
+                             :biff.auth/logo-url      "/logo.svg"
                              :biff.auth/font-family   "sans-serif"
                              :biff.auth/signin-page   "/signin"})]
     (is (= 200 (:status result)))
     (is (str/includes? (:body result) "<title>Sign in</title>"))
+    (is (str/includes? (:body result) "src=\"/logo.svg\""))
     (is (not (str/includes? (:body result) "<h1")))))
 
 (deftest signin-page-renders-captcha-when-config-is-present
@@ -601,7 +601,6 @@
                         :anti-forgery-token           "test-token"
                         :biff.auth/app-name           "Test"
                         :biff.auth/primary-color      "#4F46E5"
-                        :biff.auth/accent-color       "#818CF8"
                         :biff.auth/font-family        "sans-serif"
                         :biff.auth/signin-page        "/signin"
                         :biff.auth/turnstile-secret   (biff/secret-delay "   ")
@@ -617,7 +616,6 @@
                              :anti-forgery-token      "test-token"
                              :biff.auth/app-name      "Test"
                              :biff.auth/primary-color "#4F46E5"
-                             :biff.auth/accent-color  "#818CF8"
                              :biff.auth/font-family   "sans-serif"
                              :biff.auth/signin-page   "/signin"})]
     (is (= 200 (:status result)))

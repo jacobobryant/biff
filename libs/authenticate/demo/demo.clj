@@ -41,7 +41,6 @@
           :biff.auth/app-name   "Biff Auth Demo"
           ;; :biff.auth/logo-url      "https://example.com/logo.png"
           ;; :biff.auth/primary-color "blue"
-          ;; :biff.auth/accent-color  "green"
           ;; :biff.auth/font-family   "green"
           }
          ;; For a real app, you can use one of the provider captcha

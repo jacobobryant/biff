@@ -120,13 +120,15 @@
                   :width         "100%"
                   :max-width     "24rem"
                   :box-shadow    "0 1px 3px rgba(0,0,0,0.1)"}}
-    (when app-name
-      (if logo-url
-        [:img {:src   logo-url
-               :alt   (str app-name " logo")
-               :style {:display   "block"
-                       :max-width "180px"
-                       :margin    "0 auto 1.5rem"}}]
+    (if logo-url
+      [:img {:src   logo-url
+             :alt   (if app-name
+                      (str app-name " logo")
+                      "Application logo")
+             :style {:display   "block"
+                     :max-width "180px"
+                     :margin    "0 auto 1.5rem"}}]
+      (when app-name
         [:h1 {:style {:font-size   "1.25rem"
                       :font-weight "700"
                       :text-align  "center"

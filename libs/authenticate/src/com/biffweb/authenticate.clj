@@ -12,7 +12,6 @@
   ;; signin page appearance
   :biff.auth/app-name      :string
   :biff.auth/primary-color :string
-  :biff.auth/accent-color  :string
   :biff.auth/logo-url      :string
 
   ;; captcha config

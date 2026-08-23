@@ -6,8 +6,9 @@ Notes:
   `:params`, `:body`, `:body-params`, `:json-params`, `:form-params`, and
   `:query-params`, in that order. Parameter keys may be keywords or strings.
 
-- Check the [schema](schema.md) for details about configuration keys.
-  Configuration keys must be set on the Ring request map.
+- See the [configuration reference](configuration.md) for details about
+  configuration keys. Configuration keys can be passed to `routes` / `module` or
+  included on the Ring request map.
 
 ## Send signin code
 
@@ -27,7 +28,7 @@ Configuration:
 ```clojure
 :biff.auth/captcha-verify
 :biff.auth/signin-page
-:biff.auth/email-validated
+:biff.auth/email-valid?
 :biff.auth/send-email
 :biff.core/kv-set
 ```
@@ -36,7 +37,7 @@ Redirects to the signin page (`:biff.auth/signin-page`) with the following
 query parameters:
 
 - `sent-to={email}` on success.
-- `error=invalid-email` if `:biff.auth/email-validated` returned false.
+- `error=invalid-email` if `:biff.auth/email-valid?` returned false.
 - `error=captcha` if the captcha test failed.
 - `error=send-failed` if `:biff.auth/send-email` returned false.
 
@@ -84,7 +85,7 @@ Removes all keys from `:session` and redirects to `/`.
 
 `GET /signin`
 
-Renders a default signin page backend by [send signin code](#send-signin-code)
+Renders a default signin page backed by [send signin code](#send-signin-code)
 and [verify signin code](#verify-signin-code). Parameters:
 
 ```clojure
@@ -97,7 +98,7 @@ Configuration:
 ```clojure
 :biff.auth/app-name
 :biff.auth/captcha-button-attrs
-:biff.auth/captcha-configured
+:biff.auth/captcha-configured?
 :biff.auth/captcha-head
 :biff.auth/captcha-widget
 :biff.auth/logo-url

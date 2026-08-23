@@ -2,7 +2,7 @@
 
 Notes:
 
-- Email normalization: whitespace is trimmed from the start and beginning and
+- Email normalization: whitespace is trimmed from the start and end and
   characters are converted to lower case.
 
 - Hiccup is rendered with `dev.onionpancakes.chassis.core/html`. See its
@@ -17,8 +17,8 @@ Notes:
 Create a new user for the given normalized `email`. Returns the user ID which is
 used as the value for `(:uid session)`.
 
-`params` is the `(:params ctx)` value from the request when the user submitted
-the signin form (whereas this function is called in a subsequent request) and
+`params` contains the additional request parameters submitted with the signin
+form. The `:email` and `:__anti-forgery-token` parameters are omitted. This map
 can be used with a custom signup form to collect additional information on
 signup.
 
@@ -64,13 +64,10 @@ the signin page.
 
 String, default `#4F46E5` (indigo). The primary color for the signin page.
 
-### :biff.auth/accent-color
-
-String, default `#818CF8` (light indigo). The accent color for the signin page.
-
 ### :biff.auth/logo-url
 
-String. If set, used to display a logo on the signin page.
+String. If set, the logo is displayed instead of the application name on the
+signin page.
 
 ## Captcha
 
@@ -171,7 +168,8 @@ Int, default 10. The number of minutes a new signin code is valid.
 
 ### :biff.auth/signin-page
 
-String, default `/signin`. The path for the signin page. Used for redirects.
+String, default `/signin`. The path for the signin page. Used by backend
+handlers for redirects. Does not change the path of the default signin page.
 
 ### :biff.auth/email-valid?
 
@@ -181,7 +179,8 @@ A function that returns true if `email` is a valid email address. The default
 function ensures that `email`:
 
 - is a string.
-- includes a `@` with at least one character before and after.
+- includes a `@` with at least one character before it.
+- includes a dot after the `@`, with at least one character on both sides.
 - does not include whitespace.
 
 ### :biff.auth/include-signin-page
