@@ -64,8 +64,8 @@ docs):
 
 - [:biff.core/kv-get](/libs/core/docs/reference/schema.md#biff-core-kv-get)
 - [:biff.core/kv-set](/libs/core/docs/reference/schema.md#biff-core-kv-set)
-- [:biff.auth/create-user](docs/config.md#biff-auth-create-user)
-- [:biff.auth/get-user-id](docs/config.md#biff-auth-get-user-id)
+- [:biff.auth/create-user](docs/config.md#biffauthcreate-user)
+- [:biff.auth/get-user-id](docs/config.md#biffauthget-user-id)
 
 If you're using [biff.sqlite](/libs/sqlite) or [biff.xtdb](/libs/xtdb), then
 `kv-get` and `kv-set` should already be configured. Since `create-user` and
@@ -81,19 +81,19 @@ secret key:
 
 - [`turnstile-config`](docs/api/com.biffweb.authenticate.md#turnstile-config):
   set
-  [:biff.auth/turnstile-site-key](docs/config.md#biff-auth-turnstile-site-key)
+  [:biff.auth/turnstile-site-key](docs/config.md#biffauthturnstile-site-key)
   and
-  [:biff.auth/turnstile-secret](docs/config.md#biff-auth-turnstile-secret)
+  [:biff.auth/turnstile-secret](docs/config.md#biffauthturnstile-secret)
 - [`recaptcha-config`](docs/api/com.biffweb.authenticate.md#recaptcha-config):
   set
-  [:biff.auth/recaptcha-site-key](docs/config.md#biff-auth-recaptcha-site-key)
+  [:biff.auth/recaptcha-site-key](docs/config.md#biffauthrecaptcha-site-key)
   and
-  [:biff.auth/recaptcha-secret](docs/config.md#biff-auth-recaptcha-secret)
+  [:biff.auth/recaptcha-secret](docs/config.md#biffauthrecaptcha-secret)
 - [`hcaptcha-config`](docs/api/com.biffweb.authenticate.md#hcaptcha-config):
   set
-  [:biff.auth/hcaptcha-site-key](docs/config.md#biff-auth-hcaptcha-site-key)
+  [:biff.auth/hcaptcha-site-key](docs/config.md#biffauthhcaptcha-site-key)
   and
-  [:biff.auth/hcaptcha-secret](docs/config.md#biff-auth-hcaptcha-secret)
+  [:biff.auth/hcaptcha-secret](docs/config.md#biffauthhcaptcha-secret)
 
 For example:
 
@@ -110,8 +110,8 @@ privacy-preserving/not-Cloudflare option. I would only use reCAPTCHA if you
 already have it set up.
 
 If you would like to use a different provider, set
-[:biff.auth/captcha-verify](docs/config.md#biff-auth-captcha-verify),
-[:biff.auth/captcha-configured?](docs/config.md#biff-auth-captcha-configured),
+[:biff.auth/captcha-verify](docs/config.md#biffauthcaptcha-verify),
+[:biff.auth/captcha-configured?](docs/config.md#biffauthcaptcha-configured),
 and whatever other [captcha config keys](docs/config.md#captcha) are needed by
 your provider. See
 [com.biffweb.authenticate.impl.captcha](src/com/biffweb/authenticate/impl/captcha.clj)
@@ -120,7 +120,7 @@ for example implementations.
 ### Email
 
 You will also need to provide a real
-[`:biff.auth/send-email`](docs/config.md#biff-auth-send-email) implementation. I
+[`:biff.auth/send-email`](docs/config.md#biffauthsend-email) implementation. I
 use [MailerSend](https://mailersend.com) which has a free tier. An example
 implementation:
 
@@ -158,3 +158,31 @@ use `code` from the example above to generate your own values for `:html` and
 
 If desired, you can have your `send-email` function print the email to the
 console when in development and only send an actual email in production.
+
+### Customizing the signup form
+
+There are a few config options that can be used to change the appearance of the
+default signin form:
+
+- [:biff.auth/app-name](docs/config.md#biffauthapp-name)
+- [:biff.auth/logo-url](docs/config.md#biffauthlogo-url)
+- [:biff.auth/primary-color](docs/config.md#biffauthprimary-color)
+
+If you'd like more control, you can disable the default signin form and provide
+your own:
+
+```clojure
+(def auth-routes
+  (biff.auth/routes
+   {:biff.auth/include-signin-page false
+    :biff.auth/signin-page         "/my-signin-page"
+    ....}))
+
+(def all-routes
+  [auth-routes
+   ["/my-signin-page" {:get my-signin-page}]])
+```
+
+You may copy
+[`com.biffweb.authenticate.impl.frontend`](src/com/biffweb/authenticate/impl/frontend.clj)
+into your project as a starting point.

@@ -117,8 +117,8 @@
    [:div {:style {:background    "white"
                   :border-radius "0.5rem"
                   :padding       "2rem"
-                  :width         "100%"
-                  :max-width     "24rem"
+                  :width         "24rem"
+                  :max-width     "100%"
                   :box-shadow    "0 1px 3px rgba(0,0,0,0.1)"}}
     (if logo-url
       [:img {:src   logo-url

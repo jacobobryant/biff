@@ -1,7 +1,6 @@
 {:biff.admin/alert-email #biff/env BIFF_ADMIN_ALERT_EMAIL
  :biff.admin/user-id     #biff/env BIFF_ADMIN_USER_ID
 
- :biff.auth/app-name           "Biff Demo App"
  :biff.auth/skip-captcha       #boolean #or [#biff/env BIFF_AUTH_SKIP_CAPTCHA
                                              "false"]
  :biff.auth/turnstile-secret   #biff/secret TURNSTILE_SECRET_KEY

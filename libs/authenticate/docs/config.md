@@ -60,14 +60,14 @@ own subject / html / text.
 String. The user-visible name of the application. When provided, it is shown on
 the signin page.
 
-### :biff.auth/primary-color
-
-String, default `#4F46E5` (indigo). The primary color for the signin page.
-
 ### :biff.auth/logo-url
 
 String. If set, the logo is displayed instead of the application name on the
 signin page.
+
+### :biff.auth/primary-color
+
+String, default `#4F46E5` (indigo). The primary color for the signin page.
 
 ## Captcha
 
