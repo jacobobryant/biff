@@ -4,7 +4,8 @@
             [com.biffweb.admin.impl.util :as util]
             [taoensso.telemere :as tel]
             [taoensso.telemere.tools-logging :as tel.tl]
-            [tick.core :as tick])
+            [tick.core :as tick]
+            [clojure.tools.logging :as log])
   (:import [java.net InetAddress]))
 
 (defn- hostname []
@@ -188,10 +189,9 @@
                        (:stack-trace error)]])
       {:status 404 :headers {"content-type" "text/plain"} :body "Not found"})))
 
-(defn- test-alert-handler [ctx]
-  (handle-error ctx {:level :error
-                     :error (ex-info "Test alert from admin dashboard"
-                                     {:type :test-alert})})
+(defn- test-alert-handler [_ctx]
+  (log/error (ex-info "Test alert from admin dashboard"
+                      {:type :test-alert}))
   {:status  303
    :headers {"location" "/_biff/admin/errors?alert-sent=true"}})
 
