@@ -117,14 +117,15 @@
 
    Reads the following config keys:
 
-   - :biff.tasks/tailwind-version
+   - :biff.tasks/css-input-path
    - :biff.tasks/css-output-path
+   - :biff.tasks/tailwind-version
 
    If there is not a `tailwind` executable on the path with the version
    specified by `tailwind-version`, downloads a binary to `target/bin/tailwind`.
 
-   Writes the generated CSS to `css-output-path`. `args` are passed to the
-   `tailwind` executable with `-i resources/tailwind.css` included."
+   Compiles `css-input-path` to `css-output-path`. `args` are passed to the
+   `tailwind` executable."
   [& args]
   (apply (requiring-resolve 'com.biffweb.tasks.impl.css/css) args))
 
