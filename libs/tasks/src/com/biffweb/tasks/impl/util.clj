@@ -44,6 +44,7 @@
    [:biff.tasks/nrepl-port "an integer" integer?]
    [:biff.tasks/pom-data "a vector" vector?]
    [:biff.tasks/pom-scm "a map" map?]
+   [:biff.tasks/project-root "a string" string?]
    [:biff.tasks/skip-ssh-agent "a boolean" boolean?]
    [:biff.tasks/tailwind-version "a string" string?]])
 
@@ -196,19 +197,25 @@
 (defn project-root []
   (io/file (System/getProperty "user.dir")))
 
-(defn read-deps-edn []
-  (-> (io/file (project-root) "deps.edn")
-      slurp
-      edn/read-string))
+(defn read-deps-edn
+  ([]
+   (read-deps-edn (project-root)))
+  ([project-root]
+   (-> (io/file project-root "deps.edn")
+       slurp
+       edn/read-string)))
 
 (defn ensure-prod-alias! []
   (when-not (seq (get-in (read-deps-edn) [:aliases :prod :main-opts]))
     (throw (ex-info "deps.edn must have a :prod alias with :main-opts set."
                     {}))))
 
-(defn deps-paths []
-  (let [{:keys [paths]} (read-deps-edn)]
-    (into [] (distinct) paths)))
+(defn deps-paths
+  ([]
+   (deps-paths (project-root)))
+  ([project-root]
+   (let [{:keys [paths]} (read-deps-edn project-root)]
+     (into [] (distinct) paths))))
 
 (defn all-deps-paths []
   (let [{:keys [paths aliases]} (read-deps-edn)]

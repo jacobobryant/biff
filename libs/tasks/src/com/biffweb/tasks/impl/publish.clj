@@ -18,8 +18,8 @@
    :biff.tasks/pom-data
    :biff.tasks/pom-scm])
 
-(defn- project-file [path]
-  (.getPath (io/file (util/project-root) path)))
+(defn- project-file [project-root path]
+  (.getPath (io/file project-root path)))
 
 (defn- resource-dir? [path]
   (= "resources" (.getName (io/file path))))
@@ -82,20 +82,22 @@
                        :url    url})))))
 
 (defn- build-artifact!
-  [{:biff.tasks/keys [group-name
+  [project-root
+   {:biff.tasks/keys [group-name
                       lib-name
                       lib-version
                       monorepo
                       pom-data
                       pom-scm]}]
-  (build/with-project-root (util/project-root)
+  (build/with-project-root project-root
     (let [basis      (build/create-basis)
-          paths      (util/deps-paths)
+          paths      (util/deps-paths project-root)
           src-dirs   (source-dirs paths)
           res-dirs   (resource-dirs paths)
           lib        (symbol group-name lib-name)
-          class-path (project-file "target/classes")
+          class-path (project-file project-root "target/classes")
           jar-file   (project-file
+                      project-root
                       (str "target/" lib-name "-" lib-version ".jar"))
           pom-file   (build/pom-path {:class-dir class-path :lib lib})]
       (build/delete {:path class-path})
@@ -154,8 +156,11 @@
             (io/delete-file path)))))))
 
 (defn publish []
-  (let [{:biff.tasks/keys [group-name lib-name lib-version] :as config}
-        (util/read-config {:required required-config-keys})]
+  (let [config       (util/read-config {:required required-config-keys})
+        project-root (io/file (or (:biff.tasks/project-root config)
+                                  (util/project-root)))
+
+        {:biff.tasks/keys [group-name lib-name lib-version]} config]
     (if (published-version?
          (select-keys config [:biff.tasks/group-name
                               :biff.tasks/lib-name
@@ -163,13 +168,14 @@
       (println "Already published, skipping:"
                (str group-name "/" lib-name)
                lib-version)
-      (let  [artifact (build-artifact!
-                       (select-keys config [:biff.tasks/group-name
-                                            :biff.tasks/lib-name
-                                            :biff.tasks/lib-version
-                                            :biff.tasks/monorepo
-                                            :biff.tasks/pom-data
-                                            :biff.tasks/pom-scm]))]
+      (let [artifact (build-artifact!
+                      project-root
+                      (select-keys config [:biff.tasks/group-name
+                                           :biff.tasks/lib-name
+                                           :biff.tasks/lib-version
+                                           :biff.tasks/monorepo
+                                           :biff.tasks/pom-data
+                                           :biff.tasks/pom-scm]))]
         (deploy! (select-keys config [:biff.tasks/clojars-secret
                                       :biff.tasks/clojars-username
                                       :biff.tasks/gpg-sign-key-id

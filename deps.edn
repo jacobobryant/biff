@@ -1,48 +1,47 @@
-{:deps {com.biffweb/admin        {:local/root "libs/admin"}
-        com.biffweb/authenticate {:local/root "libs/authenticate"}
-        com.biffweb/background   {:local/root "libs/background"}
-        com.biffweb/config       {:local/root "libs/config"}
-        com.biffweb/core         {:local/root "libs/core"}
-        com.biffweb/datastar     {:local/root "libs/datastar"}
-        com.biffweb/fx           {:local/root "libs/fx"}
-        com.biffweb/graph        {:local/root "libs/graph"}
-        com.biffweb/ring         {:local/root "libs/ring"}
-        com.biffweb/sqlite       {:local/root "libs/sqlite"}}
-
- :aliases
- {:run {:extra-paths ["dev"
-                      "libs/admin/dev"
-                      "libs/admin/test"
-                      "libs/authenticate/demo"
-                      "libs/authenticate/dev"
-                      "libs/authenticate/test"
-                      "libs/background/dev"
-                      "libs/background/test"
-                      "libs/config/dev"
-                      "libs/config/test"
-                      "libs/core/dev"
-                      "libs/core/test"
-                      "libs/datastar/demo"
-                      "libs/datastar/dev"
-                      "libs/datastar/test"
-                      "libs/fx/dev"
-                      "libs/fx/test"
-                      "libs/graph/dev"
-                      "libs/graph/test"
-                      "libs/ring/dev"
-                      "libs/ring/test"
-                      "libs/run/dev"
-                      "libs/run/test"
-                      "libs/sqlite/dev"
-                      "libs/sqlite/test"
-                      "libs/stuff/dev"
-                      "libs/stuff/test"
-                      "libs/tasks/dev"
-                      "libs/tasks/test"
-                      "libs/xtdb/dev"
-                      "libs/xtdb/test"]
-
+{:aliases
+ {:run {:paths      ["dev"
+                     "libs/admin/dev"
+                     "libs/admin/test"
+                     "libs/authenticate/demo"
+                     "libs/authenticate/dev"
+                     "libs/authenticate/test"
+                     "libs/background/dev"
+                     "libs/background/test"
+                     "libs/config/dev"
+                     "libs/config/test"
+                     "libs/core/dev"
+                     "libs/core/test"
+                     "libs/defaults/dev"
+                     "libs/datastar/demo"
+                     "libs/datastar/dev"
+                     "libs/datastar/test"
+                     "libs/fx/dev"
+                     "libs/fx/test"
+                     "libs/graph/dev"
+                     "libs/graph/test"
+                     "libs/ring/dev"
+                     "libs/ring/test"
+                     "libs/run/dev"
+                     "libs/run/test"
+                     "libs/sqlite/dev"
+                     "libs/sqlite/test"
+                     "libs/stuff/dev"
+                     "libs/stuff/test"
+                     "libs/tasks/dev"
+                     "libs/tasks/test"
+                     "libs/xtdb/dev"
+                     "libs/xtdb/test"]
         :extra-deps {borkdude/rewrite-edn      {:mvn/version "0.5.9"},
+                     com.biffweb/admin         {:local/root "libs/admin"}
+                     com.biffweb/authenticate  {:local/root "libs/authenticate"}
+                     com.biffweb/background    {:local/root "libs/background"}
+                     com.biffweb/config        {:local/root "libs/config"}
+                     com.biffweb/core          {:local/root "libs/core"}
+                     com.biffweb/datastar      {:local/root "libs/datastar"}
+                     com.biffweb/fx            {:local/root "libs/fx"}
+                     com.biffweb/graph         {:local/root "libs/graph"}
+                     com.biffweb/ring          {:local/root "libs/ring"}
+                     com.biffweb/sqlite        {:local/root "libs/sqlite"}
                      com.biffweb/tasks         {:local/root "libs/tasks"},
                      com.biffweb/xtdb          {:local/root "libs/xtdb"},
                      com.taoensso/telemere     {:mvn/version "1.2.1"},
@@ -52,7 +51,6 @@
                      rewrite-clj/rewrite-clj   {:mvn/version "1.1.47"},
                      ring/ring-jetty-adapter   {:mvn/version "1.15.4"},
                      ring/ring-json            {:mvn/version "0.5.1"}}
-
         :main-opts ["-m" "tasks"]
         :jvm-opts  ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                     "--enable-native-access=ALL-UNNAMED"

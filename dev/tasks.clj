@@ -21,6 +21,10 @@
     {:task 'tasks.profile-requires/profile-requires
      :doc  "Profiles the time spent requiring a namespace."}
 
+    "publish-all"
+    {:task 'tasks.publish-all/publish-all
+     :doc  "Publishes all libraries to Clojars."}
+
     "sync-aliases"
     {:task 'tasks.sync-aliases/sync-aliases
      :doc  "Syncs library run aliases with the root run alias."}
