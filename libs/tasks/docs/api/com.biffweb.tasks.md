@@ -149,19 +149,20 @@ Compile CSS with Tailwind.
 
 Reads the following config keys:
 
-- :biff.tasks/tailwind-version
+- :biff.tasks/css-input-path
 - :biff.tasks/css-output-path
+- :biff.tasks/tailwind-version
 
 If there is not a `tailwind` executable on the path with the version
 specified by `tailwind-version`, downloads a binary to `target/bin/tailwind`.
 
-Writes the generated CSS to `css-output-path`. `args` are passed to the
-`tailwind` executable with `-i resources/tailwind.css` included.
+Compiles `css-input-path` to `css-output-path`. `args` are passed to the
+`tailwind` executable.
 ```
 
 ### deploy
 
-[view source](../../src/com/biffweb/tasks.clj#L131)
+[view source](../../src/com/biffweb/tasks.clj#L132)
 
 ```
 (deploy & args)
@@ -197,7 +198,7 @@ The deployed application must:
 
 ### dev
 
-[view source](../../src/com/biffweb/tasks.clj#L162)
+[view source](../../src/com/biffweb/tasks.clj#L163)
 
 ```
 (dev)
@@ -217,7 +218,7 @@ Then calls the `-main` function in the `main-ns` namespace.
 
 ### docs
 
-[view source](../../src/com/biffweb/tasks.clj#L177)
+[view source](../../src/com/biffweb/tasks.clj#L178)
 
 ```
 (docs)
@@ -237,7 +238,7 @@ Each namespace will be required and thus must be on the classpath.
 
 ### format
 
-[view source](../../src/com/biffweb/tasks.clj#L192)
+[view source](../../src/com/biffweb/tasks.clj#L193)
 
 ```
 (format)
@@ -260,7 +261,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### lint
 
-[view source](../../src/com/biffweb/tasks.clj#L210)
+[view source](../../src/com/biffweb/tasks.clj#L211)
 
 ```
 (lint)
@@ -284,7 +285,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L229)
+[view source](../../src/com/biffweb/tasks.clj#L230)
 
 ```
 (nrepl & args)
@@ -304,7 +305,7 @@ If the first arg is `--`, calls `-main` without setting `--port` or
 
 ### prod-logs
 
-[view source](../../src/com/biffweb/tasks.clj#L244)
+[view source](../../src/com/biffweb/tasks.clj#L245)
 
 ```
 (prod-logs & args)
@@ -322,7 +323,7 @@ Accepts a single, optional `n-lines` CLI argument, default 300. Runs
 
 ### prod-nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L257)
+[view source](../../src/com/biffweb/tasks.clj#L258)
 
 ```
 (prod-nrepl & args)
@@ -341,7 +342,7 @@ The server is expected to already have an nREPL server running on
 
 ### prod-restart
 
-[view source](../../src/com/biffweb/tasks.clj#L271)
+[view source](../../src/com/biffweb/tasks.clj#L272)
 
 ```
 (prod-restart & args)
@@ -358,7 +359,7 @@ Runs `systemctl restart` on the server.
 
 ### prod-setup
 
-[view source](../../src/com/biffweb/tasks.clj#L283)
+[view source](../../src/com/biffweb/tasks.clj#L284)
 
 ```
 (prod-setup & args)
@@ -404,7 +405,7 @@ distros.
 
 ### publish
 
-[view source](../../src/com/biffweb/tasks.clj#L324)
+[view source](../../src/com/biffweb/tasks.clj#L325)
 
 ```
 (publish & args)
@@ -430,7 +431,7 @@ And the following optional keys:
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L345)
+[view source](../../src/com/biffweb/tasks.clj#L346)
 
 ```
 (init)
@@ -465,7 +466,7 @@ Then runs the `update --clj-kondo-files-only` task.
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L375)
+[view source](../../src/com/biffweb/tasks.clj#L376)
 
 ```
 (test & args)
@@ -477,7 +478,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L382)
+[view source](../../src/com/biffweb/tasks.clj#L383)
 
 ```
 (uberjar)
@@ -496,7 +497,7 @@ include "resources" in their name are copied into the jar.
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L396)
+[view source](../../src/com/biffweb/tasks.clj#L397)
 
 ```
 (update & args)

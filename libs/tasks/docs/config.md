@@ -36,6 +36,11 @@ for publishing libraries to Clojars.
 
 String. A username to use for publishing libraries to Clojars.
 
+### :biff.tasks/css-input-path
+
+String, default `"resources/tailwind.css"`. The Tailwind CSS source file to
+compile.
+
 ### :biff.tasks/css-output-path
 
 String, default `"target/resources/public/css/main.css"`. The path at which to

@@ -51,16 +51,15 @@
       :url                 url})))
 
 (defn css [& tailwind-args]
-  (if-not (.exists (io/file "resources/tailwind.css"))
-    (println "resources/tailwind.css doesn't exist, skipping CSS compilation")
-    (let [{:biff.tasks/keys [css-output-path tailwind-version]}
-          (util/read-config)
-
-          command (ensure-tailwind-binary! tailwind-version)
-          shell   (if (some #(str/starts-with? % "--watch") tailwind-args)
-                    util/shell-inherit
-                    util/shell)]
-      (apply shell
-             (concat [command]
-                     ["-i" "resources/tailwind.css" "-o" css-output-path]
-                     tailwind-args)))))
+  (let [{:biff.tasks/keys [css-input-path css-output-path tailwind-version]}
+        (util/read-config)]
+    (if-not (.exists (io/file css-input-path))
+      (println (str css-input-path " doesn't exist, skipping CSS compilation"))
+      (let [command (ensure-tailwind-binary! tailwind-version)
+            shell   (if (some #(str/starts-with? % "--watch") tailwind-args)
+                      util/shell-inherit
+                      util/shell)]
+        (apply shell
+               (concat [command]
+                       ["-i" css-input-path "-o" css-output-path]
+                       tailwind-args))))))

@@ -12,6 +12,7 @@
    :biff.tasks/tailwind-version       "4.3.0"
    :biff.tasks/cljfmt-version         "0.16.4"
    :biff.tasks/clj-kondo-version      "2026.05.25"
+   :biff.tasks/css-input-path         "resources/tailwind.css"
    :biff.tasks/css-output-path        "target/resources/public/css/main.css"
    :biff.tasks/docs-directory         "docs/api"
    :biff.tasks/deploy-untracked-files ["target/resources/public/css/main.css"
@@ -25,6 +26,7 @@
    [:biff.tasks/clj-kondo-version "a string" string?]
    [:biff.tasks/clojars-username "a string" string?]
    [:biff.tasks/cljfmt-version "a string" string?]
+   [:biff.tasks/css-input-path "a string" string?]
    [:biff.tasks/css-output-path "a string" string?]
    [:biff.tasks/docs-directory "a string" string?]
    [:biff.tasks/docs-namespaces "a vector of symbols"

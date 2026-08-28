@@ -43,7 +43,8 @@
 
 (deftest watch-mode-inherits-process-output
   (let [calls  (atom [])
-        config {:biff.tasks/css-output-path  "main.css"
+        config {:biff.tasks/css-input-path   "tailwind.css"
+                :biff.tasks/css-output-path  "main.css"
                 :biff.tasks/tailwind-version version}]
     (with-redefs [io/file                     (constantly
                                                (proxy [java.io.File] ["input"]
@@ -54,4 +55,8 @@
                   tasks.util/shell-inherit    #(swap! calls conj [:inherit %&])]
       (css/css "--minify")
       (css/css "--watch=always"))
-    (is (= [:shell :inherit] (mapv first @calls)))))
+    (is (= [:shell :inherit] (mapv first @calls)))
+    (is (= [["tailwindcss" "-i" "tailwind.css" "-o" "main.css" "--minify"]
+            ["tailwindcss" "-i" "tailwind.css" "-o" "main.css"
+             "--watch=always"]]
+           (mapv (comp vec second) @calls)))))
