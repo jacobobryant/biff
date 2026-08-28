@@ -1,6 +1,6 @@
 {:biff.tasks/group-name       "com.biffweb"
  :biff.tasks/lib-name         "biff"
- :biff.tasks/lib-version      "2.0.0-rc20"
+ :biff.tasks/lib-version      "2.0.0-rc21"
  :biff.tasks/monorepo         true
  :biff.tasks/clojars-username #biff/env CLOJARS_USERNAME
  :biff.tasks/clojars-secret   #biff/secret CLOJARS_PASSWORD
