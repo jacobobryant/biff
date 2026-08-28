@@ -11,20 +11,19 @@
 (defn- pstats-day-key [now]
   (str (tick/date (tick/in now (tick/zone "UTC")))))
 
-(defn profile! [ctx id f]
-  (let [pstats (:biff.admin/pstats ctx)]
-    (if (and pstats id)
-      (let [[result pstats-data]
-            (tufte/profiled {} (tufte/p id (f)))]
-        (when pstats-data
-          (let [day-key (pstats-day-key (tick/now))]
-            (swap! pstats update day-key
-                   (fn [existing]
-                     (if existing
-                       (tufte/merge-pstats existing pstats-data)
-                       pstats-data)))))
-        result)
-      (f))))
+(defn profile! [{:biff.admin/keys [pstats]} id f]
+  (if (and pstats id)
+    (let [[result pstats-data]
+          (tufte/profiled {} (tufte/p id (f)))]
+      (when pstats-data
+        (let [day-key (pstats-day-key (tick/now))]
+          (swap! pstats update day-key
+                 (fn [existing]
+                   (if existing
+                     (tufte/merge-pstats existing pstats-data)
+                     pstats-data)))))
+      result)
+    (f)))
 
 (defn- stored-pstats? [value]
   (and (map? value)
