@@ -14,7 +14,7 @@ An admin dashboard for Biff applications. Includes:
 - System resource usage.
 
 
-![biff.admin demo](https://obryant-dev.nyc3.cdn.digitaloceanspaces.com/biff/biff-admin-demo.gif)
+![biff.admin demo](https://obryant-dev.nyc3.cdn.digitaloceanspaces.com/biff/biff-admin-demo-v2.gif)
 
 ### Dependency
 
