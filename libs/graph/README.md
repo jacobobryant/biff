@@ -262,12 +262,12 @@ form where you define the resolver body as a biff.fx machine:
     ...)
 
   :next
-  (fn [ctx input]
+  (fn [ctx output-from-start]
     ...))
 ```
 
-Note that the state functions defined with `defresolver` take two parameters
-instead of one as is the case for regular biff.fx machines.
+The `:start` function receives the resolver input after ctx. Later state
+functions receive the previous state's output map.
 
 ### biff.core integration
 

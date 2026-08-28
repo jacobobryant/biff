@@ -52,7 +52,7 @@
      :biff.fx/next :check-code})
 
   :check-code
-  (fn [{:keys [biff.fx/now entry path-params session]}]
+  (fn [{:keys [biff.fx/now path-params session]} {:keys [entry]}]
     (let [valid? (and entry
                       (tick/< (tick/between
                                (tick/instant (:generated-at entry)) now)

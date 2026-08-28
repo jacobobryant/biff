@@ -65,19 +65,6 @@
   [ctx]
   (impl.system/expand-config ctx))
 
-(defn use-xtdb
-  "Starts an in-process XTDB node and a connection pool.
-
-   Passes ctx to expand-config. When ctx is passed to q, execute-tx, submit-tx,
-   or authorized-write, those functions:
-
-   - Use the connection pool.
-   - Trigger a call to :biff.core/on-tx, if set.
-
-   Sets :biff.xtdb/node and :biff.xtdb/connection-pool on ctx."
-  [ctx]
-  (impl.system/use-xtdb ctx))
-
 (defn q
   "Wrapper for xtdb.api/q.
 
@@ -189,7 +176,18 @@
   impl.system/fx-handlers)
 
 (defn module
-  "Returns a biff.core module.
+  "On start, starts an in-process XTDB node and a connection pool. Include
+   :biff.xtdb/component in your components.
+
+   Passes the system map to `expand-config`. When the system map is passed to
+   `q`, `execute-tx`, `submit-tx`, or `authorized-write`, those functions:
+
+   - Use the connection pool.
+   - Trigger a call to :biff.core/on-tx, if set.
+
+   Adds :biff.xtdb/node and :biff.xtdb/connection-pool to the system map.
+
+   Also:
 
    - provides :biff.fx/handlers in the module
    - provides key-value store functions in the system map:

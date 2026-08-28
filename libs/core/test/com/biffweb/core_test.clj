@@ -66,11 +66,10 @@
                            {:biff.core/init (fn [_modules-var]
                                               {:bar 2})}])
         components  [(fn [ctx]
-                       (-> ctx
-                           (assoc :component :new-style)
-                           (update :biff.core/stop
-                                   conj
-                                   #(swap! stopped conj :new-style))))
+                       (assoc ctx
+                              :component :new-style
+                              :biff/stop
+                              [#(swap! stopped conj :new-style)]))
                      (fn [ctx]
                        (let [stop-fns [#(swap! stopped conj :legacy-1)
                                        #(swap! stopped conj :legacy-2)]]
@@ -85,10 +84,10 @@
     (is (= :new-style (:component system)))
     (is (:legacy system))
     (is (nil? (:biff/stop system)))
-    (is (= 3 (count (:biff.core/stop system))))
+    (is (fn? (:biff.core/stop-system system)))
     (is (= "modules:2" (:foo defaulted)))
     (is (= 2 (:bar defaulted)))
-    (is (= [] (:biff.core/stop defaulted)))
+    (is (fn? (:biff.core/stop-system defaulted)))
     (biff.core/stop system)
     (is (= [:legacy-1 :legacy-2 :new-style] @stopped))))
 
@@ -120,10 +119,48 @@
                          [(fn [ctx]
                             (assoc ctx :bar "bad"))]))))
 
-(deftest stop-runs-stop-functions-in-reverse-order-test
+(deftest stop-calls-system-stop-function-test
   (let [stopped (atom [])]
     (biff.core/stop
-     {:biff.core/stop [#(swap! stopped conj :first)
-                       #(swap! stopped conj :second)
-                       #(swap! stopped conj :third)]})
-    (is (= [:third :second :first] @stopped))))
+     {:biff.core/stop-system #(swap! stopped conj :stopped)})
+    (is (= [:stopped] @stopped))))
+
+(deftest keyword-components-use-module-lifecycles-test
+  (biff.core/register {:started :keyword})
+  (let [stopped (atom nil)
+        module  {:biff.core/id    :test/component
+                 :biff.core/start #(assoc % :started :yes)
+                 :biff.core/stop  #(reset! stopped (:started %))}
+        system  (biff.core/start (atom [module]) [:test/component])]
+    (is (= :yes (:started system)))
+    (biff.core/stop system)
+    (is (= :yes @stopped))))
+
+(deftest keyword-components-are-validated-before-init-test
+  (let [initialized (atom false)
+        started     (atom false)]
+    (is (thrown-with-msg?
+         AssertionError
+         #"must set :biff.core/id"
+         (biff.core/start
+          (atom [{:biff.core/start identity
+                  :biff.core/init  (fn [_] (reset! initialized true))}])
+          [])))
+    (is (false? @initialized))
+    (is (thrown-with-msg?
+         AssertionError
+         #"Missing keyword components"
+         (biff.core/start
+          (atom [{:biff.core/id    :test/component
+                  :biff.core/start identity}])
+          [])))
+    (is (thrown-with-msg?
+         AssertionError
+         #"No modules found for keyword components"
+         (biff.core/start
+          (atom [])
+          [(fn [ctx]
+             (reset! started true)
+             ctx)
+           :test/missing])))
+    (is (false? @started))))

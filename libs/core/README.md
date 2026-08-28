@@ -69,36 +69,35 @@ biff.core's system composition code is designed to be:
 
 ### Components
 
-Your application code is organized into "components" and "modules." A component
-is a function that takes the "system map" (a flat, namespaced map that defines
-your application) and modifies it. Components can start stateful resources (such
-as web servers and database connections) and do other initialization (like
-reading config and inserting it into the system map).
+Your application code is organized into "components" and "modules." Components
+start stateful resources or perform other initialization. They are defined on
+modules with `:biff.core/id`, `:biff.core/start`, and optionally
+`:biff.core/stop`.
 
 ```clojure
-(defn use-webserver [{:com.example/keys [handler port]
-                      :or {port 8080}
-                      :as ctx}]
-  (let [server (jetty/run-jetty handler
-                                {:host  "localhost"
-                                 :port  port
-                                 :join? false})]
-    (update ctx :biff.core/stop conj #(.stop server))))
+(def module
+  {:biff.core/id :com.example/webserver
+
+   :biff.core/start
+   (fn [{:com.example/keys [handler port]
+         :or {port 8080}
+         :as ctx}]
+     (assoc ctx ::server
+            (jetty/run-jetty handler
+                             {:host "localhost" :port port :join? false})))
+   :biff.core/stop
+   (fn [{::keys [server]}]
+     (.stop server))})
 ```
 
-By convention, component names start with `use-`. The system map is typically
-referred to as `ctx` (context) because it's often merged with other things (like
-Ring request maps), so `system` would be too specific in some situations.
-
-There is very intentionally no mechanism for automatically discovering
-components or wiring them up in dependency order: you wire them up manually like
-Ring middleware.
+The component list contains module IDs in startup order. It may also contain
+component functions as used by Biff 1.x for backwards compatibility.
 
 ```clojure
 (def components
-  [use-config
-   use-database
-   use-webserver])
+  [:com.example/config
+   :com.example/database
+   :com.example/webserver])
 ```
 
 ### Modules

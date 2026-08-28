@@ -2,7 +2,7 @@
 
 ### profile!
 
-[view source](../../src/com/biffweb/admin.clj#L35)
+[view source](../../src/com/biffweb/admin.clj#L34)
 
 ```
 (profile! #:biff.admin{:keys [pstats]} id f)
@@ -14,7 +14,7 @@ Stores the run time of `f` in the `pstats` atom, keyed by `id`.
 
 ### wrap-profiling
 
-[view source](../../src/com/biffweb/admin.clj#L43)
+[view source](../../src/com/biffweb/admin.clj#L42)
 
 ```
 (wrap-profiling handler)
@@ -27,7 +27,7 @@ profiling ID.
 
 ### wrap-resolver-profiling
 
-[view source](../../src/com/biffweb/admin.clj#L51)
+[view source](../../src/com/biffweb/admin.clj#L50)
 
 ```
 (wrap-resolver-profiling resolver)
@@ -39,7 +39,7 @@ The resolver's :biff.graph/id is used as the profiling ID.
 
 ### flush-pstats!
 
-[view source](../../src/com/biffweb/admin.clj#L58)
+[view source](../../src/com/biffweb/admin.clj#L57)
 
 ```
 (flush-pstats! {:keys [biff.admin/pstats biff.core/kv-set], :as ctx})
@@ -52,7 +52,7 @@ Moves data from the `pstats` atom into the database via `kv-set`, with
 
 ### routes
 
-[view source](../../src/com/biffweb/admin.clj#L67)
+[view source](../../src/com/biffweb/admin.clj#L66)
 
 ```
 (routes options)
@@ -65,26 +65,17 @@ options.
 
 ### module
 
-[view source](../../src/com/biffweb/admin.clj#L75)
+[view source](../../src/com/biffweb/admin.clj#L74)
 
 ```
 (module params)
 
-Returns a biff.core module for the admin dashboard.
+A biff.core module for the admin dashboard. Include
+:biff.admin/alerts in your components.
 
 Includes `routes`, biff.ring and biff.graph profiling middleware, an hourly
 biff.background task that calls `flush-pstats!`, and initialization for
 profiling state.
-```
-
-### use-alerts
-
-[view source](../../src/com/biffweb/admin.clj#L84)
-
-```
-(use-alerts {:biff.admin/keys [send-email alert-email], :as ctx})
-
-A biff.core component that sends email alerts for logged errors.
 
 Forwards clojure.tools.logging errors to Telemere, and adds a Telemere signal
 handler that stores logged errors in memory. Errors are reported via email in

@@ -5,25 +5,12 @@
             [ring.util.codec :as codec])
   (:import [java.util UUID]))
 
-(ring/defpath post-path ["/posts/:id" {:get identity}])
-
-(ring/defroute greeting-route "/greeting/:name"
-  :get
-  (fn [{:keys [path-params]}]
-    [:h1 "Hello " (:name path-params)]))
-
-(ring/defroute effect-route
-  [:test/value]
-
-  :post
-  (fn [_ value]
-    {:status 201
-     :body   [:span value]}))
+(ring/defpath post-path "/posts/:id")
 
 (deftest path-renders-path-params
   (is (= "/posts/42" (ring/path "/posts/:id" 42)))
-  (is (= "/posts/42" (ring/path ["/posts/:id" {:get identity}] 42)))
-  (is (= "/posts/42" (post-path 42))))
+  (is (= "/posts/42" (post-path 42)))
+  (is (= "/posts/:id" (post-path))))
 
 (deftest path-round-trips-uuid-params
   (let [id      (UUID/fromString "1f936a6e-63cd-4ba1-8e21-566171a8233c")
@@ -53,14 +40,13 @@
            (ring/path "/posts/:id" 7 {:tab "activity"})))))
 
 (deftest path-rejects-invalid-input
-  (doseq [[input args] [["/posts/:id" []]
-                        ["/posts/:id" [1 {} :extra]]
+  (doseq [[input args] [["/posts/:id" [1 {} :extra]]
                         ["/posts" [1 {}]]]]
     (is (thrown-with-msg? clojure.lang.ExceptionInfo
                           #"Wrong number of args"
                           (apply ring/path input args))))
   (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                        #"reitit-style route vector"
+                        #"path template string"
                         (ring/path {:path "/posts"}))))
 
 (deftest cross-origin-protection-allows-safe-methods
@@ -189,28 +175,6 @@
            (get-in (handler {:scheme         :https
                              :biff.ring/hsts true})
                    [:headers "Strict-Transport-Security"])))))
-
-(deftest route-definitions-produce-reitit-routes
-  (is (= "/greeting/:name" (first greeting-route)))
-  (is (= ::greeting-route (get-in greeting-route [1 :name])))
-  (is (fn? (get-in greeting-route [1 :get])))
-  (is (= "/_biff/api/com.biffweb.ring-test/effect-route"
-         (first effect-route)))
-  (is (= #{:name :post} (set (keys (second effect-route)))))
-  (is (= {:status  200
-          :headers {"content-type" "text/html; charset=utf-8"}
-          :body    "<!DOCTYPE html><h1>Hello Ada</h1>"}
-         ((get-in greeting-route [1 :get])
-          {:request-method :get
-           :path-params    {:name "Ada"}})))
-  (is (= {:status  201
-          :headers {"content-type" "text/html; charset=utf-8"}
-          :body    "<!DOCTYPE html><span>loaded</span>"}
-         ((get-in effect-route [1 :post])
-          {:request-method :post
-
-           :biff.fx/handlers
-           {:test/value (constantly "loaded")}}))))
 
 (deftest make-handler-routes-site-and-api-requests
   (let [handler (ring/make-handler

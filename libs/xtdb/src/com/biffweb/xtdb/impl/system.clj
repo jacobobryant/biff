@@ -48,7 +48,7 @@
    (doto (or hikari-config (HikariConfig.))
      (.setDataSource node))))
 
-(defn use-xtdb [ctx]
+(defn- start [ctx]
   (let [config   (expand-config ctx)
         node     (if (seq config)
                    (xt.node/start-node config)
@@ -58,11 +58,15 @@
         ctx      (assoc ctx :biff.xtdb/connection-pool pool)
         listener (tx/start-listener node ctx)
         ctx      (assoc ctx
-                        :biff.xtdb/poll-now (:poll-now listener))]
-    (update ctx :biff.core/stop conj (fn []
-                                       ((:stop listener))
-                                       (.close pool)
-                                       (.close node)))))
+                        :biff.xtdb/poll-now (:poll-now listener)
+                        ::listener listener)]
+    ctx))
+
+(defn- stop [{:keys  [biff.xtdb/node biff.xtdb/connection-pool]
+              ::keys [listener]}]
+  ((:stop listener))
+  (.close connection-pool)
+  (.close node))
 
 (defn- wrap-db-snapshot [f]
   (fn [ctx]
@@ -76,7 +80,10 @@
    :biff.xtdb.fx/authorized-write authorize/authorized-write})
 
 (defn module []
-  {:biff.fx/handlers fx-handlers
+  {:biff.core/id     :biff.xtdb/component
+   :biff.core/start  start
+   :biff.core/stop   stop
+   :biff.fx/handlers fx-handlers
 
    :biff.core/init
    (fn [_modules-var]

@@ -28,16 +28,17 @@
       (jdbc/execute! conn [pragma]))
     conn))
 
-(defn use-conn
+(defn start
   [ctx]
   (let [{:biff.sqlite/keys [db-path] :as ctx}
         (merge impl.defaults/defaults ctx)
 
         read-pool  (start-read-pool db-path)
         write-conn (start-write-conn db-path)]
-    (-> ctx
-        (assoc :biff.sqlite/read-pool read-pool
-               :biff.sqlite/write-conn write-conn)
-        (update :biff.core/stop conj (fn []
-                                       (.close write-conn)
-                                       (.close read-pool))))))
+    (assoc ctx
+           :biff.sqlite/read-pool read-pool
+           :biff.sqlite/write-conn write-conn)))
+
+(defn stop [{:biff.sqlite/keys [read-pool write-conn]}]
+  (.close write-conn)
+  (.close read-pool))

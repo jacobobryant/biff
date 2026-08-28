@@ -667,10 +667,10 @@
                                  :throw-exceptions false}]
             :biff.fx/next      :check-response}
            (captcha/turnstile-verify
-            {:biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
+            {:biff.fx/test               :start
+             :biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
 
-             :biff.stuff/params {:cf-turnstile-response "turnstile-token"}}
-            :start))))
+             :biff.stuff/params {:cf-turnstile-response "turnstile-token"}}))))
   (testing "recaptcha"
     (is (= {::captcha/response [:biff.auth/http
                                 {:method           :post
@@ -682,10 +682,10 @@
                                  :throw-exceptions false}]
             :biff.fx/next      :check-response}
            (captcha/recaptcha-verify
-            {:biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
+            {:biff.fx/test               :start
+             :biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
 
-             :biff.stuff/params {:g-recaptcha-response "recaptcha-token"}}
-            :start))))
+             :biff.stuff/params {:g-recaptcha-response "recaptcha-token"}}))))
   (testing "hcaptcha"
     (is (= {::captcha/response [:biff.auth/http
                                 {:method           :post
@@ -697,9 +697,11 @@
                                  :throw-exceptions false}]
             :biff.fx/next      :check-response}
            (captcha/hcaptcha-verify
-            {:biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
-             :biff.stuff/params         {:h-captcha-response "hcaptcha-token"}}
-            :start)))))
+            {:biff.fx/test              :start
+             :biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
+
+             :biff.stuff/params
+             {:h-captcha-response "hcaptcha-token"}})))))
 
 (deftest captcha-configured-requires-secret-and-site-key-presence-test
   (is (false? ((:biff.auth/captcha-configured? auth/turnstile-config)

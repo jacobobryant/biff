@@ -5,7 +5,10 @@
 
 (impl.v/register
  {:biff.core/init             'fn?
-  :biff.core/stop             [:vector 'fn?]
+  :biff.core/start            'fn?
+  :biff.core/id               'qualified-keyword?
+  :biff.core/stop             'fn?
+  :biff.core/stop-system      'fn?
   :biff.core/secret           [:or [:fn delay?] :string]
   :biff.core/kv-set           'fn?
   :biff.core/kv-get           'fn?
@@ -48,11 +51,18 @@
    Includes a default init function which defines a :biff.core/on-tx function
    that calls :biff.core/on-tx from the other modules in a doseq.
 
-   Each component is a function that receives the system map, starts stateful
-   resources or does other initialization as needed, and returns an updated
-   system map. Components can add stop functions (zero-arg functions that stop a
-   stateful resource) to the end of the :biff.core/stop vector. :biff/stop is
-   also recognized for backwards compatibility.
+   Components may be qualified keywords or functions. For each keyword
+   component, there must be a module with :biff.core/id set to the keyword and
+   with :biff.core/start set to a function like `(fn [ctx]) -> ctx`.
+   :biff.core/stop may be set to a function like `(fn [ctx])`. The start
+   function can start stateful resources or do other initialization as needed,
+   returning an updated system map. The stop function receives the return value
+   of the start function and shuts down stateful resources etc as needed.
+   biff.core adds a zero-argument :biff.core/stop-system function to the system
+   map which calls the component stop functions in reverse startup order.
+
+   For backwards compatibility, components may also be functions that return an
+   updated system map, with stop functions conj'd onto the :biff/stop key.
 
    Uses biff.core/validate to ensure that keys in modules, keys returned by
    :biff.core/init, and keys returned by components are valid."
@@ -64,7 +74,7 @@
 (defn stop
   "Stops a Biff application.
 
-   Calls the :biff.core/stop functions from system in reverse order."
+   Calls the :biff.core/stop-system function from system."
   [system]
   (impl.sys/stop system))
 

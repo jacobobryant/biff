@@ -60,7 +60,7 @@ returning the new number.
      :biff.fx/next :increment})
 
   :increment
-  (fn [{:keys [path content]}]
+  (fn [{:keys [path]} {:keys [content]}]
     (let [n     (or (some-> content parse-long) 0)
           new-n (inc n)]
       {:_              [:example.fx/spit path (str new-n)]
@@ -78,12 +78,11 @@ Now you can write simple `(is (= (f x) y))` unit tests:
 (require '[clojure.test :refer [deftest is]])
 
 (deftest increment-file-tests
-  (is (= (increment-file {:path "number.txt"}
-                         :start)
+  (is (= (increment-file {:path "number.txt" :biff.fx/test :start})
          {:content       [:example.fx/slurp "number.txt"],
           :biff.fx/next :increment}))
-  (is (= (increment-file {:path "number.txt" :content "2"}
-                         :increment)
+  (is (= (increment-file {:path "number.txt" :biff.fx/test :increment}
+                         {:content "2"})
          {:_              [:example.fx/spit "number.txt" "3"],
           :biff.fx/return 3})))
 ```
@@ -163,7 +162,8 @@ incoming Ring requests, and then your Ring handlers can be defined with
      ...}))
 
 (def routes
-  ["/do-something" {:post my-ring-handler}])
+  ["" {:middleware [wrap-fx-handlers]}
+   ["/do-something" {:post my-ring-handler}]])
 ```
 
 Each machine function defines its own set of states, which must include at least
@@ -181,7 +181,7 @@ output map to the next state function.
    :biff.fx/next :process-result})
 
 :process-result
-(fn [{:keys [result]}]
+(fn [ctx {:keys [result]}]
   ...)
 ```
 
@@ -190,12 +190,12 @@ will be used as the machine function's return value.
 
 ### Testing
 
-You can call an individual state function, without any of the effect-handling or
-state-transitioning logic, by passing a state keyword as the second param to the
-machine function.
+You can call an individual state function without effects or transitions by
+setting `:biff.fx/test` in ctx. Additional machine arguments are passed to the
+state function.
 
 ```clojure
-(my-machine ctx :start)
+(my-machine (assoc ctx :biff.fx/test :start))
 => {...}
 ```
 

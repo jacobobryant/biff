@@ -1,8 +1,8 @@
 (ns com.biffweb.demo.app.archive
   (:require [com.biffweb.demo.lib.middleware :as mid]
             [com.biffweb.demo.lib.ui :as ui]
+            [com.biffweb.demo.routes :as routes]
             [com.biffweb.fx :as biff.fx]
-            [com.biffweb.ring :refer [defroute]]
             [com.biffweb.sqlite :as biff.sqlite])
   (:import [java.time Instant ZoneOffset ZonedDateTime]))
 
@@ -72,8 +72,8 @@
                                            [:in :todo/id todo-ids]
                                            [:= :todo/archived false]]})))))
 
-(defroute archive-now-route "/app/archive"
-  :post
+(biff.fx/defmachine archive-now-route
+  :start
   (fn [req]
     (if (can-manually-archive? req)
       (merge ((:start queue-archive-job-states) req)
@@ -83,8 +83,8 @@
        :body    "Forbidden"}))
 
   :archive-now-submit
-  (fn [ctx]
-    (merge ((:submit queue-archive-job-states) ctx)
+  (fn [ctx output]
+    (merge ((:submit queue-archive-job-states) (merge ctx output))
            {:biff.fx/return (ui/no-content)})))
 
 (def module
@@ -98,4 +98,5 @@
 
    :biff.ring/routes
    [["" {:middleware [mid/wrap-signed-in]}
-     archive-now-route]]})
+     [(routes/todo-archive-batch)
+      {:name ::archive-now :post #'archive-now-route}]]]})

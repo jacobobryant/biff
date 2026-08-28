@@ -38,20 +38,6 @@
       (catch IllegalArgumentException _
         x))))
 
-(defn route-path [path-or-route]
-  (cond
-    (string? path-or-route)
-    path-or-route
-
-    (and (vector? path-or-route)
-         (string? (first path-or-route)))
-    (first path-or-route)
-
-    :else
-    (throw (ex-info (str "Path helpers expect a string or a reitit-style "
-                         "route vector.")
-                    {:path-or-route path-or-route}))))
-
 (defn- render-path [path args]
   (loop [segments (str/split path #"/" -1)
          args     (map encode-path-param args)
@@ -71,23 +57,27 @@
          (codec/form-encode
           {:npy (base64-encode (nippy/fast-freeze query-params))}))))
 
-(defn path [path-or-route & args]
-  (let [path             (route-path path-or-route)
-        path-param-count (->> (str/split path #"/")
-                              (filterv #(str/starts-with? % ":"))
-                              count)
-        arg-count        (count args)
+(defn path [path & args]
+  (when-not (string? path)
+    (throw (ex-info "Path helpers expect a path template string."
+                    {:path path})))
+  (if (empty? args)
+    path
+    (let [path-param-count (->> (str/split path #"/")
+                                (filterv #(str/starts-with? % ":"))
+                                count)
+          arg-count        (count args)
 
-        _
-        (when-not (<= path-param-count arg-count (inc path-param-count))
-          (throw (ex-info "Wrong number of args for path."
-                          {:path             path
-                           :path-param-count path-param-count
-                           :arg-count        arg-count})))
+          _
+          (when-not (<= path-param-count arg-count (inc path-param-count))
+            (throw (ex-info "Wrong number of args for path."
+                            {:path             path
+                             :path-param-count path-param-count
+                             :arg-count        arg-count})))
 
-        [path-args [query-params]] (split-at path-param-count args)]
-    (cond-> (render-path path path-args)
-      query-params (path-with-query query-params))))
+          [path-args [query-params]] (split-at path-param-count args)]
+      (cond-> (render-path path path-args)
+        query-params (path-with-query query-params)))))
 
 (defmacro defpath [sym path-str]
   `(def ~sym (partial path ~path-str)))

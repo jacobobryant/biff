@@ -15,7 +15,7 @@
                     {:combined     [:test/concat "-effect"]
                      :biff.fx/next :finish}])
                  :finish
-                 (fn [{:keys [prefix combined] :as ctx}]
+                 (fn [ctx {:keys [prefix combined]}]
                    {:biff.fx/return
                     {:prefix   prefix
                      :combined combined
@@ -32,18 +32,32 @@
                                      (swap! seen conj
                                             (select-keys ctx
                                                          [:from-ctx :prefix]))
-                                     (str (:prefix ctx) suffix))}})))
-    (is (= [{:from-ctx "ctx" :prefix "ctx"}]
+                                     (str (:from-ctx ctx) suffix))}})))
+    (is (= [{:from-ctx "ctx"}]
            @seen))))
 
-(deftest machine-two-arity-runs-raw-state-function
+(deftest machine-test-key-runs-raw-state-function
   (let [machine (biff.fx/machine
                  ::raw-state-test
                  :start
                  (fn [{:keys [value]}]
                    {:effect [:test/raw value]}))]
     (is (= {:effect [:test/raw 42]}
-           (machine {:value 42} :start)))))
+           (machine {:value 42 :biff.fx/test :start})))))
+
+(deftest machine-evaluates-an-initial-effect
+  (let [machine (biff.fx/machine
+                 ::initial-effect-test
+                 [:test/value 2]
+                 :start
+                 (fn [_ effect-result x y]
+                   {:biff.fx/return [effect-result x y]}))]
+    (is (= [4 5 6]
+           (machine {:biff.fx/handlers
+                     {:test/value (fn [_ x] (* 2 x))}}
+                    5 6)))
+    (is (= {:biff.fx/return [:mock 5 6]}
+           (machine {:biff.fx/test :start} :mock 5 6)))))
 
 (deftest machine-prefers-get-handlers-over-ctx-handlers
   (let [machine (biff.fx/machine

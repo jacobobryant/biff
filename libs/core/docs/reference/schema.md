@@ -8,9 +8,22 @@ for other libraries.
 
 `(fn [modules-var]) => {...}`. See [start](../api/com.biffweb.core.md#start).
 
+### :biff.core/id
+
+A qualified keyword which identifies a module component.
+
+### :biff.core/start
+
+`(fn [ctx]) => ctx`. Starts a module component.
+
 ### :biff.core/stop
 
-`(fn []) => nil`. See [start](../api/com.biffweb.core.md#start) and
+`(fn [ctx]) => nil`. Stops a module component.
+
+### :biff.core/stop-system
+
+`(fn []) => nil`. Placed on the running system map and stops all components.
+See [start](../api/com.biffweb.core.md#start) and
 [stop](../api/com.biffweb.core.md#stop).
 
 ### :biff.core/secret

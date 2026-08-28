@@ -17,11 +17,17 @@
      Functions return a map describing effects to execute and (optionally) which
      state to transition to.
 
+   An initial effect descriptor may be placed before the state definitions. Its
+   result is passed to :start immediately after ctx.
+
    machine-name
      An identifier (string, symbol, keyword...) that will be included in ex-data
      for any exceptions thrown by your state functions or handler functions.
 
-   Returns (fn [ctx & [state]]).
+   Returns (fn [ctx & args]). The :start function receives ctx followed by the
+   machine arguments. Other states receive ctx and the previous output map. Set
+   (:biff.fx/test ctx) to a state keyword to call one state without evaluating
+   effects.
 
    Example (see defmachine):
 
@@ -35,13 +41,13 @@
           :biff.fx/next :process})
 
        :process
-       (fn [{:keys [response]}]
+       (fn [ctx {:keys [response]}]
          {:result (process-response response)}))
 
      (my-machine ctx)
      => {:result ...}"
-  [machine-name & {:as state->fn}]
-  (impl/machine machine-name state->fn))
+  [machine-name & args]
+  (apply impl/machine machine-name args))
 
 (defmacro defmachine
   "Defines a var containing an fx machine. Constructs machine-name from the

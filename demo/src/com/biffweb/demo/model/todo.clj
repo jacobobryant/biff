@@ -68,7 +68,7 @@
      :biff.fx/next :finish})
 
   :finish
-  (fn [{:keys [todo-rows ui-state]} _]
+  (fn [_ctx {:keys [todo-rows ui-state]}]
     (let [active-items   (filterv (complement :todo/archived) todo-rows)
           archived-items (filterv :todo/archived todo-rows)
           visible-items  (apply-filter (:todo/filter ui-state) active-items)]

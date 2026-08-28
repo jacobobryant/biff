@@ -16,27 +16,9 @@ map based on `storage` and `log` plus their related options.
 `:local`, or `:kafka`. Both default to `:local`.
 ```
 
-### use-xtdb
-
-[view source](../../src/com/biffweb/xtdb.clj#L68)
-
-```
-(use-xtdb ctx)
-
-Starts an in-process XTDB node and a connection pool.
-
-Passes ctx to expand-config. When ctx is passed to q, execute-tx, submit-tx,
-or authorized-write, those functions:
-
-- Use the connection pool.
-- Trigger a call to :biff.core/on-tx, if set.
-
-Sets :biff.xtdb/node and :biff.xtdb/connection-pool on ctx.
-```
-
 ### q
 
-[view source](../../src/com/biffweb/xtdb.clj#L81)
+[view source](../../src/com/biffweb/xtdb.clj#L68)
 
 ```
 (q {:biff.xtdb/keys [connection-pool node snapshot-token], :as ctx} query)
@@ -52,7 +34,7 @@ Includes snapshot-token in the query opts.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/xtdb.clj#L98)
+[view source](../../src/com/biffweb/xtdb.clj#L85)
 
 ```
 (execute-tx ctx tx-ops)
@@ -70,7 +52,7 @@ Returns a map with :tx-id and :system-time.
 
 ### submit-tx
 
-[view source](../../src/com/biffweb/xtdb.clj#L116)
+[view source](../../src/com/biffweb/xtdb.clj#L103)
 
 ```
 (submit-tx ctx tx-ops)
@@ -88,7 +70,7 @@ Returns a map with :tx-id.
 
 ### authorized-write
 
-[view source](../../src/com/biffweb/xtdb.clj#L133)
+[view source](../../src/com/biffweb/xtdb.clj#L120)
 
 ```
 (authorized-write {:biff.xtdb/keys [authorize node], :as ctx} tx-ops)
@@ -107,7 +89,7 @@ On success, returns the result of submit-tx with :biff.xtdb/diff added.
 
 ### prefix-uuid
 
-[view source](../../src/com/biffweb/xtdb.clj#L150)
+[view source](../../src/com/biffweb/xtdb.clj#L137)
 
 ```
 (prefix-uuid uuid-prefix uuid-rest)
@@ -118,7 +100,7 @@ rest of `uuid-rest`.
 
 ### columns->schema
 
-[view source](../../src/com/biffweb/xtdb.clj#L156)
+[view source](../../src/com/biffweb/xtdb.clj#L143)
 
 ```
 (columns->schema columns)
@@ -132,7 +114,7 @@ calling execute-tx or submit-tx.
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/xtdb.clj#L165)
+[view source](../../src/com/biffweb/xtdb.clj#L152)
 
 ```
 (make-resolvers columns)
@@ -157,7 +139,7 @@ All resolvers have `:batch true`.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/xtdb.clj#L185)
+[view source](../../src/com/biffweb/xtdb.clj#L172)
 
 ```
 A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
@@ -166,12 +148,23 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 
 ### module
 
-[view source](../../src/com/biffweb/xtdb.clj#L191)
+[view source](../../src/com/biffweb/xtdb.clj#L178)
 
 ```
 (module)
 
-Returns a biff.core module.
+On start, starts an in-process XTDB node and a connection pool. Include
+:biff.xtdb/component in your components.
+
+Passes the system map to `expand-config`. When the system map is passed to
+`q`, `execute-tx`, `submit-tx`, or `authorized-write`, those functions:
+
+- Use the connection pool.
+- Trigger a call to :biff.core/on-tx, if set.
+
+Adds :biff.xtdb/node and :biff.xtdb/connection-pool to the system map.
+
+Also:
 
 - provides :biff.fx/handlers in the module
 - provides key-value store functions in the system map:

@@ -9,6 +9,16 @@
   [_ctx {:user/keys [first-name last-name]}]
   {:user/display-name (str first-name " " last-name)})
 
+(biff.graph/defresolver fx-resolver
+  {:input  [:user/id]
+   :output [:user/name]}
+  :start
+  (fn [_ctx {:user/keys [id]}]
+    {:id id :biff.fx/next :finish})
+  :finish
+  (fn [{:keys [prefix]} {:keys [id]}]
+    {:user/name (str prefix id)}))
+
 (defn- resolver [opts]
   (biff.graph/resolver opts))
 
@@ -21,6 +31,13 @@
     nil
     (catch clojure.lang.ExceptionInfo e
       (ex-data e))))
+
+(deftest fx-resolver-passes-input-then-previous-output
+  (is (= {:user/name "User 7"}
+         (biff.graph/query
+          (assoc (test-ctx [fx-resolver]) :prefix "User ")
+          {:user/id 7}
+          [:user/name]))))
 
 (deftest query->ast-parses-supported-query-forms
   (is (= {:user/id           {:kind :scalar}

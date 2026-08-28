@@ -18,16 +18,15 @@
   ([initial-ctx]
    (let [modules-var (atom [(biff.xtdb/module)])
          init        ((:biff.core/init (biff.xtdb/module)) modules-var)]
-     (biff.xtdb/use-xtdb (merge init
-                                {:biff.core/stop    []
-                                 :biff.xtdb/columns columns
-                                 :biff.xtdb/log     :memory
-                                 :biff.xtdb/storage :memory}
-                                initial-ctx)))))
+     ((:biff.core/start (biff.xtdb/module))
+      (merge init
+             {:biff.xtdb/columns columns
+              :biff.xtdb/log     :memory
+              :biff.xtdb/storage :memory}
+             initial-ctx)))))
 
 (defn- close-ctx [ctx]
-  (doseq [stop-fn (:biff.core/stop ctx)]
-    (stop-fn)))
+  ((:biff.core/stop (biff.xtdb/module)) ctx))
 
 (defn- thrown-data [f]
   (try

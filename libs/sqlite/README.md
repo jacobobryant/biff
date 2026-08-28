@@ -68,10 +68,8 @@ First you need to define your application's schema as a "columns map" (see
 
 ### System start up
 
-Then you can initialize your schema and start some database connections with
-`use-sqlite`. If you're using `biff.core`, you can add `use-sqlite` to your
-components, add `(module)` to your components, and add another module in your
-application with `:biff.sqlite/colums columns`:
+The included biff.core module initializes the schema and starts database
+connections:
 
 ```clojure
 (require '[com.biffweb.sqlite :as biff.sqlite])
@@ -87,26 +85,27 @@ application with `:biff.sqlite/colums columns`:
 
 (def components
   [...
-   biff.sqlite/use-sqlite
+   :biff.sqlite/component
    ...])
 ```
 
-If you're not using biff.core, you can wire things up manually:
+If you're not using biff.core, call the module lifecycle functions directly:
 
 ```clojure
 (def columns ...)
 
 (comment
   (def config {:biff.sqlite/columns columns})
-  (def ctx (biff.sqlite/use-sqlite config))
+  (def sqlite-module (biff.sqlite/module))
+  (def ctx ((:biff.core/start sqlite-module) config))
 
   ;; close database connections
-  (let [[stop-fn] (:biff.core/stop ctx)]
-    (stop-fn)))
+  ((:biff.core/stop sqlite-module) ctx))
 ```
 
 Litestream will only be used if you pass in some config for remote object
-storage; see [`use-litestream`](docs/api/com.biffweb.sqlite.md#use-litestream).
+storage; see
+[`litestream-module`](docs/api/com.biffweb.sqlite.md#litestream-module).
 
 ### Migrations
 
@@ -118,7 +117,7 @@ destructive change to `columns` (e.g. removing a column), any other migrations
 will still be applied, but the destructive migrations will be skipped.
 
 You can apply destructive migrations by running `sqlite3def` directly after your
-`resources/schema.sql` file has been updated by `use-sqlite`:
+`resources/schema.sql` file has been updated during startup:
 
 ```
 target/bin/sqlite3def storage/sqlite/main.db \
@@ -265,6 +264,6 @@ See [`make-resolvers`](docs/api/com.biffweb.sqlite.md#make-resolvers).
 - `biff.sqlite/module` inserts some KV-store functions into your system map:
   `:biff.core/kv-get`, `:biff.core/kv-set`, and `:biff.core/kv-list`. The module
   also includes the associated table schema which you will see in the generated
-  `resources/schema.sql` file after running `use-sqlite`. These KV functions are
-  used by a few not-yet-released Biff libs (e.g. the authentication module) for
-  persisting data without depending on a particular database.
+  `resources/schema.sql` file after system startup. These KV functions are used
+  by other Biff libs (e.g. biff.authenticate) for persisting data without
+  depending on a particular database.

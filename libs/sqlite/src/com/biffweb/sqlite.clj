@@ -2,11 +2,8 @@
   (:require [com.biffweb.core :as biff.core]
             [com.biffweb.sqlite.impl.authorize :as impl.authorize]
             [com.biffweb.sqlite.impl.execute :as impl.execute]
-            [com.biffweb.sqlite.impl.litestream :as impl.litestream]
-            [com.biffweb.sqlite.impl.pool :as pool]
             [com.biffweb.sqlite.impl.resolver :as impl.resolver]
             [com.biffweb.sqlite.impl.schema :as impl.schema]
-            [com.biffweb.sqlite.impl.sqldef :as impl.sqldef]
             [com.biffweb.sqlite.impl.system :as impl.system]))
 
 (def ^:private column-schema
@@ -68,70 +65,10 @@
 (defn schema-sql
   "Returns an SQL string for initializing the tables defined by `columns`.
 
-   Used by use-sqldef (and use-sqlite). All tables use STRICT mode."
+   Used by `sqldef-module` during startup. All tables use STRICT mode."
   {:arglists '([{:biff.sqlite/keys [columns]}])}
   [ctx]
   (impl.schema/schema-sql ctx))
-
-(defn use-sqlite
-  "A wrapper component that calls use-litestream, use-sqldef, then use-conn."
-  [ctx]
-  (impl.system/use-sqlite ctx))
-
-(defn use-litestream
-  "Uses litestream to backup/restore the database.
-
-   Only takes effect if litestream-access-key-id is set. If it is, at least
-   litestream-secret-access-key and litestream-bucket must also be set.
-
-   If no file yet exists at db-path, calls `litestream restore` to initialize
-   the DB from remote object storage. Then runs `litestream replicate` in the
-   background to stream local database changes to remote object storage while
-   your application runs."
-  {:arglists '([{:biff.sqlite/keys [db-path
-                                    litestream-access-key-id
-                                    litestream-bucket
-                                    litestream-dir
-                                    litestream-endpoint
-                                    litestream-region
-                                    litestream-secret-access-key
-                                    litestream-version]}])}
-  [ctx]
-  (impl.litestream/use-litestream ctx))
-
-(defn use-sqldef
-  "Generates schema from `columns` and applies it with sqldef.
-
-   Only `columns` is required; other keys have defaults. `extra-init-sql` may be
-   used to append arbitrary statements to the SQL generated from `columns`.
-   Generated schema is written to `schema-path`.
-
-   sqldef (sqlite3def, specifically) will be installed if the specified version
-   isn't available."
-  {:arglists '([{:biff.sqlite/keys [columns
-                                    db-path
-                                    extra-init-sql
-                                    schema-path
-                                    sqldef-version]}])}
-  [ctx]
-  (impl.sqldef/use-sqldef ctx))
-
-(defn use-conn
-  "Adds read/write database connections to the system map.
-
-   The returned system map includes :biff.sqlite/read-pool and
-   :biff.sqlite/write-conn. The read pool is a hikari connection pool with the
-   default options.
-
-   The following PRAGMAs are set on each connection:
-
-   - journal_mode = WAL
-   - busy_timeout = 5000
-   - foreign_keys = ON
-   - synchronous  = NORMAL"
-  {:arglists '([{:biff.sqlite/keys [db-path]}])}
-  [ctx]
-  (pool/use-conn ctx))
 
 (defn execute
   "Executes a sqlite statement, applying type coercion and validation.
@@ -215,8 +152,10 @@
   impl.system/fx-handlers)
 
 (defn module
-  "Returns a biff.core module.
+  "Returns a biff.core module. Include :biff.sqlite/component in your
+   components.
 
+   - includes litestream-module, sqldef-module, and conn-module
    - provides :biff.fx/handlers in the module
    - collects :biff.sqlite/columns from other modules
    - provides some key-value store functions in the system map:
@@ -224,6 +163,71 @@
    - provides :biff.core/wrap-db-snapshot in the system map."
   []
   (impl.system/module))
+
+(defn litestream-module
+  "On start, uses litestream to backup/restore the database. Include
+   :biff.sqlite/litestream in your components.
+
+   Uses these keys from the system map:
+
+     :biff.sqlite/db-path
+     :biff.sqlite/litestream-access-key-id
+     :biff.sqlite/litestream-bucket
+     :biff.sqlite/litestream-dir
+     :biff.sqlite/litestream-endpoint
+     :biff.sqlite/litestream-region
+     :biff.sqlite/litestream-secret-access-key
+     :biff.sqlite/litestream-version
+
+   Only takes effect if litestream-access-key-id is set. If it is, at least
+   litestream-secret-access-key and litestream-bucket must also be set.
+
+   If no file yet exists at db-path, calls `litestream restore` to initialize
+   the DB from remote object storage. Then runs `litestream replicate` in the
+   background to stream local database changes to remote object storage while
+   your application runs."
+  []
+  (impl.system/litestream-module))
+
+(defn sqldef-module
+  "On start, generates schema from `columns` and applies it with sqldef.
+   Include :biff.sqlite/sqldef in your components.
+
+   Uses these keys from the system map:
+
+     :biff.sqlite/columns
+     :biff.sqlite/db-path
+     :biff.sqlite/extra-init-sql
+     :biff.sqlite/schema-path
+     :biff.sqlite/sqldef-version
+
+   Only `columns` is required; other keys have defaults. `extra-init-sql` may be
+   used to append arbitrary statements to the SQL generated from `columns`.
+   Generated schema is written to `schema-path`.
+
+   sqldef (sqlite3def, specifically) will be installed if the specified version
+   isn't available."
+  []
+  (impl.system/sqldef-module))
+
+(defn conn-module
+  "On startup, adds read/write database connections to the system map. Include
+   :biff.sqlite/conn in your components.
+
+   Uses :biff.sqlite/db-path from the system map.
+
+   The returned system map includes :biff.sqlite/read-pool and
+   :biff.sqlite/write-conn. The read pool is a hikari connection pool with the
+   default options.
+
+   The following PRAGMAs are set on each connection:
+
+   - journal_mode = WAL
+   - busy_timeout = 5000
+   - foreign_keys = ON
+   - synchronous  = NORMAL"
+  []
+  (impl.system/conn-module))
 
 (defn make-resolvers
   "Returns a sequence of biff.graph resolvers, one for each table.

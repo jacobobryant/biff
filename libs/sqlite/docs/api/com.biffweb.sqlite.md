@@ -2,85 +2,19 @@
 
 ### schema-sql
 
-[view source](../../src/com/biffweb/sqlite.clj#L68)
+[view source](../../src/com/biffweb/sqlite.clj#L65)
 
 ```
 (schema-sql #:biff.sqlite{:keys [columns]})
 
 Returns an SQL string for initializing the tables defined by `columns`.
 
-Used by use-sqldef (and use-sqlite). All tables use STRICT mode.
-```
-
-### use-sqlite
-
-[view source](../../src/com/biffweb/sqlite.clj#L76)
-
-```
-(use-sqlite ctx)
-
-A wrapper component that calls use-litestream, use-sqldef, then use-conn.
-```
-
-### use-litestream
-
-[view source](../../src/com/biffweb/sqlite.clj#L81)
-
-```
-(use-litestream #:biff.sqlite{:keys [db-path litestream-access-key-id litestream-bucket litestream-dir litestream-endpoint litestream-region litestream-secret-access-key litestream-version]})
-
-Uses litestream to backup/restore the database.
-
-Only takes effect if litestream-access-key-id is set. If it is, at least
-litestream-secret-access-key and litestream-bucket must also be set.
-
-If no file yet exists at db-path, calls `litestream restore` to initialize
-the DB from remote object storage. Then runs `litestream replicate` in the
-background to stream local database changes to remote object storage while
-your application runs.
-```
-
-### use-sqldef
-
-[view source](../../src/com/biffweb/sqlite.clj#L102)
-
-```
-(use-sqldef #:biff.sqlite{:keys [columns db-path extra-init-sql schema-path sqldef-version]})
-
-Generates schema from `columns` and applies it with sqldef.
-
-Only `columns` is required; other keys have defaults. `extra-init-sql` may be
-used to append arbitrary statements to the SQL generated from `columns`.
-Generated schema is written to `schema-path`.
-
-sqldef (sqlite3def, specifically) will be installed if the specified version
-isn't available.
-```
-
-### use-conn
-
-[view source](../../src/com/biffweb/sqlite.clj#L119)
-
-```
-(use-conn #:biff.sqlite{:keys [db-path]})
-
-Adds read/write database connections to the system map.
-
-The returned system map includes :biff.sqlite/read-pool and
-:biff.sqlite/write-conn. The read pool is a hikari connection pool with the
-default options.
-
-The following PRAGMAs are set on each connection:
-
-- journal_mode = WAL
-- busy_timeout = 5000
-- foreign_keys = ON
-- synchronous  = NORMAL
+Used by `sqldef-module` during startup. All tables use STRICT mode.
 ```
 
 ### execute
 
-[view source](../../src/com/biffweb/sqlite.clj#L136)
+[view source](../../src/com/biffweb/sqlite.clj#L73)
 
 ```
 (execute {:biff.sqlite/keys [columns read-pool write-conn], :biff.core/keys [on-tx], :as ctx} statement)
@@ -116,7 +50,7 @@ set. on-tx receives `ctx` as it was passed to this function.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L171)
+[view source](../../src/com/biffweb/sqlite.clj#L108)
 
 ```
 (execute-tx ctx statements)
@@ -127,7 +61,7 @@ transaction. Returns a vector of the results.
 
 ### authorized-write
 
-[view source](../../src/com/biffweb/sqlite.clj#L177)
+[view source](../../src/com/biffweb/sqlite.clj#L114)
 
 ```
 (authorized-write {:biff.sqlite/keys [authorize columns write-conn read-pool], :biff.core/keys [on-tx], :as ctx} statement)
@@ -154,7 +88,7 @@ On success, calls `on-tx` and then returns the diff.
 
 ### authorized-write-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L206)
+[view source](../../src/com/biffweb/sqlite.clj#L143)
 
 ```
 (authorized-write-tx ctx statements)
@@ -164,7 +98,7 @@ Like authorized-write, but takes a sequence of statements. Returns the diff.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/sqlite.clj#L211)
+[view source](../../src/com/biffweb/sqlite.clj#L148)
 
 ```
 A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
@@ -173,13 +107,15 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
 
 ### module
 
-[view source](../../src/com/biffweb/sqlite.clj#L217)
+[view source](../../src/com/biffweb/sqlite.clj#L154)
 
 ```
 (module)
 
-Returns a biff.core module.
+Returns a biff.core module. Include :biff.sqlite/component in your
+components.
 
+- includes litestream-module, sqldef-module, and conn-module
 - provides :biff.fx/handlers in the module
 - collects :biff.sqlite/columns from other modules
 - provides some key-value store functions in the system map:
@@ -187,9 +123,89 @@ Returns a biff.core module.
 - provides :biff.core/wrap-db-snapshot in the system map.
 ```
 
+### litestream-module
+
+[view source](../../src/com/biffweb/sqlite.clj#L167)
+
+```
+(litestream-module)
+
+On start, uses litestream to backup/restore the database. Include
+:biff.sqlite/litestream in your components.
+
+Uses these keys from the system map:
+
+  :biff.sqlite/db-path
+  :biff.sqlite/litestream-access-key-id
+  :biff.sqlite/litestream-bucket
+  :biff.sqlite/litestream-dir
+  :biff.sqlite/litestream-endpoint
+  :biff.sqlite/litestream-region
+  :biff.sqlite/litestream-secret-access-key
+  :biff.sqlite/litestream-version
+
+Only takes effect if litestream-access-key-id is set. If it is, at least
+litestream-secret-access-key and litestream-bucket must also be set.
+
+If no file yet exists at db-path, calls `litestream restore` to initialize
+the DB from remote object storage. Then runs `litestream replicate` in the
+background to stream local database changes to remote object storage while
+your application runs.
+```
+
+### sqldef-module
+
+[view source](../../src/com/biffweb/sqlite.clj#L192)
+
+```
+(sqldef-module)
+
+On start, generates schema from `columns` and applies it with sqldef.
+Include :biff.sqlite/sqldef in your components.
+
+Uses these keys from the system map:
+
+  :biff.sqlite/columns
+  :biff.sqlite/db-path
+  :biff.sqlite/extra-init-sql
+  :biff.sqlite/schema-path
+  :biff.sqlite/sqldef-version
+
+Only `columns` is required; other keys have defaults. `extra-init-sql` may be
+used to append arbitrary statements to the SQL generated from `columns`.
+Generated schema is written to `schema-path`.
+
+sqldef (sqlite3def, specifically) will be installed if the specified version
+isn't available.
+```
+
+### conn-module
+
+[view source](../../src/com/biffweb/sqlite.clj#L213)
+
+```
+(conn-module)
+
+On startup, adds read/write database connections to the system map. Include
+:biff.sqlite/conn in your components.
+
+Uses :biff.sqlite/db-path from the system map.
+
+The returned system map includes :biff.sqlite/read-pool and
+:biff.sqlite/write-conn. The read pool is a hikari connection pool with the
+default options.
+
+The following PRAGMAs are set on each connection:
+
+- journal_mode = WAL
+- busy_timeout = 5000
+- foreign_keys = ON
+- synchronous  = NORMAL
+```
+
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L228)
+[view source](../../src/com/biffweb/sqlite.clj#L232)
 
 ```
 (make-resolvers columns)

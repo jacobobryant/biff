@@ -344,11 +344,11 @@
     (is (str/includes? (:body (handler {:session {:uid :admin}}))
                        "Admin Setup"))))
 
-(deftest use-alerts-test
-  (testing "use-alerts adds alert-state to ctx"
-    (let [ctx    {:biff.core/stop []}
-          result (admin/use-alerts ctx)]
+(deftest alerts-lifecycle-test
+  (testing "the alerts component adds alert-state to ctx"
+    (let [module (admin/module {:biff.admin/get-usage-events (fn [_] [])})
+          result ((:biff.core/start module) {})]
       (is (contains? result :biff.admin/alert-state))
       (is (instance? clojure.lang.Atom (:biff.admin/alert-state result)))
       (is (= [] (:errors @(:biff.admin/alert-state result))))
-      (doseq [f (:biff.core/stop result)] (f)))))
+      ((:biff.core/stop module) result))))

@@ -1,6 +1,5 @@
 (ns com.biffweb.admin
-  (:require [com.biffweb.admin.impl.alerts :as alerts]
-            [com.biffweb.admin.impl.module :as module]
+  (:require [com.biffweb.admin.impl.module :as module]
             [com.biffweb.admin.impl.profiling :as profiling]
             [com.biffweb.core :as biff.core]))
 
@@ -73,16 +72,12 @@
   (module/routes options))
 
 (defn module
-  "Returns a biff.core module for the admin dashboard.
+  "A biff.core module for the admin dashboard. Include
+   :biff.admin/alerts in your components.
 
    Includes `routes`, biff.ring and biff.graph profiling middleware, an hourly
    biff.background task that calls `flush-pstats!`, and initialization for
-   profiling state."
-  [params]
-  (module/module params))
-
-(defn use-alerts
-  "A biff.core component that sends email alerts for logged errors.
+   profiling state.
 
    Forwards clojure.tools.logging errors to Telemere, and adds a Telemere signal
    handler that stores logged errors in memory. Errors are reported via email in
@@ -91,7 +86,5 @@
 
    Errors reported via email are also stored via kv-set and are viewable on the
    biff.admin dashboard."
-  {:arglists '([{:biff.admin/keys [send-email alert-email] :as ctx}])}
-
-  [ctx]
-  (alerts/use-alerts ctx))
+  [params]
+  (module/module params))

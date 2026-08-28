@@ -24,7 +24,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{::keys [response]}]
+  (fn [_ctx {::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn turnstile-head [_ctx]
@@ -63,9 +63,9 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{::keys [response]
-        :keys  [biff.auth/recaptcha-threshold]
-        :or    {recaptcha-threshold 0.5}}]
+  (fn [{:keys [biff.auth/recaptcha-threshold]
+        :or   {recaptcha-threshold 0.5}}
+       {::keys [response]}]
     (let [{:keys [success score]} (:body response)]
       ;; Supports both v2 (no score, just success) and v3 (success + score)
       {:biff.fx/return (boolean (and success
@@ -113,7 +113,7 @@
      :biff.fx/next :check-response})
 
   :check-response
-  (fn [{::keys [response]}]
+  (fn [_ctx {::keys [response]}]
     {:biff.fx/return (boolean (get-in response [:body :success]))}))
 
 (defn hcaptcha-head [_ctx]

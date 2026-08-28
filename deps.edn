@@ -51,7 +51,7 @@
                      rewrite-clj/rewrite-clj   {:mvn/version "1.1.47"},
                      ring/ring-jetty-adapter   {:mvn/version "1.15.4"},
                      ring/ring-json            {:mvn/version "0.5.1"}}
-        :main-opts ["-m" "tasks"]
-        :jvm-opts  ["--add-opens=java.base/java.nio=ALL-UNNAMED"
-                    "--enable-native-access=ALL-UNNAMED"
-                    "-Dio.netty.tryReflectionSetAccessible=true"]}}}
+        :main-opts  ["-m" "tasks"]
+        :jvm-opts   ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                     "--enable-native-access=ALL-UNNAMED"
+                     "-Dio.netty.tryReflectionSetAccessible=true"]}}}

@@ -28,6 +28,9 @@
 
 (use-fixtures :each with-clean-system-properties)
 
+(defn- start-config [ctx]
+  ((:biff.core/start (biff.config/module)) ctx))
+
 (defn- with-test-config-resource [f]
   (let [resource io/resource]
     (with-redefs [clojure.java.io/resource
@@ -68,14 +71,14 @@
              (get env "CONFIG-TEST-QUOTED")))
       (is (nil? (get env "CONFIG_TEST_EMPTY"))))))
 
-(deftest use-aero-config-merges-values-wraps-secrets-and-applies-profile
+(deftest config-component-merges-values-wraps-secrets-and-applies-profile
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"CONFIG_TEST_FROM_ENV" "from env"
                                 "CONFIG_TEST_SECRET"   "super-secret"
                                 "BIFF_PROFILE"         "prod"
                                 "BIFF_ENV"             "ignored"})]
-       (let [ctx (biff.config/use-aero-config {:biff.config/profile :test})]
+       (let [ctx (start-config {:biff.config/profile :test})]
          (is (= "from env" (:config-test/from-env ctx)))
          (is (= "profile:test" (:config-test/profile ctx)))
          (is (= "super-secret" (force (:config-test/secret ctx))))
@@ -87,14 +90,14 @@
          (is (= "legacy only" (System/getProperty "config.test.legacy")))
          (is (= "map value" (System/getProperty "config.test.source")))))))
 
-(deftest use-aero-config-falls-back-to-biff-env
+(deftest config-component-falls-back-to-biff-env
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"BIFF_ENV" "prod"})]
        (is (= "profile:prod"
-              (:config-test/profile (biff.config/use-aero-config {})))))))
+              (:config-test/profile (start-config {})))))))
 
-(deftest use-aero-config-re-registers-reader-methods
+(deftest config-component-re-registers-reader-methods
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"CONFIG_TEST_FROM_ENV" "from env"
@@ -108,7 +111,7 @@
            (defmethod aero/reader 'biff/secret
              [_ _ _]
              "old secret")
-           (let [ctx (biff.config/use-aero-config {})]
+           (let [ctx (start-config {})]
              (is (= "from env" (:config-test/from-env ctx)))
              (is (= "super-secret" (force (:config-test/secret ctx)))))
            (finally

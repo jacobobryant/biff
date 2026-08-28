@@ -2,7 +2,7 @@
 
 ### \*testing\*
 
-[view source](../../src/com/biffweb/ring.clj#L36)
+[view source](../../src/com/biffweb/ring.clj#L35)
 
 ```
 See `path`. Default false.
@@ -10,7 +10,7 @@ See `path`. Default false.
 
 ### make-handler
 
-[view source](../../src/com/biffweb/ring.clj#L44)
+[view source](../../src/com/biffweb/ring.clj#L43)
 
 ```
 (make-handler {:keys [site-routes site-middleware api-routes api-middleware base-middleware]})
@@ -29,21 +29,20 @@ the request.
 
 ### path
 
-[view source](../../src/com/biffweb/ring.clj#L63)
+[view source](../../src/com/biffweb/ring.clj#L62)
 
 ```
-(path path-template-or-route & args)
+(path path-template & args)
 
 Returns a path with given path and query parameters applied.
 
-The first argument can be either a Reitit path template like "/posts/:id"
-or a Reitit route, in which case the path template will be extracted from
-it.
+The first argument is a Reitit path template like "/posts/:id". With no
+additional arguments, returns the template unchanged.
 
-If the path template includes path parameters, corresponding arguments must
-be provided for them. Any UUID path parameters will be base64, URL encoded,
-and they can be decoded with wrap-path-param-uuids. Non-UUID path parameters
-are inserted as-is.
+If the path template includes path parameters, corresponding arguments are
+used as the parameter values. Any UUID path parameters will be base64, URL
+encoded, and they can be decoded with wrap-path-param-uuids. Non-UUID path
+parameters are inserted as-is.
 
 You may optionally include a map of additional parameters at the end which
 will be encoded via taoensso.nippy/fast-freeze into a single `npy` query
@@ -58,73 +57,20 @@ and the unencoded query params.
 
 ### defpath
 
-[view source](../../src/com/biffweb/ring.clj#L87)
+[view source](../../src/com/biffweb/ring.clj#L85)
 
 ```
-(defpath sym path-template-or-route)
+(defpath sym path-template)
 
-Convenience macro for (def sym (partial path path-template-or-route))
+Convenience macro for (def sym (partial path path-template))
 
 It's recommended to use this in a dedicated shared namespace to define paths
 that must be referenced from multiple namespaces.
 ```
 
-### defroute
-
-[view source](../../src/com/biffweb/ring.clj#L95)
-
-```
-(defroute sym & args)
-
-Defines a Reitit route backed by a biff.fx machine.
-
-  (defroute my-route "/posts/:id"
-    [:example.fx/query ...]  ; effect descriptor
-
-    :get
-    (fn [ctx query-result]
-      {:biff.fx/next :next
-       ...})
-
-    :next
-    (fn [ctx]
-      [:div ...]))
-  => [#'com.example/my-route-impl
-      #'com.example/my-route]
-
-  my-route
-  => ["/posts/:id" {:name ..., :get ...}]
-
-A Reitit path template string may be provided after the var name. If it
-is omitted, a path of the form "/_biff/api/<namespace>/<symbol>" will be
-used by default.
-
-After that, you may provide an optional biff.fx effect descriptor (a vector).
-Its result will be passed as the second argument to any state functions that
-have HTTP method keywords (:get, :post, etc). If other state functions need
-to use the result, it is also available via (:biff.ring/fx-result ctx).
-
-The machine has a default :start state function which simply transitions to
-the state named by the request method (:get, :post, etc).
-
-If a state function returns a vector whose first element is a keyword, it
-will be rendered as hiccup (via lambdaisland.hiccup) and returned as a 200
-response. You may also return a response map with :body set to a hiccup
-vector.
-
-The var is defined as a Reitit route, i.e. a vector containing the path
-template string and an options map. The fully-qualified var name is used as
-the route :name (converted to a keyword). The handler function is set to
-whatever HTTP methods the machine has states for. The machine may contain
-multiple HTTP method states.
-
-The handler function is also defined as a var with an -impl suffix, which
-helps with testing and REPL-driven development (late binding).
-```
-
 ### wrap-csrf-protection
 
-[view source](../../src/com/biffweb/ring.clj#L145)
+[view source](../../src/com/biffweb/ring.clj#L95)
 
 ```
 (wrap-csrf-protection handler)
@@ -145,7 +91,7 @@ response.
 
 ### wrap-path-param-uuids
 
-[view source](../../src/com/biffweb/ring.clj#L161)
+[view source](../../src/com/biffweb/ring.clj#L111)
 
 ```
 (wrap-path-param-uuids handler)
@@ -156,7 +102,7 @@ Updates :path-params on incoming requests, decoding any UUIDs encoded by
 
 ### wrap-nippy-params
 
-[view source](../../src/com/biffweb/ring.clj#L167)
+[view source](../../src/com/biffweb/ring.clj#L117)
 
 ```
 (wrap-nippy-params handler)
@@ -166,7 +112,7 @@ Decodes Nippy-encoded params from `path` and merges them into :params.
 
 ### wrap-resource
 
-[view source](../../src/com/biffweb/ring.clj#L172)
+[view source](../../src/com/biffweb/ring.clj#L122)
 
 ```
 (wrap-resource handler)
@@ -186,7 +132,7 @@ to the wrapped handler.
 
 ### wrap-internal-error
 
-[view source](../../src/com/biffweb/ring.clj#L187)
+[view source](../../src/com/biffweb/ring.clj#L137)
 
 ```
 (wrap-internal-error handler)
@@ -199,7 +145,7 @@ response.
 
 ### wrap-log-requests
 
-[view source](../../src/com/biffweb/ring.clj#L195)
+[view source](../../src/com/biffweb/ring.clj#L145)
 
 ```
 (wrap-log-requests handler)
@@ -209,7 +155,7 @@ Logs an info message after each request finishes.
 
 ### wrap-session
 
-[view source](../../src/com/biffweb/ring.clj#L200)
+[view source](../../src/com/biffweb/ring.clj#L150)
 
 ```
 (wrap-session handler)
@@ -247,7 +193,7 @@ Sets HttpOnly on the session cookie.
 
 ### wrap-ssl
 
-[view source](../../src/com/biffweb/ring.clj#L233)
+[view source](../../src/com/biffweb/ring.clj#L183)
 
 ```
 (wrap-ssl handler)
@@ -268,7 +214,7 @@ Incoming requests may have the following keys:
 
 ### wrap-site-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L249)
+[view source](../../src/com/biffweb/ring.clj#L199)
 
 ```
 (wrap-site-defaults handler)
@@ -286,7 +232,7 @@ Includes:
 
 ### wrap-api-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L262)
+[view source](../../src/com/biffweb/ring.clj#L212)
 
 ```
 (wrap-api-defaults handler)
@@ -301,7 +247,7 @@ Includes:
 
 ### wrap-base-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L272)
+[view source](../../src/com/biffweb/ring.clj#L222)
 
 ```
 (wrap-base-defaults handler)
@@ -317,27 +263,16 @@ Includes:
 - Request logging
 ```
 
-### use-jetty
-
-[view source](../../src/com/biffweb/ring.clj#L287)
-
-```
-(use-jetty {:biff.ring/keys [host port handler], :or {host "localhost", port 8080}})
-
-A biff.core component that starts a Jetty webserver.
-
-Merges ctx into incoming requests.
-```
-
 ### module
 
-[view source](../../src/com/biffweb/ring.clj#L297)
+[view source](../../src/com/biffweb/ring.clj#L237)
 
 ```
 (module)
 
 A biff.core module that sets :biff.ring/handler and
-:biff.ring/fallback-session-store on the system map.
+:biff.ring/fallback-session-store on init and starts Jetty on start.
+Include :biff.ring/jetty in your components.
 
 :biff.ring/handler is compiled by collecting the following keys from other
 modules and passing them to `make-handler`:
@@ -349,4 +284,12 @@ modules and passing them to `make-handler`:
   :biff.ring/base-middleware
 
 :biff.ring/fallback-session-store is set to an in-memory store.
+
+On start, the following keys are used:
+
+  :biff.ring/handler
+  :biff.ring/host     (default "localhost")
+  :biff.ring/port     (default 8080)
+
+Merges the system map into incoming requests.
 ```

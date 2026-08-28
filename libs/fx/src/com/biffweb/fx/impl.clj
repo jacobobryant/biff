@@ -1,5 +1,6 @@
 (ns com.biffweb.fx.impl
-  (:require [clojure.walk :as walk]
+  (:require [clojure.string :as str]
+            [clojure.walk :as walk]
             [com.biffweb.core :as biff.core])
   (:import [java.time Instant]
            [java.util Random UUID]))
@@ -45,27 +46,27 @@
 
 (defn- step [{:keys [machine-name state->fn handlers ctx]}
              {:keys [state input trace]}]
-  (let [log-ctx     {:biff.fx/state        state
-                     :biff.fx/machine-name machine-name
-                     :biff.fx/trace        trace}
-        error!      (fn [message extra ex]
-                      (throw (ex-info message
-                                      (truncate (merge log-ctx extra))
-                                      ex)))
-        state-fn    (or (get state->fn state)
-                        (error! "Invalid state"
-                                {:biff.fx/available-states (keys state->fn)}
-                                nil))
-        injected    {:biff.fx/now  (Instant/now)
-                     :biff.fx/seed (.nextLong (Random.))}
-        state-input (merge ctx input injected)
-        result      (try
-                      (state-fn state-input)
-                      (catch Exception e
-                        (error! "State function threw an exception"
-                                injected e)))
-        _           (biff.core/validate {::state-fn-result result})
-        results     (if (sequential? result) result [result])]
+  (let [log-ctx       {:biff.fx/state        state
+                       :biff.fx/machine-name machine-name
+                       :biff.fx/trace        trace}
+        error!        (fn [message extra ex]
+                        (throw (ex-info message
+                                        (truncate (merge log-ctx extra))
+                                        ex)))
+        handler-error "Handler function threw an exception"
+        state-fn      (or (get state->fn state)
+                          (error! "Invalid state"
+                                  {:biff.fx/available-states (keys state->fn)}
+                                  nil))
+        injected      {:biff.fx/now  (Instant/now)
+                       :biff.fx/seed (.nextLong (Random.))}
+        result        (try
+                        (apply state-fn (merge ctx injected) input)
+                        (catch Exception e
+                          (error! "State function threw an exception"
+                                  injected e)))
+        _             (biff.core/validate {::state-fn-result result})
+        results       (if (sequential? result) result [result])]
     (reduce
      (fn [output result]
        (let [effect-keys (filterv (fn [k]
@@ -76,63 +77,101 @@
              output      (merge output
                                 (apply dissoc result effect-keys))]
          (into output
-               (map (fn [k]
-                      (let [[handler-key & args] (get result k)
-                            handler              (get handlers handler-key)]
-                        [k
-                         (try
-                           (apply handler (merge ctx output) args)
-                           (catch Exception e
-                             (error! "Handler function threw an exception"
-                                     {:biff.fx/output       output
-                                      :biff.fx/handler-args args}
-                                     e)))])))
+               (keep (fn [k]
+                       (let [[handler-key & args] (get result k)
+                             handler              (get handlers handler-key)
+                             handler-result       (try
+                                                    (apply handler ctx args)
+                                                    (catch Exception e
+                                                      (error!
+                                                       handler-error
+                                                       {:biff.fx/output
+                                                        output
+
+                                                        :biff.fx/handler-args
+                                                        args}
+                                                       e)))]
+                         (when-not (str/starts-with? (str k) ":_")
+                           [k handler-result]))))
                effect-keys)))
      {}
      results)))
 
-(defn machine [machine-name & {:as state->fn}]
-  (biff.core/validate {::state->fn state->fn})
-  (fn run
-    ([ctx state]
-     ((or (get state->fn state)
-          (throw (ex-info "Invalid state"
-                          {:biff.fx/state            state
-                           :biff.fx/machine-name     machine-name
-                           :biff.fx/available-states (keys state->fn)})))
-      ctx))
-    ([ctx]
-     (let [handlers (merge default-fx-handlers
-                           (:biff.fx/handlers ctx)
-                           (when-some [get-handlers (:biff.fx/get-handlers ctx)]
-                             (get-handlers)))
-           _        (biff.core/validate {:biff.fx/handlers handlers})
-           opts     {:machine-name machine-name
-                     :state->fn    state->fn
-                     :handlers     handlers
-                     :ctx          ctx}]
-       (loop [state :start
-              input {}
-              trace []]
-         (let [output (biff.core/validate
-                       (step opts
-                             {:state state
-                              :input input
-                              :trace trace}))]
-           (cond
-             (:biff.fx/next output)
-             (do
-               (assert (not (contains? output :biff.fx/return))
-                       (str "You can't set :biff.fx/next and :biff.fx/return "
-                            "at the same time."))
-               (recur (:biff.fx/next output)
-                      output
-                      (conj trace output)))
+(defn- initial-handler [handlers handler-key machine-name]
+  (or (get handlers handler-key)
+      (throw
+       (ex-info "Invalid initial effect handler"
+                {:biff.fx/handler            handler-key
+                 :biff.fx/machine-name       machine-name
+                 :biff.fx/available-handlers (keys handlers)}))))
 
-             (contains? output :biff.fx/return)
-             (:biff.fx/return output)
+(defn machine [machine-name & args]
+  (let [[initial-fx args] (if (vector? (first args))
+                            [(first args) (rest args)]
+                            [nil args])
+        state->fn         (if (and (= 1 (count args)) (map? (first args)))
+                            (first args)
+                            (apply hash-map args))]
+    (when-not (or (nil? initial-fx)
+                  (keyword? (first initial-fx)))
+      (throw (ex-info "Initial effect must be a vector starting with a keyword."
+                      {:biff.fx/initial-fx   initial-fx
+                       :biff.fx/machine-name machine-name})))
+    (biff.core/validate {::state->fn state->fn})
+    (fn run [ctx & args]
+      (if-some [state (:biff.fx/test ctx)]
+        (apply (or (get state->fn state)
+                   (throw (ex-info "Invalid state"
+                                   {:biff.fx/state        state
+                                    :biff.fx/machine-name machine-name
 
-             :else output)))))))
+                                    :biff.fx/available-states
+                                    (keys state->fn)})))
+               ctx
+               args)
+        (let [handlers (merge default-fx-handlers
+                              (:biff.fx/handlers ctx)
+                              (when-some [get-handlers
+                                          (:biff.fx/get-handlers ctx)]
+                                (get-handlers)))
+              _        (biff.core/validate {:biff.fx/handlers handlers})
+
+              initial-result
+              (when initial-fx
+                (let [handler (initial-handler
+                               handlers
+                               (first initial-fx)
+                               machine-name)
+
+                      handler-args (rest initial-fx)]
+                  [(apply handler ctx handler-args)]))
+
+              opts {:machine-name machine-name
+                    :state->fn    state->fn
+                    :handlers     handlers
+                    :ctx          ctx}]
+          (loop [state :start
+                 input (concat initial-result args)
+                 trace []]
+            (let [output (biff.core/validate
+                          (step opts
+                                {:state state
+                                 :input input
+                                 :trace trace}))]
+              (cond
+                (:biff.fx/next output)
+                (do
+                  (assert (not (contains? output :biff.fx/return))
+                          (str "You can't set :biff.fx/next and "
+                               ":biff.fx/return at the same time."))
+                  (recur (:biff.fx/next output)
+                         [output]
+                         (conj trace output)))
+
+                (contains? output :biff.fx/return)
+                (:biff.fx/return output)
+
+                :else output))))))))
 
 (defmacro defmachine [sym & args]
   (let [machine-name (keyword (str *ns*) (str sym))]

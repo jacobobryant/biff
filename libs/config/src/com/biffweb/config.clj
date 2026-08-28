@@ -63,8 +63,30 @@
                   [(name k) v])))
         ctx))
 
-(defn use-aero-config
-  "Parses config.edn and merges into ctx. Also sets system properties.
+(defn- start [{:biff.config/keys [profile] :as ctx}]
+  (let [env     (get-env)
+        profile (some-> (or profile
+                            (get env "BIFF_PROFILE")
+                            ;; For backwards compatibility
+                            (get env "BIFF_ENV"))
+                        keyword)
+        _       (register-reader-methods!)
+        config  (aero/read-config (io/resource "config.edn")
+                                  {:profile profile :biff.aero/env env})
+        ctx     (merge ctx (remove-nil-values config))
+        ;; For backwards compatibility
+        secret  (fn [k]
+                  (when-some [f (get ctx k)]
+                    (f)))
+        ctx     (assoc ctx :biff/secret secret)]
+    (doseq [[k v] (merge (system-properties-compat ctx)
+                         (get ctx :biff.config/system-properties))]
+      (System/setProperty (name k) v))
+    ctx))
+
+(defn module
+  "On startup, parses config.edn and merges into ctx. Also sets system
+   properties. Include :biff.config/component in your components.
 
    Loads a config.edn file from resources and parses it with Aero. (See
    https://github.com/juxt/aero). Two additional reader tags are supported:
@@ -111,23 +133,6 @@
 
    - keys with a namespace of \"biff.system-properties\" are also merged into
      the system properties."
-  [{:biff.config/keys [profile] :as ctx}]
-  (let [env     (get-env)
-        profile (some-> (or profile
-                            (get env "BIFF_PROFILE")
-                            ;; For backwards compatibility
-                            (get env "BIFF_ENV"))
-                        keyword)
-        _       (register-reader-methods!)
-        config  (aero/read-config (io/resource "config.edn")
-                                  {:profile profile :biff.aero/env env})
-        ctx     (merge ctx (remove-nil-values config))
-        ;; For backwards compatibility
-        secret  (fn [k]
-                  (when-some [f (get ctx k)]
-                    (f)))
-        ctx     (assoc ctx :biff/secret secret)]
-    (doseq [[k v] (merge (system-properties-compat ctx)
-                         (get ctx :biff.config/system-properties))]
-      (System/setProperty (name k) v))
-    ctx))
+  []
+  {:biff.core/id    :biff.config/component
+   :biff.core/start start})

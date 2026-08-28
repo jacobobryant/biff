@@ -29,8 +29,8 @@ Map that can contain the keys:
 :state       ; atom containing a :biff.background/queue-state map
 ```
 
-As input to `use-queues`, only `:consumer` is required while `:queue` and
-`:n-threads` are optional. As returned from `use-queues`, all keys are present.
+Before the queues component starts, only `:consumer` is required while `:queue`
+and `:n-threads` are optional. After startup, all keys are present.
 
 ### :biff.background/queue-state
 

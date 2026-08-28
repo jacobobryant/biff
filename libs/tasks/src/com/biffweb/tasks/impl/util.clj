@@ -58,7 +58,7 @@
   config)
 
 ;; Any 3rd party projects that want to read user config should use
-;; com.biffweb.config/use-aero-config instead of this non-public function.
+;; com.biffweb.config/module instead of this non-public function.
 ;;
 ;; Tasks in this project should only call this function from the top-level
 ;; function and then pass needed config to other functions. You should only need
@@ -74,7 +74,8 @@
           (validate-config
            (merge config-defaults
                   (when config-file-exists
-                    ((requiring-resolve 'com.biffweb.config/use-aero-config)
+                    ((:biff.core/start
+                      ((requiring-resolve 'com.biffweb.config/module)))
                      {}))
                   @(requiring-resolve 'com.biffweb.tasks/*extra-config*)))
 

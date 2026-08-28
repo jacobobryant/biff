@@ -98,14 +98,16 @@
                     (println "Failed to store recent errors:"
                              (.getMessage e))))))))))))
 
-(defn use-alerts [ctx]
+(defn start [ctx]
   (tel.tl/tools-logging->telemere!)
   (let [alert-state (atom {:errors [] :pending [] :last-sent-at 0})
         ctx         (assoc ctx :biff.admin/alert-state alert-state)]
     (tel/add-handler! :biff.admin/alerts
                       (fn [signal] (handle-error ctx signal)))
-    (update ctx :biff.core/stop conj
-            #(tel/remove-handler! :biff.admin/alerts))))
+    ctx))
+
+(defn stop [_ctx]
+  (tel/remove-handler! :biff.admin/alerts))
 
 (defn- exceptions-table [errors]
   [:div

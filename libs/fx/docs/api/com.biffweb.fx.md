@@ -5,7 +5,7 @@
 [view source](../../src/com/biffweb/fx.clj#L12)
 
 ```
-(machine machine-name & {:as state->fn})
+(machine machine-name & args)
 
 Returns a function that runs your code as a state machine.
 
@@ -14,11 +14,17 @@ state->fn
   Functions return a map describing effects to execute and (optionally) which
   state to transition to.
 
+An initial effect descriptor may be placed before the state definitions. Its
+result is passed to :start immediately after ctx.
+
 machine-name
   An identifier (string, symbol, keyword...) that will be included in ex-data
   for any exceptions thrown by your state functions or handler functions.
 
-Returns (fn [ctx & [state]]).
+Returns (fn [ctx & args]). The :start function receives ctx followed by the
+machine arguments. Other states receive ctx and the previous output map. Set
+(:biff.fx/test ctx) to a state keyword to call one state without evaluating
+effects.
 
 Example (see defmachine):
 
@@ -32,7 +38,7 @@ Example (see defmachine):
        :biff.fx/next :process})
 
     :process
-    (fn [{:keys [response]}]
+    (fn [ctx {:keys [response]}]
       {:result (process-response response)}))
 
   (my-machine ctx)
@@ -41,7 +47,7 @@ Example (see defmachine):
 
 ### defmachine
 
-[view source](../../src/com/biffweb/fx.clj#L46)
+[view source](../../src/com/biffweb/fx.clj#L52)
 
 ```
 (defmachine sym & {:as state->fn})
@@ -54,7 +60,7 @@ See com.biffweb.fx/machine.
 
 ### module
 
-[view source](../../src/com/biffweb/fx.clj#L55)
+[view source](../../src/com/biffweb/fx.clj#L61)
 
 ```
 (module)
@@ -66,7 +72,7 @@ Includes an init function that sets :biff.fx/get-handlers on the system map.
 
 ### uuid4
 
-[view source](../../src/com/biffweb/fx.clj#L62)
+[view source](../../src/com/biffweb/fx.clj#L68)
 
 ```
 (uuid4 seed)
@@ -84,7 +90,7 @@ you passed to this function.
 
 ### uuid7
 
-[view source](../../src/com/biffweb/fx.clj#L75)
+[view source](../../src/com/biffweb/fx.clj#L81)
 
 ```
 (uuid7 seed instant)

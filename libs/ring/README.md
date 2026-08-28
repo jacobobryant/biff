@@ -7,7 +7,7 @@ Features:
 - Define Ring handlers with a collection of default middleware.
 - Ergonomically construct URLs for Reitit routes without hardcoding strings
   everywhere.
-- Integrate with biff.core and biff.fx.
+- Integrate with biff.core.
 
 ### Dependency
 
@@ -57,35 +57,19 @@ of the default middleware, you'll need to construct the handler yourself without
 using `make-handler`. See the [API reference](docs/api/com.biffweb.ring.md) for
 a list of the default middleware, all of which can be used individually.
 
-[`defroute`](docs/api/com.biffweb.ring.md#defroute) can be used to define
-Reitit routes that are backed by [biff.fx machines](/libs/fx/):
-
-```clojure
-(defroute my-route "/posts/:id"
-  [:example.fx/query ...]
-
-  :get
-  (fn [ctx query-result]
-    ...)
-
-  :next
-  (fn [ctx]
-    [:div "hello"]))
-
-(def module
-  {:biff.ring/routes [my-route
-                      ...]})
-```
-
 ### Start a webserver
 
-[`use-jetty`](docs/api/com.biffweb.ring.md#use-jetty) is a biff.core component
-that starts a Jetty webserver using `:biff.ring/handler` from the system map.
+`module` includes a biff.core component that starts Jetty using
+`:biff.ring/handler` from the system map.
 
 ```clojure
+(def modules
+  [(biff.ring/module)
+   ...])
+
 (def components
   [...
-   biff.ring/use-jetty
+   :biff.ring/jetty
    ...])
 ```
 
@@ -97,34 +81,38 @@ construct `:href` / `:action` values without duplicating your route paths
 throughout your codebase. e.g. instead of this:
 
 ```clojure
-(def my-route
-  ["/foo/:id" {:get ...}])
-
 (def my-handler [request]
   ...
   [:a {:href (str "/foo/" 123)}]
   ...)
+
+(def routes
+  [["/foo/:id" {:get ...}]])
 ```
 
 You can do this:
 
 ```clojure
-(require '[com.biffweb.ring :refer [path]])
+(require '[com.biffweb.ring :refer [defpath]])
 
-(def my-route
-  ["/foo/:id" {:get ...}])
+(defpath my-path "/foo/:id")
 
 (def my-handler [request]
   ...
-  [:a {:href (path my-route 123)}]
+  [:a {:href (my-path 123)}]
   ...)
+
+(def routes
+  [[(my-path) {:get ...}]])
 ```
 
-`path` is intended for referencing routes defined in the current namespace.
-Instead of using `path` with routes from other namespaces, it's recommended to
-create a single `routes.clj` file and define route paths in it with `defpath`:
+Paths that need to be used in multiple namespaces can be defined in a single
+shared namespace:
 
 ```clojure
+(ns example.routes
+  (:require [com.biffweb.ring :refer [defpath]]))
+
 (defpath home-page    "/")
 (defpath another-page "/another-page")
 (defpath post-page    "/posts/:id")
@@ -135,13 +123,5 @@ create a single `routes.clj` file and define route paths in it with `defpath`:
 => "/posts/123"
 ```
 
-## Tips
-
-- The initial effect descriptor passed to `defroute` is intended primarily to be
-  used with biff.graph: `(defroute my-route "/foo" [:biff.graph.fx/query
-  [{:session/user [:user/email ...]}]] ...)`. e.g. many GET routes can have just
-  that and then a single `:get` state function.
-
-- Since routes in a web app are often mutually dependent (e.g. a parent page
-  links to a child page and the child page links to the parent), it's often
-  useful to `declare` routes so that they can be used with `path`.
+Calling a path function with no arguments returns its path template. This is
+useful for defining the Reitit route.

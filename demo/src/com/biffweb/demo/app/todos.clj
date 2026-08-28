@@ -6,7 +6,7 @@
             [com.biffweb.demo.model.tab-state :as model.tab-state]
             [com.biffweb.demo.model.todo :as model.todo]
             [com.biffweb.demo.routes :as routes]
-            [com.biffweb.ring :refer [defroute]]
+            [com.biffweb.fx :as fx]
             [com.biffweb.sqlite :as biff.sqlite]))
 
 (defn- post [path]
@@ -323,7 +323,7 @@
            (str "No archived todos yet. Use the archive queue button to see "
                 "background jobs kick in.")])])]))
 
-(defroute raw-app-page "/app"
+(fx/defmachine raw-app-page
   [:biff.graph.fx/query
    [{:session/user [:user/id :user/email :user/joined-at]}
     {:todo/ui-state model.todo/ui-state-fields}
@@ -335,7 +335,7 @@
     :todo/archived-count
     :todo/remaining-count]]
 
-  :get
+  :start
   (fn [req page-data]
     (let [container (app-container req page-data)]
       (if (:biff.datastar/sse-request req)
@@ -346,8 +346,8 @@
           (merge {:class "space-y-6"} (biff.datastar/init-opts))
           container])))))
 
-(defroute create-todo-route "/app/todos"
-  :post
+(fx/defmachine create-todo-route
+  :start
   (fn [{:keys [session biff.fx/now] :as req}]
     (if-some [title (trim-to-nil (param-value req :newtodo))]
       {:todo-diff      [:biff.sqlite.fx/authorized-write
@@ -362,8 +362,8 @@
        :biff.fx/return (ui/signal-patch-response {"newtodo" ""})}
       {:biff.fx/return (ui/no-content)})))
 
-(defroute tab-state-route "/app/tab-state"
-  :post
+(fx/defmachine tab-state-route
+  :start
   (fn [req]
     (let [tab-state-id (model.tab-state/tab-state-key req)
           tab-state    (when tab-state-id
@@ -377,14 +377,14 @@
       (update-ui-state! req tab-state)
       (ui/no-content))))
 
-(defroute toggle-todo-route "/app/todos/:id/toggle"
-  :post
+(fx/defmachine toggle-todo-route
+  :start
   (fn [req]
     (toggle-todo! req)
     (ui/no-content)))
 
-(defroute archive-todo-route "/app/todos/:id/archive"
-  :post
+(fx/defmachine archive-todo-route
+  :start
   (fn [req]
     (archive-todo! req)
     (ui/no-content)))
@@ -392,8 +392,9 @@
 (def module
   {:biff.ring/routes
    [["" {:middleware [mid/wrap-signed-in]}
-     raw-app-page
-     create-todo-route
-     tab-state-route
-     toggle-todo-route
-     archive-todo-route]]})
+     [(routes/app) {:name ::raw-app-page :get #'raw-app-page}]
+     [(routes/todo-create) {:name ::create-todo :post #'create-todo-route}]
+     [(routes/tab-state) {:name ::tab-state :post #'tab-state-route}]
+     [(routes/todo-toggle) {:name ::toggle-todo :post #'toggle-todo-route}]
+     [(routes/todo-archive)
+      {:name ::archive-todo :post #'archive-todo-route}]]]})

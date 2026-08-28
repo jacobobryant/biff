@@ -1,5 +1,10 @@
 (ns com.example.lib.config)
 
-(defn use-config [ctx]
-  (merge ctx
-         {:com.example/port (parse-long (or (System/getenv "PORT") "8080"))}))
+(def module
+  {:biff.core/id :com.example/config
+
+   :biff.core/start
+   (fn [ctx]
+     (merge ctx
+            {:com.example/port
+             (parse-long (or (System/getenv "PORT") "8080"))}))})

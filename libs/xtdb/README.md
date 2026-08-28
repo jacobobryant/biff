@@ -40,8 +40,7 @@ changes, but I don't anticipate any.
 
 ### System start up
 
-You can start an XTDB node with `use-xtdb`. If you're using `biff.core`,
-add `use-xtdb` to your components and add `(module)` to your modules.
+Use the biff.core module to start up an XTDB node:
 
 ```clojure
 (require '[com.biffweb.xtdb :as biff.xtdb])
@@ -52,7 +51,7 @@ add `use-xtdb` to your components and add `(module)` to your modules.
 
 (def components
   [...
-   biff.xtdb/use-xtdb
+   :biff.xtdb/component
    ...])
 ```
 
@@ -60,20 +59,18 @@ If you're not using biff.core, you can wire things up manually:
 
 ```clojure
 (comment
-  (def ctx (biff.xtdb/use-xtdb
-            {:biff.core/stop    []
-             :biff.xtdb/log     :memory
-             :biff.xtdb/storage :memory}))
+  (def xtdb-module (biff.xtdb/module))
+  (def ctx ((:biff.core/start xtdb-module)
+            {:biff.xtdb/log :memory :biff.xtdb/storage :memory}))
 
   ;; close the XTDB node
-  (let [[stop-fn] (:biff.core/stop ctx)]
-    (stop-fn)))
+  ((:biff.core/stop xtdb-module) ctx))
 ```
 
-By default, `use-xtdb` uses local disk storage under `storage/xtdb2/`. Set
+By default, uses local disk storage under `storage/xtdb2/`. Set
 `:biff.xtdb/storage` and `:biff.xtdb/log` to `:memory` for tests. See
-[`expand-config`](docs/api/com.biffweb.xtdb.md#expand-config) and
-[Library Schema](docs/reference/library-schema.md).
+[`expand-config`](docs/api/com.biffweb.xtdb.md#expand-config) and [Library
+Schema](docs/reference/library-schema.md).
 
 ### Queries
 

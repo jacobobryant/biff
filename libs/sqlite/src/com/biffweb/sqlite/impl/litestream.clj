@@ -111,15 +111,7 @@
                       {:exit-code (.exitValue proc)})))
     proc))
 
-(defn- stop-replicate! [^Process process]
-  (when (and process (.isAlive process))
-    (.destroy process)
-    (let [exited (.waitFor process 5 java.util.concurrent.TimeUnit/SECONDS)]
-      (when-not exited
-        (.destroyForcibly process)))))
-
-(defn use-litestream
-  [ctx]
+(defn start [ctx]
   (if-not (:biff.sqlite/litestream-access-key-id ctx)
     ctx
     (let [ctx      (biff.core/validate
@@ -130,5 +122,11 @@
           bin-path (ensure-litestream-binary! ctx)]
       (write-config! ctx)
       (restore! ctx bin-path)
-      (let [process (start-replicate! ctx bin-path)]
-        (update ctx :biff.core/stop conj #(stop-replicate! process))))))
+      (assoc ctx ::process (start-replicate! ctx bin-path)))))
+
+(defn stop [{::keys [process]}]
+  (when (and process (.isAlive process))
+    (.destroy process)
+    (let [exited (.waitFor process 5 java.util.concurrent.TimeUnit/SECONDS)]
+      (when-not exited
+        (.destroyForcibly process)))))

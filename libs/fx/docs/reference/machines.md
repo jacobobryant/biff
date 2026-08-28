@@ -5,20 +5,18 @@ Machines (the functions returned by
 [defmachine](../api/com.biffweb.fx.md#defmachine)) have the form:
 
 ```clojure
-(fn [ctx & [state]])
+(fn [ctx & args])
 ```
 
-If a machine is called with a single argument (`ctx`), the `:start` state
-function is called first, and then the machine transitions to other states until
-completion. Effects are executed after each state function runs. If the function
-is also called with the second `state` argument (a keyword), the associated
-state function will be called with no transitions or effects (useful for unit
-testing).
+The `:start` state function is called first and receives `ctx` and any
+additional arguments from the caller. Other states receive `ctx` and the
+previous state's output map. Effects are executed after each state function
+runs. State functions receive fresh `:biff.fx/now` and `:biff.fx/seed` values in
+ctx.
 
-Each state funtion is called with a single argument: the `ctx` map, merged with
-output from the previous state function (see below), with fresh `:biff.fx/now`
-and `:biff.fx/seed` keys injected. Each state function must return either a map
-or a sequence of maps.
+Set `:biff.fx/test` in ctx to a state keyword to call only that state. Effects
+are not evaluated in test mode, and additional machine arguments are passed
+directly to the state function.
 
 Values in those maps that represent effects (\"effect descriptors\") are then
 replaced with the results of their associated effect handler functions. If the
@@ -39,12 +37,20 @@ argument (`ctx`) and any number of additional arguments. It performs an effect
 and returns whatever value is appropriate. biff.fx will inject the `ctx`
 argument, and the remaining arguments are taken from the effect descriptor.
 
-When calling a handler function, `ctx` is merged with the \"output so far\" from
-the current state function. If the state function returned a map, this is the
-output map with any effect descriptors (and their associated keys) removed. If
-the state function returned a sequence of maps, this includes the output map
-that's currently being evaluated (without effect descriptors) merged with all
-the previous maps (including the effect results).
+Handler functions receive ctx as it was passed to the machine.
+
+An initial effect descriptor may be placed before the state definitions. Its
+result is passed to `:start` immediately after ctx and before additional machine
+arguments. It is not evaluated in test mode.
+
+```clojure
+(fx/defmachine my-machine
+  [:example/get-something ...]
+
+  :start
+  (fn [ctx something]
+    ...))
+```
 
 If the state function includes `:biff.fx/next <state keyword>` in its output,
 that state is transitioned to next. Otherwise the output is returned as the

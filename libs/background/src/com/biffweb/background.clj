@@ -33,31 +33,11 @@
                                  [:on-finished   ? 'ifn?]]
   :biff.background/stop-timeout :int})
 
-(defn use-scheduled-tasks
-  "Calls chime.core/chime-at for each `task`.
-
-   Each task function receives ctx as its sole argument."
-  {:arglists '([{:keys [biff.background/tasks] :as ctx}])}
-  [ctx]
-  (impl/use-scheduled-tasks ctx))
-
-(defn use-queues
-  "Initializes a queue and fixed executor thread pool for each entry in
-   `queues`.
-
-   See :biff.background/queues. `conj`s a shutdown function on the
-   :biff.core/stop key."
-  {:arglists '([{:keys [biff.background/queues] :as ctx}])}
-  [ctx]
-  (impl/use-queues ctx))
-
 (defn submit-jobs
   "Adds `jobs` to the specified queue.
 
    queue-id - :biff.background/queue-id
-   jobs     - Sequence of :biff.background/job
-
-   `conj`s a shutdown function on the :biff.core/stop key."
+   jobs     - Sequence of :biff.background/job"
   {:arglists '([{:biff.background/keys [queues]} queue-id jobs])}
   [ctx queue-id jobs]
   (impl/submit-jobs ctx queue-id jobs))
@@ -68,11 +48,30 @@
   impl/fx-handlers)
 
 (defn module
-  "A biff.core module that:
+  "A biff.core module that wraps both scheduled-tasks-module and queues-module.
+   Include :biff.background/component in your components.
 
-   - Provides :biff.fx/handlers.
    - Aggregates :biff.background/tasks and :biff.background/queues from other
      modules. Tasks and queues are only aggregated on startup, not whenever
      modules change."
   []
   (impl/module))
+
+(defn scheduled-tasks-module
+  "On start, calls chime.core/chime-at for each task. Include
+   :biff.background/scheduled-tasks in your components.
+
+   Aggregates :biff.background/tasks from other modules. Each task function
+   receives the system map as its sole argument."
+  []
+  (impl/scheduled-tasks-module))
+
+(defn queues-module
+  "On start, initializes a queue and fixed executor thread pool for each entry
+   in :biff.background/queues. Include :biff.background/queues in your
+   components.
+
+   Provides a :biff.fx/handlers entry (:biff.background.fx/submit-jobs)
+   and aggregates :biff.background/queues from other modules."
+  []
+  (impl/queues-module))

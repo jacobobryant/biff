@@ -23,32 +23,35 @@ changes, but I don't anticipate any.
 
 ### Setup
 
-If using biff.core, add these to your modules/components:
+Use the biff.core module:
 
 ```clojure
 (require '[com.biffweb.background :as biff.background])
 
 (def modules
-  [biff.background/module
+  [(biff.background/module)
    ...])
 
 (def components
   [...
-   biff.background/use-queues
-   biff.background/use-scheduled-tasks
+   :biff.background/component
    ...])
 ```
 
-`use-scheduled-tasks` should come second so that scheduled tasks can submit
-queue jobs. Similarly, `use-queues` should come after any other components that
-need to submit jobs (like your webserver component if you want Ring handlers to
-submit jobs).
+If you're not using biff.core, use `chime.core/chime-at` directly for scheduled
+tasks. For queues, wire up the `queues-module` lifecycle functions directly:
 
-If not using biff.core:
+```clojure
+(def config
+  {:biff.background/queues {...}})
 
-- Use `chime.core/chime-at` directly instead of `use-scheduled-tasks`.
-- Call `use-queues` directly and use the returned map as input when calling
-  `submit-jobs`.
+(comment
+  (def queues-module (biff.background/queues-module))
+  (def ctx ((:biff.core/start queues-module) config))
+
+  ;; Shut down queue executors
+  ((:biff.core/stop queues-module) ctx))
+```
 
 ### Define tasks and queues
 
@@ -76,9 +79,6 @@ Your biff.core modules may contain `:biff.background/tasks` and
      ;; Default is 1 thread per queue
      :n-threads 2}}})
 ```
-
-If not using biff.core, pass a map containing `:biff.background/queues` to
-`use-queues` directly.
 
 ### Submit queue jobs
 

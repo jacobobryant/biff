@@ -1,13 +1,16 @@
 (ns com.example
   (:require [clojure.tools.namespace.repl :as tn-repl]
             [com.biffweb.core :as biff.core]
-            [com.example.modules :refer [modules]]
-            [com.example.components :refer [components]]))
+            [com.example.modules :refer [modules]]))
 
 (defonce system (atom {}))
 
 (def initial-system
   {:com.example/app-name "My Application"})
+
+(def components
+  [:com.example/config
+   :com.example/webserver])
 
 (defn start []
   (let [new-system (biff.core/start initial-system #'modules components)]

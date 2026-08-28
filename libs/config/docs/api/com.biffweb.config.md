@@ -1,13 +1,14 @@
 # com.biffweb.config API
 
-### use-aero-config
+### module
 
-[view source](../../src/com/biffweb/config.clj#L66)
+[view source](../../src/com/biffweb/config.clj#L87)
 
 ```
-(use-aero-config {:biff.config/keys [profile], :as ctx})
+(module)
 
-Parses config.edn and merges into ctx. Also sets system properties.
+On startup, parses config.edn and merges into ctx. Also sets system
+properties. Include :biff.config/component in your components.
 
 Loads a config.edn file from resources and parses it with Aero. (See
 https://github.com/juxt/aero). Two additional reader tags are supported:

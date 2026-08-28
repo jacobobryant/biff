@@ -20,22 +20,29 @@
     (make-handler {:com.example/routes routes})))
 
 (def module
-  {:biff.core/init
+  {:biff.core/id :com.example/webserver
+
+   :biff.core/init
    (fn [modules-var]
      (let [modules->handler* (memoize modules->handler)]
        {:com.example/handler (fn [request]
                                ((modules->handler* @modules-var)
-                                request))}))})
+                                request))}))
 
-(defn use-webserver [{:com.example/keys [handler port]
-                      :or               {port 8080}
-                      :as               ctx}]
-  (biff.core/validate ctx {:required [:com.example/handler]})
-  (let [handler (fn [request]
-                  (handler (merge ctx request)))
-        server  (jetty/run-jetty handler
-                                 {:host  "localhost"
-                                  :port  port
-                                  :join? false})]
-    (log/info (str "Web server started on http://localhost:" port))
-    (update ctx :biff.core/stop conj #(.stop server))))
+   :biff.core/start
+   (fn [{:com.example/keys [handler port]
+         :or               {port 8080}
+         :as               ctx}]
+     (biff.core/validate ctx {:required [:com.example/handler]})
+     (let [handler (fn [request]
+                     (handler (merge ctx request)))
+           server  (jetty/run-jetty handler
+                                    {:host  "localhost"
+                                     :port  port
+                                     :join? false})]
+       (log/info (str "Web server started on http://localhost:" port))
+       (assoc ctx ::server server)))
+
+   :biff.core/stop
+   (fn [{::keys [server]}]
+     (.stop server))})

@@ -34,5 +34,7 @@
            :biff.graph/resolve-fn
            ~(if-not use-fx
               `(wrap-input (fn ~@args))
-              `(let [[& {:as state->fn#}] [~@args]]
-                 (fx/machine ~id (update-vals state->fn# wrap-input))))})))))
+              `(let [[& {:as state->fn#}] [~@args]
+                     machine#             (fx/machine ~id state->fn#)]
+                 (fn [ctx#]
+                   (machine# ctx# (:biff.graph/input ctx#)))))})))))

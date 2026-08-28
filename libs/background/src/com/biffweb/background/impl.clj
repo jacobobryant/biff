@@ -10,17 +10,17 @@
 
 ;;;; scheduled tasks ===========================================================
 
-(defn use-scheduled-tasks [{:keys [biff.background/tasks] :as ctx}]
-  (reduce
-   (fn [ctx {:keys [schedule task] :as config}]
-     (let [scheduler (chime/chime-at (schedule)
-                                     (fn [_] (task ctx))
-                                     (select-keys config
-                                                  [:error-handler
-                                                   :on-finished]))]
-       (update ctx :biff.core/stop conj #(.close scheduler))))
-   ctx
-   tasks))
+(defn- start-scheduled-tasks [{:keys [biff.background/tasks] :as ctx}]
+  (assoc ctx ::schedulers
+         (mapv (fn [{:keys [schedule task] :as config}]
+                 (chime/chime-at (schedule)
+                                 (fn [_] (task ctx))
+                                 (select-keys config
+                                              [:error-handler :on-finished])))
+               tasks)))
+
+(defn- stop-scheduled-tasks [{::keys [schedulers]}]
+  (run! #(.close %) schedulers))
 
 ;;;; queues ====================================================================
 
@@ -43,10 +43,10 @@
           (swap! state update :processing disj index)))
       (flush))))
 
-(defn- stop [{:keys [biff.background/stop-timeout]
-              :or   {stop-timeout 10000}}
-             queue-maps]
-  (let [timeout (+ (System/nanoTime) (* stop-timeout (Math/pow 10 6)))]
+(defn- stop-queues [{:biff.background/keys [stop-timeout queues]
+                     :or                   {stop-timeout 10000}}]
+  (let [queue-maps (vals queues)
+        timeout    (+ (System/nanoTime) (* stop-timeout (Math/pow 10 6)))]
     (run! #(swap! (:state %) assoc :continue false) queue-maps)
     (run! #(.shutdown (:executor %)) queue-maps)
     (doseq [{:keys [executor]} queue-maps
@@ -64,11 +64,9 @@
             :state    (atom {:continue   true
                              :processing #{}})})))
 
-(defn use-queues [{:keys [biff.background/queues] :as ctx}]
+(defn- start-queues [{:keys [biff.background/queues] :as ctx}]
   (let [queues (update-vals queues init-queue)
-        ctx    (-> ctx
-                   (assoc :biff.background/queues queues)
-                   (update :biff.core/stop conj #(stop ctx (vals queues))))]
+        ctx    (assoc ctx :biff.background/queues queues)]
     (doseq [{:keys [executor n-threads] :as queue-map} (vals queues)
 
             index (range n-threads)]
@@ -93,14 +91,36 @@
 (def fx-handlers
   {:biff.background.fx/submit-jobs submit-jobs})
 
-(defn module []
-  {:biff.core/init
-   (fn [modules-var]
-     {:biff.background/tasks  (into []
-                                    (mapcat :biff.background/tasks)
-                                    @modules-var)
-      :biff.background/queues (into {}
-                                    (mapcat :biff.background/queues)
-                                    @modules-var)})
+(defn- init-scheduled-tasks [modules-var]
+  {:biff.background/tasks (into []
+                                (mapcat :biff.background/tasks)
+                                @modules-var)})
 
+(defn- init-queues [modules-var]
+  {:biff.background/queues (into {}
+                                 (mapcat :biff.background/queues)
+                                 @modules-var)})
+
+(defn scheduled-tasks-module []
+  {:biff.core/id    :biff.background/scheduled-tasks
+   :biff.core/start start-scheduled-tasks
+   :biff.core/stop  stop-scheduled-tasks
+   :biff.core/init  init-scheduled-tasks})
+
+(defn queues-module []
+  {:biff.core/id     :biff.background/queues
+   :biff.core/start  start-queues
+   :biff.core/stop   stop-queues
+   :biff.core/init   init-queues
+   :biff.fx/handlers fx-handlers})
+
+(defn module []
+  {:biff.core/id     :biff.background/component
+   :biff.core/start  (comp start-scheduled-tasks start-queues)
+   :biff.core/stop   (fn [ctx]
+                       (stop-scheduled-tasks ctx)
+                       (stop-queues ctx))
+   :biff.core/init   (fn [modules-var]
+                       (merge (init-scheduled-tasks modules-var)
+                              (init-queues modules-var)))
    :biff.fx/handlers fx-handlers})

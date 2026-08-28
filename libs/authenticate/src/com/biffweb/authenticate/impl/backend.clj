@@ -67,10 +67,10 @@
        :biff.fx/next    :check-captcha}))
 
   :check-captcha
-  (fn [{::keys          [email code captcha-passed]
-        :biff.auth/keys [signin-page]
+  (fn [{:biff.auth/keys [signin-page]
         :keys           [biff.fx/now biff.stuff/params]
-        :as             ctx}]
+        :as             ctx}
+       {::keys [email code captcha-passed]}]
     (let [defaults (default-code-email ctx {:code code})
           clean-p  (params-to-save params)]
       (if captcha-passed
@@ -89,7 +89,7 @@
          :headers {"location" (add-query signin-page {:error "captcha"})}})))
 
   :check-send-result
-  (fn [{::keys [email sent] :biff.auth/keys [signin-page]}]
+  (fn [{:biff.auth/keys [signin-page]} {::keys [email sent]}]
     (if sent
       {:status  303
        :headers {"location" (add-query signin-page {:sent-to email})}}
@@ -104,9 +104,9 @@
      :biff.fx/next    :check-code})
 
   :check-code
-  (fn [{::keys          [submitted-code signin-record]
-        :biff.auth/keys [max-failed-attempts code-expiry-minutes signin-page]
-        :keys           [biff.fx/now biff.stuff/params]}]
+  (fn [{:biff.auth/keys [max-failed-attempts code-expiry-minutes signin-page]
+        :keys           [biff.fx/now biff.stuff/params]}
+       {::keys [submitted-code signin-record]}]
     (let [{:keys [email]} params
 
           {:biff-auth-signin/keys [code-hash created-at failed-attempts params]}
@@ -136,15 +136,15 @@
                        validate-record)]})))))
 
   :ensure-user
-  (fn [{::keys [saved-params existing-user-id]
-        :keys  [biff.stuff/params]}]
+  (fn [{:keys [biff.stuff/params]}
+       {::keys [saved-params existing-user-id]}]
     {::user-id     (or existing-user-id
                        [:biff.auth/create-user
                         {:email (:email params) :params saved-params}])
      :biff.fx/next :success-redirect})
 
   :success-redirect
-  (fn [{:keys [::user-id biff.auth/app-path session]}]
+  (fn [{:keys [biff.auth/app-path session]} {::keys [user-id]}]
     {:status  303
      :headers {"location" app-path}
      :session (-> session

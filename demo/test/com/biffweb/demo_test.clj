@@ -2,15 +2,12 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
-            [com.biffweb.admin :as biff.admin]
-            [com.biffweb.background :as biff.background]
             [com.biffweb.core :as biff.core]
             [com.biffweb.datastar :as biff.datastar]
             [com.biffweb.demo.lib.email :as email]
             [com.biffweb.demo.app.todos :as todos]
             [com.biffweb.demo.modules :as modules]
             [com.biffweb.demo.routes :as routes]
-            [com.biffweb.ring :as biff.ring]
             [com.biffweb.sqlite :as biff.sqlite]
             [hato.client :as hato])
   (:import [java.net ServerSocket]
@@ -22,11 +19,18 @@
 (def ^:dynamic *db-dir* nil)
 
 (def test-components
-  [biff.admin/use-alerts
-   biff.sqlite/use-sqlite
-   biff.background/use-queues
-   biff.background/use-scheduled-tasks
-   biff.ring/use-jetty])
+  [:biff.admin/alerts
+   :biff.sqlite/component
+   :biff.background/queues
+   :biff.background/scheduled-tasks
+   :biff.ring/jetty])
+
+(def test-modules
+  (atom (remove (comp #{:biff.config/component
+                        :com.biffweb.demo/fake-pstats
+                        :com.biffweb.demo/fake-errors}
+                      :biff.core/id)
+                modules/modules)))
 
 (defn- free-port []
   (with-open [socket (ServerSocket. 0)]
@@ -49,7 +53,7 @@
     :biff.ring/port         port
     :biff.ring/secure       false
     :biff.sqlite/db-path    (str db-dir "/main.db")}
-   #'modules/modules
+   test-modules
    test-components))
 
 (defn- with-demo-system [f]

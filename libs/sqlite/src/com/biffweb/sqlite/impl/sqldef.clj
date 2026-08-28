@@ -49,7 +49,7 @@
       :target-version      sqldef-version
       :url                 url})))
 
-(defn use-sqldef
+(defn start
   [ctx]
   (let [{:biff.sqlite/keys [db-path
                             schema-path

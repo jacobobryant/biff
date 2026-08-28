@@ -3,6 +3,7 @@
             [clojure.test :refer [deftest is]]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite :as sqlite]
+            [com.biffweb.sqlite.impl.pool :as pool]
             [next.jdbc :as jdbc])
   (:import [java.nio.file Files]
            [java.time Instant]
@@ -35,16 +36,15 @@
   ([]
    (open-ctx columns))
   ([columns]
-   (let [ctx (sqlite/use-conn {:biff.sqlite/db-path (temp-db-path)
-                               :biff.sqlite/columns columns
-                               :biff.core/stop      []})]
+   (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)
+                          :biff.sqlite/columns columns})]
      (doseq [statement (split-sql (sqlite/schema-sql ctx))]
        (sqlite/execute ctx statement))
      ctx)))
 
-(defn- close-ctx [ctx]
-  (doseq [stop-fn (:biff.core/stop ctx)]
-    (stop-fn)))
+(defn- close-ctx [{:keys [biff.sqlite/read-pool biff.sqlite/write-conn]}]
+  (.close write-conn)
+  (.close read-pool))
 
 (defn- with-ctx [f]
   (let [ctx (open-ctx)]
@@ -375,9 +375,8 @@
     (is (ifn? (:biff.core/kv-list init)))
     (is (ifn? (:biff.core/wrap-db-snapshot init)))))
 
-(deftest use-conn-adds-read-and-write-connections-with-pragmas
-  (let [ctx (sqlite/use-conn {:biff.sqlite/db-path (temp-db-path)
-                              :biff.core/stop      []})]
+(deftest pool-adds-read-and-write-connections-with-pragmas
+  (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)})]
     (try
       (is (some? (:biff.sqlite/read-pool ctx)))
       (is (some? (:biff.sqlite/write-conn ctx)))

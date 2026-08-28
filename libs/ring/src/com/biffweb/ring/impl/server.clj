@@ -40,19 +40,9 @@
          :site-routes     (routes :biff.ring/routes)
          :api-routes      (routes :biff.ring/api-routes)})))))
 
-(defn module []
-  {:biff.core/init
-   (fn [modules-var]
-     {:biff.ring/fallback-session-store (memory/memory-store)
-
-      :biff.ring/handler
-      (fn [request]
-        ((modules->handler @modules-var) request))})})
-
-(defn use-jetty [{:biff.ring/keys [host port handler]
-                  :or             {host "localhost"
-                                   port 8080}
-                  :as             ctx}]
+(defn- start [{:biff.ring/keys [host port handler]
+               :or             {host "localhost" port 8080}
+               :as             ctx}]
   (biff.core/validate ctx {:required [:biff.ring/handler]})
   (let [server ((requiring-resolve 'ring.adapter.jetty/run-jetty)
                 (fn [request]
@@ -63,8 +53,19 @@
                       {:status  500
                        :headers {"content-type" "text/plain; charset=utf-8"}
                        :body    "Internal Server Error"})))
-                {:host  host
-                 :port  port
-                 :join? false})]
+                {:host host :port port :join? false})]
     (log/info "Jetty running on" (str "http://" host ":" port))
-    (update ctx :biff.core/stop conj #(.stop server))))
+    (assoc ctx ::server server)))
+
+(defn module []
+  {:biff.core/id    :biff.ring/jetty
+   :biff.core/start start
+   :biff.core/stop  (fn [{::keys [server]}] (.stop server))
+
+   :biff.core/init
+   (fn [modules-var]
+     {:biff.ring/fallback-session-store (memory/memory-store)
+
+      :biff.ring/handler
+      (fn [request]
+        ((modules->handler @modules-var) request))})})

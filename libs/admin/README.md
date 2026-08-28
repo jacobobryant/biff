@@ -34,7 +34,7 @@ changes, but I don't anticipate any.
 
 ## Usage
 
-Add `module` and `use-alerts` to your biff.core modules/components:
+Use the biff.core module:
 
 ```clojure
 (require '[com.biffweb.admin :as biff.admin])
@@ -50,9 +50,9 @@ Add `module` and `use-alerts` to your biff.core modules/components:
 
 (def components
   [...
-   biff.admin/use-alerts
-   biff.background/use-scheduled-tasks
-   biff.ring/use-jetty])
+   :biff.admin/alerts
+   :biff.background/component
+   :biff.ring/jetty])
 ```
 
 This module depends on `biff.ring` and `biff.background`. `biff.graph` is

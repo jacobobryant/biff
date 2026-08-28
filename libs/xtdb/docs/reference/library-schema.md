@@ -29,7 +29,7 @@ returns this value directly and ignores the other storage/log config keys.
 ### :biff.xtdb/connection-pool
 
 A HikariDataSource connected to `:biff.xtdb/node`. Created by
-[use-xtdb](../api/com.biffweb.xtdb.md#use-xtdb).
+[module](../api/com.biffweb.xtdb.md#module).
 
 ### :biff.xtdb/disk-cache-max-bytes
 
@@ -73,7 +73,7 @@ String. Kafka topic name. Default `xtdb-log`.
 
 ### :biff.xtdb/hikari-config
 
-A HikariConfig object. Optional. If set, [use-xtdb](../api/com.biffweb.xtdb.md#use-xtdb)
+A HikariConfig object. Optional. If set, [module](../api/com.biffweb.xtdb.md#module)
 uses this when creating `:biff.xtdb/connection-pool`.
 
 ### :biff.xtdb/memory-cache-max-bytes

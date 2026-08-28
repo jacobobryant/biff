@@ -37,21 +37,19 @@ Add a `resources/config.edn` to your project and ensure `"resources"` is on the
 classpath. Put env vars in a `config.env` file in the working directory (and
 list it in `.gitignore`, of course).
 
-Then, if you're using biff.core, include this at the start of your `components`
-vector:
+If you're using biff.core, include the module and its component ID:
 
 ```clojure
 (require '[com.biffweb.config :as biff.config])
 
-(def components
-  [biff.config/use-aero-config
-   ...])
+(def modules [(biff.config/module) ...])
+(def components [:biff.config/component ...])
 ```
 
-And if not, call it yourself wherever is appropriate:
+Without biff.core, call the module's start function directly:
 
 ```clojure
-(biff.config/use-aero-config {})
+((:biff.core/start (biff.config/module)) {})
 => {...}
 ```
 
@@ -68,10 +66,6 @@ If you register schema, biff.core will enforce it when `*assert*` is true:
 ```
 
 Use the `:biff.core/secret` schema for secrets.
-
-### Migrating from Biff v1
-
-`com.biffweb.config/use-aero-config` is a drop-in replacement for `com.biffweb/use-aero-config`.
 
 ## Tips / opinions
 

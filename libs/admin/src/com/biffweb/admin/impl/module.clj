@@ -29,7 +29,10 @@
    resource/routes])
 
 (defn module [params]
-  {:biff.core/init            (fn [_modules-var]
+  {:biff.core/id              :biff.admin/alerts
+   :biff.core/start           alerts/start
+   :biff.core/stop            alerts/stop
+   :biff.core/init            (fn [_modules-var]
                                 {:biff.admin/pstats (atom {})})
    :biff.background/tasks     [{:schedule profiling/hourly-schedule
                                 :task     profiling/flush-pstats!}]

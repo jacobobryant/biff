@@ -15,16 +15,14 @@
                     :task        #(deliver called %)
                     :on-finished #(deliver finished true)}]
 
-                  :biff.core/stop []
-                  :foo            :bar}
-        result   (background/use-scheduled-tasks ctx)]
+                  :foo :bar}
+        module   (background/scheduled-tasks-module)
+        result   ((:biff.core/start module) ctx)]
     (try
       (is (= :bar (:foo (deref called 2000 nil))))
-      (is (= 1 (count (:biff.core/stop result))))
-      (is (fn? (first (:biff.core/stop result))))
       (is (some? (deref finished 2000 nil)))
       (finally
-        ((first (:biff.core/stop result)))))))
+        ((:biff.core/stop module) result)))))
 
 (deftest queues-process-jobs-in-priority-order-test
   (let [started  (CountDownLatch. 1)
@@ -38,12 +36,12 @@
                      (await-latch release))
                    (swap! seen conj [(:id job) queue])
                    (.countDown consumed))
-        result   (background/use-queues
+        module   (background/queues-module)
+        result   ((:biff.core/start module)
                   {:biff.background/queues
                    {:queue/email {:consumer consumer}}
 
-                   :biff.background/stop-timeout 100
-                   :biff.core/stop               []})
+                   :biff.background/stop-timeout 100})
         queue    (get-in result [:biff.background/queues :queue/email :queue])]
     (try
       (is (= [{:id :blocking}]
@@ -63,7 +61,7 @@
       (is (= {:continue true :processing #{}}
              @(get-in result [:biff.background/queues :queue/email :state])))
       (finally
-        (run! #(%) (reverse (:biff.core/stop result)))))))
+        ((:biff.core/stop module) result)))))
 
 (deftest submit-jobs-errors-test
   (testing "an unknown queue reports the available queues and submitted jobs"

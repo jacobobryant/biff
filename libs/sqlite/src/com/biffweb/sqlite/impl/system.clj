@@ -12,12 +12,17 @@
     (jdbc/with-transaction [tx (:biff.sqlite/read-pool ctx)]
       (f (assoc ctx :biff.sqlite/read-pool tx)))))
 
-(defn use-sqlite
+(defn- start
   [ctx]
   (-> ctx
-      litestream/use-litestream
-      impl.sqldef/use-sqldef
-      pool/use-conn))
+      litestream/start
+      impl.sqldef/start
+      pool/start))
+
+(defn- stop [ctx]
+  (-> ctx
+      pool/stop
+      litestream/stop))
 
 (def fx-handlers
   {:biff.sqlite.fx/execute             exec/execute
@@ -25,8 +30,25 @@
    :biff.sqlite.fx/authorized-write    authorize/authorized-write
    :biff.sqlite.fx/authorized-write-tx authorize/authorized-write-tx})
 
+(defn litestream-module []
+  {:biff.core/id    :biff.sqlite/litestream
+   :biff.core/start litestream/start
+   :biff.core/stop  litestream/stop})
+
+(defn sqldef-module []
+  {:biff.core/id    :biff.sqlite/sqldef
+   :biff.core/start impl.sqldef/start})
+
+(defn conn-module []
+  {:biff.core/id    :biff.sqlite/conn
+   :biff.core/start pool/start
+   :biff.core/stop  pool/stop})
+
 (defn module []
-  {:biff.fx/handlers    fx-handlers
+  {:biff.core/id        :biff.sqlite/component
+   :biff.core/start     start
+   :biff.core/stop      stop
+   :biff.fx/handlers    fx-handlers
    :biff.sqlite/columns kv/columns
 
    :biff.core/init
