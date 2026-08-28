@@ -32,7 +32,7 @@
                     (swap! calls conj [:deploy deploy-config artifact]))]
       (publish/publish))
     (is (= [[:build
-             (io/file "libs/example")
+             (.getCanonicalFile (io/file "libs/example"))
              (select-keys config [:biff.tasks/group-name
                                   :biff.tasks/lib-name
                                   :biff.tasks/lib-version

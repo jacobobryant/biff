@@ -157,8 +157,9 @@
 
 (defn publish []
   (let [config       (util/read-config {:required required-config-keys})
-        project-root (io/file (or (:biff.tasks/project-root config)
-                                  (util/project-root)))
+        project-root (.getCanonicalFile
+                      (io/file (or (:biff.tasks/project-root config)
+                                   (util/project-root))))
 
         {:biff.tasks/keys [group-name lib-name lib-version]} config]
     (if (published-version?
