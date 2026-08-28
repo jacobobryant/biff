@@ -18,9 +18,9 @@
       (kv-get ctx :biff.admin/errors "errors")
       (catch Exception _ nil))))
 
-(defn- recent-errors [{:biff.admin/keys [errors-atom] :as ctx}]
+(defn- recent-errors [{:biff.admin/keys [alert-state] :as ctx}]
   (let [cutoff        (tick/<< (tick/now) (tick/new-duration 72 :hours))
-        local-errors  (or (some-> errors-atom deref) [])
+        local-errors  (or (some-> alert-state deref :errors) [])
         remote-errors (-> (stored-errors ctx)
                           (dissoc (hostname))
                           vals
@@ -33,7 +33,7 @@
          vec)))
 
 (defn- handle-error
-  [{:biff.admin/keys [send-email errors-atom alert-state alert-email]
+  [{:biff.admin/keys [send-email alert-state alert-email]
     :as              ctx}
    signal]
   (when (= (:level signal) :error)
@@ -51,22 +51,26 @@
 
                               :stack-trace formatted
                               :instant     (tick/now)}]
-      (when errors-atom
-        (swap! errors-atom (fn [errors]
-                             (vec (take-last max-errors
-                                             (conj errors error-entry))))))
+      (when alert-state
+        (swap! alert-state update :errors
+               (fn [errors]
+                 (vec (take-last max-errors
+                                 (conj (or errors []) error-entry))))))
       (when (and send-email alert-email alert-state)
         (let [{:keys [batch]}
               (swap! alert-state
-                     (fn [{:keys [pending last-sent-at]}]
+                     (fn [{:keys [pending last-sent-at] :as state}]
                        (let [pending (conj (or pending []) formatted)]
                          (if (< rate-limit-seconds
                                 (- now-seconds (or last-sent-at 0)))
-                           {:batch        pending
-                            :pending      []
-                            :last-sent-at now-seconds}
-                           {:pending      pending
-                            :last-sent-at (or last-sent-at 0)}))))]
+                           (assoc state
+                                  :batch pending
+                                  :pending []
+                                  :last-sent-at now-seconds)
+                           (assoc state
+                                  :batch nil
+                                  :pending pending
+                                  :last-sent-at (or last-sent-at 0))))))]
           (when (not-empty batch)
             (try
               (let [error-text     (str/join "\n\n---\n\n"
@@ -87,7 +91,7 @@
                 (kv-set ctx :biff.admin/errors "errors"
                         (assoc (or (stored-errors ctx) {})
                                (hostname)
-                               @errors-atom))
+                               (:errors @alert-state)))
                 (catch Exception e
                   (binding [*out* *err*]
                     (println "Failed to store recent errors:"
@@ -95,11 +99,8 @@
 
 (defn use-alerts [ctx]
   (tel.tl/tools-logging->telemere!)
-  (let [errors-atom (atom [])
-        alert-state (atom {:pending [] :last-sent-at 0})
-        ctx         (assoc ctx
-                           :biff.admin/errors-atom errors-atom
-                           :biff.admin/alert-state alert-state)]
+  (let [alert-state (atom {:errors [] :pending [] :last-sent-at 0})
+        ctx         (assoc ctx :biff.admin/alert-state alert-state)]
     (tel/add-handler! :biff.admin/alerts
                       (fn [signal] (handle-error ctx signal)))
     (update ctx :biff.core/stop conj
@@ -128,10 +129,10 @@
             "View stack trace"]]]))]]])
 
 (defn dashboard-section
-  [{:biff.admin/keys [errors-atom]
+  [{:biff.admin/keys [alert-state]
     :keys            [biff.stuff/params]
     :as              ctx}]
-  (when errors-atom
+  (when alert-state
     (let [errors             (recent-errors ctx)
           anti-forgery-token (:anti-forgery-token ctx)
           alert-sent?        (:alert-sent params)]

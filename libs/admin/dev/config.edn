@@ -1,6 +1,7 @@
 #merge [#include "../../../dev/config.edn"
         {:biff.tasks/lib-name       "admin"
          :biff.tasks/css-input-path "dev/tailwind.css"
+
          :biff.tasks/css-output-path
          "resources/com/biffweb/admin/main.css"
 

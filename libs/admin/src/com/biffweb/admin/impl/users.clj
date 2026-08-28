@@ -35,8 +35,10 @@
       {:stored [:biff.core/kv-set :biff.admin/signin-code code
                 {:user-id      (edn/read-string user-id-str)
                  :generated-at now}]
+
        :biff.fx/return
        {:status 303
+
         :headers
         {"location"
          (str "/_biff/admin/users?signin-url="
@@ -57,6 +59,7 @@
       (if valid?
         {:deleted [:biff.core/kv-set
                    :biff.admin/signin-code (:code path-params) nil]
+
          :biff.fx/return
          {:status  303
           :headers {"location" "/"}

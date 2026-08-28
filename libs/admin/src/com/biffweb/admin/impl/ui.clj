@@ -5,6 +5,7 @@
 (defn admin-page [title & body]
   {:status  200
    :headers {"Content-Type" "text/html; charset=utf-8"}
+
    :body
    (str
     "<!DOCTYPE html>\n"
@@ -58,7 +59,7 @@
     (admin-page "Admin Setup"
                 [:div
                  (heading "Admin Setup")
-                 [:p.mb-4 (str ":biff.admin/user-id is not set. "
+                 [:p.mb-4 (str ":biff.admin/admin-user-id is not set. "
                                "Your current user ID is:")]
                  [:div.flex.items-center.gap-2.mb-4
                   [:code.bg-gray-100.p-2.rounded.text-sm.break-all
@@ -68,7 +69,7 @@
                             :onclick copy-script}
                    "Copy"]]
                  [:p.text-sm.text-gray-600
-                  (str "Set :biff.admin/user-id to enable the admin "
+                  (str "Set :biff.admin/admin-user-id to enable the admin "
                        "dashboard.")]])))
 
 (defn stylesheet-handler [_ctx]

@@ -42,7 +42,7 @@
 
 (deftest module-test
   (testing "module returns expected keys"
-    (let [m (admin/module {:biff.admin/get-user-events (fn [_] [])})]
+    (let [m (admin/module {:biff.admin/get-usage-events (fn [_] [])})]
       (is (contains? m :biff.core/init))
       (is (contains? m :biff.background/tasks))
       (is (contains? m :biff.ring/routes))
@@ -52,7 +52,7 @@
       (is (fn? (:biff.core/init m)))))
 
   (testing "biff.core/init creates a pstats atom"
-    (let [m           (admin/module {:biff.admin/get-user-events (fn [_] [])})
+    (let [m           (admin/module {:biff.admin/get-usage-events (fn [_] [])})
           init-result ((:biff.core/init m) nil)]
       (is (contains? init-result :biff.admin/pstats))
       (is (instance? clojure.lang.Atom (:biff.admin/pstats init-result)))
@@ -202,6 +202,7 @@
         merged     (#'profiling/merge-recent-pstats
                     {"2026-04-27"
                      (#'profiling/pstats->stored-value first-day)
+
                      "2026-04-28"
                      (#'profiling/pstats->stored-value second-day)})]
     (is (= 5 (:n @(get-in merged [:stats "shared"]))))
@@ -259,19 +260,20 @@
     (is (nil? (kv-get ctx :biff.admin/signin-code code)))))
 
 (deftest recent-errors-test
-  (let [store       (atom {})
-        errors-atom (atom [])
-        kv-get      (fn [_ namespace key] (get @store [namespace key]))
-        kv-set      (fn [_ namespace key value]
-                      (swap! store assoc [namespace key] value))
-        ctx         {:biff.admin/alert-email "ops@example.com"
-                     :biff.admin/alert-state
-                     (atom {:pending      []
-                            :last-sent-at Double/NEGATIVE_INFINITY})
-                     :biff.admin/errors-atom errors-atom
-                     :biff.admin/send-email  (fn [_ _])
-                     :biff.core/kv-get       kv-get
-                     :biff.core/kv-set       kv-set}]
+  (let [store  (atom {})
+        kv-get (fn [_ namespace key] (get @store [namespace key]))
+        kv-set (fn [_ namespace key value]
+                 (swap! store assoc [namespace key] value))
+        ctx    {:biff.admin/alert-email "ops@example.com"
+
+                :biff.admin/alert-state
+                (atom {:errors       []
+                       :pending      []
+                       :last-sent-at Double/NEGATIVE_INFINITY})
+
+                :biff.admin/send-email (fn [_ _])
+                :biff.core/kv-get      kv-get
+                :biff.core/kv-set      kv-set}]
     (#'alerts/handle-error
      ctx {:level :error :error (ex-info "local" {})})
     (let [stored (kv-get ctx :biff.admin/errors "errors")
@@ -307,21 +309,22 @@
 (deftest wrap-admin-access-test
   (let [handler (util/wrap-admin-access (constantly {:status 200}))]
     (is (= 401 (:status (handler {}))))
-    (is (= 401 (:status (handler {:biff.admin/user-id :admin
-                                  :session            {}}))))
-    (is (= 403 (:status (handler {:biff.admin/user-id :admin
-                                  :session            {:uid :someone-else}}))))
-    (is (= 200 (:status (handler {:biff.admin/user-id :admin
-                                  :session            {:uid :admin}}))))
+    (is (= 401 (:status (handler {:biff.admin/admin-user-id :admin
+                                  :session                  {}}))))
+    (is (= 403
+           (:status
+            (handler {:biff.admin/admin-user-id :admin
+                      :session                  {:uid :someone-else}}))))
+    (is (= 200 (:status (handler {:biff.admin/admin-user-id :admin
+                                  :session                  {:uid :admin}}))))
     (is (str/includes? (:body (handler {:session {:uid :admin}}))
                        "Admin Setup"))))
 
 (deftest use-alerts-test
-  (testing "use-alerts adds errors-atom and alert-state to ctx"
+  (testing "use-alerts adds alert-state to ctx"
     (let [ctx    {:biff.core/stop []}
           result (admin/use-alerts ctx)]
-      (is (contains? result :biff.admin/errors-atom))
       (is (contains? result :biff.admin/alert-state))
-      (is (instance? clojure.lang.Atom (:biff.admin/errors-atom result)))
-      ;; Clean up
+      (is (instance? clojure.lang.Atom (:biff.admin/alert-state result)))
+      (is (= [] (:errors @(:biff.admin/alert-state result))))
       (doseq [f (:biff.core/stop result)] (f)))))

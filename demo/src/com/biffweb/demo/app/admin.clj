@@ -40,7 +40,7 @@
                {:user-id id
                 :instant joined-at}))))
 
-(defn- get-user-events [ctx]
+(defn- get-usage-events [ctx]
   (into (vec (concat (signup-events ctx)
                      (todo-events ctx :todo/created-at)
                      (todo-events ctx :todo/updated-at)))
@@ -59,7 +59,7 @@
 
 (def module
   (biff.admin/module
-   {:biff.admin/get-user-events    #'get-user-events
+   {:biff.admin/get-usage-events   #'get-usage-events
     :biff.admin/get-revenue-events #'get-revenue-events
     :biff.admin/get-users          #'get-users
     :biff.admin/send-email         #'lib.email/send-email}))

@@ -88,15 +88,15 @@
            (format "$%.2f" (double (get daily-revenue day 0)))])])]]])
 
 (defn dashboard-section
-  [{:biff.admin/keys [get-user-events get-revenue-events] :as ctx}
+  [{:biff.admin/keys [get-usage-events get-revenue-events] :as ctx}
    timezone users]
   (let [tz             (try (tick/zone timezone)
                             (catch Exception _ (tick/zone "UTC")))
         now            (tick/now)
-        user-events    (when get-user-events (get-user-events ctx))
+        usage-events   (when get-usage-events (get-usage-events ctx))
         revenue-events (when get-revenue-events (get-revenue-events ctx))
-        dau            (compute-dau (or user-events []) tz now)
-        wau            (compute-wau (or user-events []) tz now)
+        dau            (compute-dau (or usage-events []) tz now)
+        wau            (compute-wau (or usage-events []) tz now)
         daily-signups  (when users (compute-daily-signups users tz now))
         daily-revenue  (when revenue-events
                          (compute-daily-revenue revenue-events tz now))

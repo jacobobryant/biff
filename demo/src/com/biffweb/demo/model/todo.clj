@@ -35,8 +35,8 @@
 (biff.graph/defresolver admin-link-visible?
   {:input  [{[:? :session/user] [:user/id]}]
    :output [:app/show-admin-link?]}
-  [{:keys [biff.admin/user-id]} {:keys [session/user]}]
-  (let [configured-admin-id (some-> user-id str not-empty)
+  [{:keys [biff.admin/admin-user-id]} {:keys [session/user]}]
+  (let [configured-admin-id (some-> admin-user-id str not-empty)
         current-user-id     (some-> user :user/id str)]
     {:app/show-admin-link? (or (nil? configured-admin-id)
                                (= configured-admin-id current-user-id))}))

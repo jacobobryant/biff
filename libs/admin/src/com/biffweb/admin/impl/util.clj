@@ -3,9 +3,9 @@
             [com.biffweb.admin.impl.ui :as ui]))
 
 (defn wrap-admin-access [handler]
-  (fn [{:biff.admin/keys [user-id] :keys [session] :as ctx}]
+  (fn [{:biff.admin/keys [admin-user-id] :keys [session] :as ctx}]
     (let [current-uid (str (:uid session))
-          admin-uid   (str user-id)]
+          admin-uid   (str admin-user-id)]
       (cond
         (str/blank? current-uid)
         {:status  401

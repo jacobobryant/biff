@@ -8,8 +8,8 @@
 
 (def queue-id :todo/archive)
 
-(defn- can-manually-archive? [{:keys [biff.admin/user-id session]}]
-  (let [configured-admin-id (some-> user-id str not-empty)
+(defn- can-manually-archive? [{:keys [biff.admin/admin-user-id session]}]
+  (let [configured-admin-id (some-> admin-user-id str not-empty)
         current-user-id     (some-> session :uid str)]
     (or (nil? configured-admin-id)
         (= configured-admin-id current-user-id))))

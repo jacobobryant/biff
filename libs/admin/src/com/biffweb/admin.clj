@@ -5,25 +5,32 @@
             [com.biffweb.core :as biff.core]))
 
 (biff.core/register
- {:biff.admin/alert-email        'string?
-  :biff.admin/alert-state        [:fn #(instance? clojure.lang.IAtom %)]
-  :biff.admin/errors-atom        [:fn #(instance? clojure.lang.IAtom %)]
+ {;; internal
+  :biff.admin/alert-state [:fn #(instance? clojure.lang.IAtom %)]
+  :biff.admin/pstats      [:fn #(instance? clojure.lang.IAtom %)]
+
+  ;; public
+  :biff.admin/alert-email        'string?
   :biff.admin/get-revenue-events 'ifn?
-  :biff.admin/get-user-events    'ifn?
+  :biff.admin/get-usage-events   'ifn?
   :biff.admin/get-users          'ifn?
-  :biff.admin/pstats             [:fn #(instance? clojure.lang.IAtom %)]
   :biff.admin/revenue-event      [:map
                                   [:instant 'inst?]
                                   [:revenue 'number?]]
   :biff.admin/send-email         'ifn?
+  :biff.admin/send-email-input   [:map
+                                  [:to 'string?]
+                                  [:subject 'string?]
+                                  [:text 'string?]
+                                  [:html 'string?]]
   :biff.admin/user               [:map
                                   [:user-id 'some?]
                                   [:email {:optional true} 'string?]
                                   [:joined-at {:optional true} 'inst?]]
-  :biff.admin/user-event         [:map
+  :biff.admin/usage-event        [:map
                                   [:user-id 'some?]
                                   [:instant 'inst?]]
-  :biff.admin/user-id            'some?})
+  :biff.admin/admin-user-id      'some?})
 
 (defn profile! [ctx id f]
   (profiling/profile! ctx id f))

@@ -20,24 +20,26 @@
             :reitit.core/match {:template path})))
   ctx)
 
-(defn- use-fake-errors [{:biff.admin/keys [errors-atom] :as ctx}]
-  (reset! errors-atom
-          (mapv (fn [index]
-                  (let [message (nth ["Database connection timed out"
-                                      "Payment webhook could not be processed"
-                                      "Background job failed"
-                                      "Unexpected response from email provider"]
-                                     (mod index 4))]
-                    {:instant (tick/<<
-                               (tick/now)
-                               (tick/new-duration (* index 3) :hours))
-                     :message message
-                     :stack-trace
-                     (str "clojure.lang.ExceptionInfo: " message "\n"
-                          "\tat com.biffweb.demo.example$run.invoke"
-                          "(example.clj:" (+ 20 index) ")\n"
-                          "\tat clojure.lang.AFn.applyToHelper(AFn.java:154)")}))
-                (range 12)))
+(defn- use-fake-errors [{:biff.admin/keys [alert-state] :as ctx}]
+  (swap! alert-state assoc :errors
+         (mapv (fn [index]
+                 (let [message (nth ["Database connection timed out"
+                                     "Payment webhook could not be processed"
+                                     "Background job failed"
+                                     "Unexpected response from email provider"]
+                                    (mod index 4))]
+                   {:instant (tick/<<
+                              (tick/now)
+                              (tick/new-duration (* index 3) :hours))
+                    :message message
+
+                    :stack-trace
+                    (str "clojure.lang.ExceptionInfo: " message "\n"
+                         "\tat com.biffweb.demo.example$run.invoke"
+                         "(example.clj:" (+ 20 index) ")\n"
+                         "\tat clojure.lang.AFn.applyToHelper"
+                         "(AFn.java:154)")}))
+               (range 12)))
   ctx)
 
 (def components
