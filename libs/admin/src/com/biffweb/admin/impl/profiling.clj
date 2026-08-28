@@ -2,7 +2,6 @@
   (:require [clojure.string :as str]
             [com.biffweb.admin.impl.ui :as ui]
             [com.biffweb.admin.impl.util :as util]
-            [taoensso.encore.stats :as stats]
             [taoensso.tufte :as tufte]
             [tick.core :as tick])
   (:import [java.time ZoneOffset ZonedDateTime]
@@ -119,32 +118,16 @@
            (fn [ctx]
              (profile! ctx (str id) #(resolve-fn ctx))))))
 
-(defn- merge-summary-stats [stats]
-  (->> stats
-       (map stats/summary-stats)
-       (reduce stats/summary-stats-merge)))
-
-(defn- merge-recent-pstats [pstats-by-day]
-  (let [stats-by-id (reduce (fn [acc pstats]
-                              (reduce-kv
-                               (fn [acc id stats]
-                                 (update acc id conj stats))
-                               acc
-                               (:stats pstats)))
-                            {}
-                            (vals pstats-by-day))]
-    {:clock {:total (reduce + (map #(get-in % [:clock :total])
-                                   (vals pstats-by-day)))}
-     :stats (update-vals stats-by-id merge-summary-stats)}))
-
 (defn dashboard-section [ctx]
-  (let [pstats-formatted (some-> (recent-pstats-data ctx)
-                                 merge-recent-pstats
-                                 tufte/format-pstats)]
+  (let [pstats-by-day (recent-pstats-data ctx)]
     (ui/section "Performance Metrics"
-                (if pstats-formatted
-                  [:pre.bg-gray-100.p-4.rounded.text-xs.overflow-x-auto
-                   (str pstats-formatted)]
+                (if pstats-by-day
+                  [:div
+                   (for [[day pstats] (reverse pstats-by-day)]
+                     [:div.mb-6 {:key day}
+                      [:h3.text-lg.font-semibold.mb-2 day]
+                      [:pre.bg-gray-100.p-4.rounded.text-xs.overflow-x-auto
+                       (str (tufte/format-pstats pstats))]])]
                   [:p.text-gray-500 "No performance data collected yet."]))))
 
 (defn page [ctx]

@@ -11,9 +11,16 @@
   (fn [ctx]
     (handler (merge ctx config))))
 
+(defn- wrap-fx-handlers [handler]
+  (fn [ctx]
+    (handler
+     (update ctx :biff.fx/handlers merge
+             (select-keys ctx [:biff.core/kv-get :biff.core/kv-set])))))
+
 (defn routes [config]
   ["" {:middleware [[stuff/wrap-params]
-                    [wrap-config config]]}
+                    [wrap-config config]
+                    [wrap-fx-handlers]]}
    ui/routes
    metrics/routes
    users/routes

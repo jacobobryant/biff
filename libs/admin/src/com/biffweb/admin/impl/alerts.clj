@@ -160,18 +160,12 @@
 
 (defn- stacktrace-page-handler
   [{:keys [path-params] :as ctx}]
-  (let [index       (try
-                      (Integer/parseInt
-                       (or (:index path-params) "0"))
-                      (catch Exception _ 0))
-        errors      (recent-errors ctx)
-        error       (get (vec errors) index)
-        copy-script (str "navigator.clipboard.writeText("
-                         "document.getElementById('stacktrace')"
-                         ".textContent);"
-                         "this.textContent='Copied!';"
-                         "setTimeout(()=>this.textContent="
-                         "'Copy to clipboard',2000)")]
+  (let [index  (try
+                 (Integer/parseInt
+                  (or (:index path-params) "0"))
+                 (catch Exception _ 0))
+        errors (recent-errors ctx)
+        error  (get (vec errors) index)]
     (if error
       (ui/admin-page "Stack Trace"
                      [:div
@@ -179,9 +173,16 @@
                       [:p.text-sm.text-gray-600.mb-2
                        (str "Error at " (:instant error))]
                       [:p.font-semibold.mb-4 (:message error)]
-                      [:button {:class   '[bg-blue-600 text-white px-4 py-2
-                                           rounded mb-4 cursor-pointer]
-                                :onclick copy-script}
+                      [:button
+                       {:class
+                        '[bg-blue-600 text-white px-4 py-2 rounded mb-4
+                          cursor-pointer]
+
+                        :data-clipboard
+                        (:stack-trace error)
+
+                        :data-clipboard-success-text "Copied!"
+                        :onclick                     "biffAdminCopy(this)"}
                        "Copy to clipboard"]
                       [:pre#stacktrace
                        {:class '[bg-gray-100 p-4 rounded text-xs overflow-x-auto

@@ -54,7 +54,8 @@
   :check-code
   (fn [{:keys [biff.fx/now entry path-params session]}]
     (let [valid? (and entry
-                      (tick/< (tick/between (:generated-at entry) now)
+                      (tick/< (tick/between
+                               (tick/instant (:generated-at entry)) now)
                               (tick/new-duration 5 :minutes)))]
       (if valid?
         {:deleted [:biff.core/kv-set
@@ -127,7 +128,7 @@
             [:button {:class '[bg-indigo-600 text-white px-2 py-1 rounded
                                text-xs cursor-pointer]
                       :type  "submit"}
-             "Create sign-in link"]]]])]]
+             "Copy sign-in link"]]]])]]
      [:div.flex.items-center.gap-3.mt-4.text-sm
       (when (< 1 page)
         [:a.text-blue-600.hover:underline
@@ -137,14 +138,18 @@
         [:a.text-blue-600.hover:underline
          {:href (page-href (inc page) search)} "Next"])]]))
 
+(defn- copy-signin-link [signin-url]
+  [[:div.bg-indigo-50.border.border-indigo-200.p-3.mb-4.rounded
+    {:data-clipboard         signin-url
+     :data-clipboard-on-load true}
+    "Sign-in link copied to clipboard."]])
+
 (defn dashboard-section
   [{:keys [biff.stuff/params]} users anti-forgery-token signin-url]
   (let [{:keys [user-page user-search]} params]
     (ui/section "Users"
                 (when signin-url
-                  [:div.bg-indigo-50.border.border-indigo-200.p-3.mb-4.rounded
-                   [:a.text-indigo-700.hover:underline.break-all
-                    {:href signin-url} signin-url]])
+                  (copy-signin-link signin-url))
                 (if (seq users)
                   (users-table users anti-forgery-token
                                (parse-page user-page) user-search)

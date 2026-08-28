@@ -5,12 +5,11 @@
 [view source](../../src/com/biffweb/admin.clj#L35)
 
 ```
-(profile! ctx id f)
+(profile! #:biff.admin{:keys [pstats]} id f)
 
-Calls `f`, records Tufte profiling data under `id`, and returns the result.
+Calls `f`, storing profiling data from Tufte.
 
-Profiling data is added to :biff.admin/pstats. If `ctx` does not contain
-:biff.admin/pstats or `id` is nil, calls `f` without profiling it.
+Stores the run time of `f` in the `pstats` atom, keyed by `id`.
 ```
 
 ### wrap-profiling
@@ -20,36 +19,35 @@ Profiling data is added to :biff.admin/pstats. If `ctx` does not contain
 ```
 (wrap-profiling handler)
 
-Wraps a Ring handler with `profile!`.
+Wraps a Reitit Ring handler with `profile!`.
 
-Requests are identified by their uppercase HTTP method followed by their
-Reitit route name or path template. Requests without a matched route are not
-profiled.
+Uses the request method and Reitit route name or path template as the
+profiling ID.
 ```
 
 ### wrap-resolver-profiling
 
-[view source](../../src/com/biffweb/admin.clj#L52)
+[view source](../../src/com/biffweb/admin.clj#L51)
 
 ```
 (wrap-resolver-profiling resolver)
 
-Wraps a biff.graph resolver's :biff.graph/resolve-fn with `profile!`.
+Wraps a biff.graph resolver with `profile!`.
 
 The resolver's :biff.graph/id is used as the profiling ID.
 ```
 
 ### flush-pstats!
 
-[view source](../../src/com/biffweb/admin.clj#L59)
+[view source](../../src/com/biffweb/admin.clj#L58)
 
 ```
-(flush-pstats! ctx)
+(flush-pstats! {:keys [biff.admin/pstats biff.core/kv-set], :as ctx})
 
 Persists profiling data with :biff.core/kv-set.
 
-Data is stored under :biff.admin/pstats using UTC date strings as keys.
-After flushing, only data for the current UTC date is retained in memory.
+Moves data from the `pstats` atom into the database via `kv-set`, with
+:biff.admin/pstats as the KV namespace.
 ```
 
 ### routes
@@ -74,21 +72,25 @@ options.
 
 Returns a biff.core module for the admin dashboard.
 
-Includes `routes`, Ring and biff.graph profiling middleware, an hourly task
-that calls `flush-pstats!`, and initialization for profiling state.
+Includes `routes`, biff.ring and biff.graph profiling middleware, an hourly
+biff.background task that calls `flush-pstats!`, and initialization for
+profiling state.
 ```
 
 ### use-alerts
 
-[view source](../../src/com/biffweb/admin.clj#L83)
+[view source](../../src/com/biffweb/admin.clj#L84)
 
 ```
-(use-alerts ctx)
+(use-alerts {:biff.admin/keys [send-email alert-state alert-email], :as ctx})
 
-Adds an error handler and alert state to `ctx`.
+A biff.core component that sends email alerts for logged errors.
 
-Error signals are retained for display in the admin dashboard. If
-:biff.admin/send-email and :biff.admin/alert-email are set, error alerts are
-also sent by email. `conj`s a handler-removal function onto
-:biff.core/stop.
+Forwards clojure.tools.logging errors to Telemere, and adds a Telemere signal
+handler that stores logged errors in memory. Errors are reported via email in
+batches of at most 20. Emails are rate-limited at 1 per 5 minutes. If more
+than 20 errors are logged in that time, only the most recent 20 are reported.
+
+Errors reported via email are also stored via kv-set and are viewable on the
+biff.admin dashboard.
 ```

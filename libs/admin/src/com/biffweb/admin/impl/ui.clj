@@ -17,7 +17,8 @@
                :content "width=device-width, initial-scale=1"}]
        [:title title]
        [:link {:rel "icon" :href "data:,"}]
-       [:link {:rel "stylesheet" :href "/_biff/admin/main.css"}]]
+       [:link {:rel "stylesheet" :href "/_biff/admin/main.css"}]
+       [:script {:src "/_biff/admin/main.js" :defer true}]]
       [:body.font-sans.bg-gray-50.text-gray-800.p-6
        body]]))})
 
@@ -52,28 +53,32 @@
    body])
 
 (defn admin-setup-page [current-uid]
-  (let [copy-script (str "navigator.clipboard.writeText('"
-                         current-uid "');"
-                         "this.textContent='Copied!';"
-                         "setTimeout(()=>this.textContent='Copy',2000)")]
-    (admin-page "Admin Setup"
-                [:div
-                 (heading "Admin Setup")
-                 [:p.mb-4 (str ":biff.admin/admin-user-id is not set. "
-                               "Your current user ID is:")]
-                 [:div.flex.items-center.gap-2.mb-4
-                  [:code.bg-gray-100.p-2.rounded.text-sm.break-all
-                   {:id "uid-display"} current-uid]
-                  [:button {:class   '[bg-blue-600 text-white px-3 py-1 rounded
-                                       text-sm cursor-pointer]
-                            :onclick copy-script}
-                   "Copy"]]
-                 [:p.text-sm.text-gray-600
-                  (str "Set :biff.admin/admin-user-id to enable the admin "
-                       "dashboard.")]])))
+  (admin-page "Admin Setup"
+              [:div
+               (heading "Admin Setup")
+               [:p.mb-4 (str ":biff.admin/admin-user-id is not set. "
+                             "Your current user ID is:")]
+               [:div.flex.items-center.gap-2.mb-4
+                [:code.bg-gray-100.p-2.rounded.text-sm.break-all
+                 {:id "uid-display"} current-uid]
+                [:button {:class                       '[bg-blue-600 text-white
+                                                         px-3 py-1 rounded
+                                                         text-sm cursor-pointer]
+                          :data-clipboard              current-uid
+                          :data-clipboard-success-text "Copied!"
+                          :onclick                     "biffAdminCopy(this)"}
+                 "Copy"]]
+               [:p.text-sm.text-gray-600
+                (str "Set :biff.admin/admin-user-id to enable the admin "
+                     "dashboard.")]]))
 
 (defn stylesheet-handler [_ctx]
   (ring.response/resource-response "com/biffweb/admin/main.css"))
 
+(defn javascript-handler [_ctx]
+  (ring.response/resource-response "com/biffweb/admin/main.js"))
+
 (def routes
-  ["/_biff/admin/main.css" {:get stylesheet-handler}])
+  [""
+   ["/_biff/admin/main.css" {:get stylesheet-handler}]
+   ["/_biff/admin/main.js" {:get javascript-handler}]])

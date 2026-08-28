@@ -3,6 +3,7 @@
             [clojure.test :refer [deftest is testing]]
             [com.biffweb.admin :as admin]
             [com.biffweb.admin.impl.alerts :as alerts]
+            [com.biffweb.admin.impl.module :as module]
             [com.biffweb.admin.impl.profiling :as profiling]
             [com.biffweb.admin.impl.util :as util]
             [com.biffweb.admin.impl.users :as users]
@@ -192,21 +193,22 @@
           (is (str/includes? formatted ":day-6"))
           (is (nil? (get @stored "2026-04-28"))))))))
 
-(deftest merge-recent-pstats-test
-  (let [first-day  (second
-                    (tufte/profiled {}
-                                    (dotimes [_ 2] (tufte/p "shared" :ok))))
-        second-day (second
-                    (tufte/profiled {}
-                                    (dotimes [_ 3] (tufte/p "shared" :ok))))
-        merged     (#'profiling/merge-recent-pstats
-                    {"2026-04-27"
-                     (#'profiling/pstats->stored-value first-day)
-
-                     "2026-04-28"
-                     (#'profiling/pstats->stored-value second-day)})]
-    (is (= 5 (:n @(get-in merged [:stats "shared"]))))
-    (is (str/includes? (tufte/format-pstats merged) "shared"))))
+(deftest performance-dashboard-section-test
+  (let [pstats-by-day {"2026-04-27" (sample-pstats "first-day")
+                       "2026-04-28" (sample-pstats "second-day")}
+        section       (with-redefs [profiling/recent-pstats-data
+                                    (constantly pstats-by-day)]
+                        (profiling/dashboard-section {}))
+        pre-elements  (filterv #(and (vector? %)
+                                     (some-> % first str
+                                             (str/starts-with? ":pre.")))
+                               (tree-seq coll? seq section))
+        rendered      (pr-str section)]
+    (is (= 2 (count pre-elements)))
+    (is (str/includes? rendered "2026-04-27"))
+    (is (str/includes? rendered "2026-04-28"))
+    (is (str/includes? rendered ":first-day"))
+    (is (str/includes? rendered ":second-day"))))
 
 (deftest hourly-schedule-test
   (testing "hourly-schedule starts at the next UTC hour"
@@ -237,14 +239,18 @@
 
 (deftest impersonation-code-test
   (let [store            (atom {})
-        kv-get           (fn [_ namespace key] (get @store [namespace key]))
+        kv-get           (fn [_ namespace key]
+                           (some-> (get @store [namespace key])
+                                   (update :generated-at
+                                           #(java.util.Date/from %))))
         kv-set           (fn [_ namespace key value]
                            (swap! store assoc [namespace key] value))
-        ctx              {:biff.fx/handlers  {:biff.core/kv-get kv-get
-                                              :biff.core/kv-set kv-set}
-                          :biff.stuff/params {:user-id ":user/one"}
-                          :headers           {"host" "example.com"}
-                          :scheme            :https}
+        ctx              ((#'module/wrap-fx-handlers identity)
+                          {:biff.core/kv-get  kv-get
+                           :biff.core/kv-set  kv-set
+                           :biff.stuff/params {:user-id ":user/one"}
+                           :headers           {"host" "example.com"}
+                           :scheme            :https})
         response         (#'users/generate-signin-code-handler ctx)
         [[_ code] entry] (first @store)]
     (is (= 303 (:status response)))
@@ -303,8 +309,26 @@
                         {:biff.stuff/params {:user-page "2"}}
                         users nil nil))]
       (is (str/includes? page "Page 2 of 2"))
+      (is (str/includes? page "Copy sign-in link"))
       (is (str/includes? page "user59@example.com"))
-      (is (not (str/includes? page "user0@example.com"))))))
+      (is (not (str/includes? page "user0@example.com"))))
+    (let [page (pr-str (users/dashboard-section
+                        {:biff.stuff/params {}}
+                        users nil "https://example.com/signin/code"))]
+      (is (str/includes? page "Sign-in link copied to clipboard."))
+      (is (str/includes? page ":data-clipboard"))
+      (is (str/includes? page ":data-clipboard-on-load"))
+      (is (not (str/includes? page
+                              "Create sign-in link"))))
+    (let [body (:body (users/page
+                       {:biff.admin/get-users (constantly users)
+
+                        :biff.stuff/params
+                        {:signin-url "https://example.com/signin/code"}}))]
+      (is (str/includes? body "Sign-in link copied to clipboard."))
+      (is (str/includes? body "/_biff/admin/main.js"))
+      (is (not (str/includes? body "<<>>")))
+      (is (not (str/includes? body "&lt;&lt;&gt;&gt;"))))))
 
 (deftest wrap-admin-access-test
   (let [handler (util/wrap-admin-access (constantly {:status 200}))]

@@ -91,8 +91,8 @@
 
    Errors reported via email are also stored via kv-set and are viewable on the
    biff.admin dashboard."
-  {:arglists '({:biff.admin/keys [send-email alert-state alert-email]
-                :as              ctx})}
+  {:arglists '([{:biff.admin/keys [send-email alert-state alert-email]
+                 :as              ctx}])}
 
   [ctx]
   (alerts/use-alerts ctx))
