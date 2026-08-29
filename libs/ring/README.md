@@ -12,7 +12,7 @@ Features:
 ### Dependency
 
 ```clojure
-com.biffweb/ring {:mvn/version "2.0.0-rc22"}
+com.biffweb/ring {:mvn/version "2.0.0-rc23"}
 ```
 
 If you don't want to use Jetty, you can do `com.biffweb/ring {:mvn/version ...,
@@ -59,17 +59,17 @@ a list of the default middleware, all of which can be used individually.
 
 ### Start a webserver
 
-`module` includes a biff.core component that starts Jetty using
-`:biff.ring/handler` from the system map.
+Register the module to start Jetty using `:biff.ring/handler` from the system
+map:
 
 ```clojure
 (def modules
   [(biff.ring/module)
    ...])
 
-(def components
+(def start-order
   [...
-   :biff.ring/jetty
+   :biff.ring/module
    ...])
 ```
 

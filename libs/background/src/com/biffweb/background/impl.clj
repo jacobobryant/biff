@@ -101,21 +101,21 @@
                                  (mapcat :biff.background/queues)
                                  @modules-var)})
 
-(defn scheduled-tasks-module []
-  {:biff.core/id    :biff.background/scheduled-tasks
+(defn tasks-module []
+  {:biff.core/id    :biff.background/tasks-module
    :biff.core/start start-scheduled-tasks
    :biff.core/stop  stop-scheduled-tasks
    :biff.core/init  init-scheduled-tasks})
 
 (defn queues-module []
-  {:biff.core/id     :biff.background/queues
+  {:biff.core/id     :biff.background/queues-module
    :biff.core/start  start-queues
    :biff.core/stop   stop-queues
    :biff.core/init   init-queues
    :biff.fx/handlers fx-handlers})
 
 (defn module []
-  {:biff.core/id     :biff.background/component
+  {:biff.core/id     :biff.background/module
    :biff.core/start  (comp start-scheduled-tasks start-queues)
    :biff.core/stop   (fn [ctx]
                        (stop-scheduled-tasks ctx)

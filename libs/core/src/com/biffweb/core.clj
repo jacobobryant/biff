@@ -19,17 +19,28 @@
   :biff.core/wrap-db-snapshot 'ifn?
   :biff.core/on-tx            'ifn?})
 
+(defn component-shim
+  "Converts a Biff 1 component into a Biff 2 module with lifecycle functions.
+
+     (component-shim :com.example/use-jetty biff/use-jetty)
+
+   The returned module's ID is `id`. Its start function calls `component-fn`,
+   and its stop function calls the functions that `component-fn` added to
+   :biff/stop."
+  [id component-fn]
+  (impl.sys/component-shim id component-fn))
+
 (defn start
   "Starts a Biff application and returns the system map.
 
      (def modules [...])
-     (def components [...])
-     (biff.core/start #'modules components)
+     (def start-order [...])
+     (biff.core/start #'modules start-order)
 
    Calls any :biff.core/init functions in modules and merges the results in
    order to create an initial system map. If you passed initial-system, it will
    be merged into this system map. Then the system map is passed through each
-   component.
+   :biff.core/start function.
 
    :biff.core/init is a function that receives the modules var, aggregates keys
    from other modules and/or initializes other values as needed, and returns the
@@ -51,25 +62,23 @@
    Includes a default init function which defines a :biff.core/on-tx function
    that calls :biff.core/on-tx from the other modules in a doseq.
 
-   Components may be qualified keywords or functions. For each keyword
-   component, there must be a module with :biff.core/id set to the keyword and
-   with :biff.core/start set to a function like `(fn [ctx]) -> ctx`.
-   :biff.core/stop may be set to a function like `(fn [ctx])`. The start
-   function can start stateful resources or do other initialization as needed,
-   returning an updated system map. The stop function receives the return value
-   of the start function and shuts down stateful resources etc as needed.
-   biff.core adds a zero-argument :biff.core/stop-system function to the system
-   map which calls the component stop functions in reverse startup order.
+   Entries in start-order must be qualified module ID keywords. For each module
+   ID, there must be a module with :biff.core/id set to the keyword and with
+   :biff.core/start set to a function like `(fn [ctx]) -> ctx`. :biff.core/stop
+   may be set to a function like `(fn [ctx])`.
 
-   For backwards compatibility, components may also be functions that return an
-   updated system map, with stop functions conj'd onto the :biff/stop key.
+   The start function can start stateful resources or do other initialization as
+   needed, returning an updated system map. The stop function receives the
+   return value of the start function and shuts down stateful resources etc as
+   needed. biff.core adds a zero-argument :biff.core/stop-system function to the
+   system map which calls the module stop functions in reverse startup order.
 
    Uses biff.core/validate to ensure that keys in modules, keys returned by
-   :biff.core/init, and keys returned by components are valid."
-  ([modules-var components]
-   (impl.sys/start modules-var components))
-  ([initial-system modules-var components]
-   (impl.sys/start initial-system modules-var components)))
+   :biff.core/init, and keys returned by start functions are valid."
+  ([modules-var start-order]
+   (impl.sys/start modules-var start-order))
+  ([initial-system modules-var start-order]
+   (impl.sys/start initial-system modules-var start-order)))
 
 (defn stop
   "Stops a Biff application.

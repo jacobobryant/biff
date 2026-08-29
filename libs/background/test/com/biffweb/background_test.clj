@@ -16,7 +16,7 @@
                     :on-finished #(deliver finished true)}]
 
                   :foo :bar}
-        module   (background/scheduled-tasks-module)
+        module   (background/tasks-module)
         result   ((:biff.core/start module) ctx)]
     (try
       (is (= :bar (:foo (deref called 2000 nil))))

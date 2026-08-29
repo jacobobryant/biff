@@ -8,12 +8,12 @@
 (def initial-system
   {:com.example/app-name "My Application"})
 
-(def components
+(def start-order
   [:com.example/config
    :com.example/webserver])
 
 (defn start []
-  (let [new-system (biff.core/start initial-system #'modules components)]
+  (let [new-system (biff.core/start initial-system #'modules start-order)]
     (reset! system new-system))
   :started)
 

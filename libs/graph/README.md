@@ -32,7 +32,7 @@ your code when things go wrong&mdash;should hopefully be easier.
 ### Dependency
 
 ```clojure
-com.biffweb/graph {:mvn/version "2.0.0-rc22"}
+com.biffweb/graph {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status

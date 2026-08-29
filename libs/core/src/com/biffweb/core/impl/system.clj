@@ -1,6 +1,5 @@
 (ns com.biffweb.core.impl.system
-  (:require [clojure.string :as str]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [com.biffweb.core.impl.validation :as impl.v]))
 
 (defn- default-init [modules-var]
@@ -30,43 +29,48 @@
        (apply safe-merge)
        (merge (default-init modules-var))))
 
-(defn- lifecycle-modules [modules components]
+(defn- lifecycle-modules [modules start-order]
   (let [started-modules (filterv :biff.core/start modules)
         missing-ids     (filterv (comp nil? :biff.core/id) started-modules)
         id-frequencies  (frequencies (keep :biff.core/id started-modules))
         duplicate-ids   (into []
                               (keep (fn [[id n]] (when (< 1 n) id)))
                               id-frequencies)
-        component-ids   (filterv keyword? components)
+        invalid-ids     (filterv (complement qualified-keyword?) start-order)
+        module-ids      start-order
 
-        duplicate-components
+        duplicate-module-ids
         (into []
               (keep (fn [[id n]] (when (< 1 n) id)))
-              (frequencies component-ids))
+              (frequencies module-ids))
 
-        missing-components
-        (filterv (complement (set component-ids)) (keys id-frequencies))
+        missing-module-ids
+        (filterv (complement (set module-ids)) (keys id-frequencies))
 
-        unknown-components
-        (filterv (complement (set (keys id-frequencies))) component-ids)]
+        unknown-module-ids
+        (filterv (complement (set (keys id-frequencies))) module-ids)]
     (when (seq missing-ids)
       (impl.v/assertion-error
        "Modules with :biff.core/start must set :biff.core/id."))
+    (when (seq invalid-ids)
+      (impl.v/assertion-error
+       "Start order entries must be qualified module IDs: "
+       (pr-str invalid-ids)))
     (when (seq duplicate-ids)
       (impl.v/assertion-error "Duplicate :biff.core/id values: "
                               (pr-str duplicate-ids)))
-    (when (seq duplicate-components)
-      (impl.v/assertion-error "Duplicate keyword components: "
-                              (pr-str duplicate-components)))
-    (when (seq missing-components)
-      (impl.v/assertion-error "Missing keyword components: "
-                              (pr-str missing-components)))
-    (when (seq unknown-components)
-      (impl.v/assertion-error "No modules found for keyword components: "
-                              (pr-str unknown-components)))
+    (when (seq duplicate-module-ids)
+      (impl.v/assertion-error "Duplicate module IDs in start order: "
+                              (pr-str duplicate-module-ids)))
+    (when (seq missing-module-ids)
+      (impl.v/assertion-error "Missing module IDs from start order: "
+                              (pr-str missing-module-ids)))
+    (when (seq unknown-module-ids)
+      (impl.v/assertion-error "No modules found for IDs in start order: "
+                              (pr-str unknown-module-ids)))
     (into {} (map (juxt :biff.core/id identity)) started-modules)))
 
-(defn- start-module-component [ctx {:biff.core/keys [start stop]}]
+(defn- start-module [ctx {:biff.core/keys [start stop]}]
   (let [ctx (start ctx)]
     (cond-> ctx
       stop (update :biff.core/stop-system
@@ -75,40 +79,23 @@
                         (stop ctx)
                         (stop-system)))))))
 
-;; Maintain backwards compatibility with Biff components that still use
-;; :biff/stop
-(defn- shim-old-component [component]
-  (fn [system]
-    (let [system* (component system)]
-      (-> system*
-          (dissoc :biff/stop)
-          (assoc :biff.core/stop-system
-                 (fn []
-                   (doseq [stop-fn (:biff/stop system*)]
-                     (stop-fn))
-                   (when-some [stop (:biff.core/stop-system system*)]
-                     (stop))))))))
-
 (defn start
-  ([modules-var components]
-   (start {} modules-var components))
-  ([initial-system modules-var components]
+  ([modules-var start-order]
+   (start {} modules-var start-order))
+  ([initial-system modules-var start-order]
    (let [modules        (impl.v/validate @modules-var)
-         id->module     (lifecycle-modules modules components)
+         id->module     (lifecycle-modules modules start-order)
          initial-system (merge (init-modules modules-var)
                                (impl.v/validate initial-system)
                                {:biff.core/stop-system (fn [])})
 
          system-map
-         (reduce (fn [system component]
-                   (log/info "starting:"
-                             (str/replace (str component) #"@.*" ""))
+         (reduce (fn [system id]
+                   (log/info "starting:" id)
                    (impl.v/validate
-                    (if (keyword? component)
-                      (start-module-component system (get id->module component))
-                      ((shim-old-component component) system))))
+                    (start-module system (get id->module id))))
                  initial-system
-                 components)]
+                 start-order)]
      (log/info "System started.")
      system-map)))
 
@@ -116,3 +103,18 @@
   [{:keys [biff.core/stop-system]}]
   (when stop-system
     (stop-system)))
+
+(defn component-shim [id component-fn]
+  {:biff.core/id id
+
+   :biff.core/start
+   (fn [ctx]
+     (let [ctx (component-fn ctx)]
+       (-> ctx
+           (dissoc :biff/stop)
+           (assoc-in [::component-shim-stops id] (:biff/stop ctx)))))
+
+   :biff.core/stop
+   (fn [ctx]
+     (doseq [stop-fn (get-in ctx [::component-shim-stops id])]
+       (stop-fn)))})

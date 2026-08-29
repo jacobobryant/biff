@@ -237,7 +237,7 @@
 (defn module
   "A biff.core module that sets :biff.ring/handler and
    :biff.ring/fallback-session-store on init and starts Jetty on start.
-   Include :biff.ring/jetty in your components.
+   Module ID is :biff.ring/module.
 
    :biff.ring/handler is compiled by collecting the following keys from other
    modules and passing them to `make-handler`:

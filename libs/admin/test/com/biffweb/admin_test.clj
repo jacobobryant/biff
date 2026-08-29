@@ -345,7 +345,7 @@
                        "Admin Setup"))))
 
 (deftest alerts-lifecycle-test
-  (testing "the alerts component adds alert-state to ctx"
+  (testing "the alerts module adds alert-state to ctx"
     (let [module (admin/module {:biff.admin/get-usage-events (fn [_] [])})
           result ((:biff.core/start module) {})]
       (is (contains? result :biff.admin/alert-state))

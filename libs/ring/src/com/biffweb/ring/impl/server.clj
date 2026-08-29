@@ -58,7 +58,7 @@
     (assoc ctx ::server server)))
 
 (defn module []
-  {:biff.core/id    :biff.ring/jetty
+  {:biff.core/id    :biff.ring/module
    :biff.core/start start
    :biff.core/stop  (fn [{::keys [server]}] (.stop server))
 

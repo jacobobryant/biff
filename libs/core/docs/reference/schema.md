@@ -10,19 +10,19 @@ for other libraries.
 
 ### :biff.core/id
 
-A qualified keyword which identifies a module component.
+A qualified keyword which identifies a module.
 
 ### :biff.core/start
 
-`(fn [ctx]) => ctx`. Starts a module component.
+`(fn [ctx]) => ctx`. Starts a module.
 
 ### :biff.core/stop
 
-`(fn [ctx]) => nil`. Stops a module component.
+`(fn [ctx]) => nil`. Stops a module.
 
 ### :biff.core/stop-system
 
-`(fn []) => nil`. Placed on the running system map and stops all components.
+`(fn []) => nil`. Placed on the running system map and stops all modules.
 See [start](../api/com.biffweb.core.md#start) and
 [stop](../api/com.biffweb.core.md#stop).
 

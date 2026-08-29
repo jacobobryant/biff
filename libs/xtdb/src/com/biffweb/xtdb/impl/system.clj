@@ -80,7 +80,7 @@
    :biff.xtdb.fx/authorized-write authorize/authorized-write})
 
 (defn module []
-  {:biff.core/id     :biff.xtdb/component
+  {:biff.core/id     :biff.xtdb/module
    :biff.core/start  start
    :biff.core/stop   stop
    :biff.fx/handlers fx-handlers

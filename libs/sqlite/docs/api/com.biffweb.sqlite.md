@@ -112,8 +112,7 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
 ```
 (module)
 
-Returns a biff.core module. Include :biff.sqlite/component in your
-components.
+Returns a biff.core module. Module ID is :biff.sqlite/module.
 
 - includes litestream-module, sqldef-module, and conn-module
 - provides :biff.fx/handlers in the module
@@ -125,13 +124,13 @@ components.
 
 ### litestream-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L167)
+[view source](../../src/com/biffweb/sqlite.clj#L166)
 
 ```
 (litestream-module)
 
-On start, uses litestream to backup/restore the database. Include
-:biff.sqlite/litestream in your components.
+On start, uses litestream to backup/restore the database. Module ID is
+:biff.sqlite/litestream-module.
 
 Uses these keys from the system map:
 
@@ -155,13 +154,13 @@ your application runs.
 
 ### sqldef-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L192)
+[view source](../../src/com/biffweb/sqlite.clj#L191)
 
 ```
 (sqldef-module)
 
 On start, generates schema from `columns` and applies it with sqldef.
-Include :biff.sqlite/sqldef in your components.
+Module ID is :biff.sqlite/sqldef-module.
 
 Uses these keys from the system map:
 
@@ -181,13 +180,13 @@ isn't available.
 
 ### conn-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L213)
+[view source](../../src/com/biffweb/sqlite.clj#L212)
 
 ```
 (conn-module)
 
-On startup, adds read/write database connections to the system map. Include
-:biff.sqlite/conn in your components.
+On startup, adds read/write database connections to the system map. Module ID
+is :biff.sqlite/conn-module.
 
 Uses :biff.sqlite/db-path from the system map.
 
@@ -205,7 +204,7 @@ The following PRAGMAs are set on each connection:
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L232)
+[view source](../../src/com/biffweb/sqlite.clj#L231)
 
 ```
 (make-resolvers columns)

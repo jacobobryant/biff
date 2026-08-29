@@ -71,7 +71,7 @@
              (get env "CONFIG-TEST-QUOTED")))
       (is (nil? (get env "CONFIG_TEST_EMPTY"))))))
 
-(deftest config-component-merges-values-wraps-secrets-and-applies-profile
+(deftest config-module-merges-values-wraps-secrets-and-applies-profile
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"CONFIG_TEST_FROM_ENV" "from env"
@@ -90,14 +90,14 @@
          (is (= "legacy only" (System/getProperty "config.test.legacy")))
          (is (= "map value" (System/getProperty "config.test.source")))))))
 
-(deftest config-component-falls-back-to-biff-env
+(deftest config-module-falls-back-to-biff-env
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"BIFF_ENV" "prod"})]
        (is (= "profile:prod"
               (:config-test/profile (start-config {})))))))
 
-(deftest config-component-re-registers-reader-methods
+(deftest config-module-re-registers-reader-methods
   (with-test-config-resource
     #(with-redefs [com.biffweb.config/get-env
                    (constantly {"CONFIG_TEST_FROM_ENV" "from env"

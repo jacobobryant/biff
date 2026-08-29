@@ -5,7 +5,7 @@ Convenience functions or using in-memory scheduled tasks and queues.
 ### Dependency
 
 ```clojure
-com.biffweb/background {:mvn/version "2.0.0-rc22"}
+com.biffweb/background {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -23,7 +23,7 @@ changes, but I don't anticipate any.
 
 ### Setup
 
-Use the biff.core module:
+Register the module:
 
 ```clojure
 (require '[com.biffweb.background :as biff.background])
@@ -32,9 +32,9 @@ Use the biff.core module:
   [(biff.background/module)
    ...])
 
-(def components
+(def start-order
   [...
-   :biff.background/component
+   :biff.background/module
    ...])
 ```
 

@@ -18,6 +18,24 @@
    :biff.tasks/pom-data
    :biff.tasks/pom-scm])
 
+(defn inside-rlwrap? []
+  (loop [^java.lang.ProcessHandle process (java.lang.ProcessHandle/current)]
+    (if-some [^java.lang.ProcessHandle parent
+              (.orElse (.parent process) nil)]
+      (if-some [command (.orElse (.command (.info parent)) nil)]
+        (if (= "rlwrap" (.getName (io/file command)))
+          true
+          (recur parent))
+        (recur parent))
+      false)))
+
+(defn- assert-not-rlwrap! []
+  (when (inside-rlwrap?)
+    (throw (ex-info
+            (str "Publishing from inside rlwrap is not supported. Run "
+                 "`clojure -M:run publish` instead.")
+            {}))))
+
 (defn- project-file [project-root path]
   (.getPath (io/file project-root path)))
 
@@ -156,6 +174,7 @@
             (io/delete-file path)))))))
 
 (defn publish []
+  (assert-not-rlwrap!)
   (let [config       (util/read-config {:required required-config-keys})
         project-root (.getCanonicalFile
                       (io/file (or (:biff.tasks/project-root config)

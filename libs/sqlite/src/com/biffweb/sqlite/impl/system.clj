@@ -31,21 +31,21 @@
    :biff.sqlite.fx/authorized-write-tx authorize/authorized-write-tx})
 
 (defn litestream-module []
-  {:biff.core/id    :biff.sqlite/litestream
+  {:biff.core/id    :biff.sqlite/litestream-module
    :biff.core/start litestream/start
    :biff.core/stop  litestream/stop})
 
 (defn sqldef-module []
-  {:biff.core/id    :biff.sqlite/sqldef
+  {:biff.core/id    :biff.sqlite/sqldef-module
    :biff.core/start impl.sqldef/start})
 
 (defn conn-module []
-  {:biff.core/id    :biff.sqlite/conn
+  {:biff.core/id    :biff.sqlite/conn-module
    :biff.core/start pool/start
    :biff.core/stop  pool/stop})
 
 (defn module []
-  {:biff.core/id        :biff.sqlite/component
+  {:biff.core/id        :biff.sqlite/module
    :biff.core/start     start
    :biff.core/stop      stop
    :biff.fx/handlers    fx-handlers

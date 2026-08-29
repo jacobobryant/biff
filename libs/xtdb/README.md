@@ -12,7 +12,7 @@ applications.
 ### Dependency
 
 ```clojure
-com.biffweb/xtdb {:mvn/version "2.0.0-rc22"}
+com.biffweb/xtdb {:mvn/version "2.0.0-rc23"}
 ```
 
 biff.xtdb depends on XTDB 2.1.0 which requires Java <25. Per the XTDB docs,
@@ -40,7 +40,7 @@ changes, but I don't anticipate any.
 
 ### System start up
 
-Use the biff.core module to start up an XTDB node:
+Register the module to start up an XTDB node:
 
 ```clojure
 (require '[com.biffweb.xtdb :as biff.xtdb])
@@ -49,9 +49,9 @@ Use the biff.core module to start up an XTDB node:
   [(biff.xtdb/module)
    ...])
 
-(def components
+(def start-order
   [...
-   :biff.xtdb/component
+   :biff.xtdb/module
    ...])
 ```
 

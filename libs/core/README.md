@@ -18,7 +18,7 @@ biff.core also contains:
 ### Dependency
 
 ```clojure
-com.biffweb/core {:mvn/version "2.0.0-rc22"}
+com.biffweb/core {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -56,7 +56,7 @@ com.example=> (start)
 
 biff.core's system composition code is designed to be:
 
-- easy to understand (the implementation is [~60 lines of
+- easy to understand (the implementation is [~100 lines of
   code](src/com/biffweb/core/impl/system.clj) and is built with plain functions
   and maps)
 
@@ -64,41 +64,14 @@ biff.core's system composition code is designed to be:
   other Biff libraries can provide things like web server initialization,
   authentication flows, etc)
 
-- repl-friendly: restarting stateful components shouldn't need to be a regular
+- repl-friendly: restarting stateful resources shouldn't need to be a regular
   part of your workflow.
 
-### Components
+### System map
 
-Your application code is organized into "components" and "modules." Components
-start stateful resources or perform other initialization. They are defined on
-modules with `:biff.core/id`, `:biff.core/start`, and optionally
-`:biff.core/stop`.
-
-```clojure
-(def module
-  {:biff.core/id :com.example/webserver
-
-   :biff.core/start
-   (fn [{:com.example/keys [handler port]
-         :or {port 8080}
-         :as ctx}]
-     (assoc ctx ::server
-            (jetty/run-jetty handler
-                             {:host "localhost" :port port :join? false})))
-   :biff.core/stop
-   (fn [{::keys [server]}]
-     (.stop server))})
-```
-
-The component list contains module IDs in startup order. It may also contain
-component functions as used by Biff 1.x for backwards compatibility.
-
-```clojure
-(def components
-  [:com.example/config
-   :com.example/database
-   :com.example/webserver])
-```
+Biff models your application state and configuration via a single "system map"
+which typically has flat, namespaced keys. On startup, the system map starts
+empty and then is built up by your modules.
 
 ### Modules
 
@@ -125,11 +98,13 @@ aggregates all the modules into a vector.
 
 ### Init functions
 
-Modules can also include a special `:biff.core/init` function which is what
-connects modules to components. Each init function takes the entire `modules`
-vector and returns a map that will be merged into the system map; after an
-initial system map is constructed via the init functions, it gets passed through
-the component functions.
+Modules can include a `:biff.core/init` lifecycle function. Init functions run
+at system startup in an unspecified order, before any start functions run. Each
+init function takes the entire `modules` vector and returns a map. The maps from
+all the init functions are merged together into an initial system map.
+
+So modules can both define a chunk of application functionality, and they can
+also aggregate those chunks from other modules into the system map.
 
 ```clojure
 (def module
@@ -147,18 +122,52 @@ wrapper that rebuilds an underlying handler function whenever it detects that
 the modules have changed. See [the demo app](demo/com/example/lib/ring.clj) for
 an example.
 
+### Start/stop functions
+
+Modules can define a `:biff.core/start` function (and a `:biff.core/stop`
+function if needed). Start functions take a system map, start stateful resources
+or do other initialization, then return an updated system map. Stop functions
+receive the map returned by their associated start function, and they shut down
+any stateful resources as needed.
+
+```clojure
+(def module
+  {:biff.core/id :com.example/webserver
+
+   :biff.core/start
+   (fn [{:com.example/keys [handler port]
+         :or {port 8080}
+         :as ctx}]
+     (assoc ctx ::server
+            (jetty/run-jetty handler
+                             {:host "localhost" :port port :join? false})))
+   :biff.core/stop
+   (fn [{::keys [server]}]
+     (.stop server))})
+```
+
+You specify the module start order by providing a vector of module IDs
+(the `:biff.core/id` value).
+
+```clojure
+(def start-order
+  [:com.example/config
+   :com.example/database
+   :com.example/webserver])
+```
+
 ## Usage
 
 ### System composition
 
-The `com.biffweb.core/start` function takes your modules and components and
-starts your application, returning the final system map. To stop the
+The `com.biffweb.core/start` function takes your modules and their start order
+and starts your application, returning the final system map. To stop the
 application, pass the system map to `com.biffweb.core/stop`.
 
 ```clojure
 (defonce system (atom {}))
 
-(reset! system (biff.core/start #'modules components))
+(reset! system (biff.core/start #'modules start-order))
 
 (biff.core/stop @system)
 ```
@@ -172,7 +181,7 @@ keys to the system map, you can pass an additional `initial-system` argument:
 ```clojure
 (def initial-system {...}
 
-(biff.core/start initial-system #'modules components)
+(biff.core/start initial-system #'modules start-order)
 ```
 
 ### Validation
@@ -229,10 +238,22 @@ The Biff v1 starter project comes with a `reduce` call like this:
         components)
 ```
 
-Change it to this:
+Wrap each component function with `component-shim`, register the returned
+modules, and replace the component functions with their module IDs in the start
+order vector:
 
 ```clojure
-(biff.core/start initial-system #'modules components)
+(def modules
+  [(biff.core/component-shim :com.example/use-config use-config)
+   (biff.core/component-shim :com.example/use-jetty use-jetty)
+   ...])
+
+(def start-order
+  [:com.example/use-config
+   :com.example/use-jetty
+   ...])
+
+(biff.core/start initial-system #'modules start-order)
 ```
 
 Then change your `refresh` function from this:
@@ -261,12 +282,12 @@ to this:
   they should instead expose all their functionality via a single `module` map.
   Shared functions should be kept elsewhere, e.g. inside a `lib/` folder.
 
-- Application config should be read in by the first component and inserted into
-  the system map. Other parts of the codebase should always get their config
-  from the system map instead of e.g. reading env vars directly. Config schema
-  should be registered. Config secrets should be wrapped with
-  `biff.core/secret-delay` so that they aren't accidentally serialized. Prefer
-  flat, namespaced keys over nested config.
+- Application config should be read in by the first module in the start order
+  and inserted into the system map. Other parts of the codebase should always
+  get their config from the system map instead of e.g. reading env vars
+  directly. Config schema should be registered. Config secrets should be
+  wrapped with `biff.core/secret-delay` so that they aren't accidentally
+  serialized. Prefer flat, namespaced keys over nested config.
 
 - Although the system map is typically stored in a global atom, that's only
   meant to be used via the repl. Application code should always receive the

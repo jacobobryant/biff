@@ -28,7 +28,7 @@ Babashka tasks.
 ### Dependency
 
 ```clojure
-com.biffweb/run {:mvn/version "2.0.0-rc22"}
+com.biffweb/run {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status

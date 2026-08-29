@@ -2,7 +2,7 @@
 
 A light Biff wrapper around [Aero](https://github.com/juxt/aero).
 
-Includes a [Biff component](../core/README.md#components) for parsing a
+Includes a [Biff module](../core/README.md#modules) for parsing a
 `config.edn` file from your resources with Aero and merging it into the system
 map. Also defines some reader tags for Aero:
 
@@ -17,7 +17,7 @@ system properties, if set.
 ### Dependency
 
 ```clojure
-com.biffweb/config {:mvn/version "2.0.0-rc22"}
+com.biffweb/config {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -37,13 +37,13 @@ Add a `resources/config.edn` to your project and ensure `"resources"` is on the
 classpath. Put env vars in a `config.env` file in the working directory (and
 list it in `.gitignore`, of course).
 
-If you're using biff.core, include the module and its component ID:
+If you're using biff.core, register the module:
 
 ```clojure
 (require '[com.biffweb.config :as biff.config])
 
 (def modules [(biff.config/module) ...])
-(def components [:biff.config/component ...])
+(def start-order [:biff.config/module ...])
 ```
 
 Without biff.core, call the module's start function directly:

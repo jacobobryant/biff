@@ -8,7 +8,7 @@
 (module)
 
 On startup, parses config.edn and merges into ctx. Also sets system
-properties. Include :biff.config/component in your components.
+properties. Module ID is :biff.config/module.
 
 Loads a config.edn file from resources and parses it with Aero. (See
 https://github.com/juxt/aero). Two additional reader tags are supported:

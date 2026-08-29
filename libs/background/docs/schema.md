@@ -29,7 +29,7 @@ Map that can contain the keys:
 :state       ; atom containing a :biff.background/queue-state map
 ```
 
-Before the queues component starts, only `:consumer` is required while `:queue`
+Before the queues module starts, only `:consumer` is required while `:queue`
 and `:n-threads` are optional. After startup, all keys are present.
 
 ### :biff.background/queue-state

@@ -153,8 +153,8 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 ```
 (module)
 
-On start, starts an in-process XTDB node and a connection pool. Include
-:biff.xtdb/component in your components.
+On start, starts an in-process XTDB node and a connection pool.
+Module ID is :biff.xtdb/module.
 
 Passes the system map to `expand-config`. When the system map is passed to
 `q`, `execute-tx`, `submit-tx`, or `authorized-write`, those functions:

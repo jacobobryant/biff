@@ -6,6 +6,13 @@
             [deps-deploy.deps-deploy :as deps-deploy]
             [deps-deploy.gpg :as gpg]))
 
+(deftest rlwrap-guard-test
+  (with-redefs [publish/inside-rlwrap? (constantly true)]
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"clojure -M:run publish"
+         (publish/publish)))))
+
 (deftest explicit-project-root-test
   (let [calls  (atom [])
         config {:biff.tasks/group-name       "com.example"

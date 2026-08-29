@@ -72,8 +72,7 @@
   (module/routes options))
 
 (defn module
-  "A biff.core module for the admin dashboard. Include
-   :biff.admin/alerts in your components.
+  "A biff.core module for the admin dashboard. Module ID is :biff.admin/module.
 
    Includes `routes`, biff.ring and biff.graph profiling middleware, an hourly
    biff.background task that calls `flush-pstats!`, and initialization for

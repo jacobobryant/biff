@@ -7,17 +7,17 @@
 
 (defonce system (atom {}))
 
-(def components
-  [:biff.config/component
+(def start-order
+  [:biff.config/module
    :com.biffweb.demo/fake-pstats
-   :biff.admin/alerts
+   :biff.admin/module
    :com.biffweb.demo/fake-errors
-   :biff.sqlite/component
-   :biff.background/component
-   :biff.ring/jetty])
+   :biff.sqlite/module
+   :biff.background/module
+   :biff.ring/module])
 
 (defn start []
-  (let [new-system (biff.core/start #'modules components)]
+  (let [new-system (biff.core/start #'modules start-order)]
     (reset! system new-system)
     new-system))
 

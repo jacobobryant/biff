@@ -1,23 +1,39 @@
 # com.biffweb.core API
 
-### start
+### component-shim
 
 [view source](../../src/com/biffweb/core.clj#L22)
 
 ```
-(start modules-var components)
-(start initial-system modules-var components)
+(component-shim id component-fn)
+
+Converts a Biff 1 component into a Biff 2 module with lifecycle functions.
+
+  (component-shim :com.example/use-jetty biff/use-jetty)
+
+The returned module's ID is `id`. Its start function calls `component-fn`,
+and its stop function calls the functions that `component-fn` added to
+:biff/stop.
+```
+
+### start
+
+[view source](../../src/com/biffweb/core.clj#L33)
+
+```
+(start modules-var start-order)
+(start initial-system modules-var start-order)
 
 Starts a Biff application and returns the system map.
 
   (def modules [...])
-  (def components [...])
-  (biff.core/start #'modules components)
+  (def start-order [...])
+  (biff.core/start #'modules start-order)
 
 Calls any :biff.core/init functions in modules and merges the results in
 order to create an initial system map. If you passed initial-system, it will
 be merged into this system map. Then the system map is passed through each
-component.
+:biff.core/start function.
 
 :biff.core/init is a function that receives the modules var, aggregates keys
 from other modules and/or initializes other values as needed, and returns the
@@ -39,26 +55,24 @@ modules-var:
 Includes a default init function which defines a :biff.core/on-tx function
 that calls :biff.core/on-tx from the other modules in a doseq.
 
-Components may be qualified keywords or functions. For each keyword
-component, there must be a module with :biff.core/id set to the keyword and
-with :biff.core/start set to a function like `(fn [ctx]) -> ctx`.
-:biff.core/stop may be set to a function like `(fn [ctx])`. The start
-function can start stateful resources or do other initialization as needed,
-returning an updated system map. The stop function receives the return value
-of the start function and shuts down stateful resources etc as needed.
-biff.core adds a zero-argument :biff.core/stop-system function to the system
-map which calls the component stop functions in reverse startup order.
+Entries in start-order must be qualified module ID keywords. For each module
+ID, there must be a module with :biff.core/id set to the keyword and with
+:biff.core/start set to a function like `(fn [ctx]) -> ctx`. :biff.core/stop
+may be set to a function like `(fn [ctx])`.
 
-For backwards compatibility, components may also be functions that return an
-updated system map, with stop functions conj'd onto the :biff/stop key.
+The start function can start stateful resources or do other initialization as
+needed, returning an updated system map. The stop function receives the
+return value of the start function and shuts down stateful resources etc as
+needed. biff.core adds a zero-argument :biff.core/stop-system function to the
+system map which calls the module stop functions in reverse startup order.
 
 Uses biff.core/validate to ensure that keys in modules, keys returned by
-:biff.core/init, and keys returned by components are valid.
+:biff.core/init, and keys returned by start functions are valid.
 ```
 
 ### stop
 
-[view source](../../src/com/biffweb/core.clj#L74)
+[view source](../../src/com/biffweb/core.clj#L83)
 
 ```
 (stop system)
@@ -70,7 +84,7 @@ Calls the :biff.core/stop-system function from system.
 
 ### register
 
-[view source](../../src/com/biffweb/core.clj#L81)
+[view source](../../src/com/biffweb/core.clj#L90)
 
 ```
 (register schemas)
@@ -85,7 +99,7 @@ Registered schemas are used by biff.core/validate.
 
 ### get-registry
 
-[view source](../../src/com/biffweb/core.clj#L91)
+[view source](../../src/com/biffweb/core.clj#L100)
 
 ```
 (get-registry)
@@ -99,7 +113,7 @@ Returns all schemas that have been passed to biff.core/register.
 
 ### validate
 
-[view source](../../src/com/biffweb/core.clj#L100)
+[view source](../../src/com/biffweb/core.clj#L109)
 
 ```
 (validate m & {:keys [required extra-schema]})
@@ -128,7 +142,7 @@ For convenience, m can be a sequence of maps instead of a single map.
 
 ### validate-with-ex
 
-[view source](../../src/com/biffweb/core.clj#L125)
+[view source](../../src/com/biffweb/core.clj#L134)
 
 ```
 (validate-with-ex m & {:keys [required extra-schema]})
@@ -141,7 +155,7 @@ production.
 
 ### secret-delay
 
-[view source](../../src/com/biffweb/core.clj#L134)
+[view source](../../src/com/biffweb/core.clj#L143)
 
 ```
 (secret-delay x)

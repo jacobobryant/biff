@@ -29,7 +29,7 @@
    resource/routes])
 
 (defn module [params]
-  {:biff.core/id              :biff.admin/alerts
+  {:biff.core/id              :biff.admin/module
    :biff.core/start           alerts/start
    :biff.core/stop            alerts/stop
    :biff.core/init            (fn [_modules-var]

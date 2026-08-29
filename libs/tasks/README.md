@@ -30,7 +30,7 @@ Includes tasks for:
 ### Dependency
 
 ```clojure
-com.biffweb/tasks {:mvn/version "2.0.0-rc22"}
+com.biffweb/tasks {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -55,14 +55,14 @@ application projects) or `-m com.biffweb.tasks.lib` (for library projects):
 ```clojure
 :aliases
 {:run {:extra-paths ["test"]
-       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.0-rc22"}
+       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.0-rc23"}
                      ...}
        ;; Replace with com.biffweb.tasks.lib for library projects
        :main-opts   ["-m" "com.biffweb.tasks.app"]}}
 ```
 
-Add `alias cljrun='clj -M:run'` to your shell config so you can run tasks with
-`cljrun <command>`.
+Add `alias cljrun='clojure -M:run'` to your shell config so you can run tasks
+with `cljrun <command>`.
 
 ### Running tasks
 

@@ -152,8 +152,7 @@
   impl.system/fx-handlers)
 
 (defn module
-  "Returns a biff.core module. Include :biff.sqlite/component in your
-   components.
+  "Returns a biff.core module. Module ID is :biff.sqlite/module.
 
    - includes litestream-module, sqldef-module, and conn-module
    - provides :biff.fx/handlers in the module
@@ -165,8 +164,8 @@
   (impl.system/module))
 
 (defn litestream-module
-  "On start, uses litestream to backup/restore the database. Include
-   :biff.sqlite/litestream in your components.
+  "On start, uses litestream to backup/restore the database. Module ID is
+   :biff.sqlite/litestream-module.
 
    Uses these keys from the system map:
 
@@ -191,7 +190,7 @@
 
 (defn sqldef-module
   "On start, generates schema from `columns` and applies it with sqldef.
-   Include :biff.sqlite/sqldef in your components.
+   Module ID is :biff.sqlite/sqldef-module.
 
    Uses these keys from the system map:
 
@@ -211,8 +210,8 @@
   (impl.system/sqldef-module))
 
 (defn conn-module
-  "On startup, adds read/write database connections to the system map. Include
-   :biff.sqlite/conn in your components.
+  "On startup, adds read/write database connections to the system map. Module ID
+   is :biff.sqlite/conn-module.
 
    Uses :biff.sqlite/db-path from the system map.
 

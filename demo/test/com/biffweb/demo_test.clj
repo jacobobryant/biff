@@ -18,14 +18,14 @@
 (def ^:dynamic *base-url* nil)
 (def ^:dynamic *db-dir* nil)
 
-(def test-components
-  [:biff.admin/alerts
-   :biff.sqlite/component
-   :biff.background/component
-   :biff.ring/jetty])
+(def test-start-order
+  [:biff.admin/module
+   :biff.sqlite/module
+   :biff.background/module
+   :biff.ring/module])
 
 (def test-modules
-  (atom (remove (comp #{:biff.config/component
+  (atom (remove (comp #{:biff.config/module
                         :com.biffweb.demo/fake-pstats
                         :com.biffweb.demo/fake-errors}
                       :biff.core/id)
@@ -54,7 +54,7 @@
     :biff.sqlite/db-path     (str db-dir "/main.db")
     :biff.sqlite/schema-path (str db-dir "/schema.sql")}
    test-modules
-   test-components))
+   test-start-order))
 
 (defn- with-demo-system [f]
   (let [db-dir   (temp-db-dir)

@@ -18,7 +18,7 @@ An admin dashboard for Biff applications. Includes:
 ### Dependency
 
 ```clojure
-com.biffweb/admin {:mvn/version "2.0.0-rc22"}
+com.biffweb/admin {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -34,7 +34,7 @@ changes, but I don't anticipate any.
 
 ## Usage
 
-Use the biff.core module:
+Register the module and its dependencies:
 
 ```clojure
 (require '[com.biffweb.admin :as biff.admin])
@@ -48,11 +48,11 @@ Use the biff.core module:
    admin-module
    ...])
 
-(def components
+(def start-order
   [...
-   :biff.admin/alerts
-   :biff.background/component
-   :biff.ring/jetty])
+   :biff.admin/module
+   :biff.background/module
+   :biff.ring/module])
 ```
 
 This module depends on `biff.ring` and `biff.background`. `biff.graph` is

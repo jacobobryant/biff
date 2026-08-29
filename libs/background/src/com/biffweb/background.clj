@@ -48,8 +48,8 @@
   impl/fx-handlers)
 
 (defn module
-  "A biff.core module that wraps both scheduled-tasks-module and queues-module.
-   Include :biff.background/component in your components.
+  "A biff.core module that wraps both tasks-module and queues-module. Module ID
+   is :biff.background/module.
 
    - Aggregates :biff.background/tasks and :biff.background/queues from other
      modules. Tasks and queues are only aggregated on startup, not whenever
@@ -57,19 +57,18 @@
   []
   (impl/module))
 
-(defn scheduled-tasks-module
-  "On start, calls chime.core/chime-at for each task. Include
-   :biff.background/scheduled-tasks in your components.
+(defn tasks-module
+  "On start, calls chime.core/chime-at for each task. Module ID is
+   :biff.background/tasks-module.
 
    Aggregates :biff.background/tasks from other modules. Each task function
    receives the system map as its sole argument."
   []
-  (impl/scheduled-tasks-module))
+  (impl/tasks-module))
 
 (defn queues-module
   "On start, initializes a queue and fixed executor thread pool for each entry
-   in :biff.background/queues. Include :biff.background/queues in your
-   components.
+   in :biff.background/queues. Module ID is :biff.background/queues-module.
 
    Provides a :biff.fx/handlers entry (:biff.background.fx/submit-jobs)
    and aggregates :biff.background/queues from other modules."

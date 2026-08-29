@@ -30,7 +30,7 @@ This library wraps [next.jdbc](https://github.com/seancorfield/next-jdbc) and
 ### Dependency
 
 ```clojure
-com.biffweb/sqlite {:mvn/version "2.0.0-rc22"}
+com.biffweb/sqlite {:mvn/version "2.0.0-rc23"}
 ```
 
 ### Status
@@ -68,8 +68,7 @@ First you need to define your application's schema as a "columns map" (see
 
 ### System start up
 
-The included biff.core module initializes the schema and starts database
-connections:
+Register the module to initialize the schema and start database connections:
 
 ```clojure
 (require '[com.biffweb.sqlite :as biff.sqlite])
@@ -83,9 +82,9 @@ connections:
    (biff.sqlite/module)
    ...])
 
-(def components
+(def start-order
   [...
-   :biff.sqlite/component
+   :biff.sqlite/module
    ...])
 ```
 
