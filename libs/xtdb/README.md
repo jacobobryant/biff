@@ -12,7 +12,7 @@ applications.
 ### Dependency
 
 ```clojure
-com.biffweb/xtdb {:mvn/version "2.0.0-rc21"}
+com.biffweb/xtdb {:mvn/version "2.0.0-rc22"}
 ```
 
 biff.xtdb depends on XTDB 2.1.0 which requires Java <25. Per the XTDB docs,

@@ -1,6 +1,6 @@
 {:paths ["src" "resources" "target/resources"]
  :deps  {org.clojure/clojure           {:mvn/version "1.12.5"}
-         com.biffweb/biff              {:local/root ".."}
+         com.biffweb/defaults          {:local/root "../libs/defaults"}
          dev.onionpancakes/chassis     {:mvn/version "1.0.365"}
          cheshire/cheshire             {:mvn/version "5.13.0"}
          hato/hato                     {:mvn/version "1.0.0"}

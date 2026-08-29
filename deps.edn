@@ -1,5 +1,8 @@
 {:aliases
  {:run {:paths      ["dev"
+                     "demo/resources"
+                     "demo/src"
+                     "demo/target/resources"
                      "libs/admin/dev"
                      "libs/admin/test"
                      "libs/authenticate/demo"

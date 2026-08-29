@@ -21,8 +21,7 @@
 (def test-components
   [:biff.admin/alerts
    :biff.sqlite/component
-   :biff.background/queues
-   :biff.background/scheduled-tasks
+   :biff.background/component
    :biff.ring/jetty])
 
 (def test-modules
@@ -48,11 +47,12 @@
 
 (defn- start-test-system [db-dir port]
   (biff.core/start
-   {:biff.auth/skip-captcha true
-    :biff.ring/host         "127.0.0.1"
-    :biff.ring/port         port
-    :biff.ring/secure       false
-    :biff.sqlite/db-path    (str db-dir "/main.db")}
+   {:biff.auth/skip-captcha  true
+    :biff.ring/host          "127.0.0.1"
+    :biff.ring/port          port
+    :biff.ring/secure        false
+    :biff.sqlite/db-path     (str db-dir "/main.db")
+    :biff.sqlite/schema-path (str db-dir "/schema.sql")}
    test-modules
    test-components))
 
@@ -181,7 +181,7 @@
   (let [handlers (->> modules/modules
                       (keep :biff.fx/handlers)
                       (apply merge {}))]
-    (is (contains? handlers :biff.background/submit-jobs))
+    (is (contains? handlers :biff.background.fx/submit-jobs))
     (is (contains? handlers :biff.graph.fx/query))
     (is (contains? handlers :biff.sqlite.fx/execute))
     (is (contains? handlers :biff.sqlite.fx/authorized-write))))

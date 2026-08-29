@@ -39,14 +39,16 @@
       :biff.fx/next :submit})
 
    :submit
-   (fn [{:keys [todo-rows]}]
+   (fn [_ctx {:keys [todo-rows]}]
      (let [jobs (->> todo-rows
                      (mapv :todo/id)
                      (partition-all 3)
                      (mapv (fn [todo-ids]
                              {:todo/archive-ids (vec todo-ids)})))]
        (if (seq jobs)
-         {:archive-jobs           [:biff.background/submit-jobs queue-id jobs]
+         {:archive-jobs           [:biff.background.fx/submit-jobs
+                                   queue-id
+                                   jobs]
           :todo.archive/batches   (count jobs)
           :todo.archive/submitted (reduce + (map #(count (:todo/archive-ids %))
                                                  jobs))}
@@ -84,7 +86,7 @@
 
   :archive-now-submit
   (fn [ctx output]
-    (merge ((:submit queue-archive-job-states) (merge ctx output))
+    (merge ((:submit queue-archive-job-states) ctx output)
            {:biff.fx/return (ui/no-content)})))
 
 (def module

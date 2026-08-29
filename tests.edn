@@ -1,6 +1,7 @@
 #kaocha/v1
  {:tests [{:id         :unit
-           :test-paths ["libs/admin/test"
+           :test-paths ["demo/test"
+                        "libs/admin/test"
                         "libs/authenticate/test"
                         "libs/background/test"
                         "libs/config/test"
