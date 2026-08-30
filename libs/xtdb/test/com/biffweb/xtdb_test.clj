@@ -16,14 +16,11 @@
   ([]
    (open-ctx {}))
   ([initial-ctx]
-   (let [modules-var (atom [(biff.xtdb/module)])
-         init        ((:biff.core/init (biff.xtdb/module)) modules-var)]
-     ((:biff.core/start (biff.xtdb/module))
-      (merge init
-             {:biff.xtdb/columns columns
-              :biff.xtdb/log     :memory
-              :biff.xtdb/storage :memory}
-             initial-ctx)))))
+   ((:biff.core/start (biff.xtdb/module))
+    (merge {:biff.xtdb/columns columns
+            :biff.xtdb/log     :memory
+            :biff.xtdb/storage :memory}
+           initial-ctx))))
 
 (defn- close-ctx [ctx]
   ((:biff.core/stop (biff.xtdb/module)) ctx))
@@ -262,17 +259,18 @@
       (finally
         (close-ctx base-ctx)))))
 
-(deftest module-provides-fx-kv-columns-and-wrap-db-snapshot
-  (let [modules-var (atom [{:biff.xtdb/columns {:app/name {:schema :string}}}])
-        module      (biff.xtdb/module)
-        init        ((:biff.core/init module) modules-var)]
-    (is (= #{:biff.xtdb.fx/execute-tx
-             :biff.xtdb.fx/submit-tx
-             :biff.xtdb.fx/authorized-write}
-           (set (keys (:biff.fx/handlers module)))))
-    (is (not (contains? module :biff.xtdb/columns)))
-    (is (not (contains? init :biff.xtdb/columns)))
-    (is (ifn? (:biff.core/kv-get init)))
-    (is (ifn? (:biff.core/kv-set init)))
-    (is (ifn? (:biff.core/kv-list init)))
-    (is (ifn? (:biff.core/wrap-db-snapshot init)))))
+(deftest module-provides-fx-kv-and-wrap-db-snapshot
+  (let [module (biff.xtdb/module)
+        ctx    (open-ctx)]
+    (try
+      (is (= #{:biff.xtdb.fx/execute-tx
+               :biff.xtdb.fx/submit-tx
+               :biff.xtdb.fx/authorized-write}
+             (set (keys (:biff.fx/handlers module)))))
+      (is (not (contains? module :biff.xtdb/columns)))
+      (is (ifn? (:biff.core/kv-get ctx)))
+      (is (ifn? (:biff.core/kv-set ctx)))
+      (is (ifn? (:biff.core/kv-list ctx)))
+      (is (ifn? (:biff.core/wrap-db-snapshot ctx)))
+      (finally
+        (close-ctx ctx)))))

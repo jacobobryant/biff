@@ -10,9 +10,9 @@
 (def start-order
   [:biff.config/module
    :com.biffweb.demo/fake-pstats
+   :biff.sqlite/module
    :biff.admin/module
    :com.biffweb.demo/fake-errors
-   :biff.sqlite/module
    :biff.background/module
    :biff.ring/module])
 

@@ -19,8 +19,8 @@
 (def ^:dynamic *db-dir* nil)
 
 (def test-start-order
-  [:biff.admin/module
-   :biff.sqlite/module
+  [:biff.sqlite/module
+   :biff.admin/module
    :biff.background/module
    :biff.ring/module])
 

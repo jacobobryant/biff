@@ -11,7 +11,6 @@
   "org.slf4j.simpleLogger.log.com.zaxxer.hikari" "error"
   "org.slf4j.simpleLogger.log.org.eclipse.jetty" "error"}
 
- :biff.ring/base-url      #or [#biff/env BASE_URL "http://localhost:8080"]
  :biff.ring/cookie-secret #biff/secret COOKIE_SECRET
  :biff.ring/host          #or [#biff/env HOST "localhost"]
  :biff.ring/port          #long #or [#biff/env PORT "8080"]

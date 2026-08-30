@@ -1,9 +1,8 @@
 (ns com.biffweb.tasks.impl.nrepl
   (:require [com.biffweb.tasks.impl.util :as util]
-            [nrepl.cmdline :as nrepl.cmdline]))
+            [nrepl.cmdline :as nrepl]))
 
-(defn nrepl
-  [& args]
+(defn nrepl [& args]
   (let [{:biff.tasks/keys [nrepl-port]} (util/read-config)
 
         args (if (= "--" (first args))
@@ -12,4 +11,4 @@
                          ["--port" (str nrepl-port)])
                        ["--middleware" "[cider.nrepl/cider-middleware]"]
                        args))]
-    (apply nrepl.cmdline/-main args)))
+    (apply nrepl/-main args)))

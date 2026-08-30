@@ -224,7 +224,14 @@
    - journal_mode = WAL
    - busy_timeout = 5000
    - foreign_keys = ON
-   - synchronous  = NORMAL"
+   - synchronous  = NORMAL
+
+   Also sets these keys on the system map:
+
+     :biff.core/kv-get
+     :biff.core/kv-set
+     :biff.core/kv-list
+     :biff.core/wrap-db-snapshot"
   []
   (impl.system/conn-module))
 

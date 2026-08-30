@@ -48,14 +48,25 @@
    (doto (or hikari-config (HikariConfig.))
      (.setDataSource node))))
 
+(defn- wrap-db-snapshot [f]
+  (fn [ctx]
+    (f (assoc ctx
+              :biff.xtdb/snapshot-token
+              (tx/snapshot-token (:biff.xtdb/node ctx))))))
+
 (defn- start [ctx]
   (let [config   (expand-config ctx)
         node     (if (seq config)
                    (xt.node/start-node config)
                    (xt.node/start-node))
         pool     (start-connection-pool node (:biff.xtdb/hikari-config ctx))
-        ctx      (assoc ctx :biff.xtdb/node node)
-        ctx      (assoc ctx :biff.xtdb/connection-pool pool)
+        ctx      (assoc ctx
+                        :biff.xtdb/node node
+                        :biff.xtdb/connection-pool pool
+                        :biff.core/kv-get kv/get-value
+                        :biff.core/kv-list kv/list-keys
+                        :biff.core/kv-set kv/set-value
+                        :biff.core/wrap-db-snapshot wrap-db-snapshot)
         listener (tx/start-listener node ctx)
         ctx      (assoc ctx
                         :biff.xtdb/poll-now (:poll-now listener)
@@ -68,12 +79,6 @@
   (.close connection-pool)
   (.close node))
 
-(defn- wrap-db-snapshot [f]
-  (fn [ctx]
-    (f (assoc ctx
-              :biff.xtdb/snapshot-token
-              (tx/snapshot-token (:biff.xtdb/node ctx))))))
-
 (def fx-handlers
   {:biff.xtdb.fx/execute-tx       tx/execute-tx
    :biff.xtdb.fx/submit-tx        tx/submit-tx
@@ -83,11 +88,4 @@
   {:biff.core/id     :biff.xtdb/module
    :biff.core/start  start
    :biff.core/stop   stop
-   :biff.fx/handlers fx-handlers
-
-   :biff.core/init
-   (fn [_modules-var]
-     {:biff.core/kv-get           kv/get-value
-      :biff.core/kv-list          kv/list-keys
-      :biff.core/kv-set           kv/set-value
-      :biff.core/wrap-db-snapshot wrap-db-snapshot})})
+   :biff.fx/handlers fx-handlers})

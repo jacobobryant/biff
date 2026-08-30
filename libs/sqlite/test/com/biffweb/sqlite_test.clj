@@ -370,16 +370,20 @@
     (is (contains? (:biff.sqlite/columns module) :biff-sqlite-kv/id))
     (is (= {:app/id {:type :uuid :primary-key true}}
            (:biff.sqlite/columns init)))
-    (is (ifn? (:biff.core/kv-get init)))
-    (is (ifn? (:biff.core/kv-set init)))
-    (is (ifn? (:biff.core/kv-list init)))
-    (is (ifn? (:biff.core/wrap-db-snapshot init)))))
+    (is (not (contains? init :biff.core/kv-get)))
+    (is (not (contains? init :biff.core/kv-set)))
+    (is (not (contains? init :biff.core/kv-list)))
+    (is (not (contains? init :biff.core/wrap-db-snapshot)))))
 
 (deftest pool-adds-read-and-write-connections-with-pragmas
   (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)})]
     (try
       (is (some? (:biff.sqlite/read-pool ctx)))
       (is (some? (:biff.sqlite/write-conn ctx)))
+      (is (ifn? (:biff.core/kv-get ctx)))
+      (is (ifn? (:biff.core/kv-set ctx)))
+      (is (ifn? (:biff.core/kv-list ctx)))
+      (is (ifn? (:biff.core/wrap-db-snapshot ctx)))
       (is (= [{:journal_mode "wal"}]
              (jdbc/execute! (:biff.sqlite/write-conn ctx)
                             ["PRAGMA journal_mode"])))

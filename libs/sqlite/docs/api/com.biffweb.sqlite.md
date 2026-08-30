@@ -200,11 +200,18 @@ The following PRAGMAs are set on each connection:
 - busy_timeout = 5000
 - foreign_keys = ON
 - synchronous  = NORMAL
+
+Also sets these keys on the system map:
+
+  :biff.core/kv-get
+  :biff.core/kv-set
+  :biff.core/kv-list
+  :biff.core/wrap-db-snapshot
 ```
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L231)
+[view source](../../src/com/biffweb/sqlite.clj#L238)
 
 ```
 (make-resolvers columns)

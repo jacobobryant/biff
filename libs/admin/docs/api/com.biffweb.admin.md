@@ -81,6 +81,7 @@ handler that stores logged errors in memory. Errors are reported via email in
 batches of at most 20. Emails are rate-limited at 1 per 5 minutes. If more
 than 20 errors are logged in that time, only the most recent 20 are reported.
 
-Errors reported via email are also stored via kv-set and are viewable on the
-biff.admin dashboard.
+Errors reported via email are also stored via :biff.core/kv-set and are
+viewable on the biff.admin dashboard. This module should start after whatever
+module defines the :biff.core/kv-* functions.
 ```

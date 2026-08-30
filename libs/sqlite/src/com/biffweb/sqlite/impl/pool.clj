@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [com.biffweb.sqlite.impl.defaults :as impl.defaults]
+            [com.biffweb.sqlite.impl.kv :as kv]
             [next.jdbc :as jdbc])
   (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
 
@@ -37,7 +38,15 @@
         write-conn (start-write-conn db-path)]
     (assoc ctx
            :biff.sqlite/read-pool read-pool
-           :biff.sqlite/write-conn write-conn)))
+           :biff.sqlite/write-conn write-conn
+           :biff.core/kv-get kv/get-value
+           :biff.core/kv-list kv/list-keys
+           :biff.core/kv-set kv/set-value
+           :biff.core/wrap-db-snapshot
+           (fn [f]
+             (fn [ctx]
+               (jdbc/with-transaction [tx (:biff.sqlite/read-pool ctx)]
+                 (f (assoc ctx :biff.sqlite/read-pool tx))))))))
 
 (defn stop [{:biff.sqlite/keys [read-pool write-conn]}]
   (.close write-conn)
