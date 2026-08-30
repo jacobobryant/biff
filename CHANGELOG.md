@@ -1,11 +1,14 @@
 # Changelog
 
-**Unreleased** 2.0.0-rc24-SNAPSHOT:
+**Unreleased**, **breaking** 2.0.0-rc24-SNAPSHOT:
 
 - biff.datastar: scope `:biff.datastar/tab-id` by user ID.
 - biff.sqlite, biff.xtdb: set the biff.core DB functions via the same module
   that sets the connections/node.
 - biff.tasks: allow publishing snapshot versions multiple times.
+- biff.fx: remove support for returning a vector of maps for ordered effects;
+  introduced :biff.fx/seq instead.
+- biff.fx: add pipe and defpipe.
 
 **Breaking** [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29):
 

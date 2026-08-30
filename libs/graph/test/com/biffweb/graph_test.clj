@@ -19,6 +19,14 @@
   (fn [{:keys [prefix]} {:keys [id]}]
     {:user/name (str prefix id)}))
 
+(biff.graph/defresolver pipeline-resolver
+  {:input  [:user/id]
+   :output [:user/label]}
+  (fn [_ctx {:user/keys [id]}]
+    {:id id})
+  (fn [{:keys [prefix]} {:keys [id]}]
+    {:user/label (str prefix id)}))
+
 (defn- resolver [opts]
   (biff.graph/resolver opts))
 
@@ -38,6 +46,13 @@
           (assoc (test-ctx [fx-resolver]) :prefix "User ")
           {:user/id 7}
           [:user/name]))))
+
+(deftest pipeline-resolver-passes-input-then-previous-output
+  (is (= {:user/label "User 7"}
+         (biff.graph/query
+          (assoc (test-ctx [pipeline-resolver]) :prefix "User ")
+          {:user/id 7}
+          [:user/label]))))
 
 (deftest query->ast-parses-supported-query-forms
   (is (= {:user/id           {:kind :scalar}

@@ -78,13 +78,13 @@ Now you can write simple `(is (= (f x) y))` unit tests:
 (require '[clojure.test :refer [deftest is]])
 
 (deftest increment-file-tests
-  (is (= (increment-file {:path "number.txt" :biff.fx/test :start})
-         {:content       [:example.fx/slurp "number.txt"],
-          :biff.fx/next :increment}))
-  (is (= (increment-file {:path "number.txt" :biff.fx/test :increment}
-                         {:content "2"})
-         {:_              [:example.fx/spit "number.txt" "3"],
-          :biff.fx/return 3})))
+  (let [{:keys [start increment]} (increment-file)]
+    (is (= (start {:path "number.txt"})
+           {:content       [:example.fx/slurp "number.txt"],
+            :biff.fx/next :increment}))
+    (is (= (increment {:path "number.txt"} {:content "2"})
+           {:_              [:example.fx/spit "number.txt" "3"],
+            :biff.fx/return 3}))))
 ```
 
 For comparison, here's what `increment-file` would look like without the biff.fx
@@ -108,6 +108,9 @@ treatment:
 
 **Machine**: a function defined with `biff.fx/defmachine` or `biff.fx/machine`,
 such as `increment-file` from the example.
+
+**Pipeline**: a machine defined with `biff.fx/defpipeline` or `biff.fx/pipeline`
+that transitions through a sequence of unnamed states.
 
 **Effect handlers** and **effect keywords**: functions that perform effects and
 their associated keywords, such as `:example.fx/slurp (fn ...)` from the
@@ -188,39 +191,83 @@ output map to the next state function.
 If you don't set `:biff.fx/next`, then after performing effects, the output map
 will be used as the machine function's return value.
 
-### Testing
+### Pipelines
 
-You can call an individual state function without effects or transitions by
-setting `:biff.fx/test` in ctx. Additional machine arguments are passed to the
-state function.
+When a machine's states are always called sequentially, you can define them as a
+pipeline to reduce boilerplate. Each function receives `ctx` and the previous
+function's result:
 
 ```clojure
-(my-machine (assoc ctx :biff.fx/test :start))
+(defpipeline get-user-id
+  (fn [_ctx email]
+    [:biff.sqlite.fx/execute
+     {:select [:user/id]
+      :from   :user
+      :where  [:= :user/email email]}])
+
+  (fn [_ctx result]
+    (-> result first :user/id)))
+```
+
+Use `:biff.fx/return` to exit early.
+
+A map containing `:biff.fx/return` exits early. `pipeline` and `defpipeline`
+accept functions as varargs or as a single sequence.
+
+### Testing
+
+Call a machine with no arguments to get its state-to-function map, or call a
+pipeline with no arguments to get its vector of state functions. You can then
+call the functions directly without evaluating effects.
+
+```clojure
+(let [{:keys [start]} (my-machine)]
+  (start ctx))
 => {...}
+
+(let [[first-state second-state] (my-pipeline)]
+  (first-state ctx ...)
+  (second-state ctx ...))
+```
+
+### Initial effects
+
+Machines and pipelines can both be defined with an "initial effect descriptor"
+which is evaluated before the first state function runs:
+
+```clojure
+(defmachine my-machine
+  [:example.fx/query ...]
+
+  :start
+  (fn [ctx query-result]
+    ...))
 ```
 
 ## Tips
 
-- If you want your machine function to return something other than a map, you
-  can set the `:biff.fx/return` key in the output map. Its value will become
-  the machine's return value. Note that it's invalid to set both `:biff.fx/next`
-  and `:biff.fx/return`.
+- Use `:biff.fx/return` when you need to evaluate effects and then return a
+  non-map value. If you only need to evaluate one effect and you want to return
+  its value, you can return a standalone effect descriptor: `(fn [ctx input]
+  [:example.fx/do-something ...])`.
 
 - If there are multiple effect descriptors in an output map, their order of
   execution is not specified. If you need to execute effects in a particular
   order, the recommended approach is to have your effect handler accept a
   sequence of inputs and return a sequence of outputs. If that doesn't work
   (e.g. you need to perform two different kinds of effects in a particular
-  order), your state function can return a sequence of output maps. The maps
-  will be processed in order and then merged into a single output map.
+  order), set `:biff.fx/seq` to a sequence of effect descriptors and output
+  maps. They are processed in order. The sequence's maps are merged from left
+  to right, followed by the enclosing output map, whose keys take precedence.
 
 - In some situations you may not need more than a single `:start` state, e.g. a
   POST request handler that writes a value to the database and returns a 200
   response unconditionally.
 
-- As a convention, if you don't need to use the return value of an effect
-  handler, you can set the effect descriptor on an underscore-prefixed key like
-  `:_` or `:_response`.
+- If you don't need to use the return value of an effect handler, you can set
+  the effect descriptor on an underscore-prefixed key like `:_` or `:_response`.
+  It will be omitted from the machine return value and from the input passed to
+  subsequent states.
 
 - `machine` and `defmachine` can both take a single `state->fn` map instead of
   key-value var args. This can be useful for defining multiple machines with

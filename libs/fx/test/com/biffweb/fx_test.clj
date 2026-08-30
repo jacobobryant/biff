@@ -1,7 +1,7 @@
 (ns com.biffweb.fx-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
-            [com.biffweb.fx :as biff.fx])
+            [com.biffweb.fx :as biff.fx :refer [defpipeline]])
   (:import [java.time Instant]
            [java.util UUID]))
 
@@ -11,9 +11,9 @@
                  ::transition-test
                  :start
                  (fn [{:keys [from-ctx]}]
-                   [{:prefix from-ctx}
-                    {:combined     [:test/concat "-effect"]
-                     :biff.fx/next :finish}])
+                   {:biff.fx/seq  [{:prefix from-ctx}
+                                   {:combined [:test/concat "-effect"]}]
+                    :biff.fx/next :finish})
                  :finish
                  (fn [ctx {:keys [prefix combined]}]
                    {:biff.fx/return
@@ -36,14 +36,13 @@
     (is (= [{:from-ctx "ctx"}]
            @seen))))
 
-(deftest machine-test-key-runs-raw-state-function
-  (let [machine (biff.fx/machine
-                 ::raw-state-test
-                 :start
-                 (fn [{:keys [value]}]
-                   {:effect [:test/raw value]}))]
+(deftest machine-with-no-arguments-returns-state-functions
+  (let [start   (fn [{:keys [value]}]
+                  {:effect [:test/raw value]})
+        machine (biff.fx/machine ::raw-state-test :start start)]
+    (is (= {:start start} (machine)))
     (is (= {:effect [:test/raw 42]}
-           (machine {:value 42 :biff.fx/test :start})))))
+           ((:start (machine)) {:value 42})))))
 
 (deftest machine-evaluates-an-initial-effect
   (let [machine (biff.fx/machine
@@ -57,7 +56,82 @@
                      {:test/value (fn [_ x] (* 2 x))}}
                     5 6)))
     (is (= {:biff.fx/return [:mock 5 6]}
-           (machine {:biff.fx/test :start} :mock 5 6)))))
+           ((:start (machine)) {} :mock 5 6)))))
+
+(deftest machine-returns-values-and-evaluates-direct-effects
+  (let [value-machine  (biff.fx/machine ::value :start (fn [_] [1 2 3]))
+        effect-machine (biff.fx/machine ::effect
+                                        :start
+                                        (fn [_] [:test/value 3]))]
+    (is (= [1 2 3] (value-machine {})))
+    (is (= 6 (effect-machine {:biff.fx/handlers
+                              {:test/value (fn [_ x] (* 2 x))}})))))
+
+(deftest machine-evaluates-sequenced-effects-before-the-output-map
+  (let [calls   (atom [])
+        machine (biff.fx/machine
+                 ::sequence
+                 :start
+                 (fn [_]
+                   {:a           1
+                    :ordinary    [:test/effect :ordinary]
+                    :biff.fx/seq [[:test/effect :standalone]
+                                  {:a 2 :first [:test/effect :first]}
+                                  {:a 3 :second [:test/effect :second]}]}))]
+    (is (= {:a        1
+            :first    :first
+            :second   :second
+            :ordinary :ordinary}
+           (machine {:biff.fx/handlers
+                     {:test/effect (fn [_ value]
+                                     (swap! calls conj value)
+                                     value)}})))
+    (is (= [:standalone :first :second :ordinary] @calls))))
+
+(deftest pipeline-runs-state-functions-in-order
+  (let [state-1  (fn [_ x] [:test/double x])
+        state-2  (fn [_ result] {:result result :effect [:test/inc result]})
+        state-3  (fn [_ {:keys [result effect]}] [result effect])
+        pipeline (biff.fx/pipeline
+                  ::runs-in-order
+                  [state-1 state-2 state-3])
+        ctx      {:biff.fx/handlers
+                  {:test/double (fn [_ x] (* 2 x))
+                   :test/inc    (fn [_ x] (inc x))}}]
+    (is (= [state-1 state-2 state-3] (pipeline)))
+    (is (= [6 7] (pipeline ctx 3)))))
+
+(deftest pipeline-supports-early-returns
+  (let [called?  (atom false)
+        pipeline (biff.fx/pipeline
+                  ::early-return
+                  (fn [_]
+                    {:effect         [:test/value]
+                     :biff.fx/return :done})
+                  (fn [_ _]
+                    (reset! called? true)))]
+    (is (= :done (pipeline {:biff.fx/handlers
+                            {:test/value (constantly :ignored)}})))
+    (is (false? @called?))))
+
+(deftest pipeline-supports-initial-effects
+  (let [state-fn (fn [_ initial-result x]
+                   (+ initial-result x))
+        pipeline (biff.fx/pipeline
+                  ::initial-effect
+                  [:test/value 2]
+                  state-fn)]
+    (is (= [state-fn] (pipeline)))
+    (is (= 7 (pipeline {:biff.fx/handlers
+                        {:test/value (fn [_ x] (* 2 x))}}
+                       3)))))
+
+(defpipeline defined-pipeline
+  (fn [_ x] (inc x))
+  (fn [_ x] (* 2 x)))
+
+(deftest defpipeline-defines-a-pipeline
+  (is (= 8 (defined-pipeline {} 3))))
 
 (deftest machine-prefers-get-handlers-over-ctx-handlers
   (let [machine (biff.fx/machine

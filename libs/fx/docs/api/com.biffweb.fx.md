@@ -2,29 +2,29 @@
 
 ### machine
 
-[view source](../../src/com/biffweb/fx.clj#L12)
+[view source](../../src/com/biffweb/fx.clj#L13)
 
 ```
-(machine machine-name & args)
+(machine machine-name & {:as state->fn})
+(machine machine-name initial-fx & {:as state->fn})
 
 Returns a function that runs your code as a state machine.
-
-state->fn
-  A map from state keywords to state functions. Must include :start.
-  Functions return a map describing effects to execute and (optionally) which
-  state to transition to.
-
-An initial effect descriptor may be placed before the state definitions. Its
-result is passed to :start immediately after ctx.
 
 machine-name
   An identifier (string, symbol, keyword...) that will be included in ex-data
   for any exceptions thrown by your state functions or handler functions.
 
+state->fn
+  A map from state keywords to state functions. Must include :start.
+  Functions return a map describing effects to execute and (optionally) which
+  state to transition to, or a single effect descriptor, or a non-map value.
+
+An initial effect descriptor may be placed before the state definitions. Its
+result is passed to :start immediately after ctx.
+
 Returns (fn [ctx & args]). The :start function receives ctx followed by the
-machine arguments. Other states receive ctx and the previous output map. Set
-(:biff.fx/test ctx) to a state keyword to call one state without evaluating
-effects.
+machine arguments. Other states receive ctx and the previous output map.
+Call the machine with no arguments to get its state->fn map.
 
 Example (see defmachine):
 
@@ -47,7 +47,7 @@ Example (see defmachine):
 
 ### defmachine
 
-[view source](../../src/com/biffweb/fx.clj#L52)
+[view source](../../src/com/biffweb/fx.clj#L54)
 
 ```
 (defmachine sym & {:as state->fn})
@@ -58,9 +58,52 @@ given symbol and the current namespace.
 See com.biffweb.fx/machine.
 ```
 
+### pipeline
+
+[view source](../../src/com/biffweb/fx.clj#L63)
+
+```
+(pipeline machine-name & state-fns)
+(pipeline machine-name state-fns)
+(pipeline machine-name initial-fx & state-fns)
+(pipeline machine-name initial-fx state-fns)
+
+Like fx/machine but takes a sequence of unnamed state functions that
+transition sequentially instead of using :biff.fx/next.
+
+  (defpipeline my-pipeline
+    (fn [ctx arg1 arg2]
+      ...)
+
+    (fn [ctx input]
+      ...))
+
+(See defpipeline.)
+
+The first state is the :start state. States transition to the next state
+function in the sequence. If a state function returns a map with
+:biff.fx/return, the pipeline exits immediately.
+
+State functions may be passed as varargs or as a single sequence. Also
+supports an initial effect descriptor.
+
+Call the pipeline function with no arguments to get the sequence of state
+functions (for unit testing).
+```
+
+### defpipeline
+
+[view source](../../src/com/biffweb/fx.clj#L92)
+
+```
+(defpipeline sym & args)
+
+Defines a var containing an fx pipeline.
+```
+
 ### module
 
-[view source](../../src/com/biffweb/fx.clj#L61)
+[view source](../../src/com/biffweb/fx.clj#L97)
 
 ```
 (module)
@@ -72,7 +115,7 @@ Includes an init function that sets :biff.fx/get-handlers on the system map.
 
 ### uuid4
 
-[view source](../../src/com/biffweb/fx.clj#L68)
+[view source](../../src/com/biffweb/fx.clj#L104)
 
 ```
 (uuid4 seed)
@@ -90,7 +133,7 @@ you passed to this function.
 
 ### uuid7
 
-[view source](../../src/com/biffweb/fx.clj#L81)
+[view source](../../src/com/biffweb/fx.clj#L117)
 
 ```
 (uuid7 seed instant)

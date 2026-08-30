@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [com.biffweb.admin.impl.ui :as ui]
             [com.biffweb.admin.impl.util :as util]
-            [com.biffweb.fx :as biff.fx]
+            [com.biffweb.fx :refer [defpipeline]]
             [tick.core :as tick])
   (:import [java.security SecureRandom]))
 
@@ -26,8 +26,7 @@
 (defn- url-encode [value]
   (java.net.URLEncoder/encode (str value) "UTF-8"))
 
-(biff.fx/defmachine generate-signin-code-handler
-  :start
+(defpipeline generate-signin-code-handler
   (fn [{:keys [biff.fx/now biff.stuff/params] :as ctx}]
     (let [user-id-str (:user-id params)
           code        (generate-secure-code 32)
@@ -44,15 +43,11 @@
          (str "/_biff/admin/users?signin-url="
               (url-encode (str base "/_biff/admin/signin/" code)))}}})))
 
-(biff.fx/defmachine signin-handler
-  :start
+(defpipeline signin-handler
   (fn [{:keys [path-params]}]
-    {:entry        [:biff.core/kv-get
-                    :biff.admin/signin-code (:code path-params)]
-     :biff.fx/next :check-code})
+    [:biff.core/kv-get :biff.admin/signin-code (:code path-params)])
 
-  :check-code
-  (fn [{:keys [biff.fx/now path-params session]} {:keys [entry]}]
+  (fn [{:keys [biff.fx/now path-params session]} entry]
     (let [valid? (and entry
                       (tick/< (tick/between
                                (tick/instant (:generated-at entry)) now)

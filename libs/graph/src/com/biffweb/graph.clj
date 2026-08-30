@@ -74,11 +74,10 @@
        {:y (inc x)})
 
    If the first form after the options map isn't a vector, it and the remaining
-   forms will be passed to com.biffweb.fx/machine to generate a resolve
-   function, with the state functions wrapped so that (:biff.graph/input ctx)
-   is passed as a second argument:
+   forms will be passed to com.biffweb.fx/machine or com.biffweb.fx/pipeline to
+   generate a resolve function:
 
-     (defresolver my-resolver
+     (defresolver my-machine-resolver
        {:input [:foo]
         :output [:bar]}
 
@@ -86,7 +85,14 @@
        (fn [ctx input] ...)
 
        :next
-       (fn [ctx input] ...))"
+       (fn [ctx result] ...))
+
+     (defresolver my-pipeline-resolver
+       {:input [:foo]
+        :output [:bar]}
+
+       (fn [ctx input] ...)
+       (fn [ctx result] ...))"
   [sym opts & args]
   `(impl.r/defresolver ~sym ~opts ~@args))
 

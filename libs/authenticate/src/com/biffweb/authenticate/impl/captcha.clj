@@ -1,5 +1,5 @@
 (ns com.biffweb.authenticate.impl.captcha
-  (:require [com.biffweb.fx :as fx]))
+  (:require [com.biffweb.fx :refer [defpipeline]]))
 
 (defn- configured? [ctx ks]
   (every? #(some? (get ctx %)) ks))
@@ -8,24 +8,21 @@
 
 (def turnstile-url "https://challenges.cloudflare.com/turnstile/v0/siteverify")
 
-(fx/defmachine turnstile-verify
-  :start
+(defpipeline turnstile-verify
   (fn [{:keys [biff.auth/turnstile-secret biff.stuff/params]}]
-    {::response    [:biff.auth/http
-                    {:method           :post
-                     :url              turnstile-url
-                     :form-params      {:secret (force turnstile-secret)
+    [:biff.fx/http
+     {:method           :post
+      :url              turnstile-url
+      :form-params      {:secret (force turnstile-secret)
 
-                                        :response
-                                        (:cf-turnstile-response params)}
-                     :as               :json
-                     :coerce           :always
-                     :throw-exceptions false}]
-     :biff.fx/next :check-response})
+                         :response
+                         (:cf-turnstile-response params)}
+      :as               :json
+      :coerce           :always
+      :throw-exceptions false}])
 
-  :check-response
-  (fn [_ctx {::keys [response]}]
-    {:biff.fx/return (boolean (get-in response [:body :success]))}))
+  (fn [_ctx response]
+    (boolean (get-in response [:body :success]))))
 
 (defn turnstile-head [_ctx]
   [:script {:src   "https://challenges.cloudflare.com/turnstile/v0/api.js"
@@ -47,30 +44,27 @@
 
 (def recaptcha-url "https://www.google.com/recaptcha/api/siteverify")
 
-(fx/defmachine recaptcha-verify
-  :start
+(defpipeline recaptcha-verify
   (fn [{:keys [biff.stuff/params biff.auth/recaptcha-secret]}]
-    {::response    [:biff.auth/http
-                    {:method           :post
-                     :url              recaptcha-url
-                     :form-params      {:secret (force recaptcha-secret)
+    [:biff.fx/http
+     {:method           :post
+      :url              recaptcha-url
+      :form-params      {:secret (force recaptcha-secret)
 
-                                        :response
-                                        (:g-recaptcha-response params)}
-                     :as               :json
-                     :coerce           :always
-                     :throw-exceptions false}]
-     :biff.fx/next :check-response})
+                         :response
+                         (:g-recaptcha-response params)}
+      :as               :json
+      :coerce           :always
+      :throw-exceptions false}])
 
-  :check-response
   (fn [{:keys [biff.auth/recaptcha-threshold]
         :or   {recaptcha-threshold 0.5}}
-       {::keys [response]}]
+       response]
     (let [{:keys [success score]} (:body response)]
       ;; Supports both v2 (no score, just success) and v3 (success + score)
-      {:biff.fx/return (boolean (and success
-                                     (or (nil? score)
-                                         (<= recaptcha-threshold score))))})))
+      (boolean (and success
+                    (or (nil? score)
+                        (<= recaptcha-threshold score)))))))
 
 (defn recaptcha-head [_ctx]
   [:<>
@@ -99,22 +93,19 @@
 
 (def hcaptcha-url "https://hcaptcha.com/siteverify")
 
-(fx/defmachine hcaptcha-verify
-  :start
+(defpipeline hcaptcha-verify
   (fn [{:keys [biff.auth/hcaptcha-secret biff.stuff/params]}]
-    {::response    [:biff.auth/http
-                    {:method           :post
-                     :url              hcaptcha-url
-                     :form-params      {:secret   (force hcaptcha-secret)
-                                        :response (:h-captcha-response params)}
-                     :as               :json
-                     :coerce           :always
-                     :throw-exceptions false}]
-     :biff.fx/next :check-response})
+    [:biff.fx/http
+     {:method           :post
+      :url              hcaptcha-url
+      :form-params      {:secret   (force hcaptcha-secret)
+                         :response (:h-captcha-response params)}
+      :as               :json
+      :coerce           :always
+      :throw-exceptions false}])
 
-  :check-response
-  (fn [_ctx {::keys [response]}]
-    {:biff.fx/return (boolean (get-in response [:body :success]))}))
+  (fn [_ctx response]
+    (boolean (get-in response [:body :success]))))
 
 (defn hcaptcha-head [_ctx]
   [:script {:src "https://js.hcaptcha.com/1/api.js" :async true :defer true}])

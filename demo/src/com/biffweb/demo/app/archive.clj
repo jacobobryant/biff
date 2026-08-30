@@ -2,7 +2,7 @@
   (:require [com.biffweb.demo.lib.middleware :as mid]
             [com.biffweb.demo.lib.ui :as ui]
             [com.biffweb.demo.routes :as routes]
-            [com.biffweb.fx :as biff.fx]
+            [com.biffweb.fx :refer [defpipeline]]
             [com.biffweb.sqlite :as biff.sqlite])
   (:import [java.time Instant ZoneOffset ZonedDateTime]))
 
@@ -27,39 +27,31 @@
   (iterate #(.plusMinutes ^ZonedDateTime % 5)
            (next-schedule-tick (ZonedDateTime/now ZoneOffset/UTC))))
 
-(def queue-archive-job-states
-  {:start
-   (fn [_]
-     {:todo-rows    [:biff.sqlite.fx/execute
-                     {:select   [:todo/id]
-                      :from     :todo
-                      :where    [:= :todo/archived false]
-                      :order-by [[:todo/created-at :asc]
-                                 [:todo/id :asc]]}]
-      :biff.fx/next :submit})
+(defn- get-todo-rows [_ctx]
+  [:biff.sqlite.fx/execute
+   {:select   [:todo/id]
+    :from     :todo
+    :where    [:= :todo/archived false]
+    :order-by [[:todo/created-at :asc]
+               [:todo/id :asc]]}])
 
-   :submit
-   (fn [_ctx {:keys [todo-rows]}]
-     (let [jobs (->> todo-rows
-                     (mapv :todo/id)
-                     (partition-all 3)
-                     (mapv (fn [todo-ids]
-                             {:todo/archive-ids (vec todo-ids)})))]
-       (if (seq jobs)
-         {:archive-jobs           [:biff.background.fx/submit-jobs
-                                   queue-id
-                                   jobs]
-          :todo.archive/batches   (count jobs)
-          :todo.archive/submitted (reduce + (map #(count (:todo/archive-ids %))
-                                                 jobs))}
-         {:todo.archive/batches   0
-          :todo.archive/submitted 0})))})
+(defn- submit-archive-jobs [_ctx todo-rows]
+  (let [jobs (->> todo-rows
+                  (mapv :todo/id)
+                  (partition-all 3)
+                  (mapv (fn [todo-ids]
+                          {:todo/archive-ids (vec todo-ids)})))]
+    (if (seq jobs)
+      {:archive-jobs           [:biff.background.fx/submit-jobs queue-id jobs]
+       :todo.archive/batches   (count jobs)
+       :todo.archive/submitted (reduce + (map #(count (:todo/archive-ids %))
+                                              jobs))}
+      {:todo.archive/batches   0
+       :todo.archive/submitted 0})))
 
-(def queue-archive-jobs!
-  (biff.fx/machine
-   ::queue-archive-jobs
-   :start (:start queue-archive-job-states)
-   :submit (:submit queue-archive-job-states)))
+(defpipeline queue-archive-jobs!
+  get-todo-rows
+  submit-archive-jobs)
 
 (defn archive-batch!
   [{:keys [biff.background/job] :as ctx}]
@@ -74,20 +66,19 @@
                                            [:in :todo/id todo-ids]
                                            [:= :todo/archived false]]})))))
 
-(biff.fx/defmachine archive-now-route
-  :start
+(defpipeline archive-now-route
   (fn [req]
     (if (can-manually-archive? req)
-      (merge ((:start queue-archive-job-states) req)
-             {:biff.fx/next :archive-now-submit})
-      {:status  403
-       :headers {"content-type" "text/plain; charset=utf-8"}
-       :body    "Forbidden"}))
+      (get-todo-rows req)
+      {:biff.fx/return
+       {:status  403
+        :headers {"content-type" "text/plain; charset=utf-8"}
+        :body    "Forbidden"}}))
 
-  :archive-now-submit
-  (fn [ctx output]
-    (merge ((:submit queue-archive-job-states) ctx output)
-           {:biff.fx/return (ui/no-content)})))
+  submit-archive-jobs
+
+  (fn [_ctx _output]
+    (ui/no-content)))
 
 (def module
   {:biff.background/tasks

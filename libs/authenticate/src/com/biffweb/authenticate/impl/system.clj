@@ -4,7 +4,6 @@
             [com.biffweb.authenticate.impl.captcha :as captcha]
             [com.biffweb.core :as biff.core]
             [com.biffweb.stuff :as stuff]
-            [hato.client :as hato]
             [ring.middleware.anti-forgery :as anti-forgery]))
 
 (defn email-valid? [_ctx email]
@@ -55,8 +54,7 @@
 
           fx-handlers
           (-> (select-keys ctx fx-handler-keys)
-              (merge {:biff.auth/new-code new-code
-                      :biff.auth/http     hato/request}))]
+              (merge {:biff.auth/new-code new-code}))]
       (handler (update ctx :biff.fx/handlers merge fx-handlers)))))
 
 (defn routes [options]

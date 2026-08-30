@@ -20,6 +20,14 @@
     :biff.graph/batch      (boolean batch)
     :biff.graph/resolve-fn (wrap-input resolve-fn)}))
 
+(defn fx-resolve-fn [id args]
+  (let [first-arg (first args)
+        machine   (if (or (keyword? first-arg) (map? first-arg))
+                    (apply fx/machine id args)
+                    (apply fx/pipeline id args))]
+    (fn [ctx]
+      (machine ctx (:biff.graph/input ctx)))))
+
 (defmacro defresolver [sym opts & args]
   (let [use-fx (not (vector? (first args)))
         id     (keyword (str *ns*) (str sym))]
@@ -34,7 +42,4 @@
            :biff.graph/resolve-fn
            ~(if-not use-fx
               `(wrap-input (fn ~@args))
-              `(let [[& {:as state->fn#}] [~@args]
-                     machine#             (fx/machine ~id state->fn#)]
-                 (fn [ctx#]
-                   (machine# ctx# (:biff.graph/input ctx#)))))})))))
+              `(fx-resolve-fn ~id [~@args]))})))))

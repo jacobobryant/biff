@@ -6,7 +6,7 @@
             [com.biffweb.demo.model.tab-state :as model.tab-state]
             [com.biffweb.demo.model.todo :as model.todo]
             [com.biffweb.demo.routes :as routes]
-            [com.biffweb.fx :as fx]
+            [com.biffweb.fx :refer [defpipeline]]
             [com.biffweb.sqlite :as biff.sqlite]))
 
 (defn- post [path]
@@ -323,7 +323,7 @@
            (str "No archived todos yet. Use the archive queue button to see "
                 "background jobs kick in.")])])]))
 
-(fx/defmachine raw-app-page
+(defpipeline raw-app-page
   [:biff.graph.fx/query
    [{:session/user [:user/id :user/email :user/joined-at]}
     {:todo/ui-state model.todo/ui-state-fields}
@@ -335,7 +335,6 @@
     :todo/archived-count
     :todo/remaining-count]]
 
-  :start
   (fn [req page-data]
     (let [container (app-container req page-data)]
       (if (:biff.datastar/sse-request req)
@@ -346,8 +345,7 @@
           (merge {:class "space-y-6"} (biff.datastar/init-opts))
           container])))))
 
-(fx/defmachine create-todo-route
-  :start
+(defpipeline create-todo-route
   (fn [{:keys [session biff.fx/now] :as req}]
     (if-some [title (trim-to-nil (param-value req :newtodo))]
       {:todo-diff      [:biff.sqlite.fx/authorized-write
@@ -362,8 +360,7 @@
        :biff.fx/return (ui/signal-patch-response {"newtodo" ""})}
       {:biff.fx/return (ui/no-content)})))
 
-(fx/defmachine tab-state-route
-  :start
+(defpipeline tab-state-route
   (fn [req]
     (let [tab-state-id (model.tab-state/tab-state-key req)
           tab-state    (when tab-state-id
@@ -377,14 +374,12 @@
       (update-ui-state! req tab-state)
       (ui/no-content))))
 
-(fx/defmachine toggle-todo-route
-  :start
+(defpipeline toggle-todo-route
   (fn [req]
     (toggle-todo! req)
     (ui/no-content)))
 
-(fx/defmachine archive-todo-route
-  :start
+(defpipeline archive-todo-route
   (fn [req]
     (archive-todo! req)
     (ui/no-content)))

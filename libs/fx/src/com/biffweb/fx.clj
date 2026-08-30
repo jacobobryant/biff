@@ -1,6 +1,7 @@
 (ns com.biffweb.fx
   (:require [com.biffweb.core :as biff.core]
-            [com.biffweb.fx.impl :as impl]))
+            [com.biffweb.fx.impl :as impl]
+            [com.biffweb.fx.impl.pipeline :as impl.pipeline]))
 
 (biff.core/register
  {:biff.fx/get-handlers 'ifn?
@@ -12,22 +13,21 @@
 (defn machine
   "Returns a function that runs your code as a state machine.
 
-   state->fn
-     A map from state keywords to state functions. Must include :start.
-     Functions return a map describing effects to execute and (optionally) which
-     state to transition to.
-
-   An initial effect descriptor may be placed before the state definitions. Its
-   result is passed to :start immediately after ctx.
-
    machine-name
      An identifier (string, symbol, keyword...) that will be included in ex-data
      for any exceptions thrown by your state functions or handler functions.
 
+   state->fn
+     A map from state keywords to state functions. Must include :start.
+     Functions return a map describing effects to execute and (optionally) which
+     state to transition to, or a single effect descriptor, or a non-map value.
+
+   An initial effect descriptor may be placed before the state definitions. Its
+   result is passed to :start immediately after ctx.
+
    Returns (fn [ctx & args]). The :start function receives ctx followed by the
-   machine arguments. Other states receive ctx and the previous output map. Set
-   (:biff.fx/test ctx) to a state keyword to call one state without evaluating
-   effects.
+   machine arguments. Other states receive ctx and the previous output map.
+   Call the machine with no arguments to get its state->fn map.
 
    Example (see defmachine):
 
@@ -46,6 +46,8 @@
 
      (my-machine ctx)
      => {:result ...}"
+  {:arglists '([machine-name & {:as state->fn}]
+               [machine-name initial-fx & {:as state->fn}])}
   [machine-name & args]
   (apply impl/machine machine-name args))
 
@@ -57,6 +59,40 @@
   {:arglists '([sym & {:as state->fn}])}
   [sym & args]
   `(impl/defmachine ~sym ~@args))
+
+(defn pipeline
+  "Like fx/machine but takes a sequence of unnamed state functions that
+   transition sequentially instead of using :biff.fx/next.
+
+     (defpipeline my-pipeline
+       (fn [ctx arg1 arg2]
+         ...)
+
+       (fn [ctx input]
+         ...))
+
+   (See defpipeline.)
+
+   The first state is the :start state. States transition to the next state
+   function in the sequence. If a state function returns a map with
+   :biff.fx/return, the pipeline exits immediately.
+
+   State functions may be passed as varargs or as a single sequence. Also
+   supports an initial effect descriptor.
+
+   Call the pipeline function with no arguments to get the sequence of state
+   functions (for unit testing)."
+  {:arglists '([machine-name & state-fns]
+               [machine-name state-fns]
+               [machine-name initial-fx & state-fns]
+               [machine-name initial-fx state-fns])}
+  [machine-name & args]
+  (apply impl.pipeline/pipeline machine-name args))
+
+(defmacro defpipeline
+  "Defines a var containing an fx pipeline."
+  [sym & args]
+  `(impl.pipeline/defpipeline ~sym ~@args))
 
 (defn module
   "A biff.core module that collects :biff.fx/handlers from other modules.

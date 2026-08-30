@@ -46,11 +46,10 @@ defresolver form.
     {:y (inc x)})
 
 If the first form after the options map isn't a vector, it and the remaining
-forms will be passed to com.biffweb.fx/machine to generate a resolve
-function, with the state functions wrapped so that (:biff.graph/input ctx)
-is passed as a second argument:
+forms will be passed to com.biffweb.fx/machine or com.biffweb.fx/pipeline to
+generate a resolve function:
 
-  (defresolver my-resolver
+  (defresolver my-machine-resolver
     {:input [:foo]
      :output [:bar]}
 
@@ -58,12 +57,19 @@ is passed as a second argument:
     (fn [ctx input] ...)
 
     :next
-    (fn [ctx input] ...))
+    (fn [ctx result] ...))
+
+  (defresolver my-pipeline-resolver
+    {:input [:foo]
+     :output [:bar]}
+
+    (fn [ctx input] ...)
+    (fn [ctx result] ...))
 ```
 
 ### new-ctx
 
-[view source](../../src/com/biffweb/graph.clj#L93)
+[view source](../../src/com/biffweb/graph.clj#L99)
 
 ```
 (new-ctx resolvers & {:keys [middleware]})
@@ -79,7 +85,7 @@ See schema for :biff.graph/resolvers and :biff.graph/middleware.
 
 ### query
 
-[view source](../../src/com/biffweb/graph.clj#L105)
+[view source](../../src/com/biffweb/graph.clj#L111)
 
 ```
 (query ctx query)
@@ -109,7 +115,7 @@ consistent view of the database.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/graph.clj#L131)
+[view source](../../src/com/biffweb/graph.clj#L137)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -117,7 +123,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../src/com/biffweb/graph.clj#L135)
+[view source](../../src/com/biffweb/graph.clj#L141)
 
 ```
 (module)

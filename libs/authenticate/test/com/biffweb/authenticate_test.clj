@@ -657,48 +657,42 @@
 
 (deftest captcha-verify-start-state-forces-secrets-test
   (testing "turnstile"
-    (is (= {::captcha/response [:biff.auth/http
-                                {:method           :post
-                                 :url              captcha/turnstile-url
-                                 :form-params      {:secret   "turnstile-secret"
-                                                    :response "turnstile-token"}
-                                 :as               :json
-                                 :coerce           :always
-                                 :throw-exceptions false}]
-            :biff.fx/next      :check-response}
-           (captcha/turnstile-verify
-            {:biff.fx/test               :start
-             :biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
+    (is (= [:biff.fx/http
+            {:method           :post
+             :url              captcha/turnstile-url
+             :form-params      {:secret   "turnstile-secret"
+                                :response "turnstile-token"}
+             :as               :json
+             :coerce           :always
+             :throw-exceptions false}]
+           ((first (captcha/turnstile-verify))
+            {:biff.auth/turnstile-secret (biff/secret-delay "turnstile-secret")
 
              :biff.stuff/params {:cf-turnstile-response "turnstile-token"}}))))
   (testing "recaptcha"
-    (is (= {::captcha/response [:biff.auth/http
-                                {:method           :post
-                                 :url              captcha/recaptcha-url
-                                 :form-params      {:secret   "recaptcha-secret"
-                                                    :response "recaptcha-token"}
-                                 :as               :json
-                                 :coerce           :always
-                                 :throw-exceptions false}]
-            :biff.fx/next      :check-response}
-           (captcha/recaptcha-verify
-            {:biff.fx/test               :start
-             :biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
+    (is (= [:biff.fx/http
+            {:method           :post
+             :url              captcha/recaptcha-url
+             :form-params      {:secret   "recaptcha-secret"
+                                :response "recaptcha-token"}
+             :as               :json
+             :coerce           :always
+             :throw-exceptions false}]
+           ((first (captcha/recaptcha-verify))
+            {:biff.auth/recaptcha-secret (biff/secret-delay "recaptcha-secret")
 
              :biff.stuff/params {:g-recaptcha-response "recaptcha-token"}}))))
   (testing "hcaptcha"
-    (is (= {::captcha/response [:biff.auth/http
-                                {:method           :post
-                                 :url              captcha/hcaptcha-url
-                                 :form-params      {:secret   "hcaptcha-secret"
-                                                    :response "hcaptcha-token"}
-                                 :as               :json
-                                 :coerce           :always
-                                 :throw-exceptions false}]
-            :biff.fx/next      :check-response}
-           (captcha/hcaptcha-verify
-            {:biff.fx/test              :start
-             :biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
+    (is (= [:biff.fx/http
+            {:method           :post
+             :url              captcha/hcaptcha-url
+             :form-params      {:secret   "hcaptcha-secret"
+                                :response "hcaptcha-token"}
+             :as               :json
+             :coerce           :always
+             :throw-exceptions false}]
+           ((first (captcha/hcaptcha-verify))
+            {:biff.auth/hcaptcha-secret (biff/secret-delay "hcaptcha-secret")
 
              :biff.stuff/params
              {:h-captcha-response "hcaptcha-token"}})))))

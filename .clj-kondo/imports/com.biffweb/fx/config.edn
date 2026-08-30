@@ -1,1 +1,2 @@
-{:lint-as {com.biffweb.fx/defmachine clojure.core/def}}
+{:lint-as {com.biffweb.fx/defmachine  clojure.core/def
+           com.biffweb.fx/defpipeline clojure.core/def}}

@@ -18,7 +18,16 @@ A function that returns a `:biff.fx/handlers` map. Intended for use by
 
 ### :biff.fx/next
 
-A key in the state->fn map passed to biff.fx/machine.
+A state keyword to transition to after evaluating the current output map.
+
+### :biff.fx/return
+
+The value a machine returns after evaluating the current output map.
+
+### :biff.fx/seq
+
+A sequence of effect descriptors and output maps to evaluate in order. The
+enclosing output map is evaluated and merged last.
 
 ### :biff.fx/now
 

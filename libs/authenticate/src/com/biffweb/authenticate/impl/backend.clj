@@ -1,6 +1,6 @@
 (ns com.biffweb.authenticate.impl.backend
   (:require [com.biffweb.core :as biff.core]
-            [com.biffweb.fx :as fx]
+            [com.biffweb.fx :refer [defpipeline]]
             [clojure.string :as str]
             [tick.core :as tick]
             [dev.onionpancakes.chassis.core :as chassis])
@@ -53,60 +53,55 @@
              [[:p "Your sign-in code is: " [:strong code]]
               [:p "This code expires in 10 minutes."]])})
 
-(fx/defmachine send-code-handler
-  :start
+(defpipeline send-code-handler
   (fn [{:biff.auth/keys [email-valid? signin-page]
         :keys           [biff.stuff/params]
         :as             ctx}]
     (if-not (email-valid? ctx (:email params))
-      {:status  303
-       :headers {"location" (add-query signin-page {:error "invalid-email"})}}
-      {::email          (:email params)
-       ::code           [:biff.auth/new-code 6]
-       ::captcha-passed [:biff.auth/captcha-verify]
-       :biff.fx/next    :check-captcha}))
+      {:biff.fx/return
+       {:status  303
+        :headers {"location" (add-query signin-page {:error "invalid-email"})}}}
+      {:email          (:email params)
+       :code           [:biff.auth/new-code 6]
+       :captcha-passed [:biff.auth/captcha-verify]}))
 
-  :check-captcha
   (fn [{:biff.auth/keys [signin-page]
         :keys           [biff.fx/now biff.stuff/params]
         :as             ctx}
-       {::keys [email code captcha-passed]}]
+       {:keys [email code captcha-passed]}]
     (let [defaults (default-code-email ctx {:code code})
           clean-p  (params-to-save params)]
-      (if captcha-passed
-        [{:_upsert [:biff.core/kv-set :biff.auth/signin email
-                    (validate-record
-                     {:biff-auth-signin/code-hash       (hash-secret code)
-                      :biff-auth-signin/created-at      now
-                      :biff-auth-signin/failed-attempts 0
-                      :biff-auth-signin/params          clean-p})]}
-         {::email       email
-          ::sent        [:biff.auth/send-email (merge defaults
-                                                      {:to   email
-                                                       :code code})]
-          :biff.fx/next :check-send-result}]
-        {:status  303
-         :headers {"location" (add-query signin-page {:error "captcha"})}})))
+      (if-not captcha-passed
+        {:biff.fx/return
+         {:status  303
+          :headers {"location" (add-query signin-page {:error "captcha"})}}}
+        {:biff.fx/seq
+         [{:_upsert [:biff.core/kv-set :biff.auth/signin email
+                     (validate-record
+                      {:biff-auth-signin/code-hash       (hash-secret code)
+                       :biff-auth-signin/created-at      now
+                       :biff-auth-signin/failed-attempts 0
+                       :biff-auth-signin/params          clean-p})]}
+          {:sent [:biff.auth/send-email
+                  (merge defaults {:to email :code code})]}]
 
-  :check-send-result
-  (fn [{:biff.auth/keys [signin-page]} {::keys [email sent]}]
+         :email email})))
+
+  (fn [{:biff.auth/keys [signin-page]} {:keys [email sent]}]
     (if sent
       {:status  303
        :headers {"location" (add-query signin-page {:sent-to email})}}
       {:status  303
        :headers {"location" (add-query signin-page {:error "send-failed"})}})))
 
-(fx/defmachine verify-code-handler
-  :start
+(defpipeline verify-code-handler
   (fn [{:keys [biff.stuff/params]}]
-    {::submitted-code (:code params)
-     ::signin-record  [:biff.core/kv-get :biff.auth/signin (:email params)]
-     :biff.fx/next    :check-code})
+    {:submitted-code (:code params)
+     :signin-record  [:biff.core/kv-get :biff.auth/signin (:email params)]})
 
-  :check-code
   (fn [{:biff.auth/keys [max-failed-attempts code-expiry-minutes signin-page]
         :keys           [biff.fx/now biff.stuff/params]}
-       {::keys [submitted-code signin-record]}]
+       {:keys [submitted-code signin-record]}]
     (let [{:keys [email]} params
 
           {:biff-auth-signin/keys [code-hash created-at failed-attempts params]}
@@ -119,15 +114,15 @@
                                (< elapsed-minutes code-expiry-minutes)
                                (secret-matches? submitted-code code-hash))]
       (if success
-        {:_delete           [:biff.core/kv-set :biff.auth/signin email nil]
-         ::saved-params     params
-         ::existing-user-id [:biff.auth/get-user-id email]
-         :biff.fx/next      :ensure-user}
+        {:_delete          [:biff.core/kv-set :biff.auth/signin email nil]
+         :saved-params     params
+         :existing-user-id [:biff.auth/get-user-id email]}
         (merge
-         {:status  303
-          :headers {"location" (add-query signin-page
-                                          {:error   "invalid-code"
-                                           :sent-to email})}}
+         {:biff.fx/return
+          {:status  303
+           :headers {"location" (add-query signin-page
+                                           {:error   "invalid-code"
+                                            :sent-to email})}}}
          (when (and signin-record
                     (< failed-attempts max-failed-attempts))
            {:_inc [:biff.core/kv-set :biff.auth/signin email
@@ -135,16 +130,13 @@
                        (update :biff-auth-signin/failed-attempts inc)
                        validate-record)]})))))
 
-  :ensure-user
   (fn [{:keys [biff.stuff/params]}
-       {::keys [saved-params existing-user-id]}]
-    {::user-id     (or existing-user-id
-                       [:biff.auth/create-user
-                        {:email (:email params) :params saved-params}])
-     :biff.fx/next :success-redirect})
+       {:keys [saved-params existing-user-id]}]
+    (or existing-user-id
+        [:biff.auth/create-user
+         {:email (:email params) :params saved-params}]))
 
-  :success-redirect
-  (fn [{:keys [biff.auth/app-path session]} {::keys [user-id]}]
+  (fn [{:keys [biff.auth/app-path session]} user-id]
     {:status  303
      :headers {"location" app-path}
      :session (-> session

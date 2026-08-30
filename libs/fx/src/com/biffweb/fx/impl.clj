@@ -6,11 +6,10 @@
            [java.util Random UUID]))
 
 (biff.core/register
- {::state->fn       [:and
-                     [:map-of :keyword 'ifn?]
-                     [:map
-                      [:start 'ifn?]]]
-  ::state-fn-result [:or [:maybe 'map?] [:sequential [:maybe 'map?]]]})
+ {::state->fn [:and
+               [:map-of :keyword 'ifn?]
+               [:map
+                [:start 'ifn?]]]})
 
 (def ^:private default-fx-handlers
   {:biff.fx/http
@@ -44,6 +43,10 @@
    #(if (string? %) (truncate-str % 500) %)
    data))
 
+(defn- effect-vector? [handlers x]
+  (and (vector? x)
+       (contains? handlers (first x))))
+
 (defn- step [{:keys [machine-name state->fn handlers ctx]}
              {:keys [state input trace]}]
   (let [log-ctx       {:biff.fx/state        state
@@ -60,42 +63,57 @@
                                   nil))
         injected      {:biff.fx/now  (Instant/now)
                        :biff.fx/seed (.nextLong (Random.))}
-        result        (try
+        raw-result    (try
                         (apply state-fn (merge ctx injected) input)
                         (catch Exception e
                           (error! "State function threw an exception"
                                   injected e)))
-        _             (biff.core/validate {::state-fn-result result})
-        results       (if (sequential? result) result [result])]
-    (reduce
-     (fn [output result]
-       (let [effect-keys (filterv (fn [k]
-                                    (let [v (get result k)]
-                                      (and (vector? v)
-                                           (contains? handlers (first v)))))
-                                  (keys result))
-             output      (merge output
-                                (apply dissoc result effect-keys))]
-         (into output
-               (keep (fn [k]
-                       (let [[handler-key & args] (get result k)
-                             handler              (get handlers handler-key)
-                             handler-result       (try
-                                                    (apply handler ctx args)
-                                                    (catch Exception e
-                                                      (error!
-                                                       handler-error
-                                                       {:biff.fx/output
-                                                        output
+        result        (if (map? raw-result)
+                        raw-result
+                        {:biff.fx/return raw-result})
 
-                                                        :biff.fx/handler-args
-                                                        args}
-                                                       e)))]
-                         (when-not (str/starts-with? (str k) ":_")
-                           [k handler-result]))))
-               effect-keys)))
-     {}
-     results)))
+        evaluate-effects
+        (fn [result]
+          (let [effect-keys
+                (filterv (fn [k]
+                           (effect-vector? handlers (get result k)))
+                         (keys result))]
+            (into (apply dissoc result effect-keys)
+                  (keep (fn [k]
+                          (let [[handler-key & args] (get result k)
+
+                                handler-result
+                                (try
+                                  (apply (get handlers handler-key)
+                                         ctx
+                                         args)
+                                  (catch Exception e
+                                    (error!
+                                     handler-error
+                                     {:biff.fx/output       result
+                                      :biff.fx/handler-args args}
+                                     e)))]
+                            (when-not (str/starts-with? (str k) ":_")
+                              [k handler-result])))
+                        effect-keys))))
+
+        seq-output
+        (mapv (fn [result]
+                (cond
+                  (map? result) (evaluate-effects result)
+
+                  (effect-vector? handlers result)
+                  (evaluate-effects {:_ignored result})
+
+                  :else
+                  (error! "Invalid :biff.fx/seq element"
+                          {:biff.fx/element result}
+                          nil)))
+              (:biff.fx/seq result))
+
+        output (evaluate-effects (dissoc result :biff.fx/seq))
+        output (apply merge (concat seq-output [output]))]
+    output))
 
 (defn- initial-handler [handlers handler-key machine-name]
   (or (get handlers handler-key)
@@ -118,31 +136,22 @@
                       {:biff.fx/initial-fx   initial-fx
                        :biff.fx/machine-name machine-name})))
     (biff.core/validate {::state->fn state->fn})
-    (fn run [ctx & args]
-      (if-some [state (:biff.fx/test ctx)]
-        (apply (or (get state->fn state)
-                   (throw (ex-info "Invalid state"
-                                   {:biff.fx/state        state
-                                    :biff.fx/machine-name machine-name
+    (fn run [& run-args]
+      (if (empty? run-args)
+        state->fn
+        (let [[{:keys [biff.fx/get-handlers] :as ctx} & args] run-args
 
-                                    :biff.fx/available-states
-                                    (keys state->fn)})))
-               ctx
-               args)
-        (let [handlers (merge default-fx-handlers
+              handlers (merge default-fx-handlers
                               (:biff.fx/handlers ctx)
-                              (when-some [get-handlers
-                                          (:biff.fx/get-handlers ctx)]
+                              (when get-handlers
                                 (get-handlers)))
               _        (biff.core/validate {:biff.fx/handlers handlers})
 
               initial-result
               (when initial-fx
-                (let [handler (initial-handler
-                               handlers
-                               (first initial-fx)
-                               machine-name)
-
+                (let [handler      (initial-handler handlers
+                                                    (first initial-fx)
+                                                    machine-name)
                       handler-args (rest initial-fx)]
                   [(apply handler ctx handler-args)]))
 

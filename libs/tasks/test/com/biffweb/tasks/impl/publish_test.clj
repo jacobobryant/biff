@@ -64,13 +64,16 @@
                 :biff.tasks/pom-data         []
                 :biff.tasks/pom-scm          {}}]
     (with-redefs [util/read-config (constantly config)
+
                   publish/published-version?
                   (fn [_]
                     (throw (ex-info "Unexpected version check" {})))
+
                   publish/build-artifact!
                   (fn [_ _]
                     (swap! calls conj :build)
                     ::artifact)
+
                   publish/deploy!
                   (fn [_ artifact]
                     (swap! calls conj [:deploy artifact]))]
