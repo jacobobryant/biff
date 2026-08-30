@@ -18,7 +18,7 @@ An admin dashboard for Biff applications. Includes:
 ### Dependency
 
 ```clojure
-com.biffweb/admin {:mvn/version "2.0.0-rc23"}
+com.biffweb/admin {:mvn/version "2.0.0-rc24-SNAPSHOT"}
 ```
 
 ### Status

@@ -1,6 +1,6 @@
 # Changelog
 
-Unreleased:
+**Unreleased** 2.0.0-rc24-SNAPSHOT:
 
 - biff.datastar: scope `:biff.datastar/tab-id` by user ID.
 - biff.sqlite, biff.xtdb: set the biff.core DB functions via the same module
