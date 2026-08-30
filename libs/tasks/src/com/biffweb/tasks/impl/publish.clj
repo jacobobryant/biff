@@ -1,6 +1,7 @@
 (ns com.biffweb.tasks.impl.publish
   (:require [clojure.data.json :as json]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.tools.build.api :as build]
             [com.biffweb.tasks.impl.util :as util]
             [deps-deploy.deps-deploy :as deps-deploy]
@@ -99,6 +100,9 @@
                        :status status
                        :url    url})))))
 
+(defn- snapshot-version? [version]
+  (str/ends-with? version "-SNAPSHOT"))
+
 (defn- build-artifact!
   [project-root
    {:biff.tasks/keys [group-name
@@ -181,10 +185,11 @@
                                    (util/project-root))))
 
         {:biff.tasks/keys [group-name lib-name lib-version]} config]
-    (if (published-version?
-         (select-keys config [:biff.tasks/group-name
-                              :biff.tasks/lib-name
-                              :biff.tasks/lib-version]))
+    (if (and (not (snapshot-version? lib-version))
+             (published-version?
+              (select-keys config [:biff.tasks/group-name
+                                   :biff.tasks/lib-name
+                                   :biff.tasks/lib-version])))
       (println "Already published, skipping:"
                (str group-name "/" lib-name)
                lib-version)

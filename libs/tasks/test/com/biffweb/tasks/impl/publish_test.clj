@@ -54,6 +54,29 @@
              ::artifact]]
            @calls))))
 
+(deftest snapshot-redeploy-test
+  (let [calls  (atom [])
+        config {:biff.tasks/group-name       "com.example"
+                :biff.tasks/lib-name         "example"
+                :biff.tasks/lib-version      "2.0.0-rc24-SNAPSHOT"
+                :biff.tasks/clojars-username "user"
+                :biff.tasks/clojars-secret   "secret"
+                :biff.tasks/pom-data         []
+                :biff.tasks/pom-scm          {}}]
+    (with-redefs [util/read-config (constantly config)
+                  publish/published-version?
+                  (fn [_]
+                    (throw (ex-info "Unexpected version check" {})))
+                  publish/build-artifact!
+                  (fn [_ _]
+                    (swap! calls conj :build)
+                    ::artifact)
+                  publish/deploy!
+                  (fn [_ artifact]
+                    (swap! calls conj [:deploy artifact]))]
+      (publish/publish))
+    (is (= [:build [:deploy ::artifact]] @calls))))
+
 (deftest run-deploy-test
   (let [read-passphrase gpg/read-passphrase
         calls           (atom [])]
