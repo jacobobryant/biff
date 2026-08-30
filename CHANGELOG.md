@@ -1,6 +1,10 @@
 # Changelog
 
-**Breaking**: [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29)
+Unreleased:
+
+- biff.datastar: scope :biff.datastar/tab-id by user ID
+
+**Breaking** [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29):
 
 - biff.core: components are now module lifecycle functions
 - biff.fx: state functions have additional arguments

@@ -2,7 +2,7 @@
 
 ### init-opts
 
-[view source](../../src/com/biffweb/datastar.clj#L19)
+[view source](../../src/com/biffweb/datastar.clj#L20)
 
 ```
 (init-opts)
@@ -11,7 +11,7 @@
 Returns a map of Datastar options for a hiccup element.
 
 On page load, sends an SSE request to the current URL. Also creates a
-:biff.datastar/tab-id signal. See `wrap-sse-render`.
+:biff.datastar/client-tab-id signal. See `wrap-sse-render`.
 
 If :anti-forgery-token is passed in, sets a :biff.datastar/anti-forgery-token
 signal. See `wrap-signals`.
@@ -19,7 +19,7 @@ signal. See `wrap-signals`.
 
 ### new-lock
 
-[view source](../../src/com/biffweb/datastar.clj#L31)
+[view source](../../src/com/biffweb/datastar.clj#L32)
 
 ```
 (new-lock)
@@ -34,7 +34,7 @@ Includes:
 
 ### refresh
 
-[view source](../../src/com/biffweb/datastar.clj#L41)
+[view source](../../src/com/biffweb/datastar.clj#L42)
 
 ```
 (refresh #:biff.datastar{:keys [lock condition epoch]})
@@ -47,7 +47,7 @@ Typically called whenever a database transaction has been committed.
 
 ### wrap-sse-render
 
-[view source](../../src/com/biffweb/datastar.clj#L50)
+[view source](../../src/com/biffweb/datastar.clj#L51)
 
 ```
 (wrap-sse-render handler)
@@ -99,7 +99,7 @@ See the schema reference.
 
 ### wrap-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L97)
+[view source](../../src/com/biffweb/datastar.clj#L98)
 
 ```
 (wrap-signals handler)
@@ -111,14 +111,18 @@ For Datastar requests (GET, POST, and all other methods), sets a
 signals. Underscores are used as a keyword segment separator so that the
 signals map can contain namespaced keywords; see `signals-json`.
 
-For convenience, also sets the :biff.datastar/tab-id signal (set by
-`init-opts`) on the Ring request. If a :biff.datastar/anti-forgery-token
-signal is set, the x-csrf-token request header is set to its value.
+Reads the :biff.datastar/client-tab-id signal and turns it into a UUID v5
+scoped by :biff.datastar/get-user-id which defaults to (:uid session).
+The new UUID is set on :biff.datastar/tab-id on the request and can safely
+be used as a primary key for backend tab state.
+
+If a :biff.datastar/anti-forgery-token signal is set, the x-csrf-token
+request header is set to its value.
 ```
 
 ### module
 
-[view source](../../src/com/biffweb/datastar.clj#L111)
+[view source](../../src/com/biffweb/datastar.clj#L116)
 
 ```
 (module)
@@ -132,7 +136,7 @@ Returns a biff.core module including:
 
 ### signals-json
 
-[view source](../../src/com/biffweb/datastar.clj#L120)
+[view source](../../src/com/biffweb/datastar.clj#L125)
 
 ```
 (signals-json signals)
@@ -149,7 +153,7 @@ to conversion, and they may not contain periods in the name.
 
 ### signal-name
 
-[view source](../../src/com/biffweb/datastar.clj#L132)
+[view source](../../src/com/biffweb/datastar.clj#L137)
 
 ```
 (signal-name k)
@@ -165,7 +169,7 @@ signal by passing in a vector:
 
 ### patch-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L143)
+[view source](../../src/com/biffweb/datastar.clj#L148)
 
 ```
 (patch-signals signals)

@@ -113,7 +113,7 @@
 (defn- datastar-app-path [tab-id]
   (str "/app?u=&datastar="
        (java.net.URLEncoder/encode
-        (biff.datastar/signals-json {:biff.datastar/tab-id tab-id})
+        (biff.datastar/signals-json {:biff.datastar/client-tab-id tab-id})
         "UTF-8")))
 
 (defn- datastar-get [path & {:keys [cookie]}]
@@ -124,7 +124,7 @@
 (defn- datastar-post
   [path tab-id & {:keys [cookie headers form-params signals]}]
   (let [headers (merge {"datastar-request" "true"} headers)
-        tab-id  {:biff.datastar/tab-id tab-id}]
+        tab-id  {:biff.datastar/client-tab-id tab-id}]
     (if signals
       (http-post path
                  :cookie cookie
@@ -134,8 +134,8 @@
                  :cookie cookie
                  :headers headers
                  :form-params (merge {(biff.datastar/signal-name
-                                       :biff.datastar/tab-id)
-                                      (:biff.datastar/tab-id tab-id)}
+                                       :biff.datastar/client-tab-id)
+                                      (:biff.datastar/client-tab-id tab-id)}
                                      form-params)))))
 
 (defn- db-query [sql & params]

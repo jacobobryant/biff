@@ -8,6 +8,7 @@
  {:biff.datastar/buffer-size   :int
   :biff.datastar/condition     [:fn #(instance? Condition %)]
   :biff.datastar/epoch         [:fn #(instance? clojure.lang.IAtom %)]
+  :biff.datastar/get-user-id   'ifn?
   :biff.datastar/lock          [:fn #(instance? ReentrantLock %)]
   :biff.datastar/quality       :int
   :biff.datastar/rate-limit-ms [:and :int pos?]
@@ -20,7 +21,7 @@
   "Returns a map of Datastar options for a hiccup element.
 
    On page load, sends an SSE request to the current URL. Also creates a
-   :biff.datastar/tab-id signal. See `wrap-sse-render`.
+   :biff.datastar/client-tab-id signal. See `wrap-sse-render`.
 
    If :anti-forgery-token is passed in, sets a :biff.datastar/anti-forgery-token
    signal. See `wrap-signals`."
@@ -102,9 +103,13 @@
    signals. Underscores are used as a keyword segment separator so that the
    signals map can contain namespaced keywords; see `signals-json`.
 
-   For convenience, also sets the :biff.datastar/tab-id signal (set by
-   `init-opts`) on the Ring request. If a :biff.datastar/anti-forgery-token
-   signal is set, the x-csrf-token request header is set to its value."
+   Reads the :biff.datastar/client-tab-id signal and turns it into a UUID v5
+   scoped by :biff.datastar/get-user-id which defaults to (:uid session).
+   The new UUID is set on :biff.datastar/tab-id on the request and can safely
+   be used as a primary key for backend tab state.
+
+   If a :biff.datastar/anti-forgery-token signal is set, the x-csrf-token
+   request header is set to its value."
   [handler]
   (impl/wrap-signals handler))
 

@@ -1,10 +1,9 @@
 (ns com.biffweb.demo.model.schema
-  (:require [clojure.string :as str]
-            [com.biffweb.sqlite :as biff.sqlite]))
+  (:require [com.biffweb.sqlite :as biff.sqlite]))
 
 (def columns
   {:tab-state/data {:type :edn}
-   :tab-state/id   {:type :text :primary-key true}
+   :tab-state/id   {:type :uuid :primary-key true}
 
    :todo/archived    {:type :boolean :required true :index true}
    :todo/archived-at {:type :inst}
@@ -27,7 +26,8 @@
 ;; could be used for e.g. user settings.
 (def editable-user-fields [])
 
-(defn authorize-entry [{{:keys [uid]} :session}
+(defn authorize-entry [{{:keys [uid]}       :session
+                        :biff.datastar/keys [tab-id]}
                        {:keys [table op before after]}]
   (case table
     :user
@@ -38,8 +38,9 @@
            :delete true))
 
     :tab-state
-    (every? #(str/starts-with? % (str uid ":"))
-            (keep :tab/id [before after]))
+    (and uid
+         tab-id
+         (every? #{tab-id} (keep :tab-state/id [before after])))
 
     :todo
     (every? #{uid} (keep :todo/user-id [before after]))

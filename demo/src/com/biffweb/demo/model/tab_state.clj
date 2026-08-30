@@ -11,7 +11,7 @@
 
 (defn tab-state-key [{:keys [session biff.datastar/tab-id]}]
   (when (and (:uid session) tab-id)
-    (str (:uid session) ":" tab-id)))
+    tab-id))
 
 (biff.graph/defresolver tab-state-id
   {:output [:tab-state/id]}

@@ -2,6 +2,7 @@
 
  :deps
  {org.clojure/clojure                 {:mvn/version "1.12.5"}
+  danlentz/clj-uuid                   {:mvn/version "0.2.5"}
   com.biffweb/core                    {:local/root "../core"}
   org.clojure/data.json               {:mvn/version "2.5.2"}
   ring/ring-core                      {:mvn/version "1.15.4"}

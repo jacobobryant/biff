@@ -1,5 +1,6 @@
 (ns com.biffweb.datastar.impl
   (:require
+   [clj-uuid.core :as uuid]
    [clojure.data.json :as json]
    [clojure.string :as str]
    [clojure.tools.logging :as log]
@@ -11,7 +12,7 @@
    (com.aayushatharva.brotli4j.encoder
     BrotliOutputStream Encoder$Mode Encoder$Parameters)
    (java.io ByteArrayOutputStream IOException)
-   (java.io ByteArrayOutputStream)
+   (java.nio.charset StandardCharsets)
    (java.util.concurrent.locks Condition ReentrantLock)))
 
 (defrecord ^:private StreamingResponseBody [write-body]
@@ -19,8 +20,11 @@
   (write-body-to-stream [_ _ output-stream]
     (write-body output-stream)))
 
+(def ^:private default-get-user-id (comp :uid :session))
+
 (def ^:private default-options
-  {:biff.datastar/rate-limit-ms 15
+  {:biff.datastar/get-user-id   default-get-user-id
+   :biff.datastar/rate-limit-ms 20
    ;; copied from Hyperlith
    :biff.datastar/window-size   18
    :biff.datastar/quality       5})
@@ -55,6 +59,22 @@
 
 ;;;; Signals ===================================================================
 
+(def ^:private tab-id-namespace
+  (uuid/v5 uuid/+namespace-dns+ "com.biffweb.datastar"))
+
+(def ^:private max-tab-id-part-bytes 1024)
+
+(defn- id-bytes [x]
+  (when (or (uuid? x) (string? x))
+    (let [bytes (.getBytes (str x) StandardCharsets/UTF_8)]
+      (when (<= 1 (alength bytes) max-tab-id-part-bytes)
+        bytes))))
+
+(defn- scoped-tab-id [scope-id client-tab-id]
+  (when (and (id-bytes scope-id) (id-bytes client-tab-id))
+    (uuid/v5 (uuid/v5 tab-id-namespace (str scope-id))
+             (str client-tab-id))))
+
 (defn- parse-signal-str [s]
   (let [segments (str/split s #"_")]
     (if (= (count segments) 1)
@@ -85,13 +105,15 @@
      (first (filterv map? [body-params json-params body params])))))
 
 (defn- merge-signals [request]
-  (let [signals    (parse-signals request)
-        tab-id     (some-> (:biff.datastar/tab-id signals) parse-uuid)
-        csrf-token (:biff.datastar/anti-forgery-token signals)]
+  (let [signals       (parse-signals request)
+        client-tab-id (:biff.datastar/client-tab-id signals)
+        get-user-id   (or (:biff.datastar/get-user-id request)
+                          (:biff.datastar/get-user-id default-options))
+        tab-id        (scoped-tab-id (get-user-id request) client-tab-id)
+        csrf-token    (:biff.datastar/anti-forgery-token signals)]
     (cond-> request
       signals (assoc :biff.datastar/signals signals)
       tab-id  (assoc :biff.datastar/tab-id tab-id)
-      tab-id  (assoc-in [:biff.datastar/signals :biff.datastar/tab-id] tab-id)
       csrf-token (assoc-in [:headers "x-csrf-token"] csrf-token))))
 
 (defn wrap-signals [handler]
@@ -142,7 +164,7 @@
   ([]
    (init-opts {}))
   ([{:keys [anti-forgery-token]}]
-   (merge {:data-signals:biff_datastar_tab-id__case.kebab
+   (merge {:data-signals:biff_datastar_client-tab-id__case.kebab
            "self.crypto.randomUUID()"
 
            :data-init              open-sse-action

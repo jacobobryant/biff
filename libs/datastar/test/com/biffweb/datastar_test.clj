@@ -29,9 +29,10 @@
            (json/read-str encoded)))))
 
 (deftest wrap-signals-test
-  (let [tab-id  (random-uuid)
-        handler identity
-        wrapped (datastar/wrap-signals handler)]
+  (let [client-tab-id (random-uuid)
+        user-id       (random-uuid)
+        handler       identity
+        wrapped       (datastar/wrap-signals handler)]
     (testing "ignores ordinary requests"
       (is (= {:request-method :get :headers {}}
              (wrapped {:request-method :get :headers {}}))))
@@ -39,20 +40,27 @@
       (let [request (wrapped
                      {:request-method :get
                       :headers        {"datastar-request" "true"}
+                      :session        {:uid user-id}
 
                       :query-params {"datastar"
                                      (datastar/signals-json
-                                      {:biff.datastar/tab-id tab-id
+                                      {:biff.datastar/client-tab-id
+                                       client-tab-id
 
                                        :biff.datastar/anti-forgery-token
                                        "token"
 
                                        :profile/display-name "Ada"})}})]
-        (is (= {:biff.datastar/tab-id             tab-id
-                :biff.datastar/anti-forgery-token "token"
-                :profile/display-name             "Ada"}
-               (:biff.datastar/signals request)))
-        (is (= tab-id (:biff.datastar/tab-id request)))
+        (is (uuid? (:biff.datastar/tab-id request)))
+        (is (= 5 (.version (:biff.datastar/tab-id request))))
+        (is (not= client-tab-id (:biff.datastar/tab-id request)))
+        (is (= (str client-tab-id)
+               (:biff.datastar/client-tab-id
+                (:biff.datastar/signals request))))
+        (is (= "token" (:biff.datastar/anti-forgery-token
+                        (:biff.datastar/signals request))))
+        (is (= "Ada" (:profile/display-name
+                      (:biff.datastar/signals request))))
         (is (= "token" (get-in request [:headers "x-csrf-token"])))))
     (testing "parses DELETE signals from query parameters"
       (let [request (wrapped
@@ -75,10 +83,42 @@
                 :nested               {:account/active true}}
                (:biff.datastar/signals request)))))))
 
+(deftest scoped-tab-id-test
+  (let [wrapped       (datastar/wrap-signals identity)
+        client-tab-id (random-uuid)
+        user-id       (random-uuid)
+        request       (fn [scope-id tab-id]
+                        (wrapped
+                         {:request-method :post
+                          :headers        {"datastar-request" "true"}
+                          :session        {:uid scope-id}
+
+                          :body-params
+                          {:biff_datastar_client-tab-id tab-id}}))
+        tab-id        (:biff.datastar/tab-id
+                       (request user-id client-tab-id))]
+    (is (= tab-id (:biff.datastar/tab-id
+                   (request user-id (str client-tab-id)))))
+    (is (not= tab-id (:biff.datastar/tab-id
+                      (request (random-uuid) client-tab-id))))
+    (is (nil? (:biff.datastar/tab-id (request nil client-tab-id))))
+    (is (nil? (:biff.datastar/tab-id
+               (request user-id (apply str (repeat 1025 "x"))))))
+    (is (= tab-id
+           (:biff.datastar/tab-id
+            (wrapped
+             {:request-method            :post
+              :headers                   {"datastar-request" "true"}
+              :biff.datastar/get-user-id (constantly (str user-id))
+
+              :body-params
+              {:biff_datastar_client-tab-id client-tab-id
+               :biff_datastar_tab-id        (random-uuid)}}))))))
+
 (deftest init-opts-test
   (let [opts (datastar/init-opts)]
     (is (= "self.crypto.randomUUID()"
-           (:data-signals:biff_datastar_tab-id__case.kebab opts)))
+           (:data-signals:biff_datastar_client-tab-id__case.kebab opts)))
     (is (= (:data-init opts) (:data-on:online__window opts)))
     (is (re-find #"biff-datastar-sse=true" (:data-init opts))))
   (is (= {"biff_datastar_anti-forgery-token" "csrf"}

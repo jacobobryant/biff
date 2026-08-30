@@ -9,7 +9,7 @@ CREATE TABLE biff_sqlite_kv (
 ) STRICT;
 
 CREATE TABLE tab_state (
-  id TEXT PRIMARY KEY NOT NULL,
+  id BLOB PRIMARY KEY NOT NULL,
   data BLOB
 ) STRICT;
 
