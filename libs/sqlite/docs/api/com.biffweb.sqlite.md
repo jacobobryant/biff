@@ -234,3 +234,13 @@ Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
 biff.graph queries will run inside a read transaction and thus the resolvers
 will all see a consistent view of the database.
 ```
+
+### schema-module
+
+[view source](../../src/com/biffweb/sqlite.clj#L259)
+
+```
+(schema-module #:biff.sqlite{:keys [extra-init-sql authorize columns]})
+
+Adds the given keys to the system map and also defines biff.graph resolvers.
+```

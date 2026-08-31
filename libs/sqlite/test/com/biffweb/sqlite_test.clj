@@ -375,6 +375,23 @@
     (is (not (contains? init :biff.core/kv-list)))
     (is (not (contains? init :biff.core/wrap-db-snapshot)))))
 
+(deftest schema-module-provides-schema-authorization-and-resolvers
+  (let [authorize (constantly true)
+        columns   {:app/id   {:type :uuid :primary-key true}
+                   :app/name {:type :text}}
+        module    (sqlite/schema-module
+                   {:biff.sqlite/authorize      authorize
+                    :biff.sqlite/columns        columns
+                    :biff.sqlite/extra-init-sql ["CREATE INDEX app_name"]})]
+    (is (= columns (:biff.sqlite/columns module)))
+    (is (= (mapv #(dissoc % :biff.graph/resolve-fn)
+                 (sqlite/make-resolvers columns))
+           (mapv #(dissoc % :biff.graph/resolve-fn)
+                 (:biff.graph/resolvers module))))
+    (is (= {:biff.sqlite/authorize      authorize
+            :biff.sqlite/extra-init-sql ["CREATE INDEX app_name"]}
+           ((:biff.core/init module) (atom []))))))
+
 (deftest pool-adds-read-and-write-connections-with-pragmas
   (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)})]
     (try

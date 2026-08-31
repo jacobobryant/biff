@@ -1,6 +1,8 @@
 (ns com.biffweb.xtdb.impl.system
-  (:require [com.biffweb.xtdb.impl.authorize :as authorize]
+  (:require [com.biffweb.core :as biff.core]
+            [com.biffweb.xtdb.impl.authorize :as authorize]
             [com.biffweb.xtdb.impl.kv :as kv]
+            [com.biffweb.xtdb.impl.resolver :as resolver]
             [com.biffweb.xtdb.impl.tx :as tx]
             [xtdb.node :as xt.node])
   (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
@@ -89,3 +91,11 @@
    :biff.core/start  start
    :biff.core/stop   stop
    :biff.fx/handlers fx-handlers})
+
+(defn schema-module [{:biff.xtdb/keys [authorize columns]}]
+  (biff.core/register (resolver/columns->schema columns))
+  {:biff.core/init
+   (fn [_modules-var]
+     {:biff.xtdb/authorize authorize})
+
+   :biff.graph/resolvers (resolver/make-resolvers columns)})

@@ -10,6 +10,8 @@
   introduced :biff.fx/seq instead.
 - biff.fx: add pipe and defpipe.
 - biff.fx: inject :biff.fx/{random-uuid7-seq,random-uuid4-seq} into ctx
+- biff.sqlite: add schema-module
+- biff.xtdb: add schema-module
 
 **Breaking** [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29):
 

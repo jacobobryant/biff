@@ -255,3 +255,9 @@
    will all see a consistent view of the database."
   [columns]
   (impl.resolver/make-resolvers columns))
+
+(defn schema-module
+  "Adds the given keys to the system map and also defines biff.graph resolvers."
+  {:arglists '([{:biff.sqlite/keys [extra-init-sql authorize columns]}])}
+  [opts]
+  (impl.system/schema-module opts))

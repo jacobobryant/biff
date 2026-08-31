@@ -17,8 +17,7 @@
    (open-ctx {}))
   ([initial-ctx]
    ((:biff.core/start (biff.xtdb/module))
-    (merge {:biff.xtdb/columns columns
-            :biff.xtdb/log     :memory
+    (merge {:biff.xtdb/log     :memory
             :biff.xtdb/storage :memory}
            initial-ctx))))
 
@@ -274,3 +273,18 @@
       (is (ifn? (:biff.core/wrap-db-snapshot ctx)))
       (finally
         (close-ctx ctx)))))
+
+(deftest schema-module-provides-schema-authorization-and-resolvers
+  (let [authorize (constantly true)
+        columns   {:app/id   {}
+                   :app/name {:schema :string}}
+        module    (biff.xtdb/schema-module
+                   {:biff.xtdb/authorize authorize
+                    :biff.xtdb/columns   columns})]
+    (is (= :string (:app/name (biff.core/get-registry))))
+    (is (= (mapv #(dissoc % :biff.graph/resolve-fn)
+                 (biff.xtdb/make-resolvers columns))
+           (mapv #(dissoc % :biff.graph/resolve-fn)
+                 (:biff.graph/resolvers module))))
+    (is (= {:biff.xtdb/authorize authorize}
+           ((:biff.core/init module) (atom []))))))

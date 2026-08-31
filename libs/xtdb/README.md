@@ -157,13 +157,11 @@ queries use these aliases instead of `:xt/id`.
 ```clojure
 ;; with biff.core:
 (def module
-  {:biff.graph/resolvers (biff.xtdb/make-resolvers
-                          {:biff.xtdb/columns columns})})
+  {:biff.graph/resolvers (biff.xtdb/make-resolvers columns)})
 
 ;; without:
 (def resolvers (concat
-                (biff.xtdb/make-resolvers
-                 {:biff.xtdb/columns columns})
+                (biff.xtdb/make-resolvers columns)
                 [...]))
 (def ctx (merge (biff.graph/new-ctx resolvers) ...))
 
@@ -206,28 +204,23 @@ The `:schema` values aren't used for XTDB schema or migrations; once registered,
 they're used by `execute-tx` and `submit-tx` to validate docs before they're
 submitted.
 
-If you're using `biff.core`, you can register the Malli schemas and add the
-columns map to your system with a module:
+If you're using `biff.core`, `schema-module` registers the Malli schemas and
+also provides your authorization function and biff.graph resolvers:
 
 ```clojure
-(require '[com.biffweb.core :as biff.core])
-
 (def module
-  {:biff.core/init
-   (fn [_]
-     (biff.core/register (biff.xtdb/columns->schema columns))
-     {:biff.xtdb/columns columns})})
+  (biff.xtdb/schema-module
+   {:biff.xtdb/authorize #'authorize
+    :biff.xtdb/columns   columns}))
 ```
 
-If you're not using `biff.core`, call `biff.core/register` yourself and include
-`:biff.xtdb/columns` in the ctx maps you pass to functions that need it:
+If you're not using `biff.core`, call `biff.core/register` yourself and create
+the resolvers directly:
 
 ```clojure
 (biff.core/register (biff.xtdb/columns->schema columns))
 
-(def ctx
-  {:biff.xtdb/columns columns
-   ...})
+(def resolvers (biff.xtdb/make-resolvers columns))
 ```
 
 ### biff.fx integration

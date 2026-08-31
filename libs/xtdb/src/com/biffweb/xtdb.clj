@@ -169,6 +169,13 @@
   [columns]
   (impl.resolver/make-resolvers columns))
 
+(defn schema-module
+  "Calls biff.core/register with schema for the columns, generates biff.graph
+   resolvers, and sets authorize on the system map."
+  {:arglists '([{:biff.xtdb/keys [authorize columns]}])}
+  [opts]
+  (impl.system/schema-module opts))
+
 (def
   ^{:doc "A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
           :biff.xtdb.fx/submit-tx, and :biff.xtdb.fx/authorized-write."}

@@ -137,9 +137,20 @@ join attribute without the `-id` suffix is also returned:
 All resolvers have `:batch true`.
 ```
 
-### fx-handlers
+### schema-module
 
 [view source](../../src/com/biffweb/xtdb.clj#L172)
+
+```
+(schema-module #:biff.xtdb{:keys [authorize columns]})
+
+Calls biff.core/register with schema for the columns, generates biff.graph
+resolvers, and sets authorize on the system map.
+```
+
+### fx-handlers
+
+[view source](../../src/com/biffweb/xtdb.clj#L179)
 
 ```
 A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
@@ -148,7 +159,7 @@ A biff.fx handlers map. Contains :biff.xtdb.fx/execute-tx,
 
 ### module
 
-[view source](../../src/com/biffweb/xtdb.clj#L178)
+[view source](../../src/com/biffweb/xtdb.clj#L185)
 
 ```
 (module)
