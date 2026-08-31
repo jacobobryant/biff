@@ -43,9 +43,44 @@
    #(if (string? %) (truncate-str % 500) %)
    data))
 
+(defn uuid4 [seed]
+  (let [rng       (Random. seed)
+        msb0      (.nextLong rng)
+        lsb0      (.nextLong rng)
+        ;; Set version to 4
+        msb       (-> msb0
+                      (bit-and (unchecked-long 0xffffffffffff0fff))
+                      (bit-or  (long 0x4000)))
+        ;; Set RFC 4122 variant
+        lsb       (-> lsb0
+                      (bit-and (unchecked-long 0x3fffffffffffffff))
+                      (bit-or  Long/MIN_VALUE))
+        next-seed (.nextLong rng)]
+    [(UUID. msb lsb) next-seed]))
+
+(defn uuid7 [seed instant]
+  (let [rng       (Random. seed)
+        ts        (bit-and (inst-ms instant) 0xffffffffffff)
+        rand-a    (bit-and (.nextInt rng) 0x0fff)
+        rand-b    (.nextLong rng)
+        msb       (unchecked-long
+                   (bit-or (bit-shift-left ts 16)
+                           (bit-shift-left 0x7 12)
+                           rand-a))
+        lsb       (-> rand-b
+                      (bit-and (unchecked-long 0x3fffffffffffffff))
+                      (bit-or Long/MIN_VALUE))
+        next-seed (.nextLong rng)]
+    [(UUID. msb lsb) next-seed]))
+
 (defn- effect-vector? [handlers x]
   (and (vector? x)
        (contains? handlers (first x))))
+
+(defn- uuid-seq [f seed]
+  (lazy-seq
+   (let [[uuid next-seed] (f seed)]
+     (cons uuid (uuid-seq f next-seed)))))
 
 (defn- step [{:keys [machine-name state->fn handlers ctx]}
              {:keys [state input trace]}]
@@ -61,16 +96,24 @@
                           (error! "Invalid state"
                                   {:biff.fx/available-states (keys state->fn)}
                                   nil))
-        injected      {:biff.fx/now  (Instant/now)
-                       :biff.fx/seed (.nextLong (Random.))}
-        raw-result    (try
-                        (apply state-fn (merge ctx injected) input)
-                        (catch Exception e
-                          (error! "State function threw an exception"
-                                  injected e)))
-        result        (if (map? raw-result)
-                        raw-result
-                        {:biff.fx/return raw-result})
+        now           (Instant/now)
+        rng           (Random.)
+
+        [seed uuid7-seed uuid4-seed] (repeatedly 3 #(.nextLong rng))
+
+        injected   {:biff.fx/now              now
+                    :biff.fx/seed             seed
+                    :biff.fx/random-uuid7-seq (uuid-seq #(uuid7 % now)
+                                                        uuid7-seed)
+                    :biff.fx/random-uuid4-seq (uuid-seq uuid4 uuid4-seed)}
+        raw-result (try
+                     (apply state-fn (merge ctx injected) input)
+                     (catch Exception e
+                       (error! "State function threw an exception"
+                               injected e)))
+        result     (if (map? raw-result)
+                     raw-result
+                     {:biff.fx/return raw-result})
 
         evaluate-effects
         (fn [result]
@@ -199,33 +242,3 @@
    (fn [modules-var]
      {:biff.fx/get-handlers
       #(handlers-for-modules @modules-var)})})
-
-(defn uuid4 [seed]
-  (let [rng       (Random. seed)
-        msb0      (.nextLong rng)
-        lsb0      (.nextLong rng)
-        ;; Set version to 4
-        msb       (-> msb0
-                      (bit-and (unchecked-long 0xffffffffffff0fff))
-                      (bit-or  (long 0x4000)))
-        ;; Set RFC 4122 variant
-        lsb       (-> lsb0
-                      (bit-and (unchecked-long 0x3fffffffffffffff))
-                      (bit-or  Long/MIN_VALUE))
-        next-seed (.nextLong rng)]
-    [(UUID. msb lsb) next-seed]))
-
-(defn uuid7 [seed instant]
-  (let [rng       (Random. seed)
-        ts        (bit-and (inst-ms instant) 0xffffffffffff)
-        rand-a    (bit-and (.nextInt rng) 0x0fff)
-        rand-b    (.nextLong rng)
-        msb       (unchecked-long
-                   (bit-or (bit-shift-left ts 16)
-                           (bit-shift-left 0x7 12)
-                           rand-a))
-        lsb       (-> rand-b
-                      (bit-and (unchecked-long 0x3fffffffffffffff))
-                      (bit-or Long/MIN_VALUE))
-        next-seed (.nextLong rng)]
-    [(UUID. msb lsb) next-seed]))

@@ -16,23 +16,39 @@
                     :biff.fx/next :finish})
                  :finish
                  (fn [ctx {:keys [prefix combined]}]
-                   {:biff.fx/return
-                    {:prefix   prefix
-                     :combined combined
-                     :now?     (instance? Instant (:biff.fx/now ctx))
-                     :seed?    (integer? (:biff.fx/seed ctx))}}))]
-    (is (= {:prefix   "ctx"
-            :combined "ctx-effect"
-            :now?     true
-            :seed?    true}
-           (machine {:from-ctx "ctx"
+                   (let [uuid7s (take 2 (:biff.fx/random-uuid7-seq ctx))
+                         uuid4s (take 2 (:biff.fx/random-uuid4-seq ctx))]
+                     {:biff.fx/return
+                      {:prefix     prefix
+                       :combined   combined
+                       :now?       (instance? Instant (:biff.fx/now ctx))
+                       :seed?      (integer? (:biff.fx/seed ctx))
+                       :uuid7s     uuid7s
+                       :uuid4s     uuid4s
+                       :seed-uuid7 (first (biff.fx/uuid7
+                                           (:biff.fx/seed ctx)
+                                           (:biff.fx/now ctx)))
+                       :seed-uuid4 (first (biff.fx/uuid4
+                                           (:biff.fx/seed ctx)))}})))
+        result  (machine {:from-ctx "ctx"
 
-                     :biff.fx/handlers
-                     {:test/concat (fn [ctx suffix]
-                                     (swap! seen conj
-                                            (select-keys ctx
-                                                         [:from-ctx :prefix]))
-                                     (str (:from-ctx ctx) suffix))}})))
+                          :biff.fx/handlers
+                          {:test/concat (fn [ctx suffix]
+                                          (swap! seen conj
+                                                 (select-keys ctx
+                                                              [:from-ctx
+                                                               :prefix]))
+                                          (str (:from-ctx ctx) suffix))}})]
+    (is (= "ctx" (:prefix result)))
+    (is (= "ctx-effect" (:combined result)))
+    (is (:now? result))
+    (is (:seed? result))
+    (is (every? #(= 7 (.version %)) (:uuid7s result)))
+    (is (every? #(= 4 (.version %)) (:uuid4s result)))
+    (is (apply not= (:uuid7s result)))
+    (is (apply not= (:uuid4s result)))
+    (is (not= (:seed-uuid7 result) (first (:uuid7s result))))
+    (is (not= (:seed-uuid4 result) (first (:uuid4s result))))
     (is (= [{:from-ctx "ctx"}]
            @seen))))
 

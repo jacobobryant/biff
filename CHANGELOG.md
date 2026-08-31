@@ -9,6 +9,7 @@
 - biff.fx: remove support for returning a vector of maps for ordered effects;
   introduced :biff.fx/seq instead.
 - biff.fx: add pipe and defpipe.
+- biff.fx: inject :biff.fx/{random-uuid7-seq,random-uuid4-seq} into ctx
 
 **Breaking** [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29):
 

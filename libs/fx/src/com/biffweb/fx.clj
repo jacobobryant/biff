@@ -4,11 +4,13 @@
             [com.biffweb.fx.impl.pipeline :as impl.pipeline]))
 
 (biff.core/register
- {:biff.fx/get-handlers 'ifn?
-  :biff.fx/handlers     [:map-of :keyword 'ifn?]
-  :biff.fx/next         :keyword
-  :biff.fx/now          'inst?
-  :biff.fx/seed         :int})
+ {:biff.fx/get-handlers     'ifn?
+  :biff.fx/handlers         [:map-of :keyword 'ifn?]
+  :biff.fx/next             :keyword
+  :biff.fx/now              'inst?
+  :biff.fx/random-uuid4-seq 'seq?
+  :biff.fx/random-uuid7-seq 'seq?
+  :biff.fx/seed             :int})
 
 (defn machine
   "Returns a function that runs your code as a state machine.

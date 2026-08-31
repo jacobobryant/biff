@@ -11,8 +11,12 @@ Machines (the functions returned by
 The `:start` state function is called first and receives `ctx` and any
 additional arguments from the caller. Other states receive `ctx` and the
 previous state's output map. Effects are executed after each state function
-runs. State functions receive fresh `:biff.fx/now` and `:biff.fx/seed` values in
-ctx.
+runs. State functions receive fresh values for these keys, set in `ctx`:
+
+- `:biff.fx/now` (instant)
+- `:biff.fx/seed` (long, can be used for deterministic randomness)
+- `:biff.fx/random-uuid4-seq` (infinite lazy seq of random v4 UUIDs)
+- `:biff.fx/random-uuid7-seq` (infinite lazy seq of random v7 UUIDs)
 
 Values in those maps that represent effects (\"effect descriptors\") are then
 replaced with the results of their associated effect handler functions. A state

@@ -2,7 +2,7 @@
 
 ### machine
 
-[view source](../../src/com/biffweb/fx.clj#L13)
+[view source](../../src/com/biffweb/fx.clj#L15)
 
 ```
 (machine machine-name & {:as state->fn})
@@ -47,7 +47,7 @@ Example (see defmachine):
 
 ### defmachine
 
-[view source](../../src/com/biffweb/fx.clj#L54)
+[view source](../../src/com/biffweb/fx.clj#L56)
 
 ```
 (defmachine sym & {:as state->fn})
@@ -60,7 +60,7 @@ See com.biffweb.fx/machine.
 
 ### pipeline
 
-[view source](../../src/com/biffweb/fx.clj#L63)
+[view source](../../src/com/biffweb/fx.clj#L65)
 
 ```
 (pipeline machine-name & state-fns)
@@ -93,7 +93,7 @@ functions (for unit testing).
 
 ### defpipeline
 
-[view source](../../src/com/biffweb/fx.clj#L92)
+[view source](../../src/com/biffweb/fx.clj#L94)
 
 ```
 (defpipeline sym & args)
@@ -103,7 +103,7 @@ Defines a var containing an fx pipeline.
 
 ### module
 
-[view source](../../src/com/biffweb/fx.clj#L97)
+[view source](../../src/com/biffweb/fx.clj#L99)
 
 ```
 (module)
@@ -115,7 +115,7 @@ Includes an init function that sets :biff.fx/get-handlers on the system map.
 
 ### uuid4
 
-[view source](../../src/com/biffweb/fx.clj#L104)
+[view source](../../src/com/biffweb/fx.clj#L106)
 
 ```
 (uuid4 seed)
@@ -133,7 +133,7 @@ you passed to this function.
 
 ### uuid7
 
-[view source](../../src/com/biffweb/fx.clj#L117)
+[view source](../../src/com/biffweb/fx.clj#L119)
 
 ```
 (uuid7 seed instant)
