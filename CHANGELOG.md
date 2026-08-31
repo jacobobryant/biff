@@ -14,6 +14,7 @@
 - biff.xtdb: add schema-module
 - biff.core: accept maps for :biff.core/init values
 - biff.tasks: format task adds blank lines to separate split form pairs
+- biff.tasks: add :biff/impl-visibility clj-kondo rule
 
 **Breaking** [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29):
 

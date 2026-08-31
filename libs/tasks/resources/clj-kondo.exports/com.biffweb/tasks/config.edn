@@ -1,0 +1,3 @@
+{:hooks
+ {:analyze-call
+  {clojure.core/ns hooks.biff.tasks/impl-visibility}}}
