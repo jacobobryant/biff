@@ -174,7 +174,7 @@ and it will pass a "diff" value to an `authorize` function which you define:
 
 ;; With biff.core:
 (def module
-  {:biff.core/init (fn [_] {:biff.sqlite/authorize #'authorize})})
+  {:biff.core/init {:biff.sqlite/authorize #'authorize}})
 ;; Without:
 (def ctx {:biff.sqlite/authorize #'authorize, ...})
 

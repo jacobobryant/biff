@@ -54,10 +54,8 @@
 
 (defn schema-module
   [{:biff.sqlite/keys [extra-init-sql authorize columns]}]
-  {:biff.core/init
-   (fn [_modules-var]
-     {:biff.sqlite/extra-init-sql extra-init-sql
-      :biff.sqlite/authorize      authorize})
+  {:biff.core/init {:biff.sqlite/extra-init-sql extra-init-sql
+                    :biff.sqlite/authorize      authorize}
 
    :biff.sqlite/columns  columns
    :biff.graph/resolvers (resolver/make-resolvers columns)})

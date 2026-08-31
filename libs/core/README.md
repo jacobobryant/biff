@@ -103,6 +103,8 @@ at system startup in an unspecified order, before any start functions run. Each
 init function takes the entire `modules` vector and returns a map. The maps from
 all the init functions are merged together into an initial system map.
 
+You can also set `:biff.core/init` to a map instead of a function.
+
 So modules can both define a chunk of application functionality, and they can
 also aggregate those chunks from other modules into the system map.
 

@@ -287,4 +287,4 @@
            (mapv #(dissoc % :biff.graph/resolve-fn)
                  (:biff.graph/resolvers module))))
     (is (= {:biff.xtdb/authorize authorize}
-           ((:biff.core/init module) (atom []))))))
+           (:biff.core/init module)))))

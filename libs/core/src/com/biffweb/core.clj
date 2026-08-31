@@ -4,7 +4,7 @@
             [com.biffweb.stuff.secret :as stuff.secret]))
 
 (impl.v/register
- {:biff.core/init             'fn?
+ {:biff.core/init             [:or 'fn? 'map?]
   :biff.core/start            'fn?
   :biff.core/id               'qualified-keyword?
   :biff.core/stop             'fn?
@@ -61,6 +61,9 @@
 
    Includes a default init function which defines a :biff.core/on-tx function
    that calls :biff.core/on-tx from the other modules in a doseq.
+
+   Alternatively, :biff.core/init can be a plain map in which case it will be
+   merged into the system map as-is.
 
    Entries in start-order must be qualified module ID keywords. For each module
    ID, there must be a module with :biff.core/id set to the keyword and with

@@ -63,8 +63,7 @@
         modules-var (atom [{:biff.core/init
                             (fn [modules-var]
                               {:foo (str "modules:" (count @modules-var))})}
-                           {:biff.core/init (fn [_modules-var]
-                                              {:bar 2})}
+                           {:biff.core/init {:bar 2}}
                            (biff.core/component-shim
                             :test/component-one
                             (fn [ctx]
@@ -105,17 +104,16 @@
   (is (thrown-with-msg? AssertionError
                         (re-pattern
                          (str "Conflicting keys were returned by multiple "
-                              ":biff.core/init functions"))
+                              ":biff.core/init entries"))
                         (biff.core/start
-                         (atom [{:biff.core/init (fn [_modules-var] {:bar 1})}
+                         (atom [{:biff.core/init {:bar 1}}
                                 {:biff.core/init (fn [_modules-var] {:bar 2})}])
                          [])))
   (is (thrown-with-msg? AssertionError
                         #"invalid: should be an integer"
                         (biff.core/start
                          {}
-                         (atom [{:biff.core/init (fn [_modules-var]
-                                                   {:bar "bad"})}])
+                         (atom [{:biff.core/init {:bar "bad"}}])
                          [])))
   (is (thrown-with-msg? AssertionError
                         #"invalid: should be an integer"

@@ -390,7 +390,7 @@
                  (:biff.graph/resolvers module))))
     (is (= {:biff.sqlite/authorize      authorize
             :biff.sqlite/extra-init-sql ["CREATE INDEX app_name"]}
-           ((:biff.core/init module) (atom []))))))
+           (:biff.core/init module)))))
 
 (deftest pool-adds-read-and-write-connections-with-pragmas
   (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)})]

@@ -122,7 +122,7 @@ to an `authorize` function which you define:
 
 ;; With biff.core:
 (def module
-  {:biff.core/init (fn [_] {:biff.xtdb/authorize #'authorize})})
+  {:biff.core/init {:biff.xtdb/authorize #'authorize}})
 ;; Without:
 (def ctx {:biff.xtdb/authorize #'authorize, ...})
 

@@ -6,7 +6,8 @@ for other libraries.
 
 ### :biff.core/init
 
-`(fn [modules-var]) => {...}`. See [start](../api/com.biffweb.core.md#start).
+Either a partial system map or `(fn [modules-var]) => {...}`. See
+[start](../api/com.biffweb.core.md#start).
 
 ### :biff.core/id
 

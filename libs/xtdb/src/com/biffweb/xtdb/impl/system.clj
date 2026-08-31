@@ -94,8 +94,5 @@
 
 (defn schema-module [{:biff.xtdb/keys [authorize columns]}]
   (biff.core/register (resolver/columns->schema columns))
-  {:biff.core/init
-   (fn [_modules-var]
-     {:biff.xtdb/authorize authorize})
-
+  {:biff.core/init       {:biff.xtdb/authorize authorize}
    :biff.graph/resolvers (resolver/make-resolvers columns)})

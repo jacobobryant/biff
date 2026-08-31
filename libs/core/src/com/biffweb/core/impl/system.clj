@@ -15,7 +15,7 @@
                                   (mapv key)
                                   not-empty)]
     (impl.v/assertion-error
-     "Conflicting keys were returned by multiple :biff.core/init functions:"
+     "Conflicting keys were returned by multiple :biff.core/init entries:"
      (pr-str duplicate-keys)))
   (apply merge ms))
 
@@ -24,7 +24,7 @@
   (->> @modules-var
        impl.v/validate
        (keep :biff.core/init)
-       (mapv #(% modules-var))
+       (mapv #(if (fn? %) (% modules-var) %))
        impl.v/validate
        (apply safe-merge)
        (merge (default-init modules-var))))

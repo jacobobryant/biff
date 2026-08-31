@@ -55,6 +55,9 @@ modules-var:
 Includes a default init function which defines a :biff.core/on-tx function
 that calls :biff.core/on-tx from the other modules in a doseq.
 
+Alternatively, :biff.core/init can be a plain map in which case it will be
+merged into the system map as-is.
+
 Entries in start-order must be qualified module ID keywords. For each module
 ID, there must be a module with :biff.core/id set to the keyword and with
 :biff.core/start set to a function like `(fn [ctx]) -> ctx`. :biff.core/stop
@@ -72,7 +75,7 @@ Uses biff.core/validate to ensure that keys in modules, keys returned by
 
 ### stop
 
-[view source](../../src/com/biffweb/core.clj#L83)
+[view source](../../src/com/biffweb/core.clj#L86)
 
 ```
 (stop system)
@@ -84,7 +87,7 @@ Calls the :biff.core/stop-system function from system.
 
 ### register
 
-[view source](../../src/com/biffweb/core.clj#L90)
+[view source](../../src/com/biffweb/core.clj#L93)
 
 ```
 (register schemas)
@@ -99,7 +102,7 @@ Registered schemas are used by biff.core/validate.
 
 ### get-registry
 
-[view source](../../src/com/biffweb/core.clj#L100)
+[view source](../../src/com/biffweb/core.clj#L103)
 
 ```
 (get-registry)
@@ -113,7 +116,7 @@ Returns all schemas that have been passed to biff.core/register.
 
 ### validate
 
-[view source](../../src/com/biffweb/core.clj#L109)
+[view source](../../src/com/biffweb/core.clj#L112)
 
 ```
 (validate m & {:keys [required extra-schema]})
@@ -142,7 +145,7 @@ For convenience, m can be a sequence of maps instead of a single map.
 
 ### validate-with-ex
 
-[view source](../../src/com/biffweb/core.clj#L134)
+[view source](../../src/com/biffweb/core.clj#L137)
 
 ```
 (validate-with-ex m & {:keys [required extra-schema]})
@@ -155,7 +158,7 @@ production.
 
 ### secret-delay
 
-[view source](../../src/com/biffweb/core.clj#L143)
+[view source](../../src/com/biffweb/core.clj#L146)
 
 ```
 (secret-delay x)
