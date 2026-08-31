@@ -201,7 +201,9 @@
    by `cljfmt-version`, downloads a binary to `target/bin/cljfmt`.
 
    Runs `cljfmt fix --parallel [files]` on all the Clojure and EDN files in the
-   current project.
+   current project. Also uses rewrite-clj to use line breaks to separate form
+   pairs (e.g. let binding pairs, map key-value pairs) that are written on
+   different lines.
 
    Attempts to use `git ls-files` to get a list of the project files. Otherwise,
    uses :paths and :extra-paths from deps.edn."

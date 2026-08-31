@@ -253,7 +253,9 @@ If there is not a `cljfmt` executable on the path with the version specified
 by `cljfmt-version`, downloads a binary to `target/bin/cljfmt`.
 
 Runs `cljfmt fix --parallel [files]` on all the Clojure and EDN files in the
-current project.
+current project. Also uses rewrite-clj to use line breaks to separate form
+pairs (e.g. let binding pairs, map key-value pairs) that are written on
+different lines.
 
 Attempts to use `git ls-files` to get a list of the project files. Otherwise,
 uses :paths and :extra-paths from deps.edn.
@@ -261,7 +263,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### lint
 
-[view source](../../src/com/biffweb/tasks.clj#L211)
+[view source](../../src/com/biffweb/tasks.clj#L213)
 
 ```
 (lint)
@@ -285,7 +287,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L230)
+[view source](../../src/com/biffweb/tasks.clj#L232)
 
 ```
 (nrepl & args)
@@ -305,7 +307,7 @@ If the first arg is `--`, calls `-main` without setting `--port` or
 
 ### prod-logs
 
-[view source](../../src/com/biffweb/tasks.clj#L245)
+[view source](../../src/com/biffweb/tasks.clj#L247)
 
 ```
 (prod-logs & args)
@@ -323,7 +325,7 @@ Accepts a single, optional `n-lines` CLI argument, default 300. Runs
 
 ### prod-nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L258)
+[view source](../../src/com/biffweb/tasks.clj#L260)
 
 ```
 (prod-nrepl & args)
@@ -342,7 +344,7 @@ The server is expected to already have an nREPL server running on
 
 ### prod-restart
 
-[view source](../../src/com/biffweb/tasks.clj#L272)
+[view source](../../src/com/biffweb/tasks.clj#L274)
 
 ```
 (prod-restart & args)
@@ -359,7 +361,7 @@ Runs `systemctl restart` on the server.
 
 ### prod-setup
 
-[view source](../../src/com/biffweb/tasks.clj#L284)
+[view source](../../src/com/biffweb/tasks.clj#L286)
 
 ```
 (prod-setup & args)
@@ -405,7 +407,7 @@ distros.
 
 ### publish
 
-[view source](../../src/com/biffweb/tasks.clj#L325)
+[view source](../../src/com/biffweb/tasks.clj#L327)
 
 ```
 (publish & args)
@@ -431,7 +433,7 @@ And the following optional keys:
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L346)
+[view source](../../src/com/biffweb/tasks.clj#L348)
 
 ```
 (init)
@@ -466,7 +468,7 @@ Then runs the `update --clj-kondo-files-only` task.
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L376)
+[view source](../../src/com/biffweb/tasks.clj#L378)
 
 ```
 (test & args)
@@ -478,7 +480,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L383)
+[view source](../../src/com/biffweb/tasks.clj#L385)
 
 ```
 (uberjar)
@@ -497,7 +499,7 @@ include "resources" in their name are copied into the jar.
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L397)
+[view source](../../src/com/biffweb/tasks.clj#L399)
 
 ```
 (update & args)

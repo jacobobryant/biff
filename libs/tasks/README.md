@@ -249,28 +249,3 @@ jobs:
                          :max-line-length 100
                          :exclude-urls    true}}}
 ```
-
-I also have a [custom, vibe-coded `lint` task](/dev/tasks/lint.clj) which
-ensures that form pairs on separate lines are separated with blank lines:
-
-```clojure
-;; Good:
-(let [a 1
-      b 2
-
-      c
-      3
-
-      d
-      4]
-  ...)
-
-;; Bad:
-(let [a
-      1
-      b
-      2]
-  ...)
-```
-
-I may add support for that to biff.tasks' `lint` task at some point.

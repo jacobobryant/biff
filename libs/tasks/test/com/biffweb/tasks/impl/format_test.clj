@@ -32,3 +32,14 @@
 
 (deftest installs-binary-for-current-platform
   (is (some? (format/ensure-cljfmt-binary! version))))
+
+(deftest fixes-pair-spacing
+  (is (= "(let [a\n      1\n\n      b\n      2]\n  [a b])\n"
+         (format/fix-pair-spacing
+          "(let [a\n      1\n      b\n      2]\n  [a b])\n")))
+  (is (= "{:a 1\r\n\r\n :b\r\n 2}\r\n"
+         (format/fix-pair-spacing
+          "{:a 1\r\n :b\r\n 2}\r\n")))
+  (is (= "(cond\n  a\n  1\n\n  b\n  2)\n"
+         (format/fix-pair-spacing
+          "(cond\n  a\n  1\n  b\n  2)\n"))))

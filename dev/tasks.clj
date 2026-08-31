@@ -5,11 +5,7 @@
 (def tasks
   (merge
    biff.tasks/lib-tasks
-   {"lint"
-    {:task 'tasks.lint/lint
-     :doc  "Lints code with clj-kondo and some custom rewrite-clj stuff"}
-
-    "docs"
+   {"docs"
     {:task 'tasks.docs/docs
      :doc  "Generate API docs for all libraries."}
 
@@ -21,7 +17,7 @@
     {:task 'tasks.profile-requires/profile-requires
      :doc  "Profiles the time spent requiring a namespace."}
 
-    "publish-all"
+    "publish"
     {:task 'tasks.publish-all/publish-all
      :doc  "Publishes all libraries to Clojars."}
 
