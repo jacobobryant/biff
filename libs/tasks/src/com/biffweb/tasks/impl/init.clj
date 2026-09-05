@@ -94,7 +94,8 @@
     (println (str "Updated the main namespace to " new-main-ns "."))))
 
 (defn- initialize-git-repository! []
-  (print "Initialize a new git repository (replaces existing git history)? (Y/n) ")
+  (print (str "Initialize a new git repository "
+              "(replaces existing git history)? (Y/n) "))
   (flush)
   (when (#{"" "y" "yes"} (some-> (read-line) str/trim str/lower-case))
     (let [root    (util/project-root)

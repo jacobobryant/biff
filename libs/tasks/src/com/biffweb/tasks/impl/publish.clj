@@ -180,11 +180,11 @@
 (defn publish [& args]
   (when-some [invalid-arg (first (remove #{"--local"} args))]
     (throw (ex-info "Unknown publish flag" {:arg invalid-arg})))
-  (let [local       (some #{"--local"} args)
+  (let [local        (some #{"--local"} args)
         _            (when-not local (assert-not-rlwrap!))
         required     (cond->> required-config-keys
                        local (remove #{:biff.tasks/clojars-username
-                                        :biff.tasks/clojars-secret}))
+                                       :biff.tasks/clojars-secret}))
         config       (util/read-config {:required required})
         project-root (.getCanonicalFile
                       (io/file (or (:biff.tasks/project-root config)

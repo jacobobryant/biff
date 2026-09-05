@@ -24,7 +24,9 @@ Non-breaking:
 - biff.tasks: add `:biff/impl-visibility` clj-kondo rule
 - biff.tasks: init task initializes git repo
 
-## [2.0.0-rc23](RELEASES/2.0.0-rc23.md) (2026-08-29)
+## 2.0.0-rc23 (2026-08-29)
+
+[Release notes](RELEASES/2.0.0-rc23.md).
 
 **Breaking:**
 

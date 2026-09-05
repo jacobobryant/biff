@@ -40,18 +40,24 @@
   (doseq [[needs-rename? renamed?] [[false false] [true false] [true true]]]
     (let [calls (atom [])]
       (with-redefs-fn
-        {#'util/read-config                     (constantly {:biff.tasks/main-ns 'com.example})
-         #'init/needs-main-namespace-init?      (constantly needs-rename?)
-         #'init/rewrite-main-namespace!         (fn []
-                                                  (swap! calls conj :rename)
-                                                  renamed?)
-         #'init/ensure-config-files             #(swap! calls conj :config)
-         #'init/ensure-task-binaries-installed! (fn [_] (swap! calls conj :binaries))
-         #'tasks-update/update                  (fn [& _] (swap! calls conj :update))
-         #'init/initialize-git-repository!      #(swap! calls conj :git)}
+        {#'util/read-config
+         (constantly {:biff.tasks/main-ns 'com.example})
+
+         #'init/new-project?            (constantly needs-rename?)
+         #'init/rewrite-main-namespace! (fn []
+                                          (swap! calls conj :rename)
+                                          renamed?)
+         #'init/ensure-config-files     #(swap! calls conj :config)
+
+         #'init/ensure-task-binaries-installed!
+         (fn [_] (swap! calls conj :binaries))
+
+         #'tasks-update/update
+         (fn [& _] (swap! calls conj :update))
+
+         #'init/initialize-git-repository! #(swap! calls conj :git)}
         init/init)
       (is (= (cond-> []
-               needs-rename? (conj :rename)
-               true (into [:config :binaries :update])
-               needs-rename? (conj :git))
+               needs-rename? (into [:rename :git])
+               true (into [:update :config :binaries]))
              @calls)))))
