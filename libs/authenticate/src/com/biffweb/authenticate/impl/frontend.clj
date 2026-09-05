@@ -98,23 +98,23 @@
               (str "Sign in | " app-name)
               "Sign in")]
     [:style (str "*, *::before, *::after { box-sizing: border-box; } "
-                 "body { margin: 0; padding: 0; }")]
+                 "body { margin: 0; padding: 0; "
+                 "min-height: 100vh; min-height: 100dvh; }")]
     (captcha-head opts)]
-   [:body {:style {:font-family     "'Inter', system-ui, sans-serif"
-                   :background      "#f3f4f6"
-                   :color           "#111827"
-                   :min-height      "100vh"
-                   :display         "flex"
-                   :flex-direction  "column"
-                   :align-items     "center"
-                   :justify-content "center"
-                   :padding         "1rem"
-                   :margin          "0"}}
+   [:body {:style {:font-family        "'Inter', system-ui, sans-serif"
+                   :background         "#f3f4f6"
+                   :color              "#111827"
+                   :display            "grid"
+                   :grid-template-rows "1fr auto 2fr"
+                   :justify-items      "center"
+                   :padding            "1rem"
+                   :margin             "0"}}
     content]])
 
 (defn- card [{:biff.auth/keys [app-name logo-url]} & content]
   (into
-   [:div {:style {:background    "white"
+   [:div {:style {:grid-row      "2"
+                  :background    "white"
                   :border-radius "0.5rem"
                   :padding       "2rem"
                   :width         "24rem"
