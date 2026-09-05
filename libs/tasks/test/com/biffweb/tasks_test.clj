@@ -56,7 +56,7 @@
                       :args ["--copy-only"]}
    'publish          {:fn   tasks/publish
                       :impl 'com.biffweb.tasks.impl.publish/publish
-                      :args []}
+                      :args ["--local"]}
    'init             {:fn   tasks/init
                       :impl 'com.biffweb.tasks.impl.init/init
                       :args []}

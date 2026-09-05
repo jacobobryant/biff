@@ -94,3 +94,51 @@
             [{:artifact "bar.jar"} nil]]
            @calls))
     (is (identical? read-passphrase gpg/read-passphrase))))
+
+(deftest local-install-test
+  (doseq [version ["1.0.0" "2.0.0-rc24-SNAPSHOT"]]
+    (let [calls    (atom [])
+          artifact {:jar-file "example.jar" :pom-file "pom.xml"}
+          config   {:biff.tasks/group-name  "com.example"
+                    :biff.tasks/lib-name    "example"
+                    :biff.tasks/lib-version version
+                    :biff.tasks/pom-data    []
+                    :biff.tasks/pom-scm     {}
+
+                    :biff.tasks/clojars-secret
+                    (delay (throw (ex-info "Unexpected credentials" {})))
+
+                    :biff.tasks/gpg-sign-key-id          "unused-key"
+                    :biff.tasks/gpg-sign-with-passphrase true}]
+      (with-redefs [util/read-config
+                    (fn [{:keys [required]}]
+                      (is (not-any? #{:biff.tasks/clojars-username
+                                      :biff.tasks/clojars-secret} required))
+                      config)
+
+                    publish/inside-rlwrap? (constantly true)
+
+                    publish/published-version?
+                    (fn [_] (throw (ex-info "Unexpected version check" {})))
+
+                    publish/build-artifact!
+                    (fn [_ _] artifact)
+
+                    publish/deploy!
+                    (fn [& _] (throw (ex-info "Unexpected remote deploy" {})))
+
+                    deps-deploy/deploy
+                    (fn [opts] (swap! calls conj opts))]
+        (publish/publish "--local"))
+      (is (= [{:installer      :local
+               :artifact       "example.jar"
+               :pom-file       "pom.xml"
+               :sign-releases? false}]
+             @calls)))))
+
+(deftest unknown-publish-flag-test
+  (with-redefs [util/read-config
+                (fn [& _] (throw (ex-info "Unexpected config read" {})))]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"Unknown publish flag"
+                          (publish/publish "--locla")))))

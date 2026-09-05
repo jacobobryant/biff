@@ -18,10 +18,10 @@
    "admin"
    "defaults"])
 
-(defn publish-all []
+(defn publish-all [& args]
   (doseq [library libraries]
     (binding [biff.tasks/*extra-config*
               {:biff.tasks/lib-name     library
                :biff.tasks/project-root (str "libs/" library)}]
-      (biff.tasks/publish)))
+      (apply biff.tasks/publish args)))
   nil)

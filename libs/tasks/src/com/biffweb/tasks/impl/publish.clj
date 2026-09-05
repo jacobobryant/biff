@@ -177,15 +177,22 @@
           (when (.exists (io/file path))
             (io/delete-file path)))))))
 
-(defn publish []
-  (assert-not-rlwrap!)
-  (let [config       (util/read-config {:required required-config-keys})
+(defn publish [& args]
+  (when-some [invalid-arg (first (remove #{"--local"} args))]
+    (throw (ex-info "Unknown publish flag" {:arg invalid-arg})))
+  (let [local?       (some #{"--local"} args)
+        _            (when-not local? (assert-not-rlwrap!))
+        required     (cond->> required-config-keys
+                       local? (remove #{:biff.tasks/clojars-username
+                                        :biff.tasks/clojars-secret}))
+        config       (util/read-config {:required required})
         project-root (.getCanonicalFile
                       (io/file (or (:biff.tasks/project-root config)
                                    (util/project-root))))
 
         {:biff.tasks/keys [group-name lib-name lib-version]} config]
-    (if (and (not (snapshot-version? lib-version))
+    (if (and (not local?)
+             (not (snapshot-version? lib-version))
              (published-version?
               (select-keys config [:biff.tasks/group-name
                                    :biff.tasks/lib-name
@@ -201,8 +208,13 @@
                                            :biff.tasks/monorepo
                                            :biff.tasks/pom-data
                                            :biff.tasks/pom-scm]))]
-        (deploy! (select-keys config [:biff.tasks/clojars-secret
-                                      :biff.tasks/clojars-username
-                                      :biff.tasks/gpg-sign-key-id
-                                      :biff.tasks/gpg-sign-with-passphrase])
-                 artifact)))))
+        (if local?
+          (deps-deploy/deploy {:installer      :local
+                               :artifact       (:jar-file artifact)
+                               :pom-file       (:pom-file artifact)
+                               :sign-releases? false})
+          (deploy! (select-keys config [:biff.tasks/clojars-secret
+                                        :biff.tasks/clojars-username
+                                        :biff.tasks/gpg-sign-key-id
+                                        :biff.tasks/gpg-sign-with-passphrase])
+                   artifact))))))

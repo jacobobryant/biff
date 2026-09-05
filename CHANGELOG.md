@@ -6,6 +6,7 @@
 - biff.sqlite, biff.xtdb: set the biff.core DB functions via the same module
   that sets the connections/node.
 - biff.tasks: allow publishing snapshot versions multiple times.
+- biff.tasks: `publish --local` installs artifacts into the local Maven repository.
 - biff.fx: remove support for returning a vector of maps for ordered effects;
   introduced :biff.fx/seq instead.
 - biff.fx: add pipe and defpipe.
