@@ -414,6 +414,10 @@ distros.
 
 Publish library to Clojars with deps-deploy.
 
+CLI options:
+
+  --local    install in the local Maven repo instead of Clojars
+
 Reads the following required config keys:
 
 - :biff.tasks/group-name

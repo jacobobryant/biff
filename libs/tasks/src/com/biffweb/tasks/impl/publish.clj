@@ -180,41 +180,48 @@
 (defn publish [& args]
   (when-some [invalid-arg (first (remove #{"--local"} args))]
     (throw (ex-info "Unknown publish flag" {:arg invalid-arg})))
-  (let [local?       (some #{"--local"} args)
-        _            (when-not local? (assert-not-rlwrap!))
+  (let [local       (some #{"--local"} args)
+        _            (when-not local (assert-not-rlwrap!))
         required     (cond->> required-config-keys
-                       local? (remove #{:biff.tasks/clojars-username
+                       local (remove #{:biff.tasks/clojars-username
                                         :biff.tasks/clojars-secret}))
         config       (util/read-config {:required required})
         project-root (.getCanonicalFile
                       (io/file (or (:biff.tasks/project-root config)
                                    (util/project-root))))
 
-        {:biff.tasks/keys [group-name lib-name lib-version]} config]
-    (if (and (not local?)
-             (not (snapshot-version? lib-version))
-             (published-version?
-              (select-keys config [:biff.tasks/group-name
-                                   :biff.tasks/lib-name
-                                   :biff.tasks/lib-version])))
+        {:biff.tasks/keys [group-name lib-name lib-version]} config
+
+        already-published (and (not local)
+                               (not (snapshot-version? lib-version))
+                               (published-version?
+                                (select-keys config [:biff.tasks/group-name
+                                                     :biff.tasks/lib-name
+                                                     :biff.tasks/lib-version])))
+        artifact          (when-not already-published
+                            (build-artifact!
+                             project-root
+                             (select-keys config [:biff.tasks/group-name
+                                                  :biff.tasks/lib-name
+                                                  :biff.tasks/lib-version
+                                                  :biff.tasks/monorepo
+                                                  :biff.tasks/pom-data
+                                                  :biff.tasks/pom-scm])))]
+    (cond
+      already-published
       (println "Already published, skipping:"
                (str group-name "/" lib-name)
                lib-version)
-      (let [artifact (build-artifact!
-                      project-root
-                      (select-keys config [:biff.tasks/group-name
-                                           :biff.tasks/lib-name
-                                           :biff.tasks/lib-version
-                                           :biff.tasks/monorepo
-                                           :biff.tasks/pom-data
-                                           :biff.tasks/pom-scm]))]
-        (if local?
-          (deps-deploy/deploy {:installer      :local
-                               :artifact       (:jar-file artifact)
-                               :pom-file       (:pom-file artifact)
-                               :sign-releases? false})
-          (deploy! (select-keys config [:biff.tasks/clojars-secret
-                                        :biff.tasks/clojars-username
-                                        :biff.tasks/gpg-sign-key-id
-                                        :biff.tasks/gpg-sign-with-passphrase])
-                   artifact))))))
+
+      local
+      (deps-deploy/deploy {:installer      :local
+                           :artifact       (:jar-file artifact)
+                           :pom-file       (:pom-file artifact)
+                           :sign-releases? false})
+
+      :else
+      (deploy! (select-keys config [:biff.tasks/clojars-secret
+                                    :biff.tasks/clojars-username
+                                    :biff.tasks/gpg-sign-key-id
+                                    :biff.tasks/gpg-sign-with-passphrase])
+               artifact))))
