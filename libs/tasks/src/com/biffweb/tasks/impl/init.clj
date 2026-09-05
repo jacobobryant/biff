@@ -1,5 +1,6 @@
 (ns com.biffweb.tasks.impl.init
-  (:require [clojure.java.io :as io]
+  (:require [babashka.fs :as fs]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [com.biffweb.tasks.impl.css :as css]
             [com.biffweb.tasks.impl.format :as tasks-format]
@@ -92,7 +93,19 @@
       (delete-empty-directory! child))
     (println (str "Updated the main namespace to " new-main-ns "."))))
 
-(defn- needs-main-namespace-init? [configured-main-ns]
+(defn- initialize-git-repository! []
+  (print "Initialize a new git repository (replaces existing git history)? (Y/n) ")
+  (flush)
+  (when (#{"" "y" "yes"} (some-> (read-line) str/trim str/lower-case))
+    (let [root    (util/project-root)
+          git-dir (io/file root ".git")]
+      (if (fs/directory? git-dir)
+        (fs/delete-tree git-dir)
+        (fs/delete-if-exists git-dir))
+      (doseq [args [["init"] ["add" "."] ["commit" "-m" "First commit"]]]
+        (apply util/shell-inherit "git" "-C" (str root) args)))))
+
+(defn- new-project? [configured-main-ns]
   (or (= configured-main-ns template-main-ns)
       (.exists (io/file (util/project-root)
                         "src"
@@ -109,9 +122,12 @@
         (util/read-config '{:select [main-ns
                                      clj-kondo-version
                                      cljfmt-version
-                                     tailwind-version]})]
-    (when (needs-main-namespace-init? main-ns)
-      (rewrite-main-namespace!))
+                                     tailwind-version]})
+
+        new-project (new-project? main-ns)]
+    (when new-project
+      (rewrite-main-namespace!)
+      (initialize-git-repository!))
+    (tasks-update/update "--clj-kondo-files-only")
     (ensure-config-files)
-    (ensure-task-binaries-installed! config)
-    (tasks-update/update "--clj-kondo-files-only")))
+    (ensure-task-binaries-installed! config)))

@@ -33,7 +33,7 @@ Included tasks:
 - prod-nrepl
 - prod-restart
 - prod-setup
-- setup
+- init
 - test
 - uberjar
 - update
@@ -437,7 +437,7 @@ And the following optional keys:
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L348)
+[view source](../../src/com/biffweb/tasks.clj#L352)
 
 ```
 (init)
@@ -472,7 +472,7 @@ Then runs the `update --clj-kondo-files-only` task.
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L378)
+[view source](../../src/com/biffweb/tasks.clj#L382)
 
 ```
 (test & args)
@@ -484,7 +484,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L385)
+[view source](../../src/com/biffweb/tasks.clj#L389)
 
 ```
 (uberjar)
@@ -503,7 +503,7 @@ include "resources" in their name are copied into the jar.
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L399)
+[view source](../../src/com/biffweb/tasks.clj#L403)
 
 ```
 (update & args)

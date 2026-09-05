@@ -30,7 +30,7 @@
      - prod-nrepl
      - prod-restart
      - prod-setup
-     - setup
+     - init
      - test
      - uberjar
      - update

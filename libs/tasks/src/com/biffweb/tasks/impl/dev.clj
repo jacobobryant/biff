@@ -11,8 +11,9 @@
   (try
     (f)
     (catch Exception e
-      (binding [*err* *out*]
-        (st/print-stack-trace e)))))
+      (when-not (#{130 143} (:exit (ex-data e)))
+        (binding [*err* *out*]
+          (st/print-stack-trace e))))))
 
 (defn- start-file-watcher!
   [{:keys [directories on-change debounce-ms]
