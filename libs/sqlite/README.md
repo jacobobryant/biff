@@ -75,11 +75,8 @@ Register the module to initialize the schema and start database connections:
 
 (def columns ...)
 
-(def schema-module {:biff.sqlite/columns columns})
-
 (def modules
-  [schema-module
-   (biff.sqlite/module)
+  [(biff.sqlite/module {:biff.sqlite/columns columns})
    ...])
 
 (def start-order

@@ -111,20 +111,23 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
 
 ```
 (module)
+(module #:biff.sqlite{:keys [extra-init-sql authorize columns]})
 
 Returns a biff.core module. Module ID is :biff.sqlite/module.
 
 - includes litestream-module, sqldef-module, and conn-module
-- provides :biff.fx/handlers in the module
-- collects :biff.sqlite/columns from other modules
-- provides some key-value store functions in the system map:
-  :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-- provides :biff.core/wrap-db-snapshot in the system map.
+- collects :biff.sqlite/columns from other modules and merges with the given
+  `columns`.
+- provides :biff.fx/handlers and :biff.graph/resolvers in the module.
+- provides `authorize` and `extra-init-sql` in the system map.
+- provides some DB-related biff.core functions in the system map:
+  :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list,
+  :biff.core/wrap-db-snapshot
 ```
 
 ### litestream-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L166)
+[view source](../../src/com/biffweb/sqlite.clj#L170)
 
 ```
 (litestream-module)
@@ -154,7 +157,7 @@ your application runs.
 
 ### sqldef-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L191)
+[view source](../../src/com/biffweb/sqlite.clj#L195)
 
 ```
 (sqldef-module)
@@ -180,7 +183,7 @@ isn't available.
 
 ### conn-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L212)
+[view source](../../src/com/biffweb/sqlite.clj#L216)
 
 ```
 (conn-module)
@@ -211,7 +214,7 @@ Also sets these keys on the system map:
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L238)
+[view source](../../src/com/biffweb/sqlite.clj#L242)
 
 ```
 (make-resolvers columns)
@@ -233,14 +236,4 @@ All resolvers have `:batch true`.
 Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
 biff.graph queries will run inside a read transaction and thus the resolvers
 will all see a consistent view of the database.
-```
-
-### schema-module
-
-[view source](../../src/com/biffweb/sqlite.clj#L259)
-
-```
-(schema-module #:biff.sqlite{:keys [extra-init-sql authorize columns]})
-
-Adds the given keys to the system map and also defines biff.graph resolvers.
 ```

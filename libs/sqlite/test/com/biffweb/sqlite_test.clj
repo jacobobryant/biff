@@ -370,27 +370,35 @@
     (is (contains? (:biff.sqlite/columns module) :biff-sqlite-kv/id))
     (is (= {:app/id {:type :uuid :primary-key true}}
            (:biff.sqlite/columns init)))
+    (is (not (contains? init :biff.sqlite/extra-init-sql)))
+    (is (not (contains? init :biff.sqlite/authorize)))
     (is (not (contains? init :biff.core/kv-get)))
     (is (not (contains? init :biff.core/kv-set)))
     (is (not (contains? init :biff.core/kv-list)))
     (is (not (contains? init :biff.core/wrap-db-snapshot)))))
 
-(deftest schema-module-provides-schema-authorization-and-resolvers
+(deftest module-includes-schema-options-and-resolvers
   (let [authorize (constantly true)
+        extra-sql ["CREATE INDEX app_name ON app(name)"]
         columns   {:app/id   {:type :uuid :primary-key true}
                    :app/name {:type :text}}
-        module    (sqlite/schema-module
-                   {:biff.sqlite/authorize      authorize
-                    :biff.sqlite/columns        columns
-                    :biff.sqlite/extra-init-sql ["CREATE INDEX app_name"]})]
-    (is (= columns (:biff.sqlite/columns module)))
+        module    (sqlite/module {:biff.sqlite/columns        columns
+                                  :biff.sqlite/authorize      authorize
+                                  :biff.sqlite/extra-init-sql extra-sql})
+        init      ((:biff.core/init module)
+                   (atom [module
+                          {:biff.sqlite/columns
+                           {:other/id {:type :uuid :primary-key true}}}]))]
+    (is (= columns
+           (select-keys (:biff.sqlite/columns init) (keys columns))))
+    (is (contains? (:biff.sqlite/columns init) :biff-sqlite-kv/id))
+    (is (contains? (:biff.sqlite/columns init) :other/id))
+    (is (= authorize (:biff.sqlite/authorize init)))
+    (is (= extra-sql (:biff.sqlite/extra-init-sql init)))
     (is (= (mapv #(dissoc % :biff.graph/resolve-fn)
                  (sqlite/make-resolvers columns))
            (mapv #(dissoc % :biff.graph/resolve-fn)
-                 (:biff.graph/resolvers module))))
-    (is (= {:biff.sqlite/authorize      authorize
-            :biff.sqlite/extra-init-sql ["CREATE INDEX app_name"]}
-           (:biff.core/init module)))))
+                 (:biff.graph/resolvers module))))))
 
 (deftest pool-adds-read-and-write-connections-with-pragmas
   (let [ctx (pool/start {:biff.sqlite/db-path (temp-db-path)})]

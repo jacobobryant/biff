@@ -39,23 +39,19 @@
    :biff.core/start pool/start
    :biff.core/stop  pool/stop})
 
-(defn module []
-  {:biff.core/id        :biff.sqlite/module
-   :biff.core/start     start
-   :biff.core/stop      stop
-   :biff.fx/handlers    fx-handlers
-   :biff.sqlite/columns kv/columns
+(defn module [& {:biff.sqlite/keys [columns extra-init-sql authorize]}]
+  {:biff.core/id         :biff.sqlite/module
+   :biff.core/start      start
+   :biff.core/stop       stop
+   :biff.fx/handlers     fx-handlers
+   :biff.sqlite/columns  (merge kv/columns columns)
+   :biff.graph/resolvers (resolver/make-resolvers (or columns {}))
 
    :biff.core/init
    (fn [modules-var]
-     {:biff.sqlite/columns (into {}
-                                 (mapcat :biff.sqlite/columns)
-                                 @modules-var)})})
-
-(defn schema-module
-  [{:biff.sqlite/keys [extra-init-sql authorize columns]}]
-  {:biff.core/init {:biff.sqlite/extra-init-sql extra-init-sql
-                    :biff.sqlite/authorize      authorize}
-
-   :biff.sqlite/columns  columns
-   :biff.graph/resolvers (resolver/make-resolvers columns)})
+     (into {:biff.sqlite/columns (into {}
+                                       (mapcat :biff.sqlite/columns)
+                                       @modules-var)}
+           (filter (comp some? val))
+           {:biff.sqlite/extra-init-sql extra-init-sql
+            :biff.sqlite/authorize      authorize}))})

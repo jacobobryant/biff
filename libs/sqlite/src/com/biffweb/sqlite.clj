@@ -155,13 +155,17 @@
   "Returns a biff.core module. Module ID is :biff.sqlite/module.
 
    - includes litestream-module, sqldef-module, and conn-module
-   - provides :biff.fx/handlers in the module
-   - collects :biff.sqlite/columns from other modules
-   - provides some key-value store functions in the system map:
-     :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list.
-   - provides :biff.core/wrap-db-snapshot in the system map."
-  []
-  (impl.system/module))
+   - collects :biff.sqlite/columns from other modules and merges with the given
+     `columns`.
+   - provides :biff.fx/handlers and :biff.graph/resolvers in the module.
+   - provides `authorize` and `extra-init-sql` in the system map.
+   - provides some DB-related biff.core functions in the system map:
+     :biff.core/kv-get, :biff.core/kv-set, :biff.core/kv-list,
+     :biff.core/wrap-db-snapshot"
+  {:arglists '([]
+               [{:biff.sqlite/keys [extra-init-sql authorize columns]}])}
+  [& args]
+  (apply impl.system/module args))
 
 (defn litestream-module
   "On start, uses litestream to backup/restore the database. Module ID is
@@ -255,9 +259,3 @@
    will all see a consistent view of the database."
   [columns]
   (impl.resolver/make-resolvers columns))
-
-(defn schema-module
-  "Adds the given keys to the system map and also defines biff.graph resolvers."
-  {:arglists '([{:biff.sqlite/keys [extra-init-sql authorize columns]}])}
-  [opts]
-  (impl.system/schema-module opts))

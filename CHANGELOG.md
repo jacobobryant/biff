@@ -10,7 +10,7 @@
   introduced :biff.fx/seq instead.
 - biff.fx: add pipe and defpipe.
 - biff.fx: inject :biff.fx/{random-uuid7-seq,random-uuid4-seq} into ctx
-- biff.sqlite: add schema-module
+- biff.sqlite: `module` accepts schema options
 - biff.xtdb: add schema-module
 - biff.core: accept maps for :biff.core/init values
 - biff.tasks: format task adds blank lines to separate split form pairs
