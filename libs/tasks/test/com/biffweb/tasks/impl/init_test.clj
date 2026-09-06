@@ -52,8 +52,7 @@
          #'init/ensure-task-binaries-installed!
          (fn [_] (swap! calls conj :binaries))
 
-         #'tasks-update/update
-         (fn [& _] (swap! calls conj :update))
+         #'init/ensure-clj-kondo-cache! #(swap! calls conj :update)
 
          #'init/initialize-git-repository! #(swap! calls conj :git)
          #'util/ensure-paths!              #(swap! calls conj :paths)}
@@ -62,3 +61,21 @@
                needs-rename? (into [:rename :git])
                true (into [:update :config :binaries :paths]))
              @calls)))))
+
+(deftest clj-kondo-cache-is-initialized-once
+  (doseq [cache-exists? [false true]]
+    (let [root  (fs/create-temp-dir)
+          calls (atom [])]
+      (try
+        (when cache-exists?
+          (fs/create-dirs (fs/path root ".clj-kondo/.cache")))
+        (with-redefs [util/project-root (constantly (io/file (str root)))
+                      tasks-update/update
+                      (fn [& args] (swap! calls conj (vec args)))]
+          (#'init/ensure-clj-kondo-cache!))
+        (is (= (if cache-exists?
+                 []
+                 [["--clj-kondo-files-only"]])
+               @calls))
+        (finally
+          (fs/delete-tree root))))))

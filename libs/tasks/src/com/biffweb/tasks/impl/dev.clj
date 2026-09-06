@@ -38,7 +38,10 @@
 (defn dev []
   (if-not (util/ensure-paths!)
     (util/shell-inherit "clojure" "-M:run" "dev")
-    (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
+    (let [_
+          (biff.run/run-task "init")
+
+          {:biff.tasks/keys [main-ns]} (util/read-config)]
       (future
         (run-with-printed-exceptions
          #(biff.run/run-task "css" "--watch=always")))

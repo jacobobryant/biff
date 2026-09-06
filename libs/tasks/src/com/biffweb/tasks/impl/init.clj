@@ -118,9 +118,13 @@
   (tasks-lint/ensure-clj-kondo-binary! clj-kondo-version)
   (css/ensure-tailwind-binary! tailwind-version))
 
+(defn- ensure-clj-kondo-cache! []
+  (when-not (.exists (io/file (util/project-root) ".clj-kondo/.cache"))
+    (tasks-update/update "--clj-kondo-files-only")))
+
 (defn init []
   (let [{:biff.tasks/keys [main-ns] :as config}
-        (util/read-config '{:select [main-ns
+        (util/read-config {:select '[main-ns
                                      clj-kondo-version
                                      cljfmt-version
                                      tailwind-version]})
@@ -129,7 +133,7 @@
     (when new-project
       (rewrite-main-namespace!)
       (initialize-git-repository!))
-    (tasks-update/update "--clj-kondo-files-only")
+    (ensure-clj-kondo-cache!)
     (ensure-config-files)
     (ensure-task-binaries-installed! config)
     (util/ensure-paths!)))

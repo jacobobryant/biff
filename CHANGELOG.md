@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-rc26
+
+- biff.tasks: the dev task runs the init task when needed.
+- biff.tasks: the add task syncs clj-kondo configs.
 
 ## 2.0.0-rc25
 

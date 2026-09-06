@@ -5,6 +5,9 @@
             [clojure.stacktrace :as st]
             [clojure.string :as str]))
 
+(defn project-root []
+  (io/file (System/getProperty "user.dir")))
+
 ;;;; config ====================================================================
 
 (def config-defaults
@@ -128,6 +131,35 @@
       (.flush ^java.io.Writer *out*)
       (.flush ^java.io.Writer *err*))))
 
+(defn refreshed-classpath []
+  (let [{:keys [exit out err] :as result} (sh/sh "clojure" "-Spath")
+        classpath                         (str/trim out)]
+    (when (or (not= 0 exit) (str/blank? classpath))
+      (throw (ex-info "Failed to refresh classpath"
+                      {:exit exit :err err :result result})))
+    classpath))
+
+(defn- classpath-batches [classpath]
+  (let [separator java.io.File/pathSeparator]
+    (reduce
+     (fn [batches path]
+       (let [current  (peek batches)
+             combined (str current (when-not (str/blank? current) separator)
+                           path)]
+         (if (<= (count combined) 16000)
+           (conj (pop batches) combined)
+           (conj batches path))))
+     [""]
+     (str/split classpath
+                (re-pattern (java.util.regex.Pattern/quote separator))))))
+
+(defn update-clj-kondo-cache! [binary classpath]
+  (.mkdirs (io/file (project-root) ".clj-kondo"))
+  (doseq [batch (classpath-batches classpath)]
+    (shell binary
+           "--parallel" "--dependencies" "--copy-configs"
+           "--lint" batch)))
+
 ;; this makes the output print to the console immediately instead of buffering,
 ;; but it also means callers can't capture the output.
 (defn shell-inherit [& args]
@@ -194,9 +226,6 @@
                    (.toPath (.getCanonicalFile (io/file to-file))))
       str
       (str/replace "\\" "/")))
-
-(defn project-root []
-  (io/file (System/getProperty "user.dir")))
 
 (defn read-deps-edn
   ([]

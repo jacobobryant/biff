@@ -32,7 +32,7 @@
         (update/update "--clj-kondo-files-only"))
       (is (= (mapv #(vector "kondo" "--parallel" "--dependencies"
                             "--copy-configs" "--lint" %)
-                   (#'update/classpath-batches
+                   (#'util/classpath-batches
                     (System/getProperty "java.class.path")))
              @shell-calls))))
   (testing "deps-only mode skips clj-kondo"
@@ -59,7 +59,7 @@
   (let [separator java.io.File/pathSeparator
         paths     [(apply str (repeat 10000 "a"))
                    (apply str (repeat 10000 "b"))]
-        batches   (#'update/classpath-batches (str/join separator paths))]
+        batches   (#'util/classpath-batches (str/join separator paths))]
     (is (= paths batches))
     (is (every? #(<= (count %) 16000) batches))))
 

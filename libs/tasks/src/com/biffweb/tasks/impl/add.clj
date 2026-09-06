@@ -1,7 +1,9 @@
 (ns com.biffweb.tasks.impl.add
   (:require [borkdude.rewrite-edn :as r]
+            [clojure.java.io :as io]
             [clojure.java.shell :as sh]
             [clojure.string :as str]
+            [com.biffweb.tasks.impl.lint :as tasks-lint]
             [com.biffweb.tasks.impl.util :as util]))
 
 (defn- maven-coordinate [value]
@@ -84,10 +86,29 @@
                                value))]
     (spit path (str updated))))
 
+(defn- classpath-paths [classpath]
+  (let [separator (re-pattern
+                   (java.util.regex.Pattern/quote
+                    java.io.File/pathSeparator))]
+    (mapv #(.getCanonicalPath (io/file %))
+          (str/split classpath separator))))
+
 (defn add [value]
-  (let [[coordinate dependency]
+  (let [old-classpath (set (classpath-paths
+                            (System/getProperty "java.class.path")))
+
+        [coordinate dependency]
         (if (re-find #"^[a-z][a-z0-9+.-]*://" value)
           (latest-git-coordinate value)
-          (latest-maven-coordinate (maven-coordinate value)))]
+          (latest-maven-coordinate (maven-coordinate value)))
+
+        version (:biff.tasks/clj-kondo-version (util/read-config))]
     (add-dependency! coordinate dependency)
+    (when-some [new-paths (->> (classpath-paths
+                                (util/refreshed-classpath))
+                               (remove old-classpath)
+                               not-empty)]
+      (util/update-clj-kondo-cache!
+       (tasks-lint/ensure-clj-kondo-binary! version)
+       (str/join java.io.File/pathSeparator new-paths)))
     (println "Added" coordinate dependency)))
