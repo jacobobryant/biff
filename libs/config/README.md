@@ -28,7 +28,7 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Schema](docs/reference/schema.md)
+- [Schema](docs/schema.md)
 - [API](docs/api/com.biffweb.config.md)
 
 ## Usage

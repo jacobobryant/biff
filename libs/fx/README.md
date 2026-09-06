@@ -28,8 +28,8 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Machines](docs/reference/machines.md)
-- [Schema](docs/reference/schema.md)
+- [Machines](docs/machines.md)
+- [Schema](docs/schema.md)
 - [API](docs/api/com.biffweb.fx.md)
 
 ## Example

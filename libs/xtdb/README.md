@@ -32,8 +32,8 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Transaction Ops](docs/reference/transaction-ops.md)
-- [Library Schema](docs/reference/library-schema.md)
+- [Transaction Ops](docs/transaction-ops.md)
+- [Library Schema](docs/library-schema.md)
 - [API](docs/api/com.biffweb.xtdb.md)
 
 ## Usage
@@ -70,7 +70,7 @@ If you're not using biff.core, you can wire things up manually:
 By default, uses local disk storage under `storage/xtdb2/`. Set
 `:biff.xtdb/storage` and `:biff.xtdb/log` to `:memory` for tests. See
 [`expand-config`](docs/api/com.biffweb.xtdb.md#expand-config) and [Library
-Schema](docs/reference/library-schema.md).
+Schema](docs/library-schema.md).
 
 ### Queries
 
@@ -98,7 +98,7 @@ operations, `:biff/upsert` and `:biff/assert-unique`:
      :biff/on-update {:user/score 2}}]])
 ```
 
-See [Transaction Ops](docs/reference/transaction-ops.md).
+See [Transaction Ops](docs/transaction-ops.md).
 
 ### Authorization rules
 
@@ -134,7 +134,7 @@ to an `authorize` function which you define:
 ```
 
 See [`authorized-write`](docs/api/com.biffweb.xtdb.md#authorized-write) and
-[`:biff.xtdb/authorize`](docs/reference/library-schema.md#biffxtdbauthorize).
+[`:biff.xtdb/authorize`](docs/library-schema.md#biffxtdbauthorize).
 
 ### biff.graph resolvers
 

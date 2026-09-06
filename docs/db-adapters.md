@@ -22,10 +22,10 @@ should provide at least these things:
   `:biff.core/kv-get`, and `:biff.core/kv-list`. If the database has a way to
   ensure that multiple queries see a consistent view of the database, then you
   should also include `:biff.core/wrap-db-snapshot`. See [biff.core's schema
-  reference](/libs/core/docs/reference/schema.md).
+  reference](/libs/core/docs/schema.md).
 
 - The module should also include a
-  [`:biff.fx/handlers`](/libs/fx/docs/reference/schema.md#bifffxhandlers) map
+  [`:biff.fx/handlers`](/libs/fx/docs/schema.md#bifffxhandlers) map
   containing function(s) for reading/writing to the database. The value of
   `:biff.fx/handlers` can also be exposed as a standalone `fx-handlers` var for
   biff.fx users who aren't using biff.core.

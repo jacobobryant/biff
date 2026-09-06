@@ -48,7 +48,7 @@ Some resources:
 
 ## Reference
 
-- [Schema](docs/reference/schema.md)
+- [Schema](docs/schema.md)
 - [API](docs/api/com.biffweb.datastar.md)
 
 ## Example
@@ -108,7 +108,7 @@ application:
 
 If you're using [biff.core](/libs/core), [biff.ring](/libs/ring), and a Biff
 [database adapter](/docs/db-adapters.md) that implements
-[`:biff.core/on-tx`](/libs/core/docs/reference/schema.md#biffcoreon-tx) (such
+[`:biff.core/on-tx`](/libs/core/docs/schema.md#biffcoreon-tx) (such
 as [biff.sqlite](/libs/sqlite) or [biff.xtdb](/libs/xtdb)), you can simply add
 [`(module)`](docs/api/com.biffweb.datastar.md#module) to your modules vector.
 

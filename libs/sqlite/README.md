@@ -41,8 +41,8 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Database Schema](docs/reference/db-schema.md)
-- [Library Schema](docs/reference/library-schema.md)
+- [Database Schema](docs/db-schema.md)
+- [Library Schema](docs/library-schema.md)
 - [API](docs/api/com.biffweb.sqlite.md)
 
 ## Usage
@@ -50,7 +50,7 @@ changes, but I don't anticipate any.
 ### Schema
 
 First you need to define your application's schema as a "columns map" (see
-[Database Schema](docs/reference/db-schema.md):
+[Database Schema](docs/db-schema.md):
 
 ```clojure
 (def columns
@@ -183,7 +183,7 @@ and it will pass a "diff" value to an `authorize` function which you define:
 ```
 
 See [`authorized-write`](docs/api/com.biffweb.sqlite.md#authorized-write) and
-[`:biff.sqlite/authorize`](docs/reference/library-schema.md#biffsqliteauthorize).
+[`:biff.sqlite/authorize`](docs/library-schema.md#biffsqliteauthorize).
 
 ### Transactions
 

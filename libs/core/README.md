@@ -49,7 +49,7 @@ com.example=> (start)
 
 ## Reference
 
-- [Schema](docs/reference/schema.md)
+- [Schema](docs/schema.md)
 - [API](docs/api/com.biffweb.core.md)
 
 ## Concepts

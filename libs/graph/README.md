@@ -43,9 +43,9 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Query format](docs/reference/query-format.md)
-- [Writing resolvers](docs/reference/writing-resolvers.md)
-- [Schema](docs/reference/schema.md)
+- [Query format](docs/query-format.md)
+- [Writing resolvers](docs/writing-resolvers.md)
+- [Schema](docs/schema.md)
 - [API](docs/api/com.biffweb.graph.md)
 
 ## Concepts

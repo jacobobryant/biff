@@ -83,7 +83,7 @@ Additional libraries:
 Each library's README links to a "schema" reference. This document describes the
 keywords owned by that library, which are all namespaced with the library name.
 For example, the [biff.core schema
-reference](libs/core/docs/reference/schema.md) specifies keys such as
+reference](libs/core/docs/schema.md) specifies keys such as
 `:biff.core/id`, `:biff.core/init`, `:biff.core/start`, etc. So whenever you see
 a keyword, you can tell immediately what library owns it and which schema
 reference document you can read to get more info.
