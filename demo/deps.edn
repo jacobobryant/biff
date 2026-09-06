@@ -2,7 +2,7 @@
  :deps  {org.clojure/clojure           {:mvn/version "1.12.5"}
          com.biffweb/defaults          {:local/root "../libs/defaults"}
          dev.onionpancakes/chassis     {:mvn/version "1.0.365"}
-         cheshire/cheshire             {:mvn/version "5.13.0"}
+         cheshire/cheshire             {:mvn/version "6.2.0"}
          hato/hato                     {:mvn/version "1.0.0"}
          nrepl/nrepl                   {:mvn/version "1.7.0"}
          cider/cider-nrepl             {:mvn/version "0.59.0"}

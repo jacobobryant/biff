@@ -1,48 +1,51 @@
 {:deps {aero/aero                           {:mvn/version "1.1.6"}
-        babashka/fs                         {:mvn/version "0.5.33"}
+        babashka/fs                         {:mvn/version "0.5.34"}
         babashka/process                    {:mvn/version "0.6.25"}
         com.github.liquidz/antq             {:mvn/version "2.11.1276"}
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
-        cider/cider-nrepl                   {:mvn/version "0.59.0"}
+        cider/cider-nrepl                   {:mvn/version "0.62.2"}
         codox/codox                         {:mvn/version "0.10.8"}
         danlentz/clj-uuid                   {:mvn/version "0.2.5"}
         com.aayushatharva.brotli4j/brotli4j {:mvn/version "1.23.0"}
-        com.github.seancorfield/honeysql    {:mvn/version "2.7.1368"}
-        com.github.seancorfield/next.jdbc   {:mvn/version "1.3.1108"}
+        com.github.seancorfield/honeysql    {:mvn/version "2.7.1437"}
+        com.github.seancorfield/next.jdbc   {:mvn/version "1.3.1118"}
         com.nextjournal/beholder            {:mvn/version "1.0.3"}
-        com.taoensso/nippy                  {:mvn/version "3.6.2"}
-        com.taoensso/telemere               {:mvn/version "1.2.1"}
-        com.taoensso/tufte                  {:mvn/version "3.0.2"}
+        com.taoensso/nippy                  {:mvn/version "3.8.1"}
+        com.taoensso/telemere               {:mvn/version "1.4.0"}
+        com.taoensso/tufte                  {:mvn/version "3.1.0"}
         com.xtdb/xtdb-api                   {:mvn/version "2.1.0"}
         com.xtdb/xtdb-core                  {:mvn/version "2.1.0"}
-        com.zaxxer/HikariCP                 {:mvn/version "7.0.2"}
+        com.zaxxer/HikariCP                 {:mvn/version "7.1.0"}
         dev.onionpancakes/chassis           {:mvn/version "1.0.365"}
-        dev.weavejester/cljfmt              {:mvn/version "0.16.4"}
+        dev.weavejester/cljfmt              {:mvn/version "0.16.5"}
         hato/hato                           {:mvn/version "1.0.0"}
         io.github.clojure/tools.build       {:git/tag "v0.10.14"
                                              :git/sha "1176afd"}
-        io.netty/netty-buffer               {:mvn/version "4.2.15.Final"}
+        io.netty/netty-buffer               {:mvn/version "4.2.17.Final"}
         jarohen/chime                       {:mvn/version "0.3.3"}
         lambdaisland/kaocha                 {:mvn/version "1.91.1392"}
         metosin/malli                       {:mvn/version "0.20.1"}
-        metosin/muuntaja                    {:mvn/version "0.6.11"}
+        metosin/muuntaja                    {:mvn/version "0.6.12"}
         metosin/reitit-ring                 {:mvn/version "0.10.1"}
         nrepl/nrepl                         {:mvn/version "1.7.0"}
-        org.clojure/clojure                 {:mvn/version "1.12.5"}
+        org.clojure/clojure                 {:mvn/version "1.12.6"}
         org.clojure/data.json               {:mvn/version "2.5.2"}
         org.clojure/tools.logging           {:mvn/version "1.3.1"}
         org.clojure/tools.namespace         {:mvn/version "1.5.1"}
-        org.slf4j/slf4j-simple              {:mvn/version "2.0.18"}
-        org.xerial/sqlite-jdbc              {:mvn/version "3.53.2.0"}
-        ring/ring-core                      {:mvn/version "1.15.4"}
-        ring/ring-defaults                  {:mvn/version "0.7.0"}
-        ring/ring-jetty-adapter             {:mvn/version "1.15.4"}
+        org.slf4j/slf4j-simple              {:mvn/version "2.0.19"}
+        org.xerial/sqlite-jdbc              {:mvn/version "3.53.4.0"}
+        ring/ring-core                      {:mvn/version "1.15.5"}
+        ring/ring-defaults                  {:mvn/version "0.7.1"}
+        ring/ring-jetty-adapter             {:mvn/version "1.15.5"}
         ring/ring-json                      {:mvn/version "0.5.1"}
-        rewrite-clj/rewrite-clj             {:mvn/version "1.1.47"}
+        rewrite-clj/rewrite-clj             {:mvn/version "1.2.57"}
         slipset/deps-deploy                 {:mvn/version "0.2.5"}
         tick/tick                           {:mvn/version "1.0.1"}
         borkdude/rewrite-edn                {:mvn/version "0.5.9"}
-        cheshire/cheshire                   {:mvn/version "6.2.0"}}
+        cheshire/cheshire                   {:mvn/version "6.2.0"}
+        com.taoensso/encore                 {:mvn/version "3.171.1"}
+        refactor-nrepl/refactor-nrepl       {:mvn/version "3.14.0"}
+        ring/ring-anti-forgery              {:mvn/version "1.4.0"}}
 
  :aliases
  {:run {:extra-deps {com.biffweb/tasks {:local/root "../libs/tasks"}}
