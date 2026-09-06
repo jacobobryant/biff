@@ -55,9 +55,10 @@
          #'tasks-update/update
          (fn [& _] (swap! calls conj :update))
 
-         #'init/initialize-git-repository! #(swap! calls conj :git)}
+         #'init/initialize-git-repository! #(swap! calls conj :git)
+         #'util/ensure-paths!              #(swap! calls conj :paths)}
         init/init)
       (is (= (cond-> []
                needs-rename? (into [:rename :git])
-               true (into [:update :config :binaries]))
+               true (into [:update :config :binaries :paths]))
              @calls)))))

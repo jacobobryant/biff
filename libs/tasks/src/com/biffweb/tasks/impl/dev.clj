@@ -1,6 +1,5 @@
 (ns com.biffweb.tasks.impl.dev
-  (:require [clojure.java.io :as io]
-            [clojure.stacktrace :as st]
+  (:require [clojure.stacktrace :as st]
             [com.biffweb.run :as biff.run]
             [com.biffweb.tasks.impl.reload :as reload]
             [com.biffweb.tasks.impl.util :as util]
@@ -37,16 +36,12 @@
      :watcher  watcher}))
 
 (defn dev []
-  (let [paths         (util/src-paths)
-        missing-paths (filterv #(not (.exists (io/file %))) paths)]
-    (doseq [path missing-paths]
-      (io/make-parents (io/file path "_")))
-    (if (not-empty missing-paths)
-      (util/shell-inherit "clojure" "-M:run" "dev")
-      (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
-        (future
-          (run-with-printed-exceptions
-           #(biff.run/run-task "css" "--watch=always")))
-        (start-file-watcher! {:directories paths
-                              :on-change   #'reload/refresh})
-        ((requiring-resolve (symbol (str main-ns) "-main")))))))
+  (if-not (util/ensure-paths!)
+    (util/shell-inherit "clojure" "-M:run" "dev")
+    (let [{:biff.tasks/keys [main-ns]} (util/read-config)]
+      (future
+        (run-with-printed-exceptions
+         #(biff.run/run-task "css" "--watch=always")))
+      (start-file-watcher! {:directories (util/src-paths)
+                            :on-change   #'reload/refresh})
+      ((requiring-resolve (symbol (str main-ns) "-main"))))))

@@ -131,4 +131,5 @@
       (initialize-git-repository!))
     (tasks-update/update "--clj-kondo-files-only")
     (ensure-config-files)
-    (ensure-task-binaries-installed! config)))
+    (ensure-task-binaries-installed! config)
+    (util/ensure-paths!)))

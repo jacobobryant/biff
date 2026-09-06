@@ -257,3 +257,10 @@
                     (str/ends-with? (.getPath %) extension))
                   [".clj" ".cljc" ".cljs" ".edn"])
            (project-files)))
+
+(defn ensure-paths! []
+  (let [all-paths     (all-deps-paths)
+        missing-paths (filterv #(not (.exists (io/file %))) all-paths)]
+    (doseq [path missing-paths]
+      (io/make-parents (io/file path "_")))
+    (empty? missing-paths)))
