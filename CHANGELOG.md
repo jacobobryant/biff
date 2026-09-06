@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-rc24-SNAPSHOT (unreleased)
+## 2.0.0-rc24
 
 **Breaking:**
 
