@@ -70,6 +70,7 @@
         (when cache-exists?
           (fs/create-dirs (fs/path root ".clj-kondo/.cache")))
         (with-redefs [util/project-root (constantly (io/file (str root)))
+
                       tasks-update/update
                       (fn [& args] (swap! calls conj (vec args)))]
           (#'init/ensure-clj-kondo-cache!))
