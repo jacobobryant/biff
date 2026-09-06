@@ -1,11 +1,11 @@
-# Biff
+# Biff: full-stack Clojure web framework
 
-Biff speeds up web development by providing as much functionality as possible
-out-of-the-box while making it easy to swap out, modify, or remove parts as your
-project grows. It's built with solo developers in mind and is quite opinionated
-in its approach to serving that use case. Biff has also been influenced by my
-experience working in enterprise SaaS and is perfectly capable of keeping large
-codebases maintainable.
+[Biff](https://biffweb.com) speeds up web development by providing as much
+functionality as possible out-of-the-box while making it easy to swap out,
+modify, or remove parts as your project grows. It's built with solo developers
+in mind and is quite opinionated in its approach to serving that use case. Biff
+has also been influenced by my experience working in enterprise SaaS and is
+perfectly capable of keeping large codebases maintainable.
 
 In short: Biff is built on the idea that web development can be both simple and
 easy.
