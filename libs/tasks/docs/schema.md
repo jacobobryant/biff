@@ -1,4 +1,4 @@
-# Config reference
+# Schema
 
 Config is read from `resources/config.edn` and `config.env` via
 [biff.config](/libs/config/). Example:

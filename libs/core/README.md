@@ -47,7 +47,7 @@ com.example=> (start)
 [main] INFO com.example.lib.ring - Web server started on http://localhost:8080
 ```
 
-## API Reference
+## Reference
 
 - [Schema](docs/reference/schema.md)
 - [API](docs/api/com.biffweb.core.md)
@@ -222,60 +222,6 @@ function:
 
 (force my-api-key)
 => "my-api-key"
-```
-
-### Migrating from Biff v1
-
-Using `biff.core/start` in your Biff v1 app will enable you to use other Biff v2
-libraries as they're released, many of which define modules with
-`:biff.core/init` functions.
-
-The Biff v1 starter project comes with a `reduce` call like this:
-
-```clojure
-(reduce (fn [system component]
-          (log/info "starting:" (str component))
-          (component system))
-        initial-system
-        components)
-```
-
-Wrap each component function with `component-shim`, register the returned
-modules, and replace the component functions with their module IDs in the start
-order vector:
-
-```clojure
-(def modules
-  [(biff.core/component-shim :com.example/use-config use-config)
-   (biff.core/component-shim :com.example/use-jetty use-jetty)
-   ...])
-
-(def start-order
-  [:com.example/use-config
-   :com.example/use-jetty
-   ...])
-
-(biff.core/start initial-system #'modules start-order)
-```
-
-Then change your `refresh` function from this:
-
-```clojure
-(defn refresh []
-  (doseq [f (:biff/stop @system)]
-    (log/info "stopping:" (str f))
-    (f))
-  (tn-repl/refresh :after `start)
-  :done)
-```
-
-to this:
-
-```clojure
-(defn refresh []
-  (biff.core/stop @system)
-  (tn-repl/refresh :after `start)
-  :done)
 ```
 
 ## Tips

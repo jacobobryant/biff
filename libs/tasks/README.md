@@ -41,9 +41,9 @@ changes, but I don't anticipate any.
 
 ## Reference
 
+- [Schema](docs/schema.md) (configuration)
 - [API](docs/api/com.biffweb.tasks.md). Includes a list of all the tasks and
   help docs for each task.
-- [Config](docs/config.md)
 
 ## Usage
 

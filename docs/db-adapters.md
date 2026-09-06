@@ -1,7 +1,7 @@
 # How to write a Biff database adapter
 
 If you want to make it easy to use a particular database in a Biff application,
-you'll probably want to write an adapter library. I maintain two adapter
+you'll probably want to write an adapter library. I've written two adapter
 libraries; [one for sqlite](/libs/sqlite/) and [one for XTDB](/libs/xtdb/).
 
 ## Core functionality
@@ -9,18 +9,19 @@ libraries; [one for sqlite](/libs/sqlite/) and [one for XTDB](/libs/xtdb/).
 To streamline integration with other Biff libraries, database adapter libraries
 should provide at least these things:
 
-- A biff.core component that handles any startup logic needed, such as starting
-  a connection pool, running migrations, etc. The component should provide
-  relatively high-level options for configuring the database, with defaults
-  wherever possible. The component doesn't need to support every possible way
-  the database can be configured: users can always use their own component if
-  needed.
+- A biff.core module with lifecycle functions: `:biff.core/init`,
+  `:biff.core/start`, `:biff.core/stop`.
 
-- A biff.core module with a `:biff.core/init` function that returns
-  implementations for `:biff.core/kv-set`, `:biff.core/kv-get`, and
-  `:biff.core/kv-list`. If the database has a way to ensure that multiple
-  queries see a consistent view of the database, then the `:biff.core/init`
-  function should also return `:biff.core/wrap-db-snapshot`. See [biff.core's schema
+- `:biff.core/start` handles any startup logic needed, such as starting a
+  connection pool, running migrations, etc. The module should provide relatively
+  high-level options for configuring the database, with defaults wherever
+  possible. The module doesn't need to support every possible way the database
+  can be configured: users can always define their own module if needed.
+
+- `:biff.core/init` should include implementations for `:biff.core/kv-set`,
+  `:biff.core/kv-get`, and `:biff.core/kv-list`. If the database has a way to
+  ensure that multiple queries see a consistent view of the database, then you
+  should also include `:biff.core/wrap-db-snapshot`. See [biff.core's schema
   reference](/libs/core/docs/reference/schema.md).
 
 - The module should also include a

@@ -25,7 +25,7 @@ changes, but I don't anticipate any.
 
 ## Reference
 
-- [Configuration](docs/config.md)
+- [Schema](docs/schema.md)
 - [Routes](docs/routes.md)
 - [API](docs/api/com.biffweb.authenticate.md)
 

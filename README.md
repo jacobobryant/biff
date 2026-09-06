@@ -1,126 +1,130 @@
-# Biff 2 (WIP)
+# Biff
 
-See [Biff 2.0 sneak peak](https://biffweb.com/p/biff2/).
+Biff speeds up web development by providing as much functionality as possible
+out-of-the-box while making it easy to swap out, modify, or remove parts as your
+project grows. It's built with solo developers in mind and is quite opinionated
+in its approach to serving that use case. Biff has also been influenced by my
+experience working in enterprise SaaS and is perfectly capable of keeping large
+codebases maintainable.
 
-This repo contains the code for Biff 2.0: libraries and a demo app (though not
-the starter app, which will be in a separate repo). The individual libraries are
-all finished and now I'm preparing to do the final release.
-
-TODO:
-
-- add a starter project
-- clean up the demo project
-- finish this README and add any additional docs needed
-
-### Try it out
-
-```bash
-git clone https://github.com/jacobobryant/biff
-cd biff
-git checkout v2.x
-cd demo
-clj -M:run dev
-```
-
-It'll say it emailed you a sign-in link/code, but it'll actually just be printed
-to the console. The demo app still has some bugs FYI. And also... please excuse
-the exuberance with which my agent has denoted that the demo app is used by
-myself for manual testing.
-
-The libs all use `:local/root` dependencies so you can't actually add them as a
-dependency on your own project (I think?) until I explicitly publish them.
-
-## Libraries
-
-Everything is subject to breaking changes for now, but if you'd like to try any
-of the libraries out in your own project, use a dependency like:
-
-```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc25"}
-```
-
-Replacing `<lib>` with `core`, `config`, etc. The `com.biffweb/defaults`
-dependency is a wrapper over most of the libraries. It doesn't include biff.run
-or biff.tasks (since those are dev-only) or biff.xtdb (since biff.sqlite is the
-default).
-
-- [biff.core](/libs/core/)
-- [biff.config](/libs/config/)
-- [biff.fx](/libs/fx/)
-- [biff.graph](/libs/graph/)
-- [biff.sqlite](/libs/sqlite/)
-- [biff.xtdb](/libs/xtdb/)
-- [biff.ring](/libs/ring/)
-- [biff.datastar](/libs/datastar/)
-- [biff.run](/libs/run/)
-- [biff.tasks](/libs/tasks/)
-- [biff.background](/libs/background/)
-- [biff.authenticate](/libs/authenticate)
-- [biff.admin](/libs/admin)
-- [biff.defaults](/libs/defaults)
+In short: Biff is built on the idea that web development can be both simple and
+easy.
 
 ### Resources
 
-- [How to write a Biff database adapter](/docs/db-adapters.md)
+- Subscribe to [the newsletter](https://biffweb.com/newsletter/) for
+  announcements and blog posts.
+- Ask questions on [Clojurians Slack](http://clojurians.net) (#biff channel).
+- For info about consulting, send me an email: <hello@obryant.dev>. I'm not
+  available for implementation work but can provide guidance.
 
-TODO
+## Get started
 
-## Tutorial
+Requirements:
 
-TODO. Might rewrite the old tutorial or might come up with something new.
+- Java 17 or higher
+- [Clojure](https://clojure.org/guides/install_clojure)
+
+Create a new project:
+
+```clojure
+git clone https://github.com/jacobobryant/biff-starter my-project
+cd my-project
+clj -M:run dev
+```
+
+The first time you run the `dev` command you'll be prompted to choose a
+namespace for the new project. After the app starts, go to `localhost:8080` and
+sign in. The sign-in code will be printed to the console. Changes are evaluated
+whenever you save a file.
+
+Use `clj -M:run -h` to see the available commands.
 
 ## Guide
 
-These will be "explanations" per the
-[grand unified theory of documentation](https://docs.divio.com/documentation-system/)
-definition. Relatively short and meant to (1) give you an overview of what
-things Biff covers, (2) the conceptual approach Biff takes toward each of those
-things, (3) links to other relevant documentation (howtos, reference, and
-library READMEs).
+Biff is a composition of libraries. Some of these are wrapper libraries that
+make other tools seamless to integrate in a Biff project; some of these are
+entirely new creations. Each library is documented individually and is meant to
+be usable on its own. Read the library documentation in this order to get a
+complete understanding of Biff:
 
-TODO:
+- [biff.core](/libs/core/): interfaces and code that connect all the other Biff
+  libs. This is the "framework" part of Biff.
+- [biff.config](/libs/config/): a light wrapper around
+  [Aero](https://github.com/juxt/aero).
+- [biff.fx](/libs/fx/): an approach to keeping your application logic pure, with
+  effects separated out. The starter app uses biff.fx to define its Ring
+  handlers.
+- [biff.graph](/libs/graph/): structure your data model as a queryable graph.
+  Inspired by [Pathom](https://github.com/wilkerlucio/pathom3).
+- [biff.sqlite](/libs/sqlite/): integrates SQLite with other parts of Biff and
+  adds support for rich data types.
+- [biff.ring](/libs/ring/): integrates Ring/Reitit/Jetty with other parts of
+  Biff. Includes a default middleware stack.
+- [biff.datastar](/libs/datastar/): lightweight server-side rendering with
+  [Datastar](https://data-star.dev).
+- [biff.background](/libs/background/): in-memory job queues and scheduled
+  tasks.
+- [biff.authenticate](/libs/authenticate): signin-via-email functionality,
+  including a default signin form.
+- [biff.admin](/libs/admin): admin dashboard with usage/performance metrics,
+  user directory, and email alerting.
+- [biff.run](/libs/run/): lightweight clj-based task runner.
+- [biff.tasks](/libs/tasks/): collection of default biff.run tasks (what you see
+  when you run `clj -M:run -h`).
 
-- Architecture
-- Database
-- HTTP handlers
-- Frontend
-- Background work
-- Security
-- Operations
-- Code quality (tests/formatting/linting)
+Additional libraries:
 
-## Howto
+- [biff.defaults](/libs/defaults): a wrapper/alias library that includes the
+  above libraries, except for biff.run and biff.tasks since those are dev-only.
+- [biff.xtdb](/libs/xtdb/): an alternative to biff.sqlite.
 
-TODO:
+### Reading Biff documentation
 
-- Use the REPL
-- Add DB schema
-- Add a page
-- Add an API route
-- Add a work pipeline
-- Customize the signin flow
-- Provision a server and deploy
-- Setup a sandboxed coding agent environment (with incus and/or docker
-  sandboxes)
-- Swap out the DB
-- Migrate from Biff v1
+Each library's README links to a "schema" reference. This document describes the
+keywords owned by that library, which are all namespaced with the library name.
+For example, the [biff.core schema
+reference](libs/core/docs/reference/schema.md) specifies keys such as
+`:biff.core/id`, `:biff.core/init`, `:biff.core/start`, etc. So whenever you see
+a keyword, you can tell immediately what library owns it and which schema
+reference document you can read to get more info.
 
-## Essays
+Other documentation assumes you are familiar with the schema reference and thus
+does not always describe what the keys are.
 
-TODO
+## Content library
 
-## Community
+Most of the documentation is available within the individual libraries listed
+above. Additional documentation/content:
 
-TODO
+- [How to write a Biff database adapter](/docs/db-adapters.md). Read this if you
+  want to use a database other than SQLite or XTDB.
+- [Deploy an app with biff.tasks](https://biffweb.com/p/deploy-biff-tasks/).
+  Video tutorial for deploying a Biff app.
+- [Biff 2.0 sneak peak](https://biffweb.com/p/biff2/): background info on the
+  design of Biff.
+- [Migrating from Biff 1.0](/docs/migrating-from-biff1.md): guidance on the
+  eponymous task.
 
 ## LLMs
 
-I use LLMs to generate a rough draft of pretty much all the code I write,
-reading it thoroughly. I don't release code I haven't read or don't understand.
-Before releasing, I edit the code (sometimes a little, sometimes a lot) and
-write docs almost always manually. I don't edit the tests much, but I do
-regenerate them after I write detailed docstrings which seems to work pretty
-well.
+I don't have any hard rules for how I use or don't use LLMs, but _typically_:
+
+- I use LLMs to generate a rough draft of pretty much all the code I write,
+  reading and often editing it thoroughly.
+
+- Tests are an exception: I usually glance over them but rarely edit them.
+
+- I write first drafts of documentation by hand. I often use LLMs to help keep
+  docs up to date, with moderate editing.
+
+In general, I'm moderately enthusiastic about using LLMs for code and pretty
+skeptical about using them for documentation. See [2x, not 10x: coding with LLMs
+in 2026](https://obryant.dev/p/2x-not-10x/).
 
 Biff is intended to be a good framework for both manual and LLM-assisted
 development.
+
+---
+
+Copyright (c) Jacob O'Bryant
