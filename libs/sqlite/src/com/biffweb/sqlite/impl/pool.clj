@@ -1,0 +1,53 @@
+(ns com.biffweb.sqlite.impl.pool
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
+            [com.biffweb.sqlite.impl.defaults :as impl.defaults]
+            [com.biffweb.sqlite.impl.kv :as kv]
+            [next.jdbc :as jdbc])
+  (:import [com.zaxxer.hikari HikariConfig HikariDataSource]))
+
+(def ^:private pragmas
+  ["PRAGMA journal_mode=WAL"
+   "PRAGMA busy_timeout = 5000"
+   "PRAGMA foreign_keys = ON"
+   "PRAGMA synchronous = NORMAL"])
+
+(defn start-read-pool
+  [db-path]
+  (io/make-parents db-path)
+  (HikariDataSource.
+   (doto (HikariConfig.)
+     (.setJdbcUrl (str "jdbc:sqlite:" db-path))
+     (.setConnectionInitSql (str/join ";" pragmas)))))
+
+(defn start-write-conn
+  [db-path]
+  (io/make-parents db-path)
+  (let [ds   (jdbc/get-datasource {:jdbcUrl (str "jdbc:sqlite:" db-path)})
+        conn (jdbc/get-connection ds)]
+    (doseq [pragma pragmas]
+      (jdbc/execute! conn [pragma]))
+    conn))
+
+(defn start
+  [ctx]
+  (let [{:biff.sqlite/keys [db-path] :as ctx}
+        (merge impl.defaults/defaults ctx)
+
+        read-pool  (start-read-pool db-path)
+        write-conn (start-write-conn db-path)]
+    (assoc ctx
+           :biff.sqlite/read-pool read-pool
+           :biff.sqlite/write-conn write-conn
+           :biff.core/kv-get kv/get-value
+           :biff.core/kv-list kv/list-keys
+           :biff.core/kv-set kv/set-value
+           :biff.core/wrap-db-snapshot
+           (fn [f]
+             (fn [ctx]
+               (jdbc/with-transaction [tx (:biff.sqlite/read-pool ctx)]
+                 (f (assoc ctx :biff.sqlite/read-pool tx))))))))
+
+(defn stop [{:biff.sqlite/keys [read-pool write-conn]}]
+  (.close write-conn)
+  (.close read-pool))

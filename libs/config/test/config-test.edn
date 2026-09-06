@@ -1,0 +1,9 @@
+{:config-test/from-env                      #biff/env CONFIG_TEST_FROM_ENV
+ :config-test/secret                        #biff/secret CONFIG_TEST_SECRET
+ :config-test/optional                      #biff/env CONFIG_TEST_MISSING
+ :config-test/profile                       #profile {:test "profile:test"
+                                                      :prod "profile:prod"}
+ :config-test/nil-value                     nil
+ :biff.config/system-properties             {"config.test.source" "map value"}
+ :biff.system-properties/config.test.source "legacy value"
+ :biff.system-properties/config.test.legacy "legacy only"}

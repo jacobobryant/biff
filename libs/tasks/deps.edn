@@ -1,16 +1,22 @@
-{:deps {com.biffweb/config            {:git/url "https://github.com/jacobobryant/biff"
-                                       :git/tag "v0.7.25"
-                                       :git/sha "7e920b2"
-                                       :deps/root "libs/config"}
-        com.biffweb/task-runner       {:git/url "https://github.com/jacobobryant/biff"
-                                       :git/sha "bb1feb6f68f42ac3faa02c8c15b31aa21037dc63"
-                                       :deps/root "libs/task-runner"}
-        babashka/fs                   {:mvn/version "0.5.20"}
-        babashka/process              {:mvn/version "0.5.21"}
-        cider/cider-nrepl             {:mvn/version "0.28.3"}
-        com.nextjournal/beholder      {:mvn/version "1.0.2"}
-        hato/hato                     {:mvn/version "0.9.0"}
-        io.github.clojure/tools.build {:git/tag "v0.9.6" :git/sha "8e78bcc"}
-        nrepl/nrepl                   {:mvn/version "1.0.0"}
-        refactor-nrepl/refactor-nrepl {:mvn/version "3.6.0"}}
- :paths ["src"]}
+{:paths   ["src" "resources"]
+ :deps    {babashka/fs                   {:mvn/version "0.5.33"}
+           babashka/process              {:mvn/version "0.6.25"}
+           borkdude/rewrite-edn          {:mvn/version "0.5.9"}
+           cider/cider-nrepl             {:mvn/version "0.59.0"}
+           com.github.liquidz/antq       {:mvn/version "2.11.1276"}
+           com.nextjournal/beholder      {:mvn/version "1.0.3"}
+           com.biffweb/core              {:local/root "../core"}
+           hato/hato                     {:mvn/version "1.0.0"}
+           io.github.clojure/tools.build {:mvn/version "0.10.14"}
+           lambdaisland/kaocha           {:mvn/version "1.91.1392"}
+           com.biffweb/run               {:local/root "../run"}
+           com.biffweb/config            {:local/root "../config"}
+           com.biffweb/stuff             {:local/root "../stuff"}
+           nrepl/nrepl                   {:mvn/version "1.7.0"}
+           org.clojure/data.json         {:mvn/version "2.5.2"}
+           org.clojure/tools.namespace   {:mvn/version "1.5.1"}
+           rewrite-clj/rewrite-clj       {:mvn/version "1.1.47"}
+           slipset/deps-deploy           {:mvn/version "0.2.5",
+                                          :exclusions  [org.slf4j/slf4j-nop]}}
+ :aliases {:run {:extra-paths ["test" "dev"]
+                 :main-opts   ["-m" "tasks"]}}}

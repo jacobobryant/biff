@@ -1,0 +1,1 @@
+{:hooks {:analyze-call {com.biffweb.graph/defresolver hooks.biff.graph/defresolver}}}

@@ -1,469 +1,423 @@
 (ns com.biffweb.tasks
-  "A collection of tasks used by Biff projects."
-  (:refer-clojure :exclude [future])
-  (:require [com.biffweb.task-runner :refer [run-task]]
-            [com.biffweb.tasks.lazy.clojure.java.io :as io]
-            [com.biffweb.tasks.lazy.clojure.java.shell :as sh]
-            [com.biffweb.tasks.lazy.clojure.string :as str]
-            [com.biffweb.tasks.lazy.babashka.fs :as fs]
-            [com.biffweb.tasks.lazy.babashka.process :as process]
-            [com.biffweb.tasks.lazy.com.biffweb.config :as config]
-            [com.biffweb.tasks.lazy.clojure.stacktrace :as st]
-            [com.biffweb.tasks.lazy.hato.client :as hato]
-            [com.biffweb.tasks.lazy.nrepl.cmdline :as nrepl-cmd]
-            [com.biffweb.tasks.lazy.nextjournal.beholder :as beholder]
-            [com.biffweb.tasks.lazy.clojure.tools.build.api :as clj-build])
-  (:import [java.util Timer TimerTask]))
+  "A collection of CLI tasks for use with biff.run. See docs/config.md."
+  (:refer-clojure :exclude [format test update])
+  (:require [com.biffweb.tasks.app :as app]
+            [com.biffweb.tasks.lib :as lib]))
 
-;; https://gist.github.com/oliyh/0c1da9beab43766ae2a6abc9507e732a
-(defn- debounce
-  ([f] (debounce f 1000))
-  ([f timeout]
-   (let [timer (Timer.)
-         task (atom nil)]
-     (with-meta
-      (fn [& args]
-        (when-let [t ^TimerTask @task]
-          (.cancel t))
-        (let [new-task (proxy [TimerTask] []
-                         (run []
-                           (apply f args)
-                           (reset! task nil)
-                           (.purge timer)))]
-          (reset! task new-task)
-          (.schedule timer new-task timeout)))
-      {:task-atom task}))))
+(def
+  ^{:dynamic true
 
-(defmacro future [& body]
-  `(clojure.core/future
-     (try
-       ~@body
-       (catch Exception e#
-         (binding [*err* *out*]
-           (st/print-stack-trace e#))))))
+    :doc
+    "Tasks that call other tasks can bind this to override the user's config."}
+  *extra-config*
+  {})
 
-(def ^:private ^:dynamic *shell-env* nil)
+(def
+  ^{:doc
+    "A collection of tasks for applications.
 
-(defn- windows? []
-  (-> (System/getProperty "os.name")
-      (str/lower-case)
-      (str/includes? "windows")))
+     Included tasks:
 
-(defn- shell
-  "Difference between this and clojure.java.shell/sh:
+     - add
+     - code-quality (see `app-code-quality`)
+     - css
+     - deploy
+     - dev
+     - format
+     - lint
+     - nrepl
+     - prod-logs
+     - prod-nrepl
+     - prod-restart
+     - prod-setup
+     - init
+     - test
+     - uberjar
+     - update
 
-   - inherits std{in,out,err}
-   - throws on non-zero exit code
-   - puts *shell-env* in the environment"
-  [& args]
-  (apply process/shell {:extra-env *shell-env*} args))
+     Use `:main-opts [\"-m\" \"com.biffweb.tasks.app\"]` as the entrypoint for
+     these tasks."}
+  app-tasks app/tasks)
 
-(defn- sh-success? [& args]
-  (try
-    (= 0 (:exit (apply sh/sh args)))
-    (catch Exception _
-      false)))
+(def
+  ^{:doc
+    "A collection of tasks for libraries.
 
-(defn- get-env-from [cmd]
-  (let [{:keys [exit out]} (sh/sh "sh" "-c" (str cmd "; printenv"))]
-    (when (= 0 exit)
-      (->> out
-           str/split-lines
-           (map #(vec (str/split % #"=" 2)))
-           (filter #(= 2 (count %)))
-           (into {})))))
+     Included tasks:
 
-(defn- with-ssh-agent* [{:keys [biff.tasks/skip-ssh-agent]} f]
-  (if-let [env (and (not skip-ssh-agent)
-                    (fs/which "ssh-agent")
-                    (not (sh-success? "ssh-add" "-l"))
-                    (nil? *shell-env*)
-                    (if (windows?)
-                      {}
-                      (get-env-from "eval $(ssh-agent)")))]
-    (binding [*shell-env* env]
-      (try
-        (try
-          (shell "ssh-add")
-          (println "Started an ssh-agent session. If you set up `keychain`, you won't have to enter your password"
-                   "each time you run this command: https://www.funtoo.org/Funtoo:Keychain")
-          (catch Exception e
-            (binding [*out* *err*]
-              (st/print-stack-trace e)
-              (println "\nssh-add failed. You may have to enter your password multiple times. You can avoid this if you set up `keychain`:"
-                       "https://www.funtoo.org/Funtoo:Keychain"))))
-        (f)
-        (finally
-          (sh/sh "ssh-agent" "-k" :env *shell-env*))))
-    (f)))
+     - add
+     - code-quality (see `lib-code-quality`)
+     - docs
+     - format
+     - lint
+     - nrepl
+     - publish
+     - test
+     - update
 
-(defmacro with-ssh-agent [ctx & body]
-  `(with-ssh-agent* ~ctx (fn [] ~@body)))
+     Use `:main-opts [\"-m\" \"com.biffweb.tasks.lib\"]` as the entrypoint for
+     these tasks."}
+  lib-tasks lib/tasks)
 
-(defn- new-secret [length]
-  (let [buffer (byte-array length)]
-    (.nextBytes (java.security.SecureRandom/getInstanceStrong) buffer)
-    (.encodeToString (java.util.Base64/getEncoder) buffer)))
+(defn agent-refresh
+  "A function coding agents can call over nREPL after they update source files.
 
-(defn- ssh-run [{:keys [biff.tasks/server]} & args]
-  (apply shell "ssh" (str "app@" server) args))
+   - Evaluates changed files without unloading them first.
+   - Then runs the `lint` task.
+   - Then runs the `test` task.
 
-(defn- local-bun-path []
-  (some-> (fs/which "bun") str))
-
-(defn- install-js-deps-cmd []
-  (cond
-    (fs/exists? "bun.lockb") "bun install"
-    :else                    "npm install"))
-
-(defn- local-tailwind-path []
-  (if (windows?)
-    "bin/tailwindcss.exe"
-    "bin/tailwindcss"))
-
-(defn- infer-tailwind-file []
-  (let [os-name (str/lower-case (System/getProperty "os.name"))
-        os-type (cond
-                  (str/includes? os-name "windows") "windows"
-                  (str/includes? os-name "linux") "linux"
-                  :else "macos")
-        arch (case (System/getProperty "os.arch")
-               ("amd64" "x86_64") "x64"
-               "arm64")]
-    (str "tailwindcss-" os-type "-" arch (when (= os-type "windows") ".exe"))))
-
-(defn- push-files-rsync [{:biff.tasks/keys [server deploy-untracked-files]}]
-  (let [files (->> (:out (sh/sh "git" "ls-files"))
-                   str/split-lines
-                   (map #(str/replace % #"/.*" ""))
-                   distinct
-                   (concat deploy-untracked-files)
-                   (filter fs/exists?))]
-    (when (and (not (windows?)) (fs/exists? "config.env"))
-      (fs/set-posix-file-permissions "config.env" "rw-------"))
-    (->> (concat ["rsync" "--archive" "--verbose" "--relative" "--include='**.gitignore'"
-                  "--exclude='/.git'" "--filter=:- .gitignore" "--delete-after" "--protocol=29"]
-                 files
-                 [(str "app@" server ":")])
-         (apply shell))))
-
-(defn- push-files-git [{:biff.tasks/keys [deploy-cmd
-                                          git-deploy-cmd
-                                          deploy-from
-                                          deploy-to
-                                          deploy-untracked-files
-                                          server]}]
-  (when-some [files (not-empty (filterv fs/exists? deploy-untracked-files))]
-    (when-some [dirs (not-empty (keep (comp not-empty fs/parent) files))]
-      (apply shell "ssh" (str "app@" server) "mkdir" "-p" dirs))
-    (doseq [file files]
-      (shell "scp" file (str "app@" server ":" file))))
-  ;; deploy-cmd, deploy-from, and deploy-to are all deprecated (but still supported for backwards compatibility)
-  (if-some [git-deploy-cmd (or git-deploy-cmd deploy-cmd)]
-    (apply shell git-deploy-cmd)
-    (shell "git" "push" deploy-to deploy-from)))
-
-(defn- push-files [{:keys [biff.tasks/deploy-with] :as ctx}]
-  (let [deploy-with (or deploy-with
-                        (if (fs/which "rsync")
-                          :rsync
-                          :git))]
-    (case deploy-with
-      :rsync (push-files-rsync ctx)
-      :git (push-files-git ctx)
-      (binding [*out* *err*]
-        (println "Unrecognized config option `:biff.tasks/deploy-with " deploy-with "`. Valid options are "
-                 ":rsync and :git")
-        (System/exit 2)))))
-
-(defn- auto-soft-deploy [{:biff.tasks/keys [watch-dirs]
-                          :or {watch-dirs ["src" "dev" "resources" "test"]}
-                          :as ctx}]
-  (run-task "soft-deploy")
-  (apply beholder/watch
-         (debounce (fn [_]
-                     (run-task "soft-deploy"))
-                   500)
-         watch-dirs))
-
-(def ^:private config (delay (config/use-aero-config {:biff.config/skip-validation true})))
-
-;;;; TASKS =====================================================================
-
-(defn clean
-  "Deletes generated files"
+   Returns a map containing either `:status :ok` or `:status :error, :exception
+   ...`. Also includes `:out` and `:err` (stdout and stderr)."
   []
-  (clj-build/delete {:path "target"}))
+  ((requiring-resolve 'com.biffweb.tasks.impl.agent/agent-refresh)))
 
-(defn install-tailwind
-  "Downloads a Tailwind binary to bin/tailwindcss."
-  [& [file]]
-  (let [{:biff.tasks/keys [tailwind-build tailwind-version]} @config
-        [file inferred] (or (when file
-                              [file false])
-                            ;; Backwards compatibility.
-                            (when tailwind-build
-                              [(str "tailwindcss-" tailwind-build) false])
-                            [(infer-tailwind-file) true])
-        url (str "https://github.com/tailwindlabs/tailwindcss/releases/"
-                 (if tailwind-version
-                   (str "download/" tailwind-version)
-                   "latest/download")
-                 "/"
-                 file)
-        dest (io/file (local-tailwind-path))]
-    (io/make-parents dest)
-    (println "Downloading"
-             (or tailwind-version "the latest version")
-             "of" file "...")
-    (when inferred
-      (println "If that's the wrong file, run `clj -M:dev install-tailwind <correct file>`"))
-    (println)
-    (println "After the download finishes, you can avoid downloading Tailwind again for"
-             "future projects if you copy it to your path, e.g. by running:")
-    (println "  sudo cp" (local-tailwind-path) "/usr/local/bin/tailwindcss")
-    (println)
-    (io/copy (:body (hato/get url {:as :stream :http-client {:redirect-policy :normal}})) dest)
-    (.setExecutable dest true)))
+(defn add
+  "Add the latest release of a dependency to deps.edn.
 
-(defn- bun-pkg-installed? [package-name]
-  (and (fs/which "bun")
-       (str/includes? (:out (sh/sh "bun" "pm" "ls"))
-                      package-name)))
+   Usage:
 
-(defn- tailwind-installation-info []
-  (let [local-bin-installed (fs/exists? (local-tailwind-path))]
-    {:local-bin-installed local-bin-installed
-     :tailwind-cmd
-     (cond
-       (bun-pkg-installed? "tailwindcss")                       :bun
-       (sh-success? "npm" "list" "tailwindcss")                 :npm
-       (and (fs/which "tailwindcss") (not local-bin-installed)) :global-bin
-       :else                                                    :local-bin)}))
+     add com.example/example                 # maven dep
+     add https://github.com/example/example  # git dep"
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.add/add) args))
+
+(defn app-code-quality
+  "Format, lint, and test code.
+
+  Runs the following tasks:
+
+  - update --clj-kondo-files-onle
+  - format
+  - lint
+  - test
+
+  You can run this task in a CI workflow and ensure afterward there are no
+  unstaged changes (e.g. from formatting changes etc)."
+  []
+  ((requiring-resolve 'com.biffweb.tasks.impl.code-quality/app-code-quality)))
+
+(defn lib-code-quality
+  "Format, lint, and test code, and generate API docs.
+
+  Runs the following tasks:
+
+  - update --clj-kondo-files-only
+  - format
+  - docs
+  - lint
+  - test
+
+  You can run this task in a CI workflow and ensure afterward there are no
+  unstaged changes (e.g. from formatting changes etc)."
+  []
+  ((requiring-resolve 'com.biffweb.tasks.impl.code-quality/lib-code-quality)))
 
 (defn css
-  "Generates the target/resources/public/css/main.css file.
+  "Compile CSS with Tailwind.
 
-   The logic for running and installing Tailwind is:
+   Reads the following config keys:
 
-   1. If tailwindcss has been installed via npm or bun, then that installation
-      will be used.
+   - :biff.tasks/css-input-path
+   - :biff.tasks/css-output-path
+   - :biff.tasks/tailwind-version
 
-   2. Otherwise, if the tailwindcss standalone binary has been downloaded to
-      ./bin/, that will be used.
+   If there is not a `tailwind` executable on the path with the version
+   specified by `tailwind-version`, downloads a binary to `target/bin/tailwind`.
 
-   3. Otherwise, if the tailwindcss standalone binary has been installed to the
-      path (e.g. /usr/local/bin/tailwindcss), that will be used.
-
-   4. Otherwise, the tailwindcss standalone binary will be downloaded to ./bin/,
-      and that will be used."
-  [& tailwind-args]
-  (let [{:biff.tasks/keys [css-output] :as ctx} @config
-        {:keys [local-bin-installed tailwind-cmd]} (tailwind-installation-info)]
-    (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
-      (run-task "install-tailwind"))
-    (when (= tailwind-cmd :local-bin)
-      ;; This normally will be handled by install-tailwind, but we set it here in case that function
-      ;; was interrupted. Assuming the download was incomplete, the 139 exit code (segfault) handler will be
-      ;; triggered below. I've also had a report of exit code 137 (sigkill) being triggered.
-      (.setExecutable (io/file (local-tailwind-path)) true))
-    (try
-      (apply shell (concat (case tailwind-cmd
-                             :npm        ["npx" "tailwindcss"]
-                             :bun        ["bunx" "tailwindcss"]
-                             :global-bin [(str (fs/which "tailwindcss"))]
-                             :local-bin  [(local-tailwind-path)])
-                           ["-c" "resources/tailwind.config.js"
-                            "-i" "resources/tailwind.css"
-                            "-o" css-output]
-                           tailwind-args))
-      (catch Exception e
-        (if (and (#{137 139} (:exit (ex-data e)))
-                 (#{:local-bin :global-bin} tailwind-cmd))
-          (binding [*out* *err*]
-            (println "It looks like your Tailwind installation is corrupted. Try deleting it and running this command again:")
-            (println)
-            (println "  rm" (if (= tailwind-cmd :local-bin)
-                              (local-tailwind-path)
-                              (str (fs/which "tailwindcss"))))
-            (println))
-          (throw e))))))
-
-(defn dev
-  "Starts the app locally.
-
-   After running, wait for the `System started` message. Connect your editor to
-   nrepl port 7888 (by default). Whenever you save a file, Biff will:
-
-   - Evaluate any changed Clojure files
-   - Regenerate static HTML and CSS files
-   - Run tests"
-  []
-  (if-not (fs/exists? "target/resources")
-    ;; This is an awful hack. We have to run the app in a new process, otherwise
-    ;; target/resources won't be included in the classpath. Downside of not
-    ;; using bb tasks anymore -- no longer have a lightweight parent process
-    ;; that can create the directory before starting the JVM.
-    (do
-      (io/make-parents "target/resources/_")
-      (shell "clj" "-M:dev" "dev"))
-    (let [{:keys [biff.tasks/main-ns biff.nrepl/port] :as ctx} @config]
-      (when-not (fs/exists? "config.env")
-        (run-task "generate-config"))
-      (when (fs/exists? "package.json")
-        (shell (install-js-deps-cmd)))
-      (let [{:keys [local-bin-installed tailwind-cmd]} (tailwind-installation-info)]
-        (when (and (= tailwind-cmd :local-bin) (not local-bin-installed))
-          (run-task "install-tailwind")))
-      (future (run-task "css" "--watch"))
-      (spit ".nrepl-port" port)
-      ((requiring-resolve (symbol (str main-ns) "-main"))))))
-
-(defn uberjar
-  "Compiles the app into an Uberjar.
-
-   Options:
-
-     --no-clean
-            Don't call the `clean` task before building the Uberjar."
+   Compiles `css-input-path` to `css-output-path`. `args` are passed to the
+   `tailwind` executable."
   [& args]
-  (let [{:biff.tasks/keys [main-ns generate-assets-fn] :as ctx} @config
-        class-dir "target/jar/classes"
-        basis (clj-build/create-basis {:project "deps.edn"})
-        uber-file "target/jar/app.jar"
-        no-clean (some #{"--no-clean"} args)]
-    (when-not no-clean
-      (println "Cleaning...")
-      (run-task "clean"))
-    (println "Generating CSS...")
-    (run-task "css" "--minify")
-    (println "Calling" generate-assets-fn "...")
-    ((requiring-resolve generate-assets-fn) ctx)
-    (println "Compiling...")
-    (clj-build/compile-clj {:basis basis
-                            :ns-compile [main-ns]
-                            :class-dir class-dir})
-    (println "Building uberjar...")
-    (clj-build/copy-dir {:src-dirs ["resources" "target/resources"]
-                         :target-dir class-dir})
-    (clj-build/uber {:class-dir class-dir
-                     :uber-file uber-file
-                     :basis basis
-                     :main main-ns})
-    (println "Done. Uberjar written to" uber-file)
-    (println (str "Test with `BIFF_PROFILE=dev java -jar " uber-file "`"))))
-
-(defn generate-secrets
-  "Prints new secrets to put in config.env."
-  []
-  (println "Put these in your config.env file:")
-  (println)
-  (println (str "COOKIE_SECRET=" (new-secret 16)))
-  (println (str "JWT_SECRET=" (new-secret 32)))
-  (println))
-
-(defn generate-config
-  "Creates a new config.env file if one doesn't already exist."
-  []
-  (if (fs/exists? "config.env")
-    (binding [*out* *err*]
-      (println "config.env already exists. If you want to generate a new file, run `mv config.env config.env.backup` first.")
-      (System/exit 3))
-    (let [contents (slurp (io/resource "config.template.env"))
-          contents (str/replace contents
-                                #"\{\{\s+new-secret\s+(\d+)\s+\}\}"
-                                (fn [[_ n]]
-                                  (new-secret (parse-long n))))]
-      (spit "config.env" contents)
-      (println "New config generated and written to config.env."))))
-
-(defn restart
-  "Restarts the app process via `systemctl restart app` (on the server)."
-  []
-  (ssh-run @config "sudo systemctl reset-failed app.service; sudo systemctl restart app"))
-
-(defn soft-deploy
-  "Pushes code to the server and evaluates changed files.
-
-   1. Builds css
-   2. Uploads files
-   3. `eval`s any changed files
-   4. Regenerates static html files
-
-   Does not refresh or restart, so there isn't any downtime."
-  []
-  (let [{:biff.tasks/keys [soft-deploy-fn on-soft-deploy]
-         :keys [biff.nrepl/port]
-         :as ctx} @config]
-    (with-ssh-agent ctx
-      (run-task "css" "--minify")
-      (push-files ctx)
-      (ssh-run ctx "trench"
-               "-p" port
-               "-e" (or on-soft-deploy
-                        ;; backwards compatibility
-                        (str "\"(" soft-deploy-fn " @com.biffweb/system)\""))))))
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.css/css) args))
 
 (defn deploy
-  "Pushes code to the server and restarts the app.
+  "Deploy to a server provisioned with the prod-setup task.
 
-   Uploads config and code to the server, using `rsync` if it's available, and
-   `git push` otherwise. Then restarts the app.
+   Reads the following config keys:
 
-   You must set up a server first. See https://biffweb.com/docs/reference/production/"
+   - :biff.tasks/domain (required)
+   - :biff.tasks/deploy-untracked-files
+   - :biff.tasks/deployment-name
+   - :biff.tasks/nrepl-port
+   - :biff.tasks/skip-ssh-agent
+
+   Accepts the following CLI options:
+
+     --soft    Evaluates files on the server instead of running `prod-restart`
+
+   Runs the `css --minify` task, force pushes the current git branch to
+   `/home/{deployment-name}/repo` on the server, pushes any additional files
+   listed in `deploy-untracked-files` (such as the compiled CSS), then runs the
+   `prod-restart` task.
+
+   The local git repo must have a clean worktree. If you pass --soft, the server
+   must be running an nREPL server on `nrepl-port` and it must have the `trench`
+   command installed (handled by `prod-setup`).
+
+   The deployed application must:
+
+   - Include a :prod alias in deps.edn that starts the app in production.
+   - Use the PORT environment variable for the webserver port."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.deploy/deploy) args))
+
+(defn dev
+  "Start the app in dev mode.
+
+   Reads the following config keys:
+
+   - :biff.tasks/main-ns (required)
+
+   Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
+   `css --watch=always` task in the background. Starts another file watcher that
+   evaluates source files and their dependants when saved.
+
+   Then calls the `-main` function in the `main-ns` namespace."
   []
-  (with-ssh-agent @config
-    (run-task "css" "--minify")
-    (push-files @config)
-    (run-task "restart")))
+  ((requiring-resolve 'com.biffweb.tasks.impl.dev/dev)))
 
-(defn logs
-  "Tails the server's application logs."
-  ([]
-   (logs "300"))
-  ([n-lines]
-   (ssh-run @config "journalctl" "-u" "app" "-f" "-n" n-lines)))
+(defn docs
+  "Generate API docs.
 
-(defn prod-repl
-  "Opens an SSH tunnel so you can connect to the server via nREPL."
+   Reads the following config keys:
+
+   - :biff.tasks/docs-namespaces (required)
+   - :biff.tasks/docs-directory
+
+   Generates a markdown file in `docs-directory` for each namespace in
+   `docs-namespaces` containing the namespace and var docstrings.
+
+   Each namespace will be required and thus must be on the classpath."
   []
-  (let [{:keys [biff.tasks/server biff.nrepl/port]} @config]
-    (println "Connect to nrepl port" port)
-    (spit ".nrepl-port" port)
-    (shell "ssh" "-NL" (str port ":localhost:" port) (str "app@" server))))
+  ((requiring-resolve 'com.biffweb.tasks.impl.docs/docs)))
 
-(defn prod-dev
-  "Runs the soft-deploy task whenever a file is modified. Also runs prod-repl and logs."
+(defn format
+  "Format code with cljfmt.
+
+   Reads the following config keys:
+
+   - :biff.tasks/cljfmt-version
+
+   If there is not a `cljfmt` executable on the path with the version specified
+   by `cljfmt-version`, downloads a binary to `target/bin/cljfmt`.
+
+   Runs `cljfmt fix --parallel [files]` on all the Clojure and EDN files in the
+   current project. Also uses rewrite-clj to use line breaks to separate form
+   pairs (e.g. let binding pairs, map key-value pairs) that are written on
+   different lines.
+
+   Attempts to use `git ls-files` to get a list of the project files. Otherwise,
+   uses :paths and :extra-paths from deps.edn."
   []
-  (when-not (fs/which "rsync")
-    (binding [*out* *err*]
-      (println "`rsync` command not found. Please install it.")
-      (println "Alternatively, you can deploy without downtime by running `git add .; git commit; bb soft-deploy`"))
-    (System/exit 1))
-  (with-ssh-agent @config
-    (auto-soft-deploy @config)
-    (future (run-task "prod-repl"))
-    (run-task "logs")))
+  ((requiring-resolve 'com.biffweb.tasks.impl.format/format)))
+
+(defn lint
+  "Lint code with clj-kondo.
+
+   Reads the following config keys:
+
+   - :biff.tasks/clj-kondo-version
+
+   If there is not a `clj-kondo` executable on the path with the version
+   specified by `clj-kondo-version`, downloads a binary to
+   `target/bin/clj-kondo`.
+
+   Runs `clj-kondo --parallel --lint [files]` on all the Clojure and EDN files
+   in the current project.
+
+   Attempts to use `git ls-files` to get a list of the project files. Otherwise,
+   uses :paths and :extra-paths from deps.edn."
+  []
+  ((requiring-resolve 'com.biffweb.tasks.impl.lint/lint)))
 
 (defn nrepl
-  "Starts an nrepl server without starting up the application."
-  []
-  (let [{:biff.nrepl/keys [port args]} @config]
-    (spit ".nrepl-port" port)
-    (apply nrepl-cmd/-main args)))
+  "Start an nREPL server.
 
-(def tasks
-  {"clean"            #'clean
-   "css"              #'css
-   "deploy"           #'deploy
-   "dev"              #'dev
-   "nrepl"            #'nrepl
-   "generate-secrets" #'generate-secrets
-   "generate-config"  #'generate-config
-   "logs"             #'logs
-   "prod-dev"         #'prod-dev
-   "prod-repl"        #'prod-repl
-   "restart"          #'restart
-   "soft-deploy"      #'soft-deploy
-   "uberjar"          #'uberjar
-   "install-tailwind" #'install-tailwind})
+   Reads the following config keys:
+
+   - :biff.tasks/nrepl-port (required)
+
+   Thin wrapper around nrepl.cmdline/-main. Sets `--port <nrepl port>` and
+   `--middleware [cider.nrepl/cider-middleware]`. Passes on `args` to `-main`.
+
+   If the first arg is `--`, calls `-main` without setting `--port` or
+   `--middleware`. Pass `-- --help` to see nrepl.cmdline's help."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.nrepl/nrepl) args))
+
+(defn prod-logs
+  "Tail logs from the server.
+
+   Reads the following config keys:
+
+   - :biff.tasks/domain (required)
+   - :biff.tasks/deployment-name
+
+   Accepts a single, optional `n-lines` CLI argument, default 300. Runs
+   `journalctl -u {deployment-name} -n {n-lines} -f` on the server."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.prod/prod-logs) args))
+
+(defn prod-nrepl
+  "Start an SSH tunnel to the production nREPL server.
+
+   Reads the following config keys:
+
+   - :biff.tasks/nrepl-port (required)
+   - :biff.tasks/domain (required)
+   - :biff.tasks/deployment-name
+
+   The server is expected to already have an nREPL server running on
+   `nrepl-port`."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.prod/prod-nrepl) args))
+
+(defn prod-restart
+  "Restart the application in production.
+
+   Reads the following config keys:
+
+   - :biff.tasks/domain (required)
+   - :biff.tasks/deployment-name
+
+   Runs `systemctl restart` on the server."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.prod/prod-restart) args))
+
+(defn prod-setup
+  "Provision a server so the app can be deployed to it.
+
+   Reads the following config keys:
+
+   - :biff.tasks/domain (required)
+   - :biff.tasks/deployment-name
+   - :biff.tasks/skip-ssh-agent
+
+   Accepts the following CLI options:
+
+     --copy-only    copy the setup script to the server but don't run it.
+
+   You must have SSH access as root to the (Ubuntu) server pointed to by
+   `domain`. Runs a setup script on the server that:
+
+   - Installs packages with apt-get.
+
+   - Creates a user (named by `deployment-name`).
+
+   - Copies /root/.ssh/authorized_keys to ~/.ssh for the new user.
+
+   - Creates a systemd service (named by `deployment-name`) that runs `clj
+     -M:prod` in the ~/repo directory for the new user on system startup. The
+     PORT env variable is set to a unique port (in case you setup multiple apps
+     on this server).
+
+   - Installs Caddy and configures it to forward requests for `domain` to the
+     app's unique port.
+
+   - Sets up the firewall with ufw, allowing only ports for http, https, and
+     ssh.
+
+   After running this task, you can deploy your application with the `deploy`
+   task.
+
+   The script is only tested on Ubuntu, though it may work on other Debian-based
+   distros."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.prod/prod-setup) args))
+
+(defn publish
+  "Publish library to Clojars with deps-deploy.
+
+   CLI options:
+
+     --local    install in the local Maven repo instead of Clojars
+
+   Reads the following required config keys:
+
+   - :biff.tasks/group-name
+   - :biff.tasks/lib-name
+   - :biff.tasks/lib-version
+   - :biff.tasks/pom-data
+   - :biff.tasks/pom-scm
+   - :biff.tasks/clojars-secret
+   - :biff.tasks/clojars-username
+
+   And the following optional keys:
+
+   - :biff.tasks/gpg-sign-key-id
+   - :biff.tasks/gpg-sign-wih-passphrase
+   - :biff.tasks/monorepo"
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.publish/publish) args))
+
+(defn init
+  "Initialize a freshly cloned project.
+
+   Reads the following config keys:
+
+   - :biff.tasks/main-ns
+   - :biff.tasks/clj-kondo-version
+   - :biff.tasks/cljfmt-version
+   - :biff.tasks/tailwind-version
+
+   This task can be run after cloning a project template and after cloning a
+   project that's already been initialized previously.
+
+   If the project's current namespace is com.example, prompts for a new
+   namespace and rewrites files accordingly.
+
+   Generates default config.env and config.prod.env files if they don't already
+   exist yet and their corresponding template config files
+   (resources/TEMPLATE.config.env and resources/TEMPLATE.config.prod.env) do
+   exist. Text like `{{ new-secret 32 }}` in the template files will be replaced
+   with a randomly-generated (via SecureRandom/getInstanceStrong) base64-encoded
+   byte array of the given length.
+
+   Ensures that `clj-kondo`, `cljfmt`, and `tailwind` are installed with the
+   specified versions. If not, downloads them to target/bin/.
+
+   Then runs the `update --clj-kondo-files-only` task."
+  []
+  ((requiring-resolve 'com.biffweb.tasks.impl.init/init)))
+
+(defn test
+  "Run tests with Kaocha.
+
+   Thin wrapper around kaocha.runner."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.test/test) args))
+
+(defn uberjar
+  "Generate an uberjar.
+
+   Reads the following config keys:
+
+   - :biff.tasks/main-ns (required)
+
+   Deletes target/resources/ (if it's in deps.edn :paths), runs the `css
+   --minify` task, then writes an uberjar file to target/jar/app.jar via
+   `clojure.tools.build.api/uber`. Directories from deps.edn's :paths that
+   include \"resources\" in their name are copied into the jar."
+  []
+  ((requiring-resolve 'com.biffweb.tasks.impl.uberjar/uberjar)))
+
+(defn update
+  "Update dependencies with antq and update clj-kondo files.
+
+   CLI options:
+
+     --deps-only               don't update clj-kondo files.
+     --clj-kondo-files-only    don't update dependencies.
+
+   Reads the following config keys:
+
+   - :biff.tasks/clj-kondo-version
+
+   If there is not a `clj-kondo` executable on the path with the version
+   specified by `clj-kondo-version`, downloads a binary to
+   `target/bin/clj-kondo`.
+
+   Updates clj-kondo cache and dependency configs per the instructions in
+   https://github.com/clj-kondo/clj-kondo#project-setup (`--parallel
+   --dependencies --copy-configs --lint <classpath>`)."
+  [& args]
+  (apply (requiring-resolve 'com.biffweb.tasks.impl.update/update) args))

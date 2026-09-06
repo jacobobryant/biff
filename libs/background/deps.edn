@@ -1,0 +1,9 @@
+{:paths   ["src"]
+ :deps    {org.clojure/clojure       {:mvn/version "1.12.5"}
+           jarohen/chime             {:mvn/version "0.3.3"}
+           com.biffweb/core          {:local/root "../core"}
+           com.biffweb/fx            {:local/root "../fx"}
+           org.clojure/tools.logging {:mvn/version "1.3.1"}}
+ :aliases {:run {:extra-paths ["test" "dev"]
+                 :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
+                 :main-opts   ["-m" "com.biffweb.tasks.lib"]}}}

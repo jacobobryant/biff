@@ -1,0 +1,13 @@
+{:deps    {com.biffweb/core         {:local/root "../core"}
+           com.biffweb/config       {:local/root "../config"}
+           com.biffweb/fx           {:local/root "../fx"}
+           com.biffweb/graph        {:local/root "../graph"}
+           com.biffweb/sqlite       {:local/root "../sqlite"}
+           com.biffweb/ring         {:local/root "../ring"}
+           com.biffweb/datastar     {:local/root "../datastar"}
+           com.biffweb/background   {:local/root "../background"}
+           com.biffweb/authenticate {:local/root "../authenticate"}
+           com.biffweb/admin        {:local/root "../admin"}}
+ :aliases {:run {:extra-paths ["dev"]
+                 :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
+                 :main-opts   ["-m" "tasks"]}}}

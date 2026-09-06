@@ -1,0 +1,4 @@
+{:aliases
+ {:run {:extra-paths ["dev"]
+        :extra-deps  {com.biffweb/run {:local/root ".."}}
+        :main-opts   ["-m" "tasks"]}}}

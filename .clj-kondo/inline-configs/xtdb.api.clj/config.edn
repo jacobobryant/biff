@@ -1,0 +1,1 @@
+{:config-in-call {xtdb.api/template {:ignore [:unresolved-symbol :unresolved-namespace]}}}

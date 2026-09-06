@@ -1,45 +1,18 @@
 (ns com.biffweb.config
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
-
-;;;; Copied from com.biffweb.impl.* --------------------------------------------
-(defn- ns-parts [nspace]
-  (if (empty? (str nspace))
-    []
-    (str/split (str nspace) #"\.")))
-
-(defn- select-ns [m nspace]
-  (let [parts (ns-parts nspace)]
-    (->> (keys m)
-         (filterv (fn [k]
-                    (= parts (take (count parts) (ns-parts (namespace k))))))
-         (select-keys m))))
-
-(defn- select-ns-as [m ns-from ns-to]
-  (into {}
-        (map (fn [[k v]]
-               (let [new-ns-parts (->> (ns-parts (namespace k))
-                                       (drop (count (ns-parts ns-from)))
-                                       (concat (ns-parts ns-to)))]
-                 [(if (empty? new-ns-parts)
-                    (keyword (name k))
-                    (keyword (str/join "." new-ns-parts) (name k)))
-                  v])))
-        (select-ns m ns-from)))
-
-(defmacro catchall
-  [& body]
-  `(try ~@body (catch Exception ~'_ nil)))
-;;;; ---------------------------------------------------------------------------
+            [clojure.string :as str]
+            [com.biffweb.stuff.secret :as stuff.secret]))
 
 ;; Algorithm adapted from dotenv-java:
 ;; https://github.com/cdimascio/dotenv-java/blob/master/src/main/java/io/github/cdimascio/dotenv/internal/DotenvParser.java
 ;; Wouldn't hurt to take a more thorough look at Ruby dotenv's algorithm:
 ;; https://github.com/bkeepers/dotenv/blob/master/lib/dotenv/parser.rb
-(defn parse-env-var [line]
-  (let [line (str/trim line)
-        [_ _ k v] (re-matches #"^\s*(export\s+)?([\w.\-]+)\s*=\s*(['][^']*[']|[\"][^\"]*[\"]|[^#]*)?\s*(#.*)?$"
+(defn- parse-env-var [line]
+  (let [line      (str/trim line)
+        pattern   (str "^\\s*(export\\s+)?([\\w.\\-]+)\\s*=\\s*"
+                       "(['][^']*[']|[\"][^\"]*[\"]|[^#]*)?\\s*(#.*)?$")
+        [_ _ k v] (re-matches (re-pattern pattern)
                               line)]
     (when-not (or (str/starts-with? line "#")
                   (str/starts-with? line "////")
@@ -51,19 +24,24 @@
                 v)]
         [k v]))))
 
-(defmethod aero/reader 'biff/env
-  [{:keys [profile biff.aero/env] :as opts} _ value]
-  (not-empty (get env (str value))))
+(defn- register-reader-methods!
+  "We call this function right before parsing to ensure that Biff v1 hasn't
+   overwritten our multimethods with the old #biff/secret implementation."
+  []
+  (defmethod aero/reader 'biff/env
+    [{:keys [biff.aero/env]} _ value]
+    (not-empty (get env (str value))))
+  (defmethod aero/reader 'biff/secret
+    [opts _ value]
+    (when-some [value (aero/reader opts 'biff/env value)]
+      (stuff.secret/secret-delay value))))
 
-(defmethod aero/reader 'biff/secret
-  [{:keys [profile biff.aero/env] :as opts} _ value]
-  (when-some [value (aero/reader opts 'biff/env value)]
-    (fn [] value)))
+(register-reader-methods!)
 
-(defn get-env []
+(defn- get-env []
   (reduce into
           {}
-          [(some->> (catchall (slurp "config.env"))
+          [(some->> (try (slurp "config.env") (catch Exception _ nil))
                     str/split-lines
                     (keep parse-env-var))
            (System/getenv)
@@ -72,24 +50,89 @@
                      [(str/replace k #"^biff.env." "") v]))
                  (System/getProperties))]))
 
-(defn use-aero-config [{:biff.config/keys [skip-validation profile] :as ctx}]
-  (let [env (get-env)
+(defn- remove-nil-values [m]
+  (into {}
+        (remove (comp nil? val))
+        m))
+
+(defn- system-properties-compat [ctx]
+  (into {}
+        (keep (fn [[k v]]
+                (when (and (keyword? k)
+                           (= "biff.system-properties" (namespace k)))
+                  [(name k) v])))
+        ctx))
+
+(defn- start [{:biff.config/keys [profile] :as ctx}]
+  (let [env     (get-env)
         profile (some-> (or profile
                             (get env "BIFF_PROFILE")
                             ;; For backwards compatibility
                             (get env "BIFF_ENV"))
                         keyword)
-        ctx (merge ctx (aero/read-config (io/resource "config.edn") {:profile profile :biff.aero/env env}))
-        secret (fn [k]
-                 (some-> (get ctx k) (.invoke)))
-        ctx (assoc ctx :biff/secret secret)]
-    (when-not (or skip-validation
-                  (and (secret :biff.middleware/cookie-secret)
-                       (secret :biff/jwt-secret)))
-      (binding [*out* *err*]
-        (println "Secrets are missing. Make sure you have a config.env file in the current "
-                  "directory, or set config via environment variables.")
-        (System/exit 1)))
-    (doseq [[k v] (select-ns-as ctx 'biff.system-properties nil)]
+        _       (register-reader-methods!)
+        config  (aero/read-config (io/resource "config.edn")
+                                  {:profile profile :biff.aero/env env})
+        ctx     (merge ctx (remove-nil-values config))
+        ;; For backwards compatibility
+        secret  (fn [k]
+                  (when-some [f (get ctx k)]
+                    (f)))
+        ctx     (assoc ctx :biff/secret secret)]
+    (doseq [[k v] (merge (system-properties-compat ctx)
+                         (get ctx :biff.config/system-properties))]
       (System/setProperty (name k) v))
     ctx))
+
+(defn module
+  "On startup, parses config.edn and merges into ctx. Also sets system
+   properties. Module ID is :biff.config/module.
+
+   Loads a config.edn file from resources and parses it with Aero. (See
+   https://github.com/juxt/aero). Two additional reader tags are supported:
+   #biff/env and #biff/secret. Keys with nil values (e.g. from unset env vars)
+   are filtered out.
+
+   #biff/env is like #env, but environment variables can also be specified in an
+   optional config.env file (read from the filesystem, not from resources) and
+   in the system properties (variable names should be prefixed with biff.env,
+   e.g biff.env.BIFF_PROFILE). If values are defined in multiple places,
+   precedence is as follows:
+
+     1. System properties
+     2. Actual environment variables
+     3. config.env
+
+   The :profile value for Aero is also taken from these sources, in the
+   BIFF_PROFILE key (e.g. `BIFF_PROFILE=prod` -- the value is converted to a
+   keyword). It can also be passed in with `ctx` via the :biff.config/profile
+   key, but this is only intended as a convenience for inspecting your config
+   from the REPL.
+
+   #biff/secret is like #biff/env, but wraps values in biff.core/secret-delay so
+   that they aren't visible if you serialize the system map. Secrets can be
+   unwrapped with `force`:
+
+     (let [{:keys [com.example/my-api-key]} ctx]
+       (force my-api-key))
+
+   After config is merged into ctx, any entries in
+   (:biff.config/system-properties ctx) will be added to the system map:
+
+     :biff.config/system-properties {\"user.timezone\" \"UTC\"}
+     ;; Equivalent to:
+     (System/setProperty \"user.timezone\" \"UTC\")
+
+   For backwards compatibility with Biff v1:
+
+   - secrets can be unwrapped by calling them as a zero-arg function:
+   `((:com.example/api-key ctx))`
+
+   - there is a :biff/secret function which can be used to unwrap secrets:
+   `((:biff/secret ctx) :com.example/api-key)`
+
+   - keys with a namespace of \"biff.system-properties\" are also merged into
+     the system properties."
+  []
+  {:biff.core/id    :biff.config/module
+   :biff.core/start start})
