@@ -15,8 +15,7 @@ easy.
 - Subscribe to [the newsletter](https://biffweb.com/newsletter/) for
   announcements and blog posts.
 - Ask questions on [Clojurians Slack](http://clojurians.net) (#biff channel).
-- For info about consulting, send me an email: <hello@obryant.dev>. I'm not
-  available for implementation work but can provide guidance.
+- [Buy me some tokens](https://github.com/sponsors/jacobobryant).
 
 ## Get started
 
