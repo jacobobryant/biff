@@ -1,5 +1,12 @@
 # Changelog
 
+
+## 2.0.0-rc25
+
+Bug fixes:
+
+- biff.tasks: create target/resources properly if needed.
+
 ## 2.0.0-rc24
 
 **Breaking:**

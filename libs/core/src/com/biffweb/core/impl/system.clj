@@ -91,7 +91,7 @@
 
          system-map
          (reduce (fn [system id]
-                   (log/info "starting:" id)
+                   (log/info "starting" id)
                    (impl.v/validate
                     (start-module system (get id->module id))))
                  initial-system

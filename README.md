@@ -36,7 +36,7 @@ Everything is subject to breaking changes for now, but if you'd like to try any
 of the libraries out in your own project, use a dependency like:
 
 ```
-com.biffweb/<lib> {:mvn/version "2.0.0-rc24"}
+com.biffweb/<lib> {:mvn/version "2.0.0-rc25"}
 ```
 
 Replacing `<lib>` with `core`, `config`, etc. The `com.biffweb/defaults`
