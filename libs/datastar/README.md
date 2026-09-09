@@ -19,18 +19,6 @@ POST/etc request handlers update the backend state and return an empty response,
 letting biff.datastar handle the UI updates. If your app needs real-time updates
 or collaborative features, those basically come for free.
 
-### Dependency
-
-```clojure
-com.biffweb/datastar {:mvn/version "2.0.0-rc26"}
-```
-
-### Status
-
-This library will be a release candidate until all [the other Biff 2
-libraries](/README.md) have been released. Until then there could be breaking
-changes.
-
 This architecture is obviously a much less well-trodden path than a typical
 request/response setup, and I haven't personally used it at scale. For side
 projects, you'll be fine (probably). If you're working on a Serious Project,
@@ -45,6 +33,12 @@ Some resources:
   a case study from Clojure Conj 2025.
 - [Interview with David Nolen](https://youtu.be/2ECucq-mTGg), including a live
   demo partway through.
+
+### Dependency
+
+```clojure
+com.biffweb/datastar {:mvn/version "2.0.0"}
+```
 
 ## Reference
 

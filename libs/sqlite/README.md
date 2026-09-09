@@ -30,14 +30,8 @@ This library wraps [next.jdbc](https://github.com/seancorfield/next-jdbc) and
 ### Dependency
 
 ```clojure
-com.biffweb/sqlite {:mvn/version "2.0.0-rc26"}
+com.biffweb/sqlite {:mvn/version "2.0.0"}
 ```
-
-### Status
-
-This library will be a release candidate until all [the other Biff 2
-libraries](/README.md) have been released. Until then there could be breaking
-changes, but I don't anticipate any.
 
 ## Reference
 

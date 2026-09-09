@@ -12,7 +12,7 @@ applications.
 ### Dependency
 
 ```clojure
-com.biffweb/xtdb {:mvn/version "2.0.0-rc26"}
+com.biffweb/xtdb {:mvn/version "2.0.0"}
 ```
 
 biff.xtdb depends on XTDB 2.1.0 which requires Java <25. Per the XTDB docs,
@@ -23,12 +23,6 @@ you'll need to add these Java arguments to your deps.edn file:
            "--enable-native-access=ALL-UNNAMED"
            "-Dio.netty.tryReflectionSetAccessible=true"]
 ```
-
-### Status
-
-This library will be a release candidate until all [the other Biff 2
-libraries](/README.md) have been released. Until then there could be breaking
-changes, but I don't anticipate any.
 
 ## Reference
 
