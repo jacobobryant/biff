@@ -68,7 +68,7 @@ returning the new number.
 
 Now you can write simple `(is (= (f x) y))` unit tests:
 
-```
+```clojure
 (require '[clojure.test :refer [deftest is]])
 
 (deftest increment-file-tests
@@ -203,10 +203,8 @@ function's result:
     (-> result first :user/id)))
 ```
 
-Use `:biff.fx/return` to exit early.
-
-A map containing `:biff.fx/return` exits early. `pipeline` and `defpipeline`
-accept functions as varargs or as a single sequence.
+Return `{:biff.fx/return <return value>}` to exit the pipeline immediately
+instead of proceeding to the next state.
 
 ### Testing
 

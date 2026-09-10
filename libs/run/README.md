@@ -155,7 +155,9 @@ can still add/override tasks locally:
 
 ## Tips
 
-- I recommend using a shell alias like `alias cljrun='clj -M:run`
+- I recommend using a shell alias like `alias cljrun='clojure -M:run'`
+  (`clojure` because a single task, `publish`, doesn't play nicely with
+  `rlwrap` if you're signing your jars with GPG...)
 
 - You could define global tasks by putting a `:run` alias in
   `~/.clojure/deps.edn`

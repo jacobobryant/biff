@@ -2,6 +2,8 @@
 
 ## 2.0.0
 
+[Announcement](https://biffweb.com/p/biff2-released/).
+
 - same as 2.0.0-26
 
 ## 2.0.0-26

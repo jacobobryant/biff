@@ -93,14 +93,15 @@ aggregates all the modules into a vector.
 ### Init functions
 
 Modules can include a `:biff.core/init` lifecycle function. Init functions run
-at system startup in an unspecified order, before any start functions run. Each
-init function takes the entire `modules` vector and returns a map. The maps from
-all the init functions are merged together into an initial system map.
+at system startup in an unspecified order, before any start functions (see
+below) run. Each init function takes the entire `modules` vector and returns a
+map. The maps from all the init functions are merged together into an initial
+system map.
 
 You can also set `:biff.core/init` to a map instead of a function.
 
-So modules can both define a chunk of application functionality, and they can
-also aggregate those chunks from other modules into the system map.
+So modules can both define a chunk of application functionality and aggregate
+those chunks from other modules into the system map.
 
 ```clojure
 (def module
@@ -143,7 +144,9 @@ any stateful resources as needed.
 ```
 
 You specify the module start order by providing a vector of module IDs
-(the `:biff.core/id` value).
+(the `:biff.core/id` value). The initial system map is passed to the first
+start function, then the result of that is passed to the next start function,
+etc.
 
 ```clojure
 (def start-order
