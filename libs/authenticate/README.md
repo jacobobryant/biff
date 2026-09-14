@@ -23,6 +23,19 @@ com.biffweb/authenticate {:mvn/version "2.0.0"}
 - [Routes](docs/routes.md)
 - [API](docs/api/com.biffweb.authenticate.md)
 
+## Example 
+
+Start the demo sign-in app:
+
+```clojure
+cd libs/authenticate
+clj -M:demo
+```
+
+Open broweser to `localhost:8080` and enter an email address to sign in. The sign-in code will be printed to the console, and the browser will display a form to input the verification code. 
+
+Signing in with the code displays a welcome screen displaying the current "User ID" and a functional "sign out" button.
+
 ## Usage
 
 Call `routes` and include the result in your application's Reitit routes:
