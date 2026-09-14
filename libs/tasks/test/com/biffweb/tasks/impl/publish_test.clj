@@ -15,14 +15,15 @@
 
 (deftest explicit-project-root-test
   (let [calls  (atom [])
-        config {:biff.tasks/group-name       "com.example"
-                :biff.tasks/lib-name         "example"
-                :biff.tasks/lib-version      "1.0.0"
-                :biff.tasks/clojars-username "user"
-                :biff.tasks/clojars-secret   "secret"
-                :biff.tasks/pom-data         []
-                :biff.tasks/pom-scm          {}
-                :biff.tasks/project-root     "libs/example"}]
+        config {:biff.tasks/group-name          "com.example"
+                :biff.tasks/lib-name            "example"
+                :biff.tasks/lib-version         "1.0.0"
+                :biff.tasks/clojars-username    "user"
+                :biff.tasks/clojars-secret      "secret"
+                :biff.tasks/pom-data            []
+                :biff.tasks/pom-scm             {}
+                :biff.tasks/build-jar-resources 'example/build-resources
+                :biff.tasks/project-root        "libs/example"}]
     (with-redefs [util/read-config
                   (fn [_]
                     config)
@@ -41,6 +42,7 @@
     (is (= [[:build
              (.getCanonicalFile (io/file "libs/example"))
              (select-keys config [:biff.tasks/group-name
+                                  :biff.tasks/build-jar-resources
                                   :biff.tasks/lib-name
                                   :biff.tasks/lib-version
                                   :biff.tasks/monorepo

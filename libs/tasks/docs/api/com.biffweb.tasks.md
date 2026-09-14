@@ -210,15 +210,16 @@ Reads the following config keys:
 - :biff.tasks/main-ns (required)
 
 Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
-`css --watch=always` task in the background. Starts another file watcher that
-evaluates source files and their dependants when saved.
+init task, then runs the `css --watch=always` task in the background. Starts
+another file watcher that evaluates source files and their dependants when
+saved.
 
 Then calls the `-main` function in the `main-ns` namespace.
 ```
 
 ### docs
 
-[view source](../../src/com/biffweb/tasks.clj#L178)
+[view source](../../src/com/biffweb/tasks.clj#L179)
 
 ```
 (docs)
@@ -238,7 +239,7 @@ Each namespace will be required and thus must be on the classpath.
 
 ### format
 
-[view source](../../src/com/biffweb/tasks.clj#L193)
+[view source](../../src/com/biffweb/tasks.clj#L194)
 
 ```
 (format)
@@ -263,7 +264,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### lint
 
-[view source](../../src/com/biffweb/tasks.clj#L213)
+[view source](../../src/com/biffweb/tasks.clj#L214)
 
 ```
 (lint)
@@ -287,7 +288,7 @@ uses :paths and :extra-paths from deps.edn.
 
 ### nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L232)
+[view source](../../src/com/biffweb/tasks.clj#L233)
 
 ```
 (nrepl & args)
@@ -307,7 +308,7 @@ If the first arg is `--`, calls `-main` without setting `--port` or
 
 ### prod-logs
 
-[view source](../../src/com/biffweb/tasks.clj#L247)
+[view source](../../src/com/biffweb/tasks.clj#L248)
 
 ```
 (prod-logs & args)
@@ -325,7 +326,7 @@ Accepts a single, optional `n-lines` CLI argument, default 300. Runs
 
 ### prod-nrepl
 
-[view source](../../src/com/biffweb/tasks.clj#L260)
+[view source](../../src/com/biffweb/tasks.clj#L261)
 
 ```
 (prod-nrepl & args)
@@ -344,7 +345,7 @@ The server is expected to already have an nREPL server running on
 
 ### prod-restart
 
-[view source](../../src/com/biffweb/tasks.clj#L274)
+[view source](../../src/com/biffweb/tasks.clj#L275)
 
 ```
 (prod-restart & args)
@@ -361,7 +362,7 @@ Runs `systemctl restart` on the server.
 
 ### prod-setup
 
-[view source](../../src/com/biffweb/tasks.clj#L286)
+[view source](../../src/com/biffweb/tasks.clj#L287)
 
 ```
 (prod-setup & args)
@@ -407,7 +408,7 @@ distros.
 
 ### publish
 
-[view source](../../src/com/biffweb/tasks.clj#L327)
+[view source](../../src/com/biffweb/tasks.clj#L328)
 
 ```
 (publish & args)
@@ -430,14 +431,15 @@ Reads the following required config keys:
 
 And the following optional keys:
 
+- :biff.tasks/build-jar-resources
 - :biff.tasks/gpg-sign-key-id
-- :biff.tasks/gpg-sign-wih-passphrase
+- :biff.tasks/gpg-sign-with-passphrase
 - :biff.tasks/monorepo
 ```
 
 ### init
 
-[view source](../../src/com/biffweb/tasks.clj#L352)
+[view source](../../src/com/biffweb/tasks.clj#L354)
 
 ```
 (init)
@@ -450,6 +452,7 @@ Reads the following config keys:
 - :biff.tasks/clj-kondo-version
 - :biff.tasks/cljfmt-version
 - :biff.tasks/tailwind-version
+- :biff.tasks/skip-project-files
 
 This task can be run after cloning a project template and after cloning a
 project that's already been initialized previously.
@@ -467,12 +470,13 @@ byte array of the given length.
 Ensures that `clj-kondo`, `cljfmt`, and `tailwind` are installed with the
 specified versions. If not, downloads them to target/bin/.
 
-Then runs the `update --clj-kondo-files-only` task.
+If skip-project-files isn't set, copies Biff documentation to .biff/docs/ and
+copies Biff-related agent skills to .agents/skills/.
 ```
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L382)
+[view source](../../src/com/biffweb/tasks.clj#L386)
 
 ```
 (test & args)
@@ -484,7 +488,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L389)
+[view source](../../src/com/biffweb/tasks.clj#L393)
 
 ```
 (uberjar)
@@ -494,16 +498,14 @@ Generate an uberjar.
 Reads the following config keys:
 
 - :biff.tasks/main-ns (required)
+- :biff.tasks/build-jar-resources (optional)
 
-Deletes target/resources/ (if it's in deps.edn :paths), runs the `css
---minify` task, then writes an uberjar file to target/jar/app.jar via
-`clojure.tools.build.api/uber`. Directories from deps.edn's :paths that
-include "resources" in their name are copied into the jar.
+If build-jar-resources isn't set, runs the `css --minify` task.
 ```
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L403)
+[view source](../../src/com/biffweb/tasks.clj#L405)
 
 ```
 (update & args)

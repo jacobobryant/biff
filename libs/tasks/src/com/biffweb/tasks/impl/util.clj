@@ -24,7 +24,8 @@
 
 ;; Do this instead of biff.core/register so we don't have to require Malli
 (def ^:private config-rules
-  [[:biff.tasks/clojars-secret "a string or biff.core/secret-delay"
+  [[:biff.tasks/build-jar-resources "a symbol" symbol?]
+   [:biff.tasks/clojars-secret "a string or biff.core/secret-delay"
     #(or (string? %) (delay? %))]
    [:biff.tasks/clj-kondo-version "a string" string?]
    [:biff.tasks/clojars-username "a string" string?]
@@ -48,6 +49,7 @@
    [:biff.tasks/pom-data "a vector" vector?]
    [:biff.tasks/pom-scm "a map" map?]
    [:biff.tasks/project-root "a string" string?]
+   [:biff.tasks/skip-project-files "a boolean" boolean?]
    [:biff.tasks/skip-ssh-agent "a boolean" boolean?]
    [:biff.tasks/tailwind-version "a string" string?]])
 

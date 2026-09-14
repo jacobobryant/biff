@@ -17,6 +17,14 @@ DOMAIN=example.com
 CLOJARS_SECRET=abc123
 ```
 
+### :biff.tasks/build-jar-resources
+
+Symbol that resolves to a function taking zero arguments. If set, called by the
+`publish` and `uberjar` tasks before copying resources into the jar. Typically
+this function will write files to `target/resources/`.
+
+If not set, the `uberjar` task runs the `css --minify` task instead.
+
 ### :biff.tasks/clj-kondo-version
 
 String, default `"2026.05.25"`. The version of clj-kondo to install and use.
@@ -117,6 +125,11 @@ Symbol. The namespace containing the `-main` function for this application.
 Boolean, default false. When set and publishing as a library to Clojars, any
 `:local/root` dependencies with the same group name will have `:mvn/version` set
 to value of `:biff.tasks/lib-version` in the published artifact.
+
+### :biff.tasks/skip-project-files
+
+Boolean, default false. When true, the `init` task does not write anything to
+`.biff/` or `.agents/`.
 
 ### :biff.tasks/nrepl-port
 

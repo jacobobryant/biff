@@ -1,3 +1,6 @@
 #merge [#include "../../../dev/config.edn"
         {:biff.tasks/lib-name        "tasks"
-         :biff.tasks/docs-namespaces [com.biffweb.tasks]}]
+         :biff.tasks/docs-namespaces [com.biffweb.tasks]
+
+         :biff.tasks/build-jar-resources
+         com.biffweb.tasks.impl.init/build-jar-resources}]

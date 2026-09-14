@@ -106,6 +106,7 @@
 (defn- build-artifact!
   [project-root
    {:biff.tasks/keys [group-name
+                      build-jar-resources
                       lib-name
                       lib-version
                       monorepo
@@ -122,8 +123,19 @@
                       project-root
                       (str "target/" lib-name "-" lib-version ".jar"))
           pom-file   (build/pom-path {:class-dir class-path :lib lib})]
+      ;; clean
+      (when (and build-jar-resources
+                 (some #{"target/resources"} res-dirs))
+        (build/delete {:path "target/resources"})
+        (.mkdirs (io/file "target/resources")))
       (build/delete {:path class-path})
       (build/delete {:path jar-file})
+
+      ;; build
+      (when build-jar-resources
+        ((requiring-resolve build-jar-resources)))
+
+      ;; package
       (when (seq paths)
         (build/copy-dir {:src-dirs paths :target-dir class-path}))
       (build/write-pom {:basis         (release-basis
@@ -201,12 +213,15 @@
         artifact          (when-not already-published
                             (build-artifact!
                              project-root
-                             (select-keys config [:biff.tasks/group-name
-                                                  :biff.tasks/lib-name
-                                                  :biff.tasks/lib-version
-                                                  :biff.tasks/monorepo
-                                                  :biff.tasks/pom-data
-                                                  :biff.tasks/pom-scm])))]
+                             (select-keys
+                              config
+                              [:biff.tasks/group-name
+                               :biff.tasks/build-jar-resources
+                               :biff.tasks/lib-name
+                               :biff.tasks/lib-version
+                               :biff.tasks/monorepo
+                               :biff.tasks/pom-data
+                               :biff.tasks/pom-scm])))]
     (cond
       already-published
       (println "Already published, skipping:"

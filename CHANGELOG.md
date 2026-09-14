@@ -17,9 +17,9 @@
 
 [Announcement](https://biffweb.com/p/biff2-released/).
 
-- same as 2.0.0-26
+- same as 2.0.0-r26
 
-## 2.0.0-26
+## 2.0.0-r26
 
 - biff.tasks: the dev task runs the init task when needed.
 - biff.tasks: the add task syncs clj-kondo configs.
