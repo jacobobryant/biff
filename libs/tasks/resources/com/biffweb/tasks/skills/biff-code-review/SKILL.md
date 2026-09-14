@@ -7,7 +7,7 @@ description: Review Clojure code to ensure it matches Biff conventions.
 
 # Biff code review
 
-Copy the `checklist.md` file to `.biff/review/<current date>/<n>.txt`, e.g.
+Copy the `checklist.txt` file to `.biff/review/<current date>/<n>.txt`, e.g.
 `.biff/review/2020-01-01/0.txt`. `n` starts at 0 and should be 1 higher than the
 highest number already in the folder for the current date.
 
