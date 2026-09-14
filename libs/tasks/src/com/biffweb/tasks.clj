@@ -168,8 +168,9 @@
    - :biff.tasks/main-ns (required)
 
    Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
-   `css --watch=always` task in the background. Starts another file watcher that
-   evaluates source files and their dependants when saved.
+   init task, then runs the `css --watch=always` task in the background. Starts
+   another file watcher that evaluates source files and their dependants when
+   saved.
 
    Then calls the `-main` function in the `main-ns` namespace."
   []
@@ -343,8 +344,9 @@
 
    And the following optional keys:
 
+   - :biff.tasks/build-jar-resources
    - :biff.tasks/gpg-sign-key-id
-   - :biff.tasks/gpg-sign-wih-passphrase
+   - :biff.tasks/gpg-sign-with-passphrase
    - :biff.tasks/monorepo"
   [& args]
   (apply (requiring-resolve 'com.biffweb.tasks.impl.publish/publish) args))
@@ -358,6 +360,7 @@
    - :biff.tasks/clj-kondo-version
    - :biff.tasks/cljfmt-version
    - :biff.tasks/tailwind-version
+   - :biff.tasks/skip-project-files
 
    This task can be run after cloning a project template and after cloning a
    project that's already been initialized previously.
@@ -375,7 +378,8 @@
    Ensures that `clj-kondo`, `cljfmt`, and `tailwind` are installed with the
    specified versions. If not, downloads them to target/bin/.
 
-   Then runs the `update --clj-kondo-files-only` task."
+   If skip-project-files isn't set, copies Biff documentation to .biff/docs/ and
+   copies Biff-related agent skills to .agents/skills/."
   []
   ((requiring-resolve 'com.biffweb.tasks.impl.init/init)))
 
@@ -392,11 +396,9 @@
    Reads the following config keys:
 
    - :biff.tasks/main-ns (required)
+   - :biff.tasks/build-jar-resources (optional)
 
-   Deletes target/resources/ (if it's in deps.edn :paths), runs the `css
-   --minify` task, then writes an uberjar file to target/jar/app.jar via
-   `clojure.tools.build.api/uber`. Directories from deps.edn's :paths that
-   include \"resources\" in their name are copied into the jar."
+   If build-jar-resources isn't set, runs the `css --minify` task."
   []
   ((requiring-resolve 'com.biffweb.tasks.impl.uberjar/uberjar)))
 

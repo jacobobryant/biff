@@ -1,4 +1,4 @@
-{:paths   ["src" "resources"]
+{:paths   ["src" "resources" "target/resources"]
  :deps    {babashka/fs                   {:mvn/version "0.5.33"}
            babashka/process              {:mvn/version "0.6.25"}
            borkdude/rewrite-edn          {:mvn/version "0.5.9"}

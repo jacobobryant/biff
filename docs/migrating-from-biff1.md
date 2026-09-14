@@ -1,4 +1,4 @@
-# Migrating from Biff 1.0
+# Migrating from Biff 1.x
 
 If you've previously made an app with a Biff version prior to 2.x and you want
 to migrate to the latest stuff, the general approach is:

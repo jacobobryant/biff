@@ -48,6 +48,15 @@
                         nil
                         (catch clojure.lang.ExceptionInfo e e))]
         (is (= {:key :biff.tasks/nrepl-port :expected "an integer"}
+               (ex-data exception))))))
+  (testing "a non-symbol jar resource builder"
+    (binding [tasks/*extra-config* {:biff.tasks/build-jar-resources "build"}]
+      (let [exception (try
+                        (util/read-config)
+                        nil
+                        (catch clojure.lang.ExceptionInfo e e))]
+        (is (= {:key      :biff.tasks/build-jar-resources
+                :expected "a symbol"}
                (ex-data exception)))))))
 
 (deftest dependency-paths-test

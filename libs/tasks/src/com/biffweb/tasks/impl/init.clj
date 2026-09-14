@@ -6,9 +6,118 @@
             [com.biffweb.tasks.impl.format :as tasks-format]
             [com.biffweb.tasks.impl.lint :as tasks-lint]
             [com.biffweb.tasks.impl.update :as tasks-update]
-            [com.biffweb.tasks.impl.util :as util]))
+            [com.biffweb.tasks.impl.util :as util])
+  (:import [java.security MessageDigest]
+           [java.util.jar JarFile]))
 
 (def ^:private template-main-ns 'com.example)
+(def ^:private docs-resource "com/biffweb/tasks/docs")
+(def ^:private skills-resource "com/biffweb/tasks/skills")
+
+(defn- sha256 [values]
+  (let [digest (MessageDigest/getInstance "SHA-256")]
+    (doseq [value values]
+      (.update digest ^bytes value))
+    (apply str (map #(format "%02x" %) (.digest digest)))))
+
+(defn- repository-root []
+  (or (some #(when (.exists (io/file % ".git")) %)
+            (take-while some?
+                        (iterate #(.getParentFile %) (util/project-root))))
+      (util/project-root)))
+
+;; used to package docs in the biff.tasks jar so the init task can write them to
+;; the local project directory.
+(defn build-jar-resources []
+  (let [root       (.getCanonicalFile (repository-root))
+        files      (->> (file-seq root)
+                        (filterv #(.isFile %))
+                        (filterv #(str/ends-with? (.getName %) ".md"))
+                        (remove #(= "AGENTS.md" (.getName %)))
+                        (sort-by #(util/relative-path root %)))
+        tasks-root (if (.exists (io/file root "libs/tasks/deps.edn"))
+                     (io/file root "libs/tasks")
+                     root)
+        dest       (io/file tasks-root "target/resources" docs-resource)]
+    (doseq [file files]
+      (let [target (io/file dest (util/relative-path root file))]
+        (io/make-parents target)
+        (io/copy file target)))
+    (io/make-parents (io/file dest "hash.txt"))
+    (spit (io/file dest "hash.txt")
+          (sha256
+           (mapv #(java.nio.file.Files/readAllBytes (.toPath %)) files)))))
+
+(defn- copy-classpath-docs! [url dest]
+  (case (.getProtocol url)
+    "file"
+    (fs/copy-tree (io/file (.toURI url)) dest)
+
+    "jar"
+    (let [connection (.openConnection url)
+          prefix     (str docs-resource "/")]
+      (with-open [jar ^JarFile (.getJarFile connection)]
+        (doseq [entry (enumeration-seq (.entries jar))
+                :let  [name (.getName entry)]
+                :when (and (not (.isDirectory entry))
+                           (str/starts-with? name prefix))]
+          (let [target (io/file dest (subs name (count prefix)))]
+            (io/make-parents target)
+            (with-open [in (.getInputStream jar entry)]
+              (io/copy in target))))))))
+
+(defn- ensure-docs! []
+  (when-some [hash-url (io/resource (str docs-resource "/hash.txt"))]
+    (let [url            (java.net.URL. (subs (str hash-url)
+                                              0
+                                              (- (count (str hash-url))
+                                                 (count "/hash.txt"))))
+          dest           (io/file (util/project-root) ".biff/docs")
+          bundled-hash   (slurp hash-url)
+          installed-hash (when (.exists (io/file dest "hash.txt"))
+                           (slurp (io/file dest "hash.txt")))]
+      (when (not= bundled-hash installed-hash)
+        (fs/delete-tree dest)
+        (copy-classpath-docs! url dest)))))
+
+(defn- write-if-different! [file bytes]
+  (when (or (not (.exists file))
+            (not (java.util.Arrays/equals
+                  ^bytes bytes
+                  ^bytes (java.nio.file.Files/readAllBytes (.toPath file)))))
+    (io/make-parents file)
+    (with-open [out (io/output-stream file)]
+      (.write out ^bytes bytes))))
+
+(defn- ensure-skills! []
+  (when-some [url (io/resource skills-resource)]
+    (let [dest (io/file (util/project-root) ".agents/skills")]
+      (case (.getProtocol url)
+        "file"
+        (let [source (io/file (.toURI url))]
+          (doseq [file  (file-seq source)
+                  :when (.isFile file)]
+            (write-if-different!
+             (io/file dest (util/relative-path source file))
+             (java.nio.file.Files/readAllBytes (.toPath file)))))
+
+        "jar"
+        (let [connection (.openConnection url)
+              prefix     (str skills-resource "/")]
+          (with-open [jar ^JarFile (.getJarFile connection)]
+            (doseq [entry (enumeration-seq (.entries jar))
+                    :let  [name (.getName entry)]
+                    :when (and (not (.isDirectory entry))
+                               (str/starts-with? name prefix))]
+              (with-open [in (.getInputStream jar entry)]
+                (write-if-different!
+                 (io/file dest (subs name (count prefix)))
+                 (.readAllBytes in))))))))))
+
+(defn- ensure-biff-gitignore! []
+  (let [file (io/file (util/project-root) ".biff/.gitignore")]
+    (io/make-parents file)
+    (spit file "*\n")))
 
 (defn- new-secret [length]
   (let [buffer (byte-array length)]
@@ -123,17 +232,22 @@
     (tasks-update/update "--clj-kondo-files-only")))
 
 (defn init []
-  (let [{:biff.tasks/keys [main-ns] :as config}
+  (let [{:biff.tasks/keys [main-ns skip-project-files] :as config}
         (util/read-config {:select '[main-ns
                                      clj-kondo-version
                                      cljfmt-version
-                                     tailwind-version]})
+                                     tailwind-version
+                                     skip-project-files]})
 
         new-project (new-project? main-ns)]
     (when new-project
       (rewrite-main-namespace!)
       (initialize-git-repository!))
     (ensure-clj-kondo-cache!)
+    (when-not skip-project-files
+      (ensure-biff-gitignore!)
+      (ensure-docs!)
+      (ensure-skills!))
     (ensure-config-files)
     (ensure-task-binaries-installed! config)
     (util/ensure-paths!)))

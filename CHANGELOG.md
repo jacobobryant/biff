@@ -1,12 +1,18 @@
 # Changelog
 
-## 2.0.0
+## 2.0.1-SNAPSHOT
+
+- Added `:biff.tasks/build-jar-resource`
+- `init` task generates .biff/docs and .agents/skills/biff-*/*
+- Added `:biff.tasks/skip-project-files`
+
+## 2.0.0 (2026-09-10)
 
 [Announcement](https://biffweb.com/p/biff2-released/).
 
-- same as 2.0.0-26
+- same as 2.0.0-r26
 
-## 2.0.0-26
+## 2.0.0-r26
 
 - biff.tasks: the dev task runs the init task when needed.
 - biff.tasks: the add task syncs clj-kondo configs.
