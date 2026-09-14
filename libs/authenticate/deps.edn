@@ -12,6 +12,14 @@
          :extra-deps  {com.biffweb/tasks       {:local/root "../tasks"}
                        ring/ring-jetty-adapter {:mvn/version "1.15.4"}
                        ring/ring-defaults      {:mvn/version "0.7.0"}
+                       org.slf4j/slf4j-simple  {:mvn/version "2.0.18"}
                        metosin/reitit-ring     {:mvn/version "0.10.1"}}
          :main-opts   ["-m" "com.biffweb.tasks.lib"]}
-  :demo {:main-opts ["-m" "demo"]}}}
+  :demo {:extra-paths ["demo"]
+         :extra-deps  {org.slf4j/slf4j-simple  {:mvn/version "2.0.18"}
+                       nrepl/nrepl             {:mvn/version "1.7.0"}
+                       cider/cider-nrepl       {:mvn/version "0.62.2"}
+                       ring/ring-jetty-adapter {:mvn/version "1.15.4"}
+                       ring/ring-defaults      {:mvn/version "0.7.0"}
+                       metosin/reitit-ring     {:mvn/version "0.10.1"}}
+         :main-opts ["-m" "demo"]}}}
