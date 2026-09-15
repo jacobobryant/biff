@@ -7,8 +7,34 @@
             [com.biffweb.authenticate.impl.captcha :as captcha]
             [com.biffweb.authenticate.impl.system :as system]
             [com.biffweb.core :as biff]
-            [com.biffweb.stuff :as stuff]
-            [demo.store :as store]))
+            [com.biffweb.stuff :as stuff]))
+
+(defn- atom-store []
+  (let [store (atom {:users {} :kv {}})]
+    {::store store
+
+     :biff.auth/get-user-id
+     (fn [_ctx email]
+       (get-in @store [:users email :user/id]))
+
+     :biff.auth/create-user
+     (fn [_ctx {:keys [email params]}]
+       (let [user-id (random-uuid)]
+         (swap! store assoc-in [:users email]
+                {:user/id        user-id
+                 :user/email     email
+                 :user/params    params
+                 :user/joined-at (java.time.Instant/now)})
+         user-id))
+
+     :biff.core/kv-get
+     (fn [_ctx namespace key]
+       (get-in @store [:kv namespace key]))
+
+     :biff.core/kv-set
+     (fn [_ctx namespace key value]
+       (swap! store assoc-in [:kv namespace key] value)
+       nil)}))
 
 ;;;; Helpers (backend) =========================================================
 
@@ -63,8 +89,8 @@
 ;;;; Atom store ================================================================
 
 (deftest atom-store-test
-  (let [config (store/atom-store)
-        store  (::store/store config)
+  (let [config (atom-store)
+        store  (::store config)
         ctx    {}]
     (testing "store atom is accessible"
       (is (instance? clojure.lang.Atom store)))
@@ -131,7 +157,7 @@
     :biff.auth/new-code       system/new-code}})
 
 (deftest send-code-invalid-email-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         ctx    (make-send-code-ctx config :email "not-valid")
         result (backend/send-code-handler ctx)]
     (is (= 303 (:status result)))
@@ -139,8 +165,8 @@
                        "error=invalid-email"))))
 
 (deftest send-code-success-test
-  (let [config      (store/atom-store)
-        store       (::store/store config)
+  (let [config      (atom-store)
+        store       (::store config)
         sent-emails (atom [])
         ctx         (assoc-in (make-send-code-ctx
                                config :email "test@example.com")
@@ -166,8 +192,8 @@
       (is (not= code code-hash)))))
 
 (deftest send-code-stores-params-test
-  (let [config (store/atom-store)
-        store  (::store/store config)
+  (let [config (atom-store)
+        store  (::store config)
         ctx    (assoc (make-send-code-ctx config :email "test@example.com")
                       :biff.stuff/params
                       {:email                 "test@example.com"
@@ -182,7 +208,7 @@
              (:biff-auth-signin/params signin-record))))))
 
 (deftest send-code-email-send-fails-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         ctx    (make-send-code-ctx config :email "test@example.com"
                                    :send-result false)
         result (backend/send-code-handler ctx)]
@@ -191,7 +217,7 @@
                        "error=send-failed"))))
 
 (deftest send-code-captcha-fail-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         ctx    (-> (make-send-code-ctx config :email "test@example.com")
                    (assoc-in [:biff.fx/handlers :biff.auth/captcha-verify]
                              (constantly false)))
@@ -226,7 +252,7 @@
     :biff.auth/new-code system/new-code}})
 
 (deftest verify-code-success-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         now    (java.time.Instant/now)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret
@@ -244,7 +270,7 @@
       (is (some? ((:biff.auth/get-user-id config) {} "test@example.com"))))))
 
 (deftest verify-code-wrong-code-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         now    (java.time.Instant/now)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret
@@ -262,7 +288,7 @@
                 (get-signin config {} "test@example.com")))))))
 
 (deftest verify-code-expired-test
-  (let [config       (store/atom-store)
+  (let [config       (atom-store)
         expired-time (.minus (java.time.Instant/now)
                              (java.time.Duration/ofMinutes 15))]
     (put-signin! config {} "test@example.com"
@@ -279,7 +305,7 @@
                          "error=invalid-code")))))
 
 (deftest verify-code-too-many-attempts-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         now    (java.time.Instant/now)]
     (put-signin! config {} "test@example.com"
                  {:biff-auth-signin/code-hash       (backend/hash-secret
@@ -300,7 +326,7 @@
                          "error=invalid-code")))))
 
 (deftest verify-code-existing-user-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         now    (java.time.Instant/now)
         uid    ((:biff.auth/create-user config)
                 {} {:email "test@example.com"})]
@@ -341,7 +367,7 @@
   {:biff.auth/skip-csrf-protection true})
 
 (deftest module-returns-routes-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/app-name   "Test App"
                                     :biff.auth/send-email (constantly true)}))]
@@ -349,7 +375,7 @@
     (is (= "" (first (first (:biff.ring/routes m)))))))
 
 (deftest module-with-custom-options-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/send-email    (constantly true)
                                     :biff.auth/app-path      "/dashboard"
@@ -358,14 +384,14 @@
     (is (some? (:biff.ring/routes m)))))
 
 (deftest module-includes-signin-route-by-default-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/app-name   "Test App"
                                     :biff.auth/send-email (constantly true)}))]
     (is (contains? (set (map first (route-nodes m))) "/signin"))))
 
 (deftest module-signin-routes-ignore-redirect-page-options-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         m      (auth/module
                 (merge config auth/turnstile-config module-defaults
                        {:biff.auth/app-name    "Test App"
@@ -376,7 +402,7 @@
     (is (not (contains? paths "/custom/signin")))))
 
 (deftest module-omits-signin-when-disabled-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
         m      (auth/module (merge config auth/turnstile-config module-defaults
                                    {:biff.auth/app-name "Test App"
 
@@ -398,7 +424,7 @@
                           (handler {})))))
 
 (deftest module-does-not-require-app-name-test
-  (let [config         (store/atom-store)
+  (let [config         (atom-store)
         module         (auth/module
                         (merge config auth/turnstile-config module-defaults
                                {:biff.auth/send-email   (constantly true)
@@ -408,7 +434,7 @@
     (is (nil? (:biff.auth/app-name (handler {}))))))
 
 (deftest module-enables-csrf-protection-by-default-test
-  (let [config  (store/atom-store)
+  (let [config  (atom-store)
         module  (auth/module
                  (merge config
                         {:biff.auth/app-name     "Test App"
@@ -425,7 +451,7 @@
                   (handler {:request-method :get :session {}}))))))
 
 (deftest module-allows-send-code-without-captcha-test
-  (let [config              (store/atom-store)
+  (let [config              (atom-store)
         opts                {:biff.auth/app-name             "Test App"
                              :biff.auth/skip-captcha         true
                              :biff.auth/skip-csrf-protection true
@@ -457,7 +483,7 @@
                        "/signin?sent-to="))))
 
 (deftest module-requires-send-email-test
-  (let [config         (store/atom-store)
+  (let [config         (atom-store)
         module         (auth/module
                         (merge config auth/turnstile-config module-defaults
                                {:biff.auth/app-name     "Test App"
@@ -472,7 +498,7 @@
     (is (str/includes? (ex-message ex) ":biff.auth/send-email"))))
 
 (deftest module-uses-send-email-when-skip-captcha-is-true-test
-  (let [config     (store/atom-store)
+  (let [config     (atom-store)
         captured   (atom nil)
         send-email (fn [ctx _params]
                      (reset! captured ctx)
@@ -501,7 +527,7 @@
     (is (= :present (:system-marker @captured)))))
 
 (deftest module-send-code-route-uses-send-email-handler-test
-  (let [config      (store/atom-store)
+  (let [config      (atom-store)
         sent-emails (atom [])
         send-email  (fn [_ctx params]
                       (swap! sent-emails conj params)
@@ -536,7 +562,7 @@
     (is (some? (:html (first @sent-emails))))))
 
 (deftest module-throws-when-captcha-is-missing-and-skip-captcha-is-false-test
-  (let [config (store/atom-store)
+  (let [config (atom-store)
 
         [_ auth-route-data & _]
         (first (:biff.ring/routes

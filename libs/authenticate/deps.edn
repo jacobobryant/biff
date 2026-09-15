@@ -8,12 +8,8 @@
          dev.onionpancakes/chassis {:mvn/version "1.0.365"}}
 
  :aliases
- {:run  {:extra-paths ["test" "demo" "dev"]
-         :extra-deps  {com.biffweb/tasks       {:local/root "../tasks"}
-                       ring/ring-jetty-adapter {:mvn/version "1.15.4"}
-                       ring/ring-defaults      {:mvn/version "0.7.0"}
-                       org.slf4j/slf4j-simple  {:mvn/version "2.0.18"}
-                       metosin/reitit-ring     {:mvn/version "0.10.1"}}
+ {:run  {:extra-paths ["test" "dev"]
+         :extra-deps  {com.biffweb/tasks {:local/root "../tasks"}}
          :main-opts   ["-m" "com.biffweb.tasks.lib"]}
   :demo {:extra-paths ["demo"]
          :extra-deps  {org.slf4j/slf4j-simple  {:mvn/version "2.0.18"}
@@ -22,4 +18,4 @@
                        ring/ring-jetty-adapter {:mvn/version "1.15.4"}
                        ring/ring-defaults      {:mvn/version "0.7.0"}
                        metosin/reitit-ring     {:mvn/version "0.10.1"}}
-         :main-opts ["-m" "demo"]}}}
+         :main-opts   ["-m" "demo"]}}}
