@@ -50,7 +50,6 @@ com.biffweb/datastar {:mvn/version "2.0.0"}
 Start the demo app, which is, of course, a chat app:
 
 ```clojure
-git checkout v2.x
 cd libs/datastar
 clj -M:demo
 ```
