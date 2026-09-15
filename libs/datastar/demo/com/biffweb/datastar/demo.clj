@@ -350,11 +350,20 @@
   (fn [request]
     (handler (assoc request ::state-value @(::state request)))))
 
+;; Temporary fix for https://github.com/jacobobryant/biff/issues/253
+(defn fix-tab-id [handler]
+  (fn [request]
+    (let [client-tab-id (get-in request [:biff.datastar/signals
+                                         :biff.datastar/client-tab-id])
+          tab-id        (some-> client-tab-id parse-uuid)]
+      (handler (assoc request :biff.datastar/tab-id tab-id)))))
+
 (def handler
   (-> base-handler
       ;; wrap-state must come before wrap-sse-render so that we get up-to-date
       ;; state every time wrap-sse-render calls the underlying handler.
       wrap-state
+      fix-tab-id
       biff.datastar/wrap-sse-render
       (wrap-json-params {:keywords? true})
       wrap-params))
