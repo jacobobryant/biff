@@ -70,6 +70,28 @@
       (when (<= 1 (alength bytes) max-tab-id-part-bytes)
         bytes))))
 
+(defn- ensure-scope-id [request get-user-id]
+  (let [user-id  (get-user-id request)
+        anon-uid (get-in request [:session :anon-uid])]
+    (cond
+      (some? user-id)
+      {:request  request
+       :scope-id user-id}
+
+      (not (map? (:session request)))
+      {:request request}
+
+      (some? anon-uid)
+      {:request  request
+       :scope-id anon-uid}
+
+      :else
+      (let [new-anon-uid (random-uuid)]
+        {:request  (-> request
+                       (assoc-in [:session :anon-uid] new-anon-uid)
+                       (assoc ::session-updated true))
+         :scope-id new-anon-uid}))))
+
 (defn- scoped-tab-id [scope-id client-tab-id]
   (when (and (id-bytes scope-id) (id-bytes client-tab-id))
     (uuid/v5 (uuid/v5 tab-id-namespace (str scope-id))
@@ -109,16 +131,31 @@
         client-tab-id (:biff.datastar/client-tab-id signals)
         get-user-id   (or (:biff.datastar/get-user-id request)
                           (:biff.datastar/get-user-id default-options))
-        tab-id        (scoped-tab-id (get-user-id request) client-tab-id)
-        csrf-token    (:biff.datastar/anti-forgery-token signals)]
+
+        {:keys [request scope-id]}
+        (if (id-bytes client-tab-id)
+          (ensure-scope-id request get-user-id)
+          {:request request})
+
+        tab-id     (scoped-tab-id scope-id client-tab-id)
+        csrf-token (:biff.datastar/anti-forgery-token signals)]
     (cond-> request
       signals (assoc :biff.datastar/signals signals)
       tab-id  (assoc :biff.datastar/tab-id tab-id)
       csrf-token (assoc-in [:headers "x-csrf-token"] csrf-token))))
 
+(defn- persist-session [response request]
+  (cond-> response
+    (and response
+         (::session-updated request)
+         (not (contains? response :session)))
+    (assoc :session (:session request))))
+
 (defn wrap-signals [handler]
   (fn [request]
-    (handler (merge-signals request))))
+    (let [request* (merge-signals request)
+          request  (dissoc request* ::session-updated)]
+      (persist-session (handler request) request*))))
 
 (defn- signal-name-part [x]
   (if (keyword? x)
@@ -254,20 +291,25 @@
     (let [has-signals (contains? request :biff.datastar/signals)
           sse-request (= (get-in request [:query-params "biff-datastar-sse"])
                          "true")
-          request     (cond-> request
+          request*    (cond-> request
                         (not has-signals) merge-signals
-                        true (assoc :biff.datastar/sse-request sse-request))]
-      (if sse-request
-        (do
-          (biff.core/validate request {:required [:biff.datastar/lock
-                                                  :biff.datastar/condition
-                                                  :biff.datastar/epoch]})
-          {:status  200
-           :headers {"Content-Type"     "text/event-stream; charset=utf-8"
-                     "Cache-Control"    "no-store"
-                     "Content-Encoding" "br"}
-           :body    (streaming-response-body handler request)})
-        (handler request)))))
+                        true (assoc :biff.datastar/sse-request sse-request))
+          request     (dissoc request* ::session-updated)
+
+          response
+          (if sse-request
+            (do
+              (biff.core/validate request
+                                  {:required [:biff.datastar/lock
+                                              :biff.datastar/condition
+                                              :biff.datastar/epoch]})
+              {:status  200
+               :headers {"Content-Type"     "text/event-stream; charset=utf-8"
+                         "Cache-Control"    "no-store"
+                         "Content-Encoding" "br"}
+               :body    (streaming-response-body handler request)})
+            (handler request))]
+      (persist-session response request*))))
 
 ;;;; biff.core =================================================================
 
