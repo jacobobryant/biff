@@ -5,6 +5,7 @@
 - Added `:biff.tasks/build-jar-resource`
 - `init` task generates .biff/docs and .agents/skills/biff-*/*
 - Added `:biff.tasks/skip-project-files`
+- Set `:biff.datastar/tab-id` for not-signed-in users
 
 ## 2.0.0 (2026-09-10)
 

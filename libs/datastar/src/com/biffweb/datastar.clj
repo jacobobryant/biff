@@ -103,10 +103,14 @@
    signals. Underscores are used as a keyword segment separator so that the
    signals map can contain namespaced keywords; see `signals-json`.
 
-   Reads the :biff.datastar/client-tab-id signal and turns it into a UUID v5
-   scoped by :biff.datastar/get-user-id which defaults to (:uid session).
-   The new UUID is set on :biff.datastar/tab-id on the request and can safely
-   be used as a primary key for backend tab state.
+   If session middleware is installed, sets :biff.datastar/tab-id to a UUID v5
+   generated from the :biff.datastar/client-tab-id signal and an ID from the
+   session. `tab-id` can be safely used as a primary key for backend state.
+
+   `tab-id` is scoped by (:uid session) by default, configurable via
+   :biff.datastar/get-user-id. If the user ID is nil, an ID is generated and
+   stored on (:anon-id session). If session middleware is not installed,
+   `tab-id` is not set.
 
    If a :biff.datastar/anti-forgery-token signal is set, the x-csrf-token
    request header is set to its value."

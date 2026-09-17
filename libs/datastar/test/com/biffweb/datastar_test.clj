@@ -87,23 +87,60 @@
   (let [wrapped       (datastar/wrap-signals identity)
         client-tab-id (random-uuid)
         user-id       (random-uuid)
-        request       (fn [scope-id tab-id]
+        anon-uid      (random-uuid)
+        request       (fn [session tab-id]
                         (wrapped
                          {:request-method :post
                           :headers        {"datastar-request" "true"}
-                          :session        {:uid scope-id}
+                          :session        session
 
                           :body-params
                           {:biff_datastar_client-tab-id tab-id}}))
         tab-id        (:biff.datastar/tab-id
-                       (request user-id client-tab-id))]
+                       (request {:uid user-id} client-tab-id))
+        anonymous-id  (:biff.datastar/tab-id
+                       (request {:anon-uid anon-uid} client-tab-id))]
     (is (= tab-id (:biff.datastar/tab-id
-                   (request user-id (str client-tab-id)))))
+                   (request {:uid user-id} (str client-tab-id)))))
     (is (not= tab-id (:biff.datastar/tab-id
-                      (request (random-uuid) client-tab-id))))
-    (is (nil? (:biff.datastar/tab-id (request nil client-tab-id))))
+                      (request {:uid (random-uuid)} client-tab-id))))
+    (is (uuid? anonymous-id))
+    (is (not= tab-id anonymous-id))
+    (is (not= anonymous-id
+              (:biff.datastar/tab-id
+               (request {:anon-uid (random-uuid)} client-tab-id))))
+    (is (not= anonymous-id
+              (:biff.datastar/tab-id
+               (request {:anon-uid anon-uid} (random-uuid)))))
+    (is (= anonymous-id
+           (:biff.datastar/tab-id
+            (wrapped
+             {:request-method :post
+              :headers        {"datastar-request" "true"}
+              :session        {:anon-uid anon-uid}
+
+              :body-params
+              {:biff_datastar_client-tab-id client-tab-id}}))))
+    (is (= anonymous-id
+           (:biff.datastar/tab-id
+            (wrapped
+             {:request-method            :post
+              :headers                   {"datastar-request" "true"}
+              :biff.datastar/get-user-id (constantly nil)
+              :session                   {:anon-uid anon-uid}
+
+              :body-params
+              {:biff_datastar_client-tab-id client-tab-id}}))))
+    (is (nil?
+         (:biff.datastar/tab-id
+          (wrapped
+           {:request-method :post
+            :headers        {"datastar-request" "true"}
+
+            :body-params
+            {:biff_datastar_client-tab-id client-tab-id}}))))
     (is (nil? (:biff.datastar/tab-id
-               (request user-id (apply str (repeat 1025 "x"))))))
+               (request {:uid user-id} (apply str (repeat 1025 "x"))))))
     (is (= tab-id
            (:biff.datastar/tab-id
             (wrapped
@@ -114,6 +151,23 @@
               :body-params
               {:biff_datastar_client-tab-id client-tab-id
                :biff_datastar_tab-id        (random-uuid)}}))))))
+
+(deftest anonymous-session-test
+  (let [seen     (atom nil)
+        wrapped  (datastar/wrap-signals
+                  (fn [request]
+                    (reset! seen request)
+                    {:status 204}))
+        response (wrapped
+                  {:request-method :post
+                   :headers        {"datastar-request" "true"}
+                   :session        {}
+
+                   :body-params
+                   {:biff_datastar_client-tab-id (random-uuid)}})
+        anon-uid (get-in @seen [:session :anon-uid])]
+    (is (uuid? anon-uid))
+    (is (= anon-uid (get-in response [:session :anon-uid])))))
 
 (deftest init-opts-test
   (let [opts (datastar/init-opts)]
@@ -157,13 +211,22 @@
       (let [response (wrapped
                       (merge (datastar/new-lock)
                              {:request-method :get
-                              :headers        {}
-                              :query-params   {"biff-datastar-sse" "true"}}))]
+                              :headers        {"datastar-request" "true"}
+                              :session        {}
+
+                              :query-params
+                              {"biff-datastar-sse" "true"
+
+                               "datastar"
+                               (datastar/signals-json
+                                {:biff.datastar/client-tab-id
+                                 (random-uuid)})}}))]
         (is (= 200 (:status response)))
         (is (= {"Content-Type"     "text/event-stream; charset=utf-8"
                 "Cache-Control"    "no-store"
                 "Content-Encoding" "br"}
                (:headers response)))
+        (is (uuid? (get-in response [:session :anon-uid])))
         (is (satisfies? rp/StreamableResponseBody (:body response)))))))
 
 (deftest module-test

@@ -17,11 +17,13 @@ clients.
 
 ### :biff.datastar/get-user-id
 
-`(fn [ctx]) -> string or UUID`
+`(fn [ctx]) -> string, UUID, or nil`
 
 Returns the authenticated user ID for the given Ring request. This is used as
 the scope for `:biff.datastar/tab-id` and must return a trusted value, not a
 value that the client can set arbitrarily. Defaults to `(comp :uid :session)`.
+If `get-user-id` returns `nil`, an ID will be generated and stored on `(:anon-id
+session)`.
 
 ### :biff.datastar/lock
 
