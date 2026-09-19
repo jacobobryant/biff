@@ -195,7 +195,7 @@
        "window.location.pathname + "
        "(window.location.search + '&biff-datastar-sse=true')"
        ".replace(/^&/,'?'), "
-       "{openWhenHidden: false, retryMaxCount: Infinity})"))
+       "{openWhenHidden: false, retry: 'always', retryMaxCount: 64})"))
 
 (defn init-opts
   ([]
@@ -213,24 +213,35 @@
 ;;;; SSE =======================================================================
 
 ;; Called on system startup
-(defn new-lock []
+(defn new-state []
   (let [lock (ReentrantLock.)]
-    {:biff.datastar/lock      lock
-     :biff.datastar/condition (.newCondition lock)
-     :biff.datastar/epoch     (atom 0)}))
+    {:biff.datastar/lock             lock
+     :biff.datastar/condition        (.newCondition lock)
+     :biff.datastar/connection-epoch (atom 0)
+     :biff.datastar/epoch            (atom 0)}))
+
+(defn- notify [ctx epoch-key & epoch-keys]
+  (let [epoch-keys (cons epoch-key epoch-keys)]
+    (biff.core/validate ctx {:required (into [:biff.datastar/lock
+                                              :biff.datastar/condition]
+                                             epoch-keys)})
+    (let [{:biff.datastar/keys [lock condition]} ctx]
+      (.lock ^ReentrantLock lock)
+      (try
+        (doseq [k epoch-keys]
+          (swap! (get ctx k) inc))
+        (.signalAll ^Condition condition)
+        nil
+        (finally
+          (.unlock ^ReentrantLock lock))))))
 
 ;; Called by threads that update the DB
-(defn refresh [{:biff.datastar/keys [lock condition epoch] :as ctx}]
-  (biff.core/validate ctx {:required [:biff.datastar/lock
-                                      :biff.datastar/condition
-                                      :biff.datastar/epoch]})
-  (.lock ^ReentrantLock lock)
-  (try
-    (swap! epoch inc)
-    (.signalAll ^Condition condition)
-    nil
-    (finally
-      (.unlock ^ReentrantLock lock))))
+(defn refresh [ctx]
+  (notify ctx :biff.datastar/epoch))
+
+(defn disconnect [ctx]
+  (when (contains? ctx :biff.datastar/lock)
+    (notify ctx :biff.datastar/connection-epoch :biff.datastar/epoch)))
 
 ;; Used by the SSE handler to be notified when `refresh` is called
 (defn- wait-for-refresh [{:biff.datastar/keys [lock condition epoch]}
@@ -250,8 +261,10 @@
        "\n\n"))
 
 (defn- streaming-response-body [handler request]
-  (let [{:biff.datastar/keys [rate-limit-ms epoch] :as opts}
-        (merge default-options request)]
+  (let [{:biff.datastar/keys [connection-epoch epoch rate-limit-ms] :as opts}
+        (merge default-options request)
+
+        observed-connection-epoch @connection-epoch]
     (->StreamingResponseBody
      (fn [response-output]
        (try
@@ -277,9 +290,10 @@
                    observed-epoch (wait-for-refresh request observed-epoch)
                    elapsed-ms     (- (System/currentTimeMillis)
                                      iteration-start-ms)]
-               (when (< elapsed-ms rate-limit-ms)
-                 (Thread/sleep (- rate-limit-ms elapsed-ms)))
-               (recur body-hash observed-epoch))))
+               (when (= @connection-epoch observed-connection-epoch)
+                 (when (< elapsed-ms rate-limit-ms)
+                   (Thread/sleep (- rate-limit-ms elapsed-ms)))
+                 (recur body-hash observed-epoch)))))
          ;; Probably server shutdown
          (catch InterruptedException _e)
          ;; Probably client closed the connection
@@ -302,6 +316,7 @@
               (biff.core/validate request
                                   {:required [:biff.datastar/lock
                                               :biff.datastar/condition
+                                              :biff.datastar/connection-epoch
                                               :biff.datastar/epoch]})
               {:status  200
                :headers {"Content-Type"     "text/event-stream; charset=utf-8"
@@ -317,4 +332,4 @@
   []
   {:biff.ring/site-middleware [wrap-sse-render]
    :biff.core/on-tx           #'refresh
-   :biff.core/init            (fn [_] (new-lock))})
+   :biff.core/init            (fn [_] (new-state))})

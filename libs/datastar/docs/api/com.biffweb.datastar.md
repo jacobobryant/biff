@@ -2,7 +2,7 @@
 
 ### init-opts
 
-[view source](../../src/com/biffweb/datastar.clj#L20)
+[view source](../../src/com/biffweb/datastar.clj#L21)
 
 ```
 (init-opts)
@@ -17,24 +17,25 @@ If :anti-forgery-token is passed in, sets a :biff.datastar/anti-forgery-token
 signal. See `wrap-signals`.
 ```
 
-### new-lock
+### new-state
 
-[view source](../../src/com/biffweb/datastar.clj#L32)
+[view source](../../src/com/biffweb/datastar.clj#L33)
 
 ```
-(new-lock)
+(new-state)
 
 Returns a map of parameters needed by `refresh` and `wrap-sse-render`.
 
 Includes:
 - :biff.datastar/lock
 - :biff.datastar/condition
+- :biff.datastar/connection-epoch
 - :biff.datastar/epoch
 ```
 
 ### refresh
 
-[view source](../../src/com/biffweb/datastar.clj#L42)
+[view source](../../src/com/biffweb/datastar.clj#L44)
 
 ```
 (refresh #:biff.datastar{:keys [lock condition epoch]})
@@ -45,9 +46,20 @@ payload should be rendered for connected clients.
 Typically called whenever a database transaction has been committed.
 ```
 
+### disconnect
+
+[view source](../../src/com/biffweb/datastar.clj#L53)
+
+```
+(disconnect ctx)
+
+Closes all open biff.datastar SSE connections. Clients will then reconnect
+automatically.
+```
+
 ### wrap-sse-render
 
-[view source](../../src/com/biffweb/datastar.clj#L51)
+[view source](../../src/com/biffweb/datastar.clj#L59)
 
 ```
 (wrap-sse-render handler)
@@ -85,7 +97,7 @@ body's top-level element must have `id` set.)
              ...])
    ...}
 
-The incoming Ring request must include the keys returned by `new-lock`. The
+The incoming Ring request must include the keys returned by `new-state`. The
 same instances of those keys' values must be used when calling `refresh`. The
 request may also include:
 
@@ -99,7 +111,7 @@ See the schema reference.
 
 ### wrap-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L98)
+[view source](../../src/com/biffweb/datastar.clj#L106)
 
 ```
 (wrap-signals handler)
@@ -126,7 +138,7 @@ request header is set to its value.
 
 ### module
 
-[view source](../../src/com/biffweb/datastar.clj#L120)
+[view source](../../src/com/biffweb/datastar.clj#L128)
 
 ```
 (module)
@@ -135,12 +147,12 @@ Returns a biff.core module including:
 
 - `:biff.ring/site-middleware [wrap-sse-render]`
 - `:biff.core/on-tx refresh`
-- A :biff.core/init function that returns `(new-lock)`
+- A :biff.core/init function that returns `(new-state)`
 ```
 
 ### signals-json
 
-[view source](../../src/com/biffweb/datastar.clj#L129)
+[view source](../../src/com/biffweb/datastar.clj#L137)
 
 ```
 (signals-json signals)
@@ -157,7 +169,7 @@ to conversion, and they may not contain periods in the name.
 
 ### signal-name
 
-[view source](../../src/com/biffweb/datastar.clj#L141)
+[view source](../../src/com/biffweb/datastar.clj#L149)
 
 ```
 (signal-name k)
@@ -173,7 +185,7 @@ signal by passing in a vector:
 
 ### patch-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L152)
+[view source](../../src/com/biffweb/datastar.clj#L160)
 
 ```
 (patch-signals signals)
@@ -181,4 +193,14 @@ signal by passing in a vector:
 Returns a 200 Ring response containing a datastar-patch-signals event.
 
 Signals are encoded with `signals-json`.
+```
+
+### new-lock
+
+[view source](../../src/com/biffweb/datastar.clj#L167)
+
+```
+(new-lock)
+
+Deprecated. Use new-state instead.
 ```

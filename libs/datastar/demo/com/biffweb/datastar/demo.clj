@@ -8,6 +8,8 @@
    [ring.adapter.jetty :as ring-jetty]
    [ring.middleware.json :refer [wrap-json-params]]
    [ring.middleware.params :refer [wrap-params]]
+   [ring.middleware.session :refer [wrap-session]]
+   [ring.middleware.session.memory :refer [memory-store]]
    [ring.util.codec :as codec])
   (:import
    (java.time Instant)
@@ -350,23 +352,16 @@
   (fn [request]
     (handler (assoc request ::state-value @(::state request)))))
 
-;; Temporary fix for https://github.com/jacobobryant/biff/issues/253
-(defn fix-tab-id [handler]
-  (fn [request]
-    (let [client-tab-id (get-in request [:biff.datastar/signals
-                                         :biff.datastar/client-tab-id])
-          tab-id        (some-> client-tab-id parse-uuid)]
-      (handler (assoc request :biff.datastar/tab-id tab-id)))))
-
 (def handler
   (-> base-handler
       ;; wrap-state must come before wrap-sse-render so that we get up-to-date
       ;; state every time wrap-sse-render calls the underlying handler.
       wrap-state
-      fix-tab-id
       biff.datastar/wrap-sse-render
       (wrap-json-params {:keywords? true})
-      wrap-params))
+      wrap-params
+      ;; Session storage is needed for :biff.datastar/tab-id
+      (wrap-session {:store (memory-store)})))
 
 (defonce system (atom nil))
 
@@ -401,14 +396,16 @@
 
 (defn start! []
   (let [state  (atom default-app-state)
-        ctx    (merge (biff.datastar/new-lock)
+        ctx    (merge (biff.datastar/new-state)
                       {::state state})
         _      (add-watch state ::refresh
                           (fn [_ _ old-state new-state]
                             (assert (m/validate state-schema new-state)
-                                    (pr-str (me/humanize
-                                             (m/explain state-schema
-                                                        new-state))))
+                                    (pr-str
+                                     {:error     (me/humanize
+                                                  (m/explain state-schema
+                                                             new-state))
+                                      :new-state new-state}))
                             (when-not (= old-state new-state)
                               (biff.datastar/refresh ctx))))
         server (ring-jetty/run-jetty #(handler (merge % ctx))
@@ -427,3 +424,6 @@
 (defn -main [& _]
   (start!)
   (println "Demo running on http://localhost:8080"))
+
+;; Refresh pages when this file is evaluated
+(biff.datastar/disconnect @system)
