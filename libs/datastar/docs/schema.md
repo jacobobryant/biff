@@ -6,14 +6,19 @@ Int. The size in bytes to use for Brotli4j's input buffer. Default 16 KB.
 
 ### :biff.datastar/condition
 
-`java.util.concurrent.locks.Condition`. Used by `refresh` to signal to
-`wrap-sse-render` that `:biff.datastar/epoch` has changed.
+`java.util.concurrent.locks.Condition`. Used by `refresh` and `disconnect` to
+notify `wrap-sse-render` that an epoch has changed.
+
+### :biff.datastar/connection-epoch
+
+Atom containing an int. This value is incremented by `disconnect` and is used
+by `wrap-sse-render` to determine when an SSE connection should be closed.
 
 ### :biff.datastar/epoch
 
-Atom containing an int. This value is incremented by `refresh` and is used by
-`wrap-sse-render` to infer when another SSE push should be sent to connected
-clients.
+Atom containing an int. This value is incremented by `refresh` and `disconnect`
+and is used by `wrap-sse-render` to infer when another SSE push should be sent
+to connected clients.
 
 ### :biff.datastar/get-user-id
 
@@ -27,8 +32,8 @@ session)`.
 
 ### :biff.datastar/lock
 
-`java.util.concurrent.locks.ReentrantLock`. Used by `refresh` to signal to
-`wrap-sse-render` that `:biff.datastar/epoch` has changed.
+`java.util.concurrent.locks.ReentrantLock`. Used by `refresh` and `disconnect`
+to notify `wrap-sse-render` that an epoch has changed.
 
 ### :biff.datastar/quality
 

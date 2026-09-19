@@ -61,7 +61,7 @@ take note of:
 
 - `refresh` is called whenever state changes.
 - We have `wrap-sse-render` in the middleware stack.
-- The map returned by `new-lock` is passed to both `wrap-sse-render`
+- The map returned by `new-state` is passed to both `wrap-sse-render`
   (by merging it into incoming Ring requests) and `refresh`.
 - There is only one Ring handler that returns HTML: `chat-page`.
 - `chat-page` uses `sse-page-response` to conditionally render the `<html>` and
@@ -94,7 +94,7 @@ application:
   new database transaction is committed. Ideally your database lets you listen for
   changes, but if not you can poll for changes or submit transactions through a
   wrapper function that calls `refresh`.
-- [`new-lock`](docs/api/com.biffweb.datastar.md#new-lock): call this on system
+- [`new-state`](docs/api/com.biffweb.datastar.md#new-state): call this on system
   startup to get a map with some state in it, then merge that map into incoming
   Ring requests (so that `wrap-sse-render` gets it) and also pass that map to
   `refresh`.

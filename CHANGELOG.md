@@ -6,6 +6,8 @@
 - `init` task generates .biff/docs and .agents/skills/biff-*/*
 - Added `:biff.tasks/skip-project-files`
 - Set `:biff.datastar/tab-id` for not-signed-in users
+- biff.datastar: added `disconnect` which can be used to refresh pages after
+  files are evaluated.
 
 ## 2.0.0 (2026-09-10)
 

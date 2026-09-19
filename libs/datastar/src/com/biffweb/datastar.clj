@@ -5,17 +5,18 @@
    (java.util.concurrent.locks Condition ReentrantLock)))
 
 (biff.core/register
- {:biff.datastar/buffer-size   :int
-  :biff.datastar/condition     [:fn #(instance? Condition %)]
-  :biff.datastar/epoch         [:fn #(instance? clojure.lang.IAtom %)]
-  :biff.datastar/get-user-id   'ifn?
-  :biff.datastar/lock          [:fn #(instance? ReentrantLock %)]
-  :biff.datastar/quality       :int
-  :biff.datastar/rate-limit-ms [:and :int pos?]
-  :biff.datastar/signals       'map?
-  :biff.datastar/sse-request   :boolean
-  :biff.datastar/tab-id        :uuid
-  :biff.datastar/window-size   :int})
+ {:biff.datastar/buffer-size      :int
+  :biff.datastar/condition        [:fn #(instance? Condition %)]
+  :biff.datastar/connection-epoch [:fn #(instance? clojure.lang.IAtom %)]
+  :biff.datastar/epoch            [:fn #(instance? clojure.lang.IAtom %)]
+  :biff.datastar/get-user-id      'ifn?
+  :biff.datastar/lock             [:fn #(instance? ReentrantLock %)]
+  :biff.datastar/quality          :int
+  :biff.datastar/rate-limit-ms    [:and :int pos?]
+  :biff.datastar/signals          'map?
+  :biff.datastar/sse-request      :boolean
+  :biff.datastar/tab-id           :uuid
+  :biff.datastar/window-size      :int})
 
 (defn init-opts
   "Returns a map of Datastar options for a hiccup element.
@@ -29,15 +30,16 @@
   ([] (impl/init-opts))
   ([opts] (impl/init-opts opts)))
 
-(defn new-lock
+(defn new-state
   "Returns a map of parameters needed by `refresh` and `wrap-sse-render`.
 
    Includes:
    - :biff.datastar/lock
    - :biff.datastar/condition
+   - :biff.datastar/connection-epoch
    - :biff.datastar/epoch"
   []
-  (impl/new-lock))
+  (impl/new-state))
 
 (defn refresh
   "Signals to `wrap-sse-render` that backend state has changed and thus a new
@@ -47,6 +49,12 @@
   {:arglists '([{:biff.datastar/keys [lock condition epoch]}])}
   [ctx]
   (impl/refresh ctx))
+
+(defn disconnect
+  "Closes all open biff.datastar SSE connections. Clients will then reconnect
+   automatically."
+  [ctx]
+  (impl/disconnect ctx))
 
 (defn wrap-sse-render
   "Parses signals and starts long-lived SSE connections when requested.
@@ -82,7 +90,7 @@
                 ...])
       ...}
 
-   The incoming Ring request must include the keys returned by `new-lock`. The
+   The incoming Ring request must include the keys returned by `new-state`. The
    same instances of those keys' values must be used when calling `refresh`. The
    request may also include:
 
@@ -122,7 +130,7 @@
 
    - `:biff.ring/site-middleware [wrap-sse-render]`
    - `:biff.core/on-tx refresh`
-   - A :biff.core/init function that returns `(new-lock)`"
+   - A :biff.core/init function that returns `(new-state)`"
   []
   (impl/module))
 
@@ -155,3 +163,8 @@
   Signals are encoded with `signals-json`."
   [signals]
   (impl/patch-signals signals))
+
+(defn new-lock
+  "Deprecated. Use new-state instead."
+  []
+  (new-state))

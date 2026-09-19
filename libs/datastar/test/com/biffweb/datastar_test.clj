@@ -3,7 +3,8 @@
             [clojure.test :refer [deftest is testing]]
             [com.biffweb.datastar :as datastar]
             [ring.core.protocols :as rp])
-  (:import (java.util.concurrent.locks Condition ReentrantLock)))
+  (:import (java.io ByteArrayOutputStream)
+           (java.util.concurrent.locks Condition ReentrantLock)))
 
 (deftest signal-name-test
   (is (= "plain" (datastar/signal-name :plain)))
@@ -174,7 +175,9 @@
     (is (= "self.crypto.randomUUID()"
            (:data-signals:biff_datastar_client-tab-id__case.kebab opts)))
     (is (= (:data-init opts) (:data-on:online__window opts)))
-    (is (re-find #"biff-datastar-sse=true" (:data-init opts))))
+    (is (re-find #"biff-datastar-sse=true" (:data-init opts)))
+    (is (re-find #"retry: 'always'" (:data-init opts)))
+    (is (re-find #"retryMaxCount: 64" (:data-init opts))))
   (is (= {"biff_datastar_anti-forgery-token" "csrf"}
          (-> (datastar/init-opts {:anti-forgery-token "csrf"})
              :data-signals
@@ -188,14 +191,21 @@
                         "data: signals {\"counter_value\":2}\n\n")}
          (datastar/patch-signals {:counter/value 2}))))
 
-(deftest lock-and-refresh-test
-  (let [{:biff.datastar/keys [lock condition epoch] :as state}
-        (datastar/new-lock)]
+(deftest state-and-refresh-test
+  (let [{:biff.datastar/keys [lock condition connection-epoch epoch] :as state}
+        (datastar/new-state)]
     (is (instance? ReentrantLock lock))
     (is (instance? Condition condition))
+    (is (instance? ReentrantLock
+                   (:biff.datastar/lock (datastar/new-lock))))
+    (is (= 0 @connection-epoch))
     (is (= 0 @epoch))
     (is (nil? (datastar/refresh state)))
-    (is (= 1 @epoch))))
+    (is (= 1 @epoch))
+    (is (= 0 @connection-epoch))
+    (is (nil? (datastar/disconnect state)))
+    (is (= 2 @epoch))
+    (is (= 1 @connection-epoch))))
 
 (deftest wrap-sse-render-test
   (let [seen    (atom nil)
@@ -209,7 +219,7 @@
       (is (false? (:biff.datastar/sse-request @seen))))
     (testing "SSE requests return a Brotli stream response"
       (let [response (wrapped
-                      (merge (datastar/new-lock)
+                      (merge (datastar/new-state)
                              {:request-method :get
                               :headers        {"datastar-request" "true"}
                               :session        {}
@@ -229,6 +239,28 @@
         (is (uuid? (get-in response [:session :anon-uid])))
         (is (satisfies? rp/StreamableResponseBody (:body response)))))))
 
+(deftest disconnect-test
+  (is (nil? (datastar/disconnect {})))
+  (let [state     (datastar/new-state)
+        started   (promise)
+        response  ((datastar/wrap-sse-render
+                    (fn [_]
+                      (deliver started true)
+                      {:status 200 :body "<div id=\"content\">ok</div>"}))
+                   (merge state
+                          {:biff.datastar/signals {}
+
+                           :query-params
+                           {"biff-datastar-sse" "true"}}))
+        streaming (future
+                    (rp/write-body-to-stream
+                     (:body response)
+                     response
+                     (ByteArrayOutputStream.)))]
+    @started
+    (datastar/disconnect state)
+    (is (nil? (deref streaming 1000 :timeout)))))
+
 (deftest module-test
   (let [module (datastar/module)
         state  ((:biff.core/init module) nil)]
@@ -236,6 +268,8 @@
     (is (fn? (first (:biff.ring/site-middleware module))))
     (is (var? (:biff.core/on-tx module)))
     (is (instance? ReentrantLock (:biff.datastar/lock state)))
+    (is (instance? clojure.lang.IAtom
+                   (:biff.datastar/connection-epoch state)))
     (is (instance? clojure.lang.IAtom (:biff.datastar/epoch state)))
     ((:biff.core/on-tx module) state)
     (is (= 1 @(:biff.datastar/epoch state)))))
