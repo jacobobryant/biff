@@ -10,6 +10,7 @@
   :biff.datastar/connection-epoch [:fn #(instance? clojure.lang.IAtom %)]
   :biff.datastar/epoch            [:fn #(instance? clojure.lang.IAtom %)]
   :biff.datastar/get-user-id      'ifn?
+  :biff.datastar/heartbeat-ms     [:and :int pos?]
   :biff.datastar/lock             [:fn #(instance? ReentrantLock %)]
   :biff.datastar/quality          :int
   :biff.datastar/rate-limit-ms    [:and :int pos?]

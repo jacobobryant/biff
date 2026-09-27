@@ -13,6 +13,7 @@
     BrotliOutputStream Encoder$Mode Encoder$Parameters)
    (java.io ByteArrayOutputStream IOException)
    (java.nio.charset StandardCharsets)
+   (java.util.concurrent TimeUnit)
    (java.util.concurrent.locks Condition ReentrantLock)))
 
 (defrecord ^:private StreamingResponseBody [write-body]
@@ -24,6 +25,7 @@
 
 (def ^:private default-options
   {:biff.datastar/get-user-id   default-get-user-id
+   :biff.datastar/heartbeat-ms  15000
    :biff.datastar/rate-limit-ms 20
    ;; copied from Hyperlith
    :biff.datastar/window-size   18
@@ -245,11 +247,11 @@
 
 ;; Used by the SSE handler to be notified when `refresh` is called
 (defn- wait-for-refresh [{:biff.datastar/keys [lock condition epoch]}
-                         observed-epoch]
+                         observed-epoch heartbeat-ms]
   (.lock ^ReentrantLock lock)
   (try
-    (while (= @epoch observed-epoch)
-      (.await ^Condition condition))
+    (when (= @epoch observed-epoch)
+      (.await ^Condition condition heartbeat-ms TimeUnit/MILLISECONDS))
     @epoch
     (finally
       (.unlock ^ReentrantLock lock))))
@@ -259,6 +261,22 @@
        "id: " (Integer/toHexString (hash html)) "\n"
        "data: elements " (str/replace html "\n" "\ndata: elements ")
        "\n\n"))
+
+(defn- wait-with-heartbeats
+  [{:biff.datastar/keys [connection-epoch heartbeat-ms] :as request}
+   observed-connection-epoch observed-epoch
+   compressed-buffer brotli-stream response-output]
+  (loop []
+    (let [next-epoch (wait-for-refresh request observed-epoch heartbeat-ms)]
+      (when (= @connection-epoch observed-connection-epoch)
+        (if (= next-epoch observed-epoch)
+          (do
+            (->> ": heartbeat\n\n"
+                 (compress-chunk compressed-buffer brotli-stream)
+                 (.write response-output))
+            (.flush response-output)
+            (recur))
+          next-epoch)))))
 
 (defn- streaming-response-body [handler request]
   (let [{:biff.datastar/keys [connection-epoch epoch rate-limit-ms] :as opts}
@@ -287,13 +305,16 @@
                             (.write response-output))
                        (.flush response-output))
 
-                   observed-epoch (wait-for-refresh request observed-epoch)
-                   elapsed-ms     (- (System/currentTimeMillis)
-                                     iteration-start-ms)]
-               (when (= @connection-epoch observed-connection-epoch)
+                   next-epoch (wait-with-heartbeats
+                               opts observed-connection-epoch
+                               observed-epoch compressed-buffer
+                               brotli-stream response-output)
+                   elapsed-ms (- (System/currentTimeMillis)
+                                 iteration-start-ms)]
+               (when next-epoch
                  (when (< elapsed-ms rate-limit-ms)
                    (Thread/sleep (- rate-limit-ms elapsed-ms)))
-                 (recur body-hash observed-epoch)))))
+                 (recur body-hash next-epoch)))))
          ;; Probably server shutdown
          (catch InterruptedException _e)
          ;; Probably client closed the connection

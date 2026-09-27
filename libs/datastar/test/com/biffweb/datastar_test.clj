@@ -3,7 +3,7 @@
             [clojure.test :refer [deftest is testing]]
             [com.biffweb.datastar :as datastar]
             [ring.core.protocols :as rp])
-  (:import (java.io ByteArrayOutputStream)
+  (:import (java.io ByteArrayOutputStream IOException OutputStream)
            (java.util.concurrent.locks Condition ReentrantLock)))
 
 (deftest signal-name-test
@@ -260,6 +260,33 @@
     @started
     (datastar/disconnect state)
     (is (nil? (deref streaming 1000 :timeout)))))
+
+(deftest sse-heartbeat-detects-disconnect-test
+  (let [writes    (atom 0)
+        renders   (atom 0)
+        response  ((datastar/wrap-sse-render
+                    (fn [_]
+                      (swap! renders inc)
+                      {:status 200 :body "<div id=\"content\">ok</div>"}))
+                   (merge (datastar/new-state)
+                          {:biff.datastar/signals      {}
+                           :biff.datastar/heartbeat-ms 25
+
+                           :query-params
+                           {"biff-datastar-sse" "true"}}))
+        output    (proxy [OutputStream] []
+                    (write
+                      ([b]
+                       (when (and (bytes? b) (= 2 (swap! writes inc)))
+                         (throw (IOException. "Client disconnected"))))
+                      ([b _off _len]
+                       (when (= 2 (swap! writes inc))
+                         (throw (IOException. "Client disconnected"))))))
+        streaming (future
+                    (rp/write-body-to-stream (:body response) response output))]
+    (is (nil? (deref streaming 1000 :timeout)))
+    (is (= 2 @writes))
+    (is (= 1 @renders))))
 
 (deftest module-test
   (let [module (datastar/module)
