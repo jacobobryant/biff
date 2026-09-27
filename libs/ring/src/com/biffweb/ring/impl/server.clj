@@ -3,7 +3,8 @@
             [com.biffweb.core :as biff.core]
             [com.biffweb.ring.impl.middleware :as middleware]
             [reitit.ring :as reitit-ring]
-            [ring.middleware.session.memory :as memory]))
+            [ring.middleware.session.memory :as memory])
+  (:import (org.eclipse.jetty.util.thread QueuedThreadPool VirtualThreadPool)))
 
 (defn- default-error-handler [status]
   #(middleware/on-error (assoc % :status status)))
@@ -53,7 +54,12 @@
                       {:status  500
                        :headers {"content-type" "text/plain; charset=utf-8"}
                        :body    "Internal Server Error"})))
-                {:host host :port port :join? false})]
+                {:host        host
+                 :port        port
+                 :join?       false
+                 :thread-pool (doto (QueuedThreadPool.)
+                                (.setVirtualThreadsExecutor
+                                 (VirtualThreadPool.)))})]
     (log/info "Jetty running on" (str "http://" host ":" port))
     (assoc ctx ::server server)))
 

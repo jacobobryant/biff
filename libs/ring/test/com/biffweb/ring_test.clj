@@ -2,8 +2,29 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [com.biffweb.ring :as ring]
+            [com.biffweb.ring.impl.server :as server]
             [ring.util.codec :as codec])
-  (:import [java.util UUID]))
+  (:import [java.net URI]
+           [java.util UUID]
+           [org.eclipse.jetty.util.thread QueuedThreadPool]))
+
+(deftest jetty-runs-handlers-on-virtual-threads
+  (let [module  (server/module)
+        handler (fn [_]
+                  {:status 200
+                   :body   (str (.isVirtual (Thread/currentThread)))})
+        ctx     ((:biff.core/start module)
+                 {:biff.ring/host    "localhost"
+                  :biff.ring/port    0
+                  :biff.ring/handler handler})
+        running (::server/server ctx)]
+    (try
+      (is (instance? QueuedThreadPool (.getThreadPool running)))
+      (let [port (.getLocalPort (first (.getConnectors running)))]
+        (is (= "true" (slurp (.toURL (URI/create
+                                      (str "http://localhost:" port "/")))))))
+      (finally
+        ((:biff.core/stop module) ctx)))))
 
 (ring/defpath post-path "/posts/:id")
 

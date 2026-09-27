@@ -43,6 +43,12 @@ compression (and resource usage). Default 5.
 See
 [`BROTLI_PARAM_QUALITY`](https://github.com/google/brotli/blob/0d1f6297d6a4f6e2acd5e50ae9a5d22c3f55ba6d/c/include/brotli/encode.h#L156).
 
+### :biff.datastar/heartbeat-ms
+
+Positive int. The idle interval in milliseconds before an SSE heartbeat is
+written. A failed heartbeat closes a disconnected client's handler. Default
+15000.
+
 ### :biff.datastar/rate-limit-ms
 
 Positive int. The minimum number of milliseconds that must pass in between SSE
