@@ -5,9 +5,6 @@
 - BREAKING: minimum jvm version is increased from 17 to 21.
 - biff.ring uses a virtual thread pool for Jetty.
 - biff.datastar uses a heartbeat event to detect disconnected clients.
-- Added `:biff.tasks/build-jar-resource`
-- `init` task generates .biff/docs and .agents/skills/biff-*/*
-- Added `:biff.tasks/skip-project-files`
 - Set `:biff.datastar/tab-id` for not-signed-in users
 - biff.datastar: added `disconnect` which can be used to refresh pages after
   files are evaluated.
