@@ -2,7 +2,7 @@
 
 ### init-opts
 
-[view source](../../src/com/biffweb/datastar.clj#L21)
+[view source](../../src/com/biffweb/datastar.clj#L22)
 
 ```
 (init-opts)
@@ -19,7 +19,7 @@ signal. See `wrap-signals`.
 
 ### new-state
 
-[view source](../../src/com/biffweb/datastar.clj#L33)
+[view source](../../src/com/biffweb/datastar.clj#L34)
 
 ```
 (new-state)
@@ -35,7 +35,7 @@ Includes:
 
 ### refresh
 
-[view source](../../src/com/biffweb/datastar.clj#L44)
+[view source](../../src/com/biffweb/datastar.clj#L45)
 
 ```
 (refresh #:biff.datastar{:keys [lock condition epoch]})
@@ -48,7 +48,7 @@ Typically called whenever a database transaction has been committed.
 
 ### disconnect
 
-[view source](../../src/com/biffweb/datastar.clj#L53)
+[view source](../../src/com/biffweb/datastar.clj#L54)
 
 ```
 (disconnect ctx)
@@ -59,7 +59,7 @@ automatically.
 
 ### wrap-sse-render
 
-[view source](../../src/com/biffweb/datastar.clj#L59)
+[view source](../../src/com/biffweb/datastar.clj#L60)
 
 ```
 (wrap-sse-render handler)
@@ -111,7 +111,7 @@ See the schema reference.
 
 ### wrap-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L106)
+[view source](../../src/com/biffweb/datastar.clj#L107)
 
 ```
 (wrap-signals handler)
@@ -138,7 +138,7 @@ request header is set to its value.
 
 ### module
 
-[view source](../../src/com/biffweb/datastar.clj#L128)
+[view source](../../src/com/biffweb/datastar.clj#L129)
 
 ```
 (module)
@@ -152,7 +152,7 @@ Returns a biff.core module including:
 
 ### signals-json
 
-[view source](../../src/com/biffweb/datastar.clj#L137)
+[view source](../../src/com/biffweb/datastar.clj#L138)
 
 ```
 (signals-json signals)
@@ -169,7 +169,7 @@ to conversion, and they may not contain periods in the name.
 
 ### signal-name
 
-[view source](../../src/com/biffweb/datastar.clj#L149)
+[view source](../../src/com/biffweb/datastar.clj#L150)
 
 ```
 (signal-name k)
@@ -185,7 +185,7 @@ signal by passing in a vector:
 
 ### patch-signals
 
-[view source](../../src/com/biffweb/datastar.clj#L160)
+[view source](../../src/com/biffweb/datastar.clj#L161)
 
 ```
 (patch-signals signals)
@@ -197,7 +197,7 @@ Signals are encoded with `signals-json`.
 
 ### new-lock
 
-[view source](../../src/com/biffweb/datastar.clj#L167)
+[view source](../../src/com/biffweb/datastar.clj#L168)
 
 ```
 (new-lock)
