@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.1-SNAPSHOT
+## 2.0.1
 
 - BREAKING: minimum jvm version is increased from 17 to 21.
 - biff.ring uses a virtual thread pool for Jetty.
