@@ -14,7 +14,7 @@ captcha/email providers.
 ### Dependency
 
 ```clojure
-com.biffweb/authenticate {:mvn/version "2.0.1"}
+com.biffweb/authenticate {:mvn/version "2.0.2"}
 ```
 
 ## Reference

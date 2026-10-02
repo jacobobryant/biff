@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+- Fix exception on startup from clj-uuid when getLocalHost fails
+
 ## 2.0.1
 
 - BREAKING: minimum jvm version is increased from 17 to 21.

@@ -2,6 +2,7 @@
   (:require [clojure.data.json :as json]
             [clojure.test :refer [deftest is testing]]
             [com.biffweb.datastar :as datastar]
+            [com.biffweb.datastar.impl.uuid :as uuid]
             [ring.core.protocols :as rp])
   (:import (java.io ByteArrayOutputStream IOException OutputStream)
            (java.util.concurrent.locks Condition ReentrantLock)))
@@ -152,6 +153,24 @@
               :body-params
               {:biff_datastar_client-tab-id client-tab-id
                :biff_datastar_tab-id        (random-uuid)}}))))))
+
+(deftest uuid-v5-test
+  (is (= #uuid "2ed6657d-e927-568b-95e1-2665a8aea6a2"
+         (uuid/v5 uuid/+namespace-dns+ "www.example.com")))
+  (is (= #uuid "eb11afd3-d91e-5950-9ab8-6db0668202ea"
+         (let [namespace-id
+               (uuid/v5 uuid/+namespace-dns+ "com.biffweb.datastar")]
+           (uuid/v5 (uuid/v5 namespace-id "søren") "标签-α")))))
+
+(deftest scoped-tab-id-compatibility-test
+  (let [request ((datastar/wrap-signals identity)
+                 {:request-method :post
+                  :headers        {"datastar-request" "true"}
+                  :session        {:uid #uuid "00000000-0000-0000-0000-000000000001"}
+                  :body-params    {:biff_datastar_client-tab-id
+                                   #uuid "00000000-0000-0000-0000-000000000002"}})]
+    (is (= #uuid "9d49e402-87a9-5ffe-b459-29494b88c6a9"
+           (:biff.datastar/tab-id request)))))
 
 (deftest anonymous-session-test
   (let [seen     (atom nil)

@@ -38,7 +38,7 @@ Some resources:
 ### Dependency
 
 ```clojure
-com.biffweb/datastar {:mvn/version "2.0.1"}
+com.biffweb/datastar {:mvn/version "2.0.2"}
 ```
 
 ## Reference

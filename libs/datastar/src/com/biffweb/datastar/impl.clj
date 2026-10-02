@@ -1,11 +1,11 @@
 (ns com.biffweb.datastar.impl
   (:require
-   [clj-uuid.core :as uuid]
    [clojure.data.json :as json]
    [clojure.string :as str]
    [clojure.tools.logging :as log]
    [clojure.walk :as walk]
    [com.biffweb.core :as biff.core]
+   [com.biffweb.datastar.impl.uuid :as uuid]
    [ring.core.protocols :as rp])
   (:import
    (com.aayushatharva.brotli4j Brotli4jLoader)

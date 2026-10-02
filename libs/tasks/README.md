@@ -30,7 +30,7 @@ Includes tasks for:
 ### Dependency
 
 ```clojure
-com.biffweb/tasks {:mvn/version "2.0.1"}
+com.biffweb/tasks {:mvn/version "2.0.2"}
 ```
 
 ## Reference
@@ -49,7 +49,7 @@ application projects) or `-m com.biffweb.tasks.lib` (for library projects):
 ```clojure
 :aliases
 {:run {:extra-paths ["test"]
-       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.1"}
+       :extra-deps  {com.biffweb/tasks {:mvn/version "2.0.2"}
                      ...}
        ;; Replace with com.biffweb.tasks.lib for library projects
        :main-opts   ["-m" "com.biffweb.tasks.app"]}}
