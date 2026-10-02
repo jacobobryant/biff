@@ -96,12 +96,13 @@ does not always describe what the keys are.
 Most of the documentation is available within the individual libraries listed
 above. Additional documentation/content:
 
-- [How to write a Biff database adapter](/docs/db-adapters.md). Read this if you
-  want to use a database other than SQLite or XTDB.
+- [Understanding Datastar](https://biffweb.com/p/understanding-datastar)
 - [Deploy an app with biff.tasks](https://biffweb.com/p/deploy-biff-tasks/).
   Video tutorial for deploying a Biff app.
 - [Biff 2.0 sneak peak](https://biffweb.com/p/biff2/): background info on the
   design of Biff.
+- [How to write a Biff database adapter](/docs/db-adapters.md). Read this if you
+  want to use a database other than SQLite or XTDB.
 - [Migrating from Biff 1.0](/docs/migrating-from-biff1.md): guidance on the
   eponymous task.
 

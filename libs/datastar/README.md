@@ -26,6 +26,7 @@ you'll want to take some measurements.
 
 Some resources:
 
+- [Understanding Datastar](https://biffweb.com/p/understanding-datastar)
 - [Anders Murphy's blog](https://andersmurphy.com), e.g. see [Realtime
   collaborative webapps without
   Clojurescript](https://andersmurphy.com/2025/04/07/clojure-realtime-collaborative-web-apps-without-clojurescript.html).
