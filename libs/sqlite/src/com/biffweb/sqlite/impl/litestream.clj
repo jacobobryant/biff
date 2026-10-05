@@ -60,9 +60,11 @@
                                           litestream-dir
                                           litestream-bucket
                                           litestream-endpoint
+                                          litestream-replica-path
                                           litestream-region]}]
   (let [config-path  (str litestream-dir "/litestream.yml")
-        replica-path (str litestream-dir "/" (.getName (io/file db-path)))
+        replica-path (or litestream-replica-path
+                         (str litestream-dir "/" (.getName (io/file db-path))))
 
         config
         (str "dbs:\n"

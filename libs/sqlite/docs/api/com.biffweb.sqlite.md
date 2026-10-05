@@ -2,7 +2,7 @@
 
 ### schema-sql
 
-[view source](../../src/com/biffweb/sqlite.clj#L65)
+[view source](../../src/com/biffweb/sqlite.clj#L66)
 
 ```
 (schema-sql #:biff.sqlite{:keys [columns]})
@@ -14,7 +14,7 @@ Used by `sqldef-module` during startup. All tables use STRICT mode.
 
 ### execute
 
-[view source](../../src/com/biffweb/sqlite.clj#L73)
+[view source](../../src/com/biffweb/sqlite.clj#L74)
 
 ```
 (execute {:biff.sqlite/keys [columns read-pool write-conn], :biff.core/keys [on-tx], :as ctx} statement)
@@ -50,7 +50,7 @@ set. on-tx receives `ctx` as it was passed to this function.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L108)
+[view source](../../src/com/biffweb/sqlite.clj#L109)
 
 ```
 (execute-tx ctx statements)
@@ -61,7 +61,7 @@ transaction. Returns a vector of the results.
 
 ### authorized-write
 
-[view source](../../src/com/biffweb/sqlite.clj#L114)
+[view source](../../src/com/biffweb/sqlite.clj#L115)
 
 ```
 (authorized-write {:biff.sqlite/keys [authorize columns write-conn read-pool], :biff.core/keys [on-tx], :as ctx} statement)
@@ -88,7 +88,7 @@ On success, calls `on-tx` and then returns the diff.
 
 ### authorized-write-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L143)
+[view source](../../src/com/biffweb/sqlite.clj#L144)
 
 ```
 (authorized-write-tx ctx statements)
@@ -98,7 +98,7 @@ Like authorized-write, but takes a sequence of statements. Returns the diff.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/sqlite.clj#L148)
+[view source](../../src/com/biffweb/sqlite.clj#L149)
 
 ```
 A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
@@ -107,7 +107,7 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
 
 ### module
 
-[view source](../../src/com/biffweb/sqlite.clj#L154)
+[view source](../../src/com/biffweb/sqlite.clj#L155)
 
 ```
 (module)
@@ -127,7 +127,7 @@ Returns a biff.core module. Module ID is :biff.sqlite/module.
 
 ### litestream-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L170)
+[view source](../../src/com/biffweb/sqlite.clj#L171)
 
 ```
 (litestream-module)
@@ -142,6 +142,7 @@ Uses these keys from the system map:
   :biff.sqlite/litestream-bucket
   :biff.sqlite/litestream-dir
   :biff.sqlite/litestream-endpoint
+  :biff.sqlite/litestream-replica-path
   :biff.sqlite/litestream-region
   :biff.sqlite/litestream-secret-access-key
   :biff.sqlite/litestream-version
@@ -157,7 +158,7 @@ your application runs.
 
 ### sqldef-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L195)
+[view source](../../src/com/biffweb/sqlite.clj#L197)
 
 ```
 (sqldef-module)
@@ -183,7 +184,7 @@ isn't available.
 
 ### conn-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L216)
+[view source](../../src/com/biffweb/sqlite.clj#L218)
 
 ```
 (conn-module)
@@ -214,7 +215,7 @@ Also sets these keys on the system map:
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L242)
+[view source](../../src/com/biffweb/sqlite.clj#L244)
 
 ```
 (make-resolvers columns)

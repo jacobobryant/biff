@@ -49,6 +49,7 @@
   :biff.sqlite/litestream-bucket            :string
   :biff.sqlite/litestream-dir               :string
   :biff.sqlite/litestream-endpoint          :string
+  :biff.sqlite/litestream-replica-path      :string
   :biff.sqlite/litestream-region            :string
   :biff.sqlite/litestream-secret-access-key :biff.core/secret
   :biff.sqlite/litestream-version           :string
@@ -178,6 +179,7 @@
      :biff.sqlite/litestream-bucket
      :biff.sqlite/litestream-dir
      :biff.sqlite/litestream-endpoint
+     :biff.sqlite/litestream-replica-path
      :biff.sqlite/litestream-region
      :biff.sqlite/litestream-secret-access-key
      :biff.sqlite/litestream-version

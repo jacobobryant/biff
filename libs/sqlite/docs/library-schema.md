@@ -81,6 +81,10 @@ String. An endpoint for an S3-compatible service.
 
 String. A region for an S3-compatible service.
 
+### :biff.sqlite/litestream-replica-path
+
+String. The path within the bucket where Litestream stores the database backup.
+
 ### :biff.sqlite/litestream-secret-access-key
 
 A string wrapped with

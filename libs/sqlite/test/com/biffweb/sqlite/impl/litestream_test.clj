@@ -51,3 +51,23 @@
 
 (deftest installs-binary-for-current-platform
   (is (some? (litestream/ensure-litestream-binary! {}))))
+
+(deftest config-uses-custom-replica-path
+  (let [dir         (java.nio.file.Files/createTempDirectory
+                     "litestream-test" (make-array java.nio.file.attribute.FileAttribute 0))
+        config-dir  (str dir)
+        config-file (.resolve dir "litestream.yml")
+        ctx         {:biff.sqlite/db-path           "storage/sqlite/main.db"
+                     :biff.sqlite/litestream-bucket "backups"
+                     :biff.sqlite/litestream-dir    config-dir}]
+    (try
+      (#'litestream/write-config! ctx)
+      (is (.contains (slurp (str config-file))
+                     (str "        path: " config-dir "/main.db\n")))
+      (#'litestream/write-config!
+       (assoc ctx :biff.sqlite/litestream-replica-path "production/database"))
+      (is (.contains (slurp (str config-file))
+                     "        path: production/database\n"))
+      (finally
+        (java.nio.file.Files/deleteIfExists config-file)
+        (java.nio.file.Files/deleteIfExists dir)))))
