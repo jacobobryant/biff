@@ -15,6 +15,7 @@
      [:unique       ? :boolean]
      [:unique-with  ? [:sequential :qualified-keyword]]
      [:required     ? :boolean]
+     [:default      ? :any]
      [:ref          ? :qualified-keyword]
      [:index        ? :boolean]
      [:extra-schema ? :any]

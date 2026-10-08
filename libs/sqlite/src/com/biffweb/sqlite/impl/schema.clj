@@ -1,6 +1,7 @@
 (ns com.biffweb.sqlite.impl.schema
   (:require [clojure.string :as str]
-            [com.biffweb.core :as biff.core]))
+            [com.biffweb.core :as biff.core]
+            [com.biffweb.sqlite.impl.coerce :as coerce]))
 
 (defn- sql-name [s]
   (str/replace (name s) "-" "_"))
@@ -42,6 +43,19 @@
                                 (str/join ", "))
                            ")")}]))))
 
+(defn- default-sql [column]
+  (let [value (first (coerce/coerce-params {(:id column) column}
+                                            [(:default column)]))]
+    (cond
+      (nil? value) "NULL"
+      (string? value) (str "'" (str/replace value "'" "''") "'")
+      (number? value) (str value)
+      (bytes? value) (str "X'"
+                          (apply str (map #(format "%02X" (bit-and % 0xff)) value))
+                          "'")
+      :else (throw (ex-info "Unsupported SQLite default value"
+                            {:column (:id column) :value value})))))
+
 (defn- column-sql-def [column]
   (let [col-name (sql-name (:id column))
         col-type (sqlite-type (:type column))
@@ -60,6 +74,8 @@
     {:line    (str col-name " " col-type
                    (when (:primary-key column) " PRIMARY KEY")
                    (when required " NOT NULL")
+                   (when (contains? column :default)
+                     (str " DEFAULT " (default-sql column)))
                    check)
      :comment comment*}))
 

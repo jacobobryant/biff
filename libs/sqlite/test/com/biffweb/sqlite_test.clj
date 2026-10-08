@@ -81,6 +81,41 @@
               "CREATE INDEX idx_user_joined_at ON user(joined_at);")
          (sqlite/schema-sql {:biff.sqlite/columns columns}))))
 
+(deftest column-defaults-apply-to-omitted-values
+  (let [uuid    (UUID/randomUUID)
+        instant (Instant/parse "2024-02-03T04:05:06Z")
+        columns {:thing/id          {:type :int :primary-key true}
+                 :thing/count       {:type :int :default 7}
+                 :thing/ratio       {:type :real :default 1.5}
+                 :thing/name        {:type :text :default "O'Reilly"}
+                 :thing/active      {:type :boolean :default false}
+                 :thing/status      {:type :enum
+                                     :enum-values {1 :thing.status/ready}
+                                     :default :thing.status/ready}
+                 :thing/at          {:type :inst :default instant}
+                 :thing/uuid        {:type :uuid :default uuid}
+                 :thing/prefs       {:type :edn :default {:color :blue}}
+                 :thing/empty-value {:type :text :default nil}}
+        sql     (sqlite/schema-sql {:biff.sqlite/columns columns})
+        ctx     (open-ctx columns)]
+    (try
+      (is (str/includes? sql "name TEXT DEFAULT 'O''Reilly'"))
+      (is (str/includes? sql "empty_value TEXT DEFAULT NULL"))
+      (sqlite/execute ctx {:insert-into :thing :values [{:thing/id 1}]})
+      (is (= [{:thing/id          1
+               :thing/count       7
+               :thing/ratio       1.5
+               :thing/name        "O'Reilly"
+               :thing/active      false
+               :thing/status      :thing.status/ready
+               :thing/at          instant
+               :thing/uuid        uuid
+               :thing/prefs       {:color :blue}
+               :thing/empty-value nil}]
+             (sqlite/execute ctx {:select [:*] :from :thing})))
+      (finally
+        (close-ctx ctx)))))
+
 (deftest execute-coerces-rich-values-on-write-and-read
   (with-ctx
     (fn [ctx]
