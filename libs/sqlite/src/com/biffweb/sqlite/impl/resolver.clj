@@ -2,11 +2,49 @@
   (:require [clojure.string :as str]
             [com.biffweb.core :as biff.core]
             [com.biffweb.graph :as biff.graph]
-            [com.biffweb.sqlite.impl.execute :as exec]))
+            [com.biffweb.sqlite.impl.execute :as exec]
+            [malli.core :as malli]))
 
 (defn- strip-id-suffix [k]
   (keyword (namespace k)
            (str/replace (name k) #"-id$" "")))
+
+(defn- schema-shape [schema]
+  (let [schema   (malli/schema schema)
+        type     (malli/type schema)
+        children (malli/children schema)]
+    (cond
+      (#{:map :map-of 'map?} type)
+      :map
+
+      (#{:vector :sequential} type)
+      (when (= :map (schema-shape (first children)))
+        :join)
+
+      (= :tuple type)
+      (when (every? #(= :map (schema-shape %)) children)
+        :join)
+
+      (= :maybe type)
+      (schema-shape (first children))
+
+      (= :and type)
+      (first (keep schema-shape children))
+
+      (= :or type)
+      (let [shapes (mapv schema-shape children)]
+        (when (and (seq shapes) (every? some? shapes))
+          (if (apply = shapes)
+            (first shapes)
+            :join))))))
+
+(defn- edn-join? [col]
+  (and (= :edn (:type col))
+       (some? (:extra-schema col))
+       (try
+         (some? (schema-shape (:extra-schema col)))
+         (catch Exception _
+           false))))
 
 ;; This is used both for generating the resolver's :output query and for
 ;; formatting the actual resolver output.
@@ -26,7 +64,8 @@
     :else
     [{:source-key  (:id col)
       :output-key  (:id col)
-      :foreign-key (:ref col)}]))
+      :foreign-key (:ref col)
+      :edn-join    (edn-join? col)}]))
 
 (defn make-resolvers [columns]
   (biff.core/validate {:biff.sqlite/columns columns})
@@ -61,10 +100,11 @@
         {:id     (keyword "com.biffweb.sqlite"
                           (str (name table-key) "-resolver"))
          :input  [primary-key]
-         :output (mapv (fn [{:keys [output-key foreign-key]}]
-                         (if foreign-key
-                           {output-key [foreign-key]}
-                           output-key))
+         :output (mapv (fn [{:keys [output-key foreign-key edn-join]}]
+                         (cond
+                           foreign-key {output-key [foreign-key]}
+                           edn-join {output-key [:*]}
+                           :else output-key))
                        output-mappings)
          :batch  true
 

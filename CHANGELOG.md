@@ -5,6 +5,8 @@
 - biff.tasks: copy docs into .biff/ and skills into .agents/
 - add :biff.tasks/skip-project-files, :biff.tasks/build-jar-resources
 - add :biff.sqlite/litestream-replica-path
+- biff.sqlite: `:edn` columns that contain maps use `[:*]` for their biff.graph
+  output shape
 
 ## 2.0.2 (2026-10-02)
 

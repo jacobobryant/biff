@@ -357,6 +357,61 @@
                  {:user/pet [:pet/id
                              :pet/species]}])))))))
 
+(deftest make-resolvers-infers-edn-joins-from-extra-schema
+  (let [columns {:thing/id      {:type :uuid :primary-key true}
+                 :thing/map     {:type :edn :extra-schema [:map [:value :int]]}
+                 :thing/maps    {:type :edn
+                                 :extra-schema [:vector [:map [:value :int]]]}
+                 :thing/map-of  {:type :edn
+                                 :extra-schema [:map-of :keyword :int]}
+                 :thing/seq     {:type :edn
+                                 :extra-schema [:sequential map?]}
+                 :thing/maybe   {:type :edn
+                                 :extra-schema [:maybe map?]}
+                 :thing/and     {:type :edn
+                                 :extra-schema [:and map? [:fn #(contains? % :value)]]}
+                 :thing/or      {:type :edn
+                                 :extra-schema [:or :map [:vector :map]]}
+                 :thing/unknown {:type :edn}
+                 :thing/mixed   {:type :edn
+                                 :extra-schema [:or :map [:vector :int]]}
+                 :thing/values  {:type :edn
+                                 :extra-schema [:vector :int]}}
+        resolver (first (sqlite/make-resolvers columns))
+        output   (:biff.graph/output-ast resolver)]
+    (doseq [attr [:thing/map :thing/maps :thing/map-of :thing/seq
+                  :thing/maybe :thing/and :thing/or]]
+      (is (= {:kind :join :wildcard true}
+             (get output attr))))
+    (doseq [attr [:thing/unknown :thing/mixed :thing/values]]
+      (is (= {:kind :scalar}
+             (get output attr))))))
+
+(deftest make-resolvers-queries-edn-map-and-vector-of-maps
+  (let [columns {:thing/id    {:type :uuid :primary-key true}
+                 :thing/map   {:type :edn
+                               :extra-schema [:map [:value :int]]}
+                 :thing/maps  {:type :edn
+                               :extra-schema [:vector [:map [:value :int]]]}}
+        ctx     (open-ctx columns)]
+    (try
+      (let [id    (UUID/randomUUID)
+            attrs {:thing/map  {:value 1}
+                   :thing/maps [{:value 2} {:value 3}]}
+            ctx   (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
+                         ctx)]
+        (sqlite/execute ctx
+                        {:insert-into :thing
+                         :values [{:thing/id id
+                                   :thing/map [:lift (:thing/map attrs)]
+                                   :thing/maps [:lift (:thing/maps attrs)]}]})
+        (is (= attrs
+               (biff.graph/query ctx {:thing/id id}
+                                 [{:thing/map [:*]}
+                                  {:thing/maps [:*]}]))))
+      (finally
+        (close-ctx ctx)))))
+
 (deftest module-provides-fx-kv-schema-and-wrap-db-snapshot
   (let [modules-var (atom [{:biff.sqlite/columns
                             {:app/id {:type :uuid :primary-key true}}}])
