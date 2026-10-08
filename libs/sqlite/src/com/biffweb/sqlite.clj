@@ -113,6 +113,9 @@
   [ctx statements]
   (impl.execute/execute-tx ctx statements))
 
+(defn execute-one [ctx statement]
+  (first (impl.execute/execute ctx statement)))
+
 (defn authorized-write
   "Executes a write sqlite statement, rejecting statements that violate the
    application's authorization rules.

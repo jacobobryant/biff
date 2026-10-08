@@ -447,12 +447,25 @@
       (finally
         (close-ctx ctx)))))
 
+(deftest execute-one-returns-first-row
+  (with-ctx
+    (fn [ctx]
+      (let [id        (UUID/randomUUID)
+            statement {:select [:pet/id] :from :pet}]
+        (is (nil? (sqlite/execute-one ctx statement)))
+        (sqlite/execute ctx {:insert-into :pet :values [{:pet/id id}]})
+        (is (= {:pet/id id} (sqlite/execute-one ctx statement)))
+        (is (= {:pet/id id}
+               ((:biff.sqlite.fx/execute-one sqlite/fx-handlers)
+                ctx statement)))))))
+
 (deftest module-provides-fx-kv-schema-and-wrap-db-snapshot
   (let [modules-var (atom [{:biff.sqlite/columns
                             {:app/id {:type :uuid :primary-key true}}}])
         module      (sqlite/module)
         init        ((:biff.core/init module) modules-var)]
     (is (= #{:biff.sqlite.fx/execute
+             :biff.sqlite.fx/execute-one
              :biff.sqlite.fx/execute-tx
              :biff.sqlite.fx/authorized-write
              :biff.sqlite.fx/authorized-write-tx}

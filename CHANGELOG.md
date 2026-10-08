@@ -9,6 +9,7 @@
   output shape
 - biff.graph: support `:?foo/bar` as an alias for `[:? :foo/bar]`
 - biff.sqlite: add :default column option
+- biff.sqlite: add execute-one
 
 ## 2.0.2 (2026-10-02)
 

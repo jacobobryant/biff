@@ -83,3 +83,6 @@
             [statement]
             (fn [conn sql-statements opts]
               (jdbc/execute! conn (first sql-statements) opts))))
+
+(defn execute-one [ctx statement]
+  (first (execute ctx statement)))

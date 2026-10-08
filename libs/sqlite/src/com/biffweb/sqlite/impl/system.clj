@@ -21,6 +21,7 @@
 
 (def fx-handlers
   {:biff.sqlite.fx/execute             exec/execute
+   :biff.sqlite.fx/execute-one         exec/execute-one
    :biff.sqlite.fx/execute-tx          exec/execute-tx
    :biff.sqlite.fx/authorized-write    authorize/authorized-write
    :biff.sqlite.fx/authorized-write-tx authorize/authorized-write-tx})
