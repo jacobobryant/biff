@@ -1,10 +1,16 @@
 # Changelog
 
-## 2.0.2
+## 2.0.3-SNAPSHOT
+
+- biff.tasks: copy docs into .biff/ and skills into .agents/
+- add :biff.tasks/skip-project-files, :biff.tasks/build-jar-resources
+- add :biff.sqlite/litestream-replica-path
+
+## 2.0.2 (2026-10-02)
 
 - Fix exception on startup from clj-uuid when getLocalHost fails
 
-## 2.0.1
+## 2.0.1 (2026-10-01)
 
 - BREAKING: minimum jvm version is increased from 17 to 21.
 - biff.ring uses a virtual thread pool for Jetty.
