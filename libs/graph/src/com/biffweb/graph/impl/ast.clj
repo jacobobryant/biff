@@ -42,6 +42,11 @@
 
 (declare parsed-query-item->ast)
 
+(defn- optional-attr [attr]
+  (if (= \? (second (str attr)))
+    [(keyword (subs (str attr) 2)) true]
+    [attr false]))
+
 (defn- parsed-subquery->ast
   [parsed-subquery]
   (case (:key parsed-subquery)
@@ -62,9 +67,10 @@
                                                   true])]
     (case (:key query-item)
       :scalar
-      [(:value query-item) (into {:kind :scalar}
-                                 (filter val)
-                                 {:optional optional})]
+      (let [[attr shorthand-optional] (optional-attr (:value query-item))]
+        [attr (into {:kind :scalar}
+                    (filter val)
+                    {:optional (or optional shorthand-optional)})])
 
       :join
       (let [[attr-node subquery]        (first (:value query-item))
@@ -73,11 +79,12 @@
                                           :required [attr-value optional]
                                           :optional
                                           [(second attr-value) true])
+            [attr shorthand-optional]   (optional-attr attr)
             {:keys [wildcard children]} (parsed-subquery->ast subquery)]
         [attr (into {:kind :join}
                     (filter val)
                     {:children children
-                     :optional optional
+                     :optional (or optional shorthand-optional)
                      :wildcard wildcard})]))))
 
 (defn query->ast

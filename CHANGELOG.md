@@ -7,6 +7,7 @@
 - add :biff.sqlite/litestream-replica-path
 - biff.sqlite: `:edn` columns that contain maps use `[:*]` for their biff.graph
   output shape
+- biff.graph: support `:?foo/bar` as an alias for `[:? :foo/bar]`
 
 ## 2.0.2 (2026-10-02)
 

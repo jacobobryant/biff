@@ -5,7 +5,7 @@
 
 (biff.graph/defresolver display-name-resolver
   {:input  [:user/first-name :user/last-name]
-   :output [:user/display-name]}
+   :output [:?user/display-name]}
   [_ctx {:user/keys [first-name last-name]}]
   {:user/display-name (str first-name " " last-name)})
 
@@ -70,6 +70,21 @@
            {:user/settings [:*]}
            {[:? :user/posts] [:post/title]}]))))
 
+(deftest question-mark-keywords-are-optional
+  (is (= {:foo {:kind :scalar :optional true}
+          :foo/bar {:kind :scalar :optional true}
+          :user/profile {:kind :join
+                         :optional true
+                         :children {:profile/bio {:kind :scalar
+                                                  :optional true}}}
+          :user/posts {:kind :join
+                       :optional true
+                       :wildcard true}}
+         (biff.graph/query->ast
+          [:?foo :?foo/bar
+           {:?user/profile [:?profile/bio]}
+           {:?user/posts [:*]}]))))
+
 (deftest query-resolves-scalars-joins-vectors-and-filters-output
   (let [ctx (test-ctx
              [(resolver
@@ -97,8 +112,8 @@
            (biff.graph/query
             ctx
             {:user/id 1}
-            [:user/display-name
-             {:user/profile [:profile/bio]}
+            [:?user/display-name
+             {:?user/profile [:profile/bio]}
              {:user/posts [:post/title]}])))))
 
 (deftest query-supports-sequential-input-and-batch-resolvers
@@ -165,7 +180,7 @@
                                           (str "Hi " (:user/nickname input))})})
                          (resolver
                           {:id         ::optional-missing
-                           :input      [[:? :user/nickname]]
+                           :input      [:?user/nickname]
                            :output     [:user/optional-greeting]
                            :resolve-fn (fn [_ctx input]
                                          (swap! optional-calls inc)
