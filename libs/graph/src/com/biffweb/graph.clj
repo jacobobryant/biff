@@ -3,7 +3,8 @@
             [com.biffweb.graph.impl.query :as impl.query]
             [com.biffweb.graph.impl.ctx :as impl.ctx]
             [com.biffweb.graph.impl.ast :as impl.ast]
-            [com.biffweb.graph.impl.resolver :as impl.r]))
+            [com.biffweb.graph.impl.resolver :as impl.r]
+            [com.biffweb.graph.impl.uml :as impl.uml]))
 
 (biff.core/register
  {:biff.graph/id               'qualified-keyword?
@@ -47,6 +48,9 @@
   "Returns the AST for the given query."
   [query]
   (impl.ast/query->ast query))
+
+(defn uml [ctx]
+  (impl.uml/uml ctx))
 
 (defn resolver
   "Returns a resolver map conforming to the :biff.graph/resolver schema.

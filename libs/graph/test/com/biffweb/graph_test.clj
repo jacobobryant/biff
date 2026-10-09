@@ -40,6 +40,65 @@
     (catch clojure.lang.ExceptionInfo e
       (ex-data e))))
 
+(deftest uml-includes-transitive-top-level-attributes
+  (let [resolvers [(resolver {:id ::user-name
+                              :input [:user/id]
+                              :output [:user/first-name
+                                       {:user/profile [:profile/id :profile/bio]}]
+                              :resolve-fn (fn [_ _] {})})
+                   (resolver {:id ::display-name
+                              :input [:user/first-name]
+                              :output [:user/display-name]
+                              :resolve-fn (fn [_ _] {})})
+                   (resolver {:id ::shared
+                              :input [:user/display-name :account/id]
+                              :output [:common/label]
+                              :resolve-fn (fn [_ _] {})})
+                   (resolver {:id ::cycle
+                              :input [:common/label]
+                              :output [:user/first-name]
+                              :resolve-fn (fn [_ _] {})})]]
+    (is (= (str "classDiagram\n"
+                "  class account {\n"
+                "    account/id\n"
+                "    common/label\n"
+                "    user/display-name\n"
+                "    user/first-name\n"
+                "  }\n"
+                "  class profile {\n"
+                "    profile/id\n"
+                "  }\n"
+                "  class user {\n"
+                "    common/label\n"
+                "    user/display-name\n"
+                "    user/first-name\n"
+                "    user/id\n"
+                "    user/profile\n"
+                "  }\n"
+                "  user -- profile : user/profile\n")
+           (biff.graph/uml {:biff.graph/resolvers resolvers})))))
+
+(deftest uml-includes-joins-declared-in-inputs
+  (let [resolvers [(resolver {:id ::input-join
+                              :input [:order/id {:order/customer [:customer/id]}]
+                              :output [:order/summary]
+                              :resolve-fn (fn [_ _] {})})
+                   (resolver {:id ::other-join
+                              :input [:order/id]
+                              :output [{:order/customer [:customer/id]}]
+                              :resolve-fn (fn [_ _] {})})]]
+    (is (= (str "classDiagram\n"
+                "  class customer {\n"
+                "    customer/id\n"
+                "  }\n"
+                "  class order {\n"
+                "    order/customer\n"
+                "    order/id\n"
+                "    order/summary\n"
+                "  }\n"
+                "  order -- customer : order/customer\n")
+           (biff.graph/uml {:biff.graph/resolvers resolvers})))))
+
 (deftest fx-resolver-passes-input-then-previous-output
   (is (= {:user/name "User 7"}
          (biff.graph/query

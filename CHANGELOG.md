@@ -11,6 +11,7 @@
 - biff.sqlite: add :default column option
 - biff.sqlite: add execute-one
 - biff.sqlite: autogenerate resolvers for unique fields and back references
+- biff.graph: add uml function
 
 ## 2.0.2 (2026-10-02)
 
