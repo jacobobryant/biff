@@ -392,6 +392,98 @@
                  {:user/pet [:pet/id
                              :pet/species]}])))))))
 
+(deftest make-resolvers-look-up-primary-keys-from-unique-columns
+  (with-ctx
+    (fn [ctx]
+      (let [ada-id (UUID/randomUUID)
+            bob-id (UUID/randomUUID)
+            ctx    (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
+                          ctx)]
+        (sqlite/execute ctx
+                        {:insert-into :user
+                         :values [{:user/id ada-id
+                                   :user/email "ada@example.com"
+                                   :user/score 1}
+                                  {:user/id bob-id
+                                   :user/email "bob@example.com"
+                                   :user/score 2}]})
+        (is (= [{:user/id ada-id} {:user/id bob-id}]
+               (biff.graph/query ctx
+                                 [{:user/email "ada@example.com"}
+                                  {:user/email "bob@example.com"}]
+                                 [:user/id])))
+        (is (= [{:user/id bob-id} {:user/id ada-id}]
+               (biff.graph/query ctx
+                                 [{:user/email "bob@example.com"
+                                   :user/score 2}
+                                  {:user/email "ada@example.com"
+                                   :user/score 1}]
+                                 [:user/id])))))))
+
+(deftest make-resolvers-builds-backreferences
+  (let [columns (-> columns
+                    (assoc-in [:user/pet-id :backref] :pet/user)
+                    (assoc-in [:user/pet-id :backref-many] :pet/users))
+        ctx     (open-ctx columns)]
+    (try
+      (let [pet-id (UUID/randomUUID)
+            ada-id (UUID/randomUUID)
+            bob-id (UUID/randomUUID)
+            ctx    (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
+                          ctx)]
+        (sqlite/execute ctx {:insert-into :pet
+                             :values [{:pet/id pet-id}]})
+        (sqlite/execute ctx
+                        {:insert-into :user
+                         :values [{:user/id ada-id
+                                   :user/email "ada@example.com"
+                                   :user/score 1
+                                   :user/pet-id pet-id}]})
+        (is (= {:pet/user {:user/id ada-id}}
+               (biff.graph/query ctx {:pet/id pet-id}
+                                 [{:pet/user [:user/id]}])))
+        (sqlite/execute ctx
+                        {:insert-into :user
+                         :values [{:user/id bob-id
+                                   :user/email "bob@example.com"
+                                   :user/score 2
+                                   :user/pet-id pet-id}]})
+        (is (= #{ada-id bob-id}
+               (set (map :user/id
+                         (:pet/users
+                          (biff.graph/query ctx {:pet/id pet-id}
+                                            [{:pet/users [:user/id]}])))))))
+      (finally
+        (close-ctx ctx)))))
+
+(deftest make-resolvers-look-up-primary-keys-from-composite-unique-columns
+  (let [columns {:thing/id {:type :int :primary-key true}
+                 :thing/a  {:type :int :unique-with [:thing/b]}
+                 :thing/b  {:type :int}}
+        ctx     (open-ctx columns)]
+    (try
+      (let [ctx (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
+                       ctx)]
+        (sqlite/execute ctx
+                        {:insert-into :thing
+                         :values [{:thing/id 1 :thing/a 7 :thing/b 8}
+                                  {:thing/id 2 :thing/a 7 :thing/b 9}]})
+        (is (= [{:thing/id 2} {:thing/id 1}]
+               (biff.graph/query ctx
+                                 [{:thing/a 7 :thing/b 9}
+                                  {:thing/a 7 :thing/b 8}]
+                                 [:thing/id]))))
+      (finally
+        (close-ctx ctx)))))
+
+(deftest make-resolvers-requires-primary-key-for-backreferences
+  (is (= {:column :user/pet-id :backref :pet/users}
+         (thrown-data
+          #(sqlite/make-resolvers
+            {:user/pet-id {:type :uuid
+                           :ref :pet/id
+                           :backref-many :pet/users}})))))
+
 (deftest make-resolvers-infers-edn-joins-from-extra-schema
   (let [columns {:thing/id      {:type :uuid :primary-key true}
                  :thing/map     {:type :edn :extra-schema [:map [:value :int]]}

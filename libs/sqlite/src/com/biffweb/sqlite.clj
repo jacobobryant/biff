@@ -17,6 +17,8 @@
      [:required     ? :boolean]
      [:default      ? :any]
      [:ref          ? :qualified-keyword]
+     [:backref      ? :qualified-keyword]
+     [:backref-many ? :qualified-keyword]
      [:index        ? :boolean]
      [:extra-schema ? :any]
      [:enum-values  ? [:map-of :int :qualified-keyword]]]))

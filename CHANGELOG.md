@@ -10,6 +10,7 @@
 - biff.graph: support `:?foo/bar` as an alias for `[:? :foo/bar]`
 - biff.sqlite: add :default column option
 - biff.sqlite: add execute-one
+- biff.sqlite: autogenerate resolvers for unique fields and back references
 
 ## 2.0.2 (2026-10-02)
 
