@@ -14,6 +14,7 @@
 - biff.graph: add uml function
 - biff.sqlite: add schema helpers
 - biff.tasks: fix bug in prod-logs task that made output buffered
+- biff.admin: fix bug with send-email not being passed to the alert code
 
 ## 2.0.2 (2026-10-02)
 

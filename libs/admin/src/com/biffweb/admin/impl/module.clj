@@ -33,7 +33,10 @@
    :biff.core/start           alerts/start
    :biff.core/stop            alerts/stop
    :biff.core/init            (fn [_modules-var]
-                                {:biff.admin/pstats (atom {})})
+                                {:biff.admin/pstats (atom {})
+
+                                 :biff.admin/send-email
+                                 (:biff.admin/send-email params)})
    :biff.background/tasks     [{:schedule profiling/hourly-schedule
                                 :task     profiling/flush-pstats!}]
    :biff.graph/middleware     [profiling/wrap-resolver-profiling]
