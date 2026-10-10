@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.3-SNAPSHOT
+## 2.0.3-rc1
 
 - biff.tasks: copy docs into .biff/ and skills into .agents/
 - add :biff.tasks/skip-project-files, :biff.tasks/build-jar-resources
