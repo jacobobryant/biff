@@ -213,6 +213,9 @@
 (defn ssh-run [ctx & args]
   (shell "ssh" (ssh-target ctx) (str/join " " (map shell-quote args))))
 
+(defn ssh-run-inherit [ctx & args]
+  (shell-inherit "ssh" (ssh-target ctx) (str/join " " (map shell-quote args))))
+
 (defn ssh-run-shell [ctx command]
   (shell "ssh" (ssh-target ctx) (str "sh -lc " (shell-quote command))))
 

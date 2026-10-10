@@ -80,5 +80,5 @@
   ([n-lines]
    (let [{:biff.tasks/keys [deployment-name] :as ctx}
          (util/read-config {:select '[deployment-name domain]})]
-     (util/ssh-run ctx "journalctl" "-u" deployment-name
-                   "-n" n-lines "-f" "--no-pager"))))
+     (util/ssh-run-inherit ctx "journalctl" "-u" deployment-name
+                           "-n" n-lines "-f" "--no-pager"))))

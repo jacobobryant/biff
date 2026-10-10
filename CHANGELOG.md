@@ -13,6 +13,7 @@
 - biff.sqlite: autogenerate resolvers for unique fields and back references
 - biff.graph: add uml function
 - biff.sqlite: add schema helpers
+- biff.tasks: fix bug in prod-logs task that made output buffered
 
 ## 2.0.2 (2026-10-02)
 
