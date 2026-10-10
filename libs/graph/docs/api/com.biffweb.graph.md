@@ -10,23 +10,9 @@
 Returns the AST for the given query.
 ```
 
-### uml
-
-[view source](../../src/com/biffweb/graph.clj#L52)
-
-```
-(uml ctx)
-
-Returns a Mermaid classDiagram string for the resolvers in `ctx`.
-
-Each class represents a qualified `:namespace/id` attribute. Attributes
-reachable through resolver inputs and outputs appear in that class, and
-joins to another entity's ID appear as relationships.
-```
-
 ### resolver
 
-[view source](../../src/com/biffweb/graph.clj#L61)
+[view source](../../src/com/biffweb/graph.clj#L52)
 
 ```
 (resolver {:keys [id input output batch resolve-fn]})
@@ -41,7 +27,7 @@ two arguments, (fn [ctx input] ...), that gets wrapped so that
 
 ### defresolver
 
-[view source](../../src/com/biffweb/graph.clj#L72)
+[view source](../../src/com/biffweb/graph.clj#L63)
 
 ```
 (defresolver sym opts & args)
@@ -83,7 +69,7 @@ generate a resolve function:
 
 ### new-ctx
 
-[view source](../../src/com/biffweb/graph.clj#L109)
+[view source](../../src/com/biffweb/graph.clj#L100)
 
 ```
 (new-ctx resolvers & {:keys [middleware]})
@@ -99,7 +85,7 @@ See schema for :biff.graph/resolvers and :biff.graph/middleware.
 
 ### query
 
-[view source](../../src/com/biffweb/graph.clj#L121)
+[view source](../../src/com/biffweb/graph.clj#L112)
 
 ```
 (query ctx query)
@@ -129,7 +115,7 @@ consistent view of the database.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/graph.clj#L147)
+[view source](../../src/com/biffweb/graph.clj#L138)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -137,7 +123,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../src/com/biffweb/graph.clj#L151)
+[view source](../../src/com/biffweb/graph.clj#L142)
 
 ```
 (module)
@@ -147,4 +133,14 @@ Returns a biff.core module.
 Includes :biff.fx/handlers. :biff.core/init collects :biff.graph/resolvers
 and :biff.graph/middleware from other modules and passes them to new-ctx, so
 you can pass the system map as ctx to `query`.
+```
+
+### uml
+
+[view source](../../src/com/biffweb/graph.clj#L155)
+
+```
+(uml {:keys [biff.graph/resolvers]})
+
+Returns a Mermaid classDiagram string for `resolvers`.
 ```

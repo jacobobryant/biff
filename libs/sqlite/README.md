@@ -37,7 +37,9 @@ com.biffweb/sqlite {:mvn/version "2.0.2"}
 
 - [Database Schema](docs/db-schema.md)
 - [Library Schema](docs/library-schema.md)
-- [API](docs/api/com.biffweb.sqlite.md)
+- API:
+  - [com.biffweb.sqlite](docs/api/com.biffweb.sqlite.md)
+  - [com.biffweb.sqlite.schema](docs/api/com.biffweb.sqlite.schema.md)
 
 ## Usage
 

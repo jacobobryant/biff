@@ -1,3 +1,4 @@
 #merge [#include "../../../dev/config.edn"
         {:biff.tasks/lib-name        "sqlite"
-         :biff.tasks/docs-namespaces [com.biffweb.sqlite]}]
+         :biff.tasks/docs-namespaces [com.biffweb.sqlite
+                                      com.biffweb.sqlite.schema]}]

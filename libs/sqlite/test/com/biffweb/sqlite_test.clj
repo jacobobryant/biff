@@ -477,7 +477,11 @@
         (close-ctx ctx)))))
 
 (deftest make-resolvers-requires-primary-key-for-backreferences
-  (is (= {:column :user/pet-id :backref-many :pet/users}
+  (is (= {:column {:id           :user/pet-id
+                   :table        :user
+                   :type         :uuid
+                   :ref          :pet/id
+                   :backref-many :pet/users}}
          (thrown-data
           #(sqlite/make-resolvers
             {:user/pet-id {:type         :uuid

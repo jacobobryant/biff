@@ -66,7 +66,7 @@ transaction. Returns a vector of the results.
 ```
 (execute-one ctx statement)
 
-Like `execute`, but returns the first result row or nil.
+Calls `execute` and returns the first row (or nil).
 ```
 
 ### authorized-write
@@ -232,12 +232,14 @@ Also sets these keys on the system map:
 ```
 (make-resolvers columns)
 
-Returns biff.graph resolvers for tables, unique keys, and backreferences.
+Returns biff.graph resolvers for primary keys, unique keys, and
+backreferences.
 
-Each resolver takes the primary key as input and returns all the other
-columns as output. Columns with :ref are returned as joins. If a ref column
-ends in `-id`, that column is returned as a regular non-join attribute and an
-additional join attribute without the `-id` suffix is also returned:
+Each table gets a resolver that takes the primary key as input and returns
+all the other columns as output. Columns with :ref are returned as joins. If
+a ref column ends in `-id`, that column is returned as a regular non-join
+attribute and an additional join attribute without the `-id` suffix is also
+returned:
 
   :user/pet-id {:ref :pet/id, ...}
   ;; ->
@@ -247,13 +249,16 @@ additional join attribute without the `-id` suffix is also returned:
 EDN columns whose :extra-schema describes a map or collection of maps are
 returned as joins with a `[:*]` subquery.
 
-A column with :unique or :unique-with also gets a resolver that looks up
-its table's primary key. For :unique-with, the input includes the column and
-all columns named in :unique-with.
+A column with :unique or :unique-with gets a resolver that looks up its
+table's primary key given a value(s) for the unique key(s).
 
-A column with :ref and :backref or :backref-many gets a resolver from the
-referenced ID to the declaring table's primary key. :backref returns one
-map; :backref-many returns a vector of maps.
+:ref columns that have :backref or :backref-many set get a resolver that
+goes from the entity targeted by :ref back to the current column's entity:
+
+  ;; given this column:
+  :user/pet {:type :uuid, :ref :pet/id, :backref :pet/user}
+  ;; you get a resolver with this:
+  :input [:pet/id], :output [{:pet/user [:user/id]}]
 
 All resolvers have `:batch true`.
 
