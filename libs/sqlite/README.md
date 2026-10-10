@@ -49,7 +49,7 @@ First you need to define your application's schema as a "columns map" (see
 ```clojure
 (def columns
   {:user/id        {:type :uuid :primary-key true}
-   :user/email     {:type :string :unique true}
+   :user/email     {:type :text :unique true}
    :user/joined-at {:type :inst}
    :user/pet-id    {:type :uuid :ref :pet/id}
 
@@ -58,6 +58,24 @@ First you need to define your application's schema as a "columns map" (see
                  :enum-values {0 :pet.species/iguana
                                1 :pet.species/tardigrade
                                2 :pet.species/rock}}})
+```
+
+The `com.biffweb.sqlite.schema` namespace contains helper functions for defining
+columns. The above code can be written as:
+
+```clojure
+(require '[com.biffweb.sqlite.schema :as s])
+
+(def columns
+  {:user/id        s/pkey
+   :user/email     (s/text :unique)
+   :user/joined-at (s/inst)
+   :user/pet-id    (s/ref :pet/id)
+
+   :pet/id      s/pkey
+   :pet/species (s/enum {0 :pet.species/iguana
+                         1 :pet.species/tardigrade
+                         2 :pet.species/rock})})
 ```
 
 ### System start up
@@ -198,24 +216,40 @@ transactions:
 
 ### biff.graph resolvers
 
-Use `biff.sqlite/make-resolvers` to generate a biff.graph resolver for each of
-your SQLite tables:
+If you're using `biff.sqlite/module`, a `:biff.graph/resolvers` key will be
+included in your system map containing resolvers generated from your schema.
+Otherwise, use `biff.sqlite/make-resolvers` directly:
 
 ```clojure
-;; with biff.core:
-(def module
-  {:biff.graph/resolvers (biff.sqlite/make-resolvers
-                          {:biff.sqlite/columns columns})})
-
-;; without:
 (def resolvers (concat
                 (biff.sqlite/make-resolvers
                  {:biff.sqlite/columns columns})
                 [...]))
 (def ctx (merge (biff.graph/new-ctx resolvers) ...))
+```
 
+There are three kinds of resolvers:
 
-;; Then you can query sqlite via biff.graph:
+- One resolver for each primary key in your schema. It takes the primary key as
+  input and returns all the other keys from the table.
+- A resolver for each unique column (or set of composite unique columns) that
+  takes the unique column(s) as input and returns the primary key.
+- A resolver for each `:ref` column with either `:backref` or `:backref-many`
+  set which takes the target column (`:ref` value) as input and returns a join
+  to the source table's primary key.
+
+This schema results in all three kinds of resolvers:
+
+```clojure
+:user/id     s/pkey
+:user/email  (s/text :unique)
+:user/pet-id (s/ref :pet/id {:backref :pet/user})
+```
+
+And it lets you do queries like these:
+
+```clojure
+;; primary key resolver
 (biff.graph/query
   ctx
   {:user/id ...}
@@ -223,6 +257,12 @@ your SQLite tables:
    :user/pet-id
    {:user/pet [:pet/id
                :pet/species]}])
+
+;; unique field resolver
+(biff.graph/query ctx {:user/email ...} [:user/id])
+
+;; backref resolver
+(biff.graph/query ctx {:pet/id ...} [{:pet/user [:user/id]}])
 ```
 
 See [`make-resolvers`](docs/api/com.biffweb.sqlite.md#make-resolvers).

@@ -43,8 +43,21 @@ required:
 :required
   Boolean. Sets a NOT NULL constraint.
 
+:default
+  A default value for the column. Type coercion is applied as usual.
+
 :ref
   Keyword (a primary column key). Adds a FOREIGN KEY constraint.
+
+:backref
+  Keyword used to generate a reverse join biff.graph resolver. e.g. a
+  :user/pet-id column could have `:backref :pet/user`. The current column's
+  table must have a primary key. The resolver returns a single map, i.e. this is
+  for one-to-one relationships.
+
+:backref-many
+  Like :backref, but the resolver returns a vector of maps (for one-to-many
+  relationships).
 
 :index
   Boolean. Adds a single-column CREATE INDEX statement. (For multi-column
@@ -63,10 +76,11 @@ required:
 
 :extra-schema
   Malli schema for validating column values, beyond what can be inferred by the
-  :type value.
+  :type value. For :edn columns that contain a map or collection of maps, the
+  generated biff.graph resolver uses `{<column> [:*]}` as its output.
 ```
 
-Use [schema-sql](../api/com.biffweb.sqlite.md#schema-sql) to see exactly how the
+Use [schema-sql](api/com.biffweb.sqlite.md#schema-sql) to see exactly how the
 columns map translates to sqlite statements.
 
 ## Migrations

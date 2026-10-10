@@ -2,7 +2,7 @@
 
 ### schema-sql
 
-[view source](../../src/com/biffweb/sqlite.clj#L66)
+[view source](../../src/com/biffweb/sqlite.clj#L69)
 
 ```
 (schema-sql #:biff.sqlite{:keys [columns]})
@@ -14,7 +14,7 @@ Used by `sqldef-module` during startup. All tables use STRICT mode.
 
 ### execute
 
-[view source](../../src/com/biffweb/sqlite.clj#L74)
+[view source](../../src/com/biffweb/sqlite.clj#L77)
 
 ```
 (execute {:biff.sqlite/keys [columns read-pool write-conn], :biff.core/keys [on-tx], :as ctx} statement)
@@ -50,7 +50,7 @@ set. on-tx receives `ctx` as it was passed to this function.
 
 ### execute-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L109)
+[view source](../../src/com/biffweb/sqlite.clj#L112)
 
 ```
 (execute-tx ctx statements)
@@ -59,9 +59,19 @@ Like execute, but takes a sequence of statements and runs them in a
 transaction. Returns a vector of the results.
 ```
 
+### execute-one
+
+[view source](../../src/com/biffweb/sqlite.clj#L118)
+
+```
+(execute-one ctx statement)
+
+Like `execute`, but returns the first result row or nil.
+```
+
 ### authorized-write
 
-[view source](../../src/com/biffweb/sqlite.clj#L115)
+[view source](../../src/com/biffweb/sqlite.clj#L123)
 
 ```
 (authorized-write {:biff.sqlite/keys [authorize columns write-conn read-pool], :biff.core/keys [on-tx], :as ctx} statement)
@@ -88,7 +98,7 @@ On success, calls `on-tx` and then returns the diff.
 
 ### authorized-write-tx
 
-[view source](../../src/com/biffweb/sqlite.clj#L144)
+[view source](../../src/com/biffweb/sqlite.clj#L152)
 
 ```
 (authorized-write-tx ctx statements)
@@ -98,16 +108,18 @@ Like authorized-write, but takes a sequence of statements. Returns the diff.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/sqlite.clj#L149)
+[view source](../../src/com/biffweb/sqlite.clj#L157)
 
 ```
-A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
-:biff.sqlite.fx/authorized-write.
+A biff.fx handlers map. Contains :biff.sqlite.fx/execute,
+:biff.sqlite.fx/execute-one, :biff.sqlite.fx/execute-tx,
+:biff.sqlite.fx/authorized-write, and
+:biff.sqlite.fx/authorized-write-tx.
 ```
 
 ### module
 
-[view source](../../src/com/biffweb/sqlite.clj#L155)
+[view source](../../src/com/biffweb/sqlite.clj#L165)
 
 ```
 (module)
@@ -127,7 +139,7 @@ Returns a biff.core module. Module ID is :biff.sqlite/module.
 
 ### litestream-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L171)
+[view source](../../src/com/biffweb/sqlite.clj#L181)
 
 ```
 (litestream-module)
@@ -158,7 +170,7 @@ your application runs.
 
 ### sqldef-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L197)
+[view source](../../src/com/biffweb/sqlite.clj#L207)
 
 ```
 (sqldef-module)
@@ -184,7 +196,7 @@ isn't available.
 
 ### conn-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L218)
+[view source](../../src/com/biffweb/sqlite.clj#L228)
 
 ```
 (conn-module)
@@ -215,12 +227,12 @@ Also sets these keys on the system map:
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L244)
+[view source](../../src/com/biffweb/sqlite.clj#L254)
 
 ```
 (make-resolvers columns)
 
-Returns a sequence of biff.graph resolvers, one for each table.
+Returns biff.graph resolvers for tables, unique keys, and backreferences.
 
 Each resolver takes the primary key as input and returns all the other
 columns as output. Columns with :ref are returned as joins. If a ref column
@@ -231,6 +243,17 @@ additional join attribute without the `-id` suffix is also returned:
   ;; ->
   :output [:user/pet-id
            {:user/pet [:pet/id]}]
+
+EDN columns whose :extra-schema describes a map or collection of maps are
+returned as joins with a `[:*]` subquery.
+
+A column with :unique or :unique-with also gets a resolver that looks up
+its table's primary key. For :unique-with, the input includes the column and
+all columns named in :unique-with.
+
+A column with :ref and :backref or :backref-many gets a resolver from the
+referenced ID to the declaring table's primary key. :backref returns one
+map; :backref-many returns a vector of maps.
 
 All resolvers have `:batch true`.
 

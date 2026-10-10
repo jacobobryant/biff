@@ -49,9 +49,6 @@
   [query]
   (impl.ast/query->ast query))
 
-(defn uml [ctx]
-  (impl.uml/uml ctx))
-
 (defn resolver
   "Returns a resolver map conforming to the :biff.graph/resolver schema.
 
@@ -154,3 +151,9 @@
                          (get-ctx) ; for validation
                          {:biff.graph/get-ctx get-ctx}))
    :biff.fx/handlers fx-handlers})
+
+(defn uml
+  "Returns a Mermaid classDiagram string for `resolvers`."
+  {:arglists '([{:keys [biff.graph/resolvers]}])}
+  [ctx]
+  (impl.uml/uml ctx))

@@ -89,9 +89,9 @@
                  :thing/ratio       {:type :real :default 1.5}
                  :thing/name        {:type :text :default "O'Reilly"}
                  :thing/active      {:type :boolean :default false}
-                 :thing/status      {:type :enum
+                 :thing/status      {:type        :enum
                                      :enum-values {1 :thing.status/ready}
-                                     :default :thing.status/ready}
+                                     :default     :thing.status/ready}
                  :thing/at          {:type :inst :default instant}
                  :thing/uuid        {:type :uuid :default uuid}
                  :thing/prefs       {:type :edn :default {:color :blue}}
@@ -401,12 +401,12 @@
                           ctx)]
         (sqlite/execute ctx
                         {:insert-into :user
-                         :values [{:user/id ada-id
-                                   :user/email "ada@example.com"
-                                   :user/score 1}
-                                  {:user/id bob-id
-                                   :user/email "bob@example.com"
-                                   :user/score 2}]})
+                         :values      [{:user/id    ada-id
+                                        :user/email "ada@example.com"
+                                        :user/score 1}
+                                       {:user/id    bob-id
+                                        :user/email "bob@example.com"
+                                        :user/score 2}]})
         (is (= [{:user/id ada-id} {:user/id bob-id}]
                (biff.graph/query ctx
                                  [{:user/email "ada@example.com"}
@@ -432,22 +432,22 @@
             ctx    (merge (biff.graph/new-ctx (sqlite/make-resolvers columns))
                           ctx)]
         (sqlite/execute ctx {:insert-into :pet
-                             :values [{:pet/id pet-id}]})
+                             :values      [{:pet/id pet-id}]})
         (sqlite/execute ctx
                         {:insert-into :user
-                         :values [{:user/id ada-id
-                                   :user/email "ada@example.com"
-                                   :user/score 1
-                                   :user/pet-id pet-id}]})
+                         :values      [{:user/id     ada-id
+                                        :user/email  "ada@example.com"
+                                        :user/score  1
+                                        :user/pet-id pet-id}]})
         (is (= {:pet/user {:user/id ada-id}}
                (biff.graph/query ctx {:pet/id pet-id}
                                  [{:pet/user [:user/id]}])))
         (sqlite/execute ctx
                         {:insert-into :user
-                         :values [{:user/id bob-id
-                                   :user/email "bob@example.com"
-                                   :user/score 2
-                                   :user/pet-id pet-id}]})
+                         :values      [{:user/id     bob-id
+                                        :user/email  "bob@example.com"
+                                        :user/score  2
+                                        :user/pet-id pet-id}]})
         (is (= #{ada-id bob-id}
                (set (map :user/id
                          (:pet/users
@@ -466,8 +466,8 @@
                        ctx)]
         (sqlite/execute ctx
                         {:insert-into :thing
-                         :values [{:thing/id 1 :thing/a 7 :thing/b 8}
-                                  {:thing/id 2 :thing/a 7 :thing/b 9}]})
+                         :values      [{:thing/id 1 :thing/a 7 :thing/b 8}
+                                       {:thing/id 2 :thing/a 7 :thing/b 9}]})
         (is (= [{:thing/id 2} {:thing/id 1}]
                (biff.graph/query ctx
                                  [{:thing/a 7 :thing/b 9}
@@ -477,33 +477,35 @@
         (close-ctx ctx)))))
 
 (deftest make-resolvers-requires-primary-key-for-backreferences
-  (is (= {:column :user/pet-id :backref :pet/users}
+  (is (= {:column :user/pet-id :backref-many :pet/users}
          (thrown-data
           #(sqlite/make-resolvers
-            {:user/pet-id {:type :uuid
-                           :ref :pet/id
+            {:user/pet-id {:type         :uuid
+                           :ref          :pet/id
                            :backref-many :pet/users}})))))
 
 (deftest make-resolvers-infers-edn-joins-from-extra-schema
-  (let [columns {:thing/id      {:type :uuid :primary-key true}
-                 :thing/map     {:type :edn :extra-schema [:map [:value :int]]}
-                 :thing/maps    {:type :edn
-                                 :extra-schema [:vector [:map [:value :int]]]}
-                 :thing/map-of  {:type :edn
-                                 :extra-schema [:map-of :keyword :int]}
-                 :thing/seq     {:type :edn
-                                 :extra-schema [:sequential map?]}
-                 :thing/maybe   {:type :edn
-                                 :extra-schema [:maybe map?]}
-                 :thing/and     {:type :edn
-                                 :extra-schema [:and map? [:fn #(contains? % :value)]]}
-                 :thing/or      {:type :edn
-                                 :extra-schema [:or :map [:vector :map]]}
-                 :thing/unknown {:type :edn}
-                 :thing/mixed   {:type :edn
-                                 :extra-schema [:or :map [:vector :int]]}
-                 :thing/values  {:type :edn
-                                 :extra-schema [:vector :int]}}
+  (let [columns  {:thing/id      {:type :uuid :primary-key true}
+                  :thing/map     {:type :edn :extra-schema [:map [:value :int]]}
+                  :thing/maps    {:type         :edn
+                                  :extra-schema [:vector [:map [:value :int]]]}
+                  :thing/map-of  {:type         :edn
+                                  :extra-schema [:map-of :keyword :int]}
+                  :thing/seq     {:type         :edn
+                                  :extra-schema [:sequential map?]}
+                  :thing/maybe   {:type         :edn
+                                  :extra-schema [:maybe map?]}
+                  :thing/and     {:type :edn
+
+                                  :extra-schema
+                                  [:and map? [:fn #(contains? % :value)]]}
+                  :thing/or      {:type         :edn
+                                  :extra-schema [:or :map [:vector :map]]}
+                  :thing/unknown {:type :edn}
+                  :thing/mixed   {:type         :edn
+                                  :extra-schema [:or :map [:vector :int]]}
+                  :thing/values  {:type         :edn
+                                  :extra-schema [:vector :int]}}
         resolver (first (sqlite/make-resolvers columns))
         output   (:biff.graph/output-ast resolver)]
     (doseq [attr [:thing/map :thing/maps :thing/map-of :thing/seq
@@ -515,11 +517,11 @@
              (get output attr))))))
 
 (deftest make-resolvers-queries-edn-map-and-vector-of-maps
-  (let [columns {:thing/id    {:type :uuid :primary-key true}
-                 :thing/map   {:type :edn
-                               :extra-schema [:map [:value :int]]}
-                 :thing/maps  {:type :edn
-                               :extra-schema [:vector [:map [:value :int]]]}}
+  (let [columns {:thing/id   {:type :uuid :primary-key true}
+                 :thing/map  {:type         :edn
+                              :extra-schema [:map [:value :int]]}
+                 :thing/maps {:type         :edn
+                              :extra-schema [:vector [:map [:value :int]]]}}
         ctx     (open-ctx columns)]
     (try
       (let [id    (UUID/randomUUID)
@@ -529,9 +531,11 @@
                          ctx)]
         (sqlite/execute ctx
                         {:insert-into :thing
-                         :values [{:thing/id id
-                                   :thing/map [:lift (:thing/map attrs)]
-                                   :thing/maps [:lift (:thing/maps attrs)]}]})
+                         :values      [{:thing/id  id
+                                        :thing/map [:lift (:thing/map attrs)]
+
+                                        :thing/maps
+                                        [:lift (:thing/maps attrs)]}]})
         (is (= attrs
                (biff.graph/query ctx {:thing/id id}
                                  [{:thing/map [:*]}

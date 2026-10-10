@@ -5,7 +5,10 @@
 (deftest column-helpers
   (is (= {:optional true} schema/?))
   (is (= {:type :uuid :primary-key true} schema/pkey))
-  (is (= {:type :uuid :ref :publication/id :required true :index true
+  (is (= {:type        :uuid
+          :ref         :publication/id
+          :required    true
+          :index       true
           :unique-with [:subscriber/email]}
          (schema/ref :publication/id :required :index
                      {:unique-with [:subscriber/email]})))

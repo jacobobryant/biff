@@ -123,81 +123,83 @@
 
       :resolve-fn
       (fn [ctx inputs]
-        (let [rows       (exec/execute ctx {:select [id primary-key]
-                                            :from   table
-                                            :where  [:in id (mapv ref inputs)]})
-              id->rows  (group-by id rows)]
+        (let [rows     (exec/execute ctx {:select [id primary-key]
+                                          :from   table
+                                          :where  [:in id (mapv ref inputs)]})
+              id->rows (group-by id rows)]
           (mapv (fn [input]
                   {output-key
-                   (let [matches (mapv #(array-map primary-key (get % primary-key))
+                   (let [matches (mapv (fn [row]
+                                         {primary-key (get row primary-key)})
                                        (get id->rows (get input ref)))]
                      (if many? matches (or (first matches) {})))})
                 inputs)))})))
 
 (defn make-resolvers [columns]
   (biff.core/validate {:biff.sqlite/columns columns})
-  (let [columns (mapv (fn [[id opts]]
-                        (assoc opts
-                               :id id
-                               :table (keyword (namespace id))))
-                      columns)
+  (let [columns      (mapv (fn [[id opts]]
+                             (assoc opts
+                                    :id id
+                                    :table (keyword (namespace id))))
+                           columns)
         key-by-table (primary-keys columns)]
     (vec
      (concat
       (for [[table-key columns] (group-by :table columns)
 
-           :let  [primary-key (get key-by-table table-key)]
-           :when primary-key
-           :let  [output-mappings (mapcat make-output-mappings columns)
-
-                  process-row
-                  (fn [row]
-                    (into {}
-                          (keep (fn [{:keys [source-key
-                                             output-key
-                                             foreign-key]}]
-                                  (when-some [value (get row source-key)]
-                                    [output-key
-                                     (if foreign-key
-                                       {foreign-key value}
-                                       value)])))
-                          output-mappings))]]
-       (biff.graph/resolver
-        {:id     (keyword "com.biffweb.sqlite"
-                          (str (name table-key) "-resolver"))
-         :input  [primary-key]
-         :output (mapv (fn [{:keys [output-key foreign-key edn-join]}]
-                         (cond
-                           foreign-key {output-key [foreign-key]}
-                           edn-join {output-key [:*]}
-                           :else output-key))
-                       output-mappings)
-         :batch  true
-
-         :resolve-fn
-         (fn [ctx inputs]
-           (let [ids        (mapv primary-key inputs)
-                 results    (exec/execute ctx {:select :*
-                                               :from   table-key
-                                               :where  [:in primary-key ids]})
-                 id->result (into {}
-                                  (map (juxt primary-key process-row))
-                                  results)]
-             (mapv (fn [input]
-                     (get id->result (get input primary-key) {}))
-                   inputs)))}))
-      (for [col columns
-            :let [primary-key (get key-by-table (:table col))]
+            :let  [primary-key (get key-by-table table-key)]
             :when primary-key
+            :let  [output-mappings (mapcat make-output-mappings columns)
+
+                   process-row
+                   (fn [row]
+                     (into {}
+                           (keep (fn [{:keys [source-key
+                                              output-key
+                                              foreign-key]}]
+                                   (when-some [value (get row source-key)]
+                                     [output-key
+                                      (if foreign-key
+                                        {foreign-key value}
+                                        value)])))
+                           output-mappings))]]
+        (biff.graph/resolver
+         {:id     (keyword "com.biffweb.sqlite"
+                           (str (name table-key) "-resolver"))
+          :input  [primary-key]
+          :output (mapv (fn [{:keys [output-key foreign-key edn-join]}]
+                          (cond
+                            foreign-key {output-key [foreign-key]}
+                            edn-join {output-key [:*]}
+                            :else output-key))
+                        output-mappings)
+          :batch  true
+
+          :resolve-fn
+          (fn [ctx inputs]
+            (let [ids        (mapv primary-key inputs)
+                  results    (exec/execute ctx {:select :*
+                                                :from   table-key
+                                                :where  [:in primary-key ids]})
+                  id->result (into {}
+                                   (map (juxt primary-key process-row))
+                                   results)]
+              (mapv (fn [input]
+                      (get id->result (get input primary-key) {}))
+                    inputs)))}))
+      (for [col   columns
+            :let  [primary-key (get key-by-table (:table col))]
+            :when primary-key
+
             [input-keys composite?]
             (concat (when (:unique col) [[[(:id col)] false]])
                     (when (:unique-with col)
                       [[(into [(:id col)] (:unique-with col)) true]]))]
         (unique-resolver col primary-key input-keys composite?))
-      (for [col columns
+      (for [col         columns
             [key many?] [[:backref false] [:backref-many true]]
-            :let [output-key (get col key)]
-            :when output-key]
+            :let        [output-key (get col key)]
+            :when       output-key]
         (let [primary-key (get key-by-table (:table col))]
           (when-not primary-key
             (throw (ex-info (str key " is set but " (:table col)

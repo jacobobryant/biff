@@ -96,13 +96,14 @@ Reads the following config keys:
 - :biff.tasks/main-ns (required)
 
 Ensures all :paths / :extra-paths directories from deps.edn exist. Runs the
-`css --watch=always` task in the background. Starts another file watcher that
-evaluates source files and their dependants when saved.
+init task, then runs the `css --watch=always` task in the background. Starts
+another file watcher that evaluates source files and their dependants when
+saved.
 
 Then calls the `-main` function in the `main-ns` namespace.
 ```
 
-See the [config reference](docs/config.md); individual tasks don't always
+See the [config reference](docs/schema.md); individual tasks don't always
 describe what the config keys do.
 
 ### Configuration

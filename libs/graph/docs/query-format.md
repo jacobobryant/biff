@@ -6,7 +6,8 @@ A query is a vector of attributes:
 - join attributes are described with a single-entry map, going from a keyword to
   a subquery: `{:foo [:bar]}`
 - Optional attributes (scalar or join) are described by wrapping them with a
-  `[:? ...]`: `[:? :foo]`, `{[:? :foo] [:bar]}`
+  `[:? ...]`: `[:? :foo]`, `{[:? :foo] [:bar]}`. As shorthand, you can also do
+  `:?foo` instead of `[:? :foo]`.
 
 The value that a join attribute describes can be either a single map or a vector
 of maps. A join value _must_ be described by a join key: a scalar attribute

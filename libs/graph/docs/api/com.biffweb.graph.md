@@ -2,7 +2,7 @@
 
 ### query->ast
 
-[view source](../../src/com/biffweb/graph.clj#L46)
+[view source](../../src/com/biffweb/graph.clj#L47)
 
 ```
 (query->ast query)
@@ -10,9 +10,23 @@
 Returns the AST for the given query.
 ```
 
+### uml
+
+[view source](../../src/com/biffweb/graph.clj#L52)
+
+```
+(uml ctx)
+
+Returns a Mermaid classDiagram string for the resolvers in `ctx`.
+
+Each class represents a qualified `:namespace/id` attribute. Attributes
+reachable through resolver inputs and outputs appear in that class, and
+joins to another entity's ID appear as relationships.
+```
+
 ### resolver
 
-[view source](../../src/com/biffweb/graph.clj#L51)
+[view source](../../src/com/biffweb/graph.clj#L61)
 
 ```
 (resolver {:keys [id input output batch resolve-fn]})
@@ -27,7 +41,7 @@ two arguments, (fn [ctx input] ...), that gets wrapped so that
 
 ### defresolver
 
-[view source](../../src/com/biffweb/graph.clj#L62)
+[view source](../../src/com/biffweb/graph.clj#L72)
 
 ```
 (defresolver sym opts & args)
@@ -69,7 +83,7 @@ generate a resolve function:
 
 ### new-ctx
 
-[view source](../../src/com/biffweb/graph.clj#L99)
+[view source](../../src/com/biffweb/graph.clj#L109)
 
 ```
 (new-ctx resolvers & {:keys [middleware]})
@@ -85,7 +99,7 @@ See schema for :biff.graph/resolvers and :biff.graph/middleware.
 
 ### query
 
-[view source](../../src/com/biffweb/graph.clj#L111)
+[view source](../../src/com/biffweb/graph.clj#L121)
 
 ```
 (query ctx query)
@@ -115,7 +129,7 @@ consistent view of the database.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/graph.clj#L137)
+[view source](../../src/com/biffweb/graph.clj#L147)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -123,7 +137,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../src/com/biffweb/graph.clj#L141)
+[view source](../../src/com/biffweb/graph.clj#L151)
 
 ```
 (module)

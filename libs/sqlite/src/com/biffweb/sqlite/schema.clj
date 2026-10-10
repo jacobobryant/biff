@@ -7,7 +7,8 @@
   (let [opts  (if (map? (last args)) (last args) {})
         flags (if (map? (last args)) (butlast args) args)]
     (when-not (every? #{:required :unique :index} flags)
-      (throw (ex-info "Expected :required, :unique, or :index flags followed by an options map"
+      (throw (ex-info (str "Expected :required, :unique, or :index flags "
+                           "followed by an options map")
                       {:args args})))
     (into opts (map (fn [flag] [flag true])) flags)))
 

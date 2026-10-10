@@ -45,13 +45,15 @@
 
 (defn- default-sql [column]
   (let [value (first (coerce/coerce-params {(:id column) column}
-                                            [(:default column)]))]
+                                           [(:default column)]))]
     (cond
       (nil? value) "NULL"
       (string? value) (str "'" (str/replace value "'" "''") "'")
       (number? value) (str value)
       (bytes? value) (str "X'"
-                          (apply str (map #(format "%02X" (bit-and % 0xff)) value))
+                          (apply str
+                                 (map #(format "%02X" (bit-and % 0xff))
+                                      value))
                           "'")
       :else (throw (ex-info "Unsupported SQLite default value"
                             {:column (:id column) :value value})))))

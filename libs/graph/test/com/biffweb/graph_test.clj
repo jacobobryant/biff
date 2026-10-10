@@ -41,22 +41,23 @@
       (ex-data e))))
 
 (deftest uml-includes-transitive-top-level-attributes
-  (let [resolvers [(resolver {:id ::user-name
-                              :input [:user/id]
-                              :output [:user/first-name
-                                       {:user/profile [:profile/id :profile/bio]}]
+  (let [resolvers [(resolver {:id         ::user-name
+                              :input      [:user/id]
+                              :output     [:user/first-name
+                                           {:user/profile [:profile/id
+                                                           :profile/bio]}]
                               :resolve-fn (fn [_ _] {})})
-                   (resolver {:id ::display-name
-                              :input [:user/first-name]
-                              :output [:user/display-name]
+                   (resolver {:id         ::display-name
+                              :input      [:user/first-name]
+                              :output     [:user/display-name]
                               :resolve-fn (fn [_ _] {})})
-                   (resolver {:id ::shared
-                              :input [:user/display-name :account/id]
-                              :output [:common/label]
+                   (resolver {:id         ::shared
+                              :input      [:user/display-name :account/id]
+                              :output     [:common/label]
                               :resolve-fn (fn [_ _] {})})
-                   (resolver {:id ::cycle
-                              :input [:common/label]
-                              :output [:user/first-name]
+                   (resolver {:id         ::cycle
+                              :input      [:common/label]
+                              :output     [:user/first-name]
                               :resolve-fn (fn [_ _] {})})]]
     (is (= (str "classDiagram\n"
                 "  class account {\n"
@@ -79,13 +80,14 @@
            (biff.graph/uml {:biff.graph/resolvers resolvers})))))
 
 (deftest uml-includes-joins-declared-in-inputs
-  (let [resolvers [(resolver {:id ::input-join
-                              :input [:order/id {:order/customer [:customer/id]}]
-                              :output [:order/summary]
+  (let [resolvers [(resolver {:id         ::input-join
+                              :input      [:order/id
+                                           {:order/customer [:customer/id]}]
+                              :output     [:order/summary]
                               :resolve-fn (fn [_ _] {})})
-                   (resolver {:id ::other-join
-                              :input [:order/id]
-                              :output [{:order/customer [:customer/id]}]
+                   (resolver {:id         ::other-join
+                              :input      [:order/id]
+                              :output     [{:order/customer [:customer/id]}]
                               :resolve-fn (fn [_ _] {})})]]
     (is (= (str "classDiagram\n"
                 "  class customer {\n"
@@ -130,15 +132,15 @@
            {[:? :user/posts] [:post/title]}]))))
 
 (deftest question-mark-keywords-are-optional
-  (is (= {:foo {:kind :scalar :optional true}
-          :foo/bar {:kind :scalar :optional true}
-          :user/profile {:kind :join
+  (is (= {:foo          {:kind :scalar :optional true}
+          :foo/bar      {:kind :scalar :optional true}
+          :user/profile {:kind     :join
                          :optional true
-                         :children {:profile/bio {:kind :scalar
+                         :children {:profile/bio {:kind     :scalar
                                                   :optional true}}}
-          :user/posts {:kind :join
-                       :optional true
-                       :wildcard true}}
+          :user/posts   {:kind     :join
+                         :optional true
+                         :wildcard true}}
          (biff.graph/query->ast
           [:?foo :?foo/bar
            {:?user/profile [:?profile/bio]}

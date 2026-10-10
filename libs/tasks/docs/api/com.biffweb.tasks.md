@@ -470,13 +470,15 @@ byte array of the given length.
 Ensures that `clj-kondo`, `cljfmt`, and `tailwind` are installed with the
 specified versions. If not, downloads them to target/bin/.
 
-If skip-project-files isn't set, copies Biff documentation to .biff/docs/ and
-copies Biff-related agent skills to .agents/skills/.
+If skip-project-files isn't set, copies Biff documentation to .biff/docs/,
+copies Biff-related agent skills to .agents/skills/, and writes
+.biff/.gitignore. Documentation is refreshed when bundled content changes;
+skill files are updated only when their content differs.
 ```
 
 ### test
 
-[view source](../../src/com/biffweb/tasks.clj#L386)
+[view source](../../src/com/biffweb/tasks.clj#L388)
 
 ```
 (test & args)
@@ -488,7 +490,7 @@ Thin wrapper around kaocha.runner.
 
 ### uberjar
 
-[view source](../../src/com/biffweb/tasks.clj#L393)
+[view source](../../src/com/biffweb/tasks.clj#L395)
 
 ```
 (uberjar)
@@ -500,12 +502,14 @@ Reads the following config keys:
 - :biff.tasks/main-ns (required)
 - :biff.tasks/build-jar-resources (optional)
 
-If build-jar-resources isn't set, runs the `css --minify` task.
+Cleans target resources, compiles the main namespace, then calls
+build-jar-resources if set or runs `css --minify` otherwise. Copies resource
+paths from deps.edn into target/jar/app.jar.
 ```
 
 ### update
 
-[view source](../../src/com/biffweb/tasks.clj#L405)
+[view source](../../src/com/biffweb/tasks.clj#L409)
 
 ```
 (update & args)

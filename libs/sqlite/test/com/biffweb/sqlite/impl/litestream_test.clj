@@ -53,8 +53,9 @@
   (is (some? (litestream/ensure-litestream-binary! {}))))
 
 (deftest config-uses-custom-replica-path
-  (let [dir         (java.nio.file.Files/createTempDirectory
-                     "litestream-test" (make-array java.nio.file.attribute.FileAttribute 0))
+  (let [attrs       (make-array java.nio.file.attribute.FileAttribute 0)
+        dir         (java.nio.file.Files/createTempDirectory "litestream-test"
+                                                             attrs)
         config-dir  (str dir)
         config-file (.resolve dir "litestream.yml")
         ctx         {:biff.sqlite/db-path           "storage/sqlite/main.db"

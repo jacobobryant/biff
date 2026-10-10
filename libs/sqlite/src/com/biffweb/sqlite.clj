@@ -115,7 +115,9 @@
   [ctx statements]
   (impl.execute/execute-tx ctx statements))
 
-(defn execute-one [ctx statement]
+(defn execute-one
+  "Calls `execute` and returns the first row (or nil)."
+  [ctx statement]
   (first (impl.execute/execute ctx statement)))
 
 (defn authorized-write
@@ -153,8 +155,10 @@
   (impl.authorize/authorized-write-tx ctx statements))
 
 (def
-  ^{:doc "A biff.fx handlers map. Contains :biff.sqlite.fx/execute and
-          :biff.sqlite.fx/authorized-write."}
+  ^{:doc "A biff.fx handlers map. Contains :biff.sqlite.fx/execute,
+          :biff.sqlite.fx/execute-one, :biff.sqlite.fx/execute-tx,
+          :biff.sqlite.fx/authorized-write, and
+          :biff.sqlite.fx/authorized-write-tx."}
   fx-handlers
   impl.system/fx-handlers)
 
@@ -248,17 +252,33 @@
   (impl.system/conn-module))
 
 (defn make-resolvers
-  "Returns a sequence of biff.graph resolvers, one for each table.
+  "Returns biff.graph resolvers for primary keys, unique keys, and
+   backreferences.
 
-   Each resolver takes the primary key as input and returns all the other
-   columns as output. Columns with :ref are returned as joins. If a ref column
-   ends in `-id`, that column is returned as a regular non-join attribute and an
-   additional join attribute without the `-id` suffix is also returned:
+   Each table gets a resolver that takes the primary key as input and returns
+   all the other columns as output. Columns with :ref are returned as joins. If
+   a ref column ends in `-id`, that column is returned as a regular non-join
+   attribute and an additional join attribute without the `-id` suffix is also
+   returned:
 
      :user/pet-id {:ref :pet/id, ...}
      ;; ->
      :output [:user/pet-id
               {:user/pet [:pet/id]}]
+
+   EDN columns whose :extra-schema describes a map or collection of maps are
+   returned as joins with a `[:*]` subquery.
+
+   A column with :unique or :unique-with gets a resolver that looks up its
+   table's primary key given a value(s) for the unique key(s).
+
+   :ref columns that have :backref or :backref-many set get a resolver that
+   goes from the entity targeted by :ref back to the current column's entity:
+
+     ;; given this column:
+     :user/pet {:type :uuid, :ref :pet/id, :backref :pet/user}
+     ;; you get a resolver with this:
+     :input [:pet/id], :output [{:pet/user [:user/id]}]
 
    All resolvers have `:batch true`.
 
