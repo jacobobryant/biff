@@ -15,6 +15,7 @@
 - biff.sqlite: add schema helpers
 - biff.tasks: fix bug in prod-logs task that made output buffered
 - biff.admin: fix bug with send-email not being passed to the alert code
+- biff.fx: add :biff.fx/swap! default handler
 
 ## 2.0.2 (2026-10-02)
 

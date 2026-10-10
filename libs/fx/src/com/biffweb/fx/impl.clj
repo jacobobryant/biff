@@ -33,7 +33,11 @@
          (map? input) (http* input)
          (sequential? input) (mapv http* input)
          :else (throw (ex-info "Invalid input type for :biff.fx/http"
-                               {:type (type input)})))))})
+                               {:type (type input)})))))
+
+   :biff.fx/swap!
+   (fn [ctx get-atom & args]
+     (apply swap! (get-atom ctx) args))})
 
 (defn- truncate-str [s n]
   (if (<= (count s) n) s (str (subs s 0 (dec n)) "…")))
