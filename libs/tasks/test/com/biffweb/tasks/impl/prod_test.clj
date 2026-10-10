@@ -8,7 +8,8 @@
                :biff.tasks/domain          "example.com"}
         calls (atom [])]
     (with-redefs [util/read-config     (constantly ctx)
-                  util/ssh-run-inherit (fn [& args] (swap! calls conj (vec args)))]
+                  util/ssh-run-inherit (fn [& args]
+                                         (swap! calls conj (vec args)))]
       (prod/prod-logs "20"))
     (is (= [[ctx "journalctl" "-u" "my-app" "-n" "20" "-f" "--no-pager"]]
            @calls))))
