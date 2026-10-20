@@ -6,7 +6,7 @@
 
 2. `app` namespaces contain ring handlers for rendering web pages, including
    internal endpoints needed by those web pages (`:biff.ring/routes`). They do
-   API routes (`:biff.ring/api-routes`), biff.graph resolvers, scheduled tasks,
+   not include API routes (`:biff.ring/api-routes`), biff.graph resolvers, scheduled tasks,
    or queues.
 
 3. Each `app` namespace has at most one page-rendering handler (GET handler that
