@@ -30,7 +30,7 @@ This library wraps [next.jdbc](https://github.com/seancorfield/next-jdbc) and
 ### Dependency
 
 ```clojure
-com.biffweb/sqlite {:mvn/version "2.0.2"}
+com.biffweb/sqlite {:mvn/version "2.0.3"}
 ```
 
 ## Reference

@@ -127,7 +127,19 @@ A biff.fx handlers map. Contains :biff.sqlite.fx/execute,
 
 Returns a biff.core module. Module ID is :biff.sqlite/module.
 
-- includes litestream-module, sqldef-module, and conn-module
+Combines config-module, litestream-module, sqldef-module, and conn-module.
+```
+
+### config-module
+
+[view source](../../src/com/biffweb/sqlite.clj#L174)
+
+```
+(config-module)
+(config-module #:biff.sqlite{:keys [extra-init-sql authorize columns]})
+
+Returns a biff.core module.
+
 - collects :biff.sqlite/columns from other modules and merges with the given
   `columns`.
 - provides :biff.fx/handlers and :biff.graph/resolvers in the module.
@@ -139,7 +151,7 @@ Returns a biff.core module. Module ID is :biff.sqlite/module.
 
 ### litestream-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L181)
+[view source](../../src/com/biffweb/sqlite.clj#L189)
 
 ```
 (litestream-module)
@@ -170,7 +182,7 @@ your application runs.
 
 ### sqldef-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L207)
+[view source](../../src/com/biffweb/sqlite.clj#L215)
 
 ```
 (sqldef-module)
@@ -196,7 +208,7 @@ isn't available.
 
 ### conn-module
 
-[view source](../../src/com/biffweb/sqlite.clj#L228)
+[view source](../../src/com/biffweb/sqlite.clj#L236)
 
 ```
 (conn-module)
@@ -227,7 +239,7 @@ Also sets these keys on the system map:
 
 ### make-resolvers
 
-[view source](../../src/com/biffweb/sqlite.clj#L254)
+[view source](../../src/com/biffweb/sqlite.clj#L262)
 
 ```
 (make-resolvers columns)
@@ -262,7 +274,7 @@ goes from the entity targeted by :ref back to the current column's entity:
 
 All resolvers have `:batch true`.
 
-Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
-biff.graph queries will run inside a read transaction and thus the resolvers
-will all see a consistent view of the database.
+When using `module` or `conn-module`, biff.graph queries will run inside a
+read transaction and thus the resolvers will all see a consistent view of the
+database (see :biff.core/wrap-db-snapshot).
 ```

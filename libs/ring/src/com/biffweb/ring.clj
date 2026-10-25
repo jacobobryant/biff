@@ -137,6 +137,9 @@
 (defn wrap-internal-error
   "Logs exceptions and returns a default 500 response.
 
+   If the exception or any of its causes has :biff.ring/status in its ex-data,
+   that status is used instead, and the error is logged at the debug level.
+
    Set :biff.ring/on-error on incoming requests to override the default
    response."
   [handler]

@@ -2,8 +2,15 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]))
 
-(defn uml [{:keys [biff.graph/resolvers]}]
-  (let [asts          (mapcat (fn [resolver]
+(defn- ctx-resolvers [{:biff.graph/keys [get-ctx resolvers] :as ctx}]
+  (let [{:biff.graph/keys [attr->resolvers]}
+        (merge ctx (when get-ctx (get-ctx)))]
+    (or (when-not get-ctx resolvers)
+        (distinct (apply concat (vals attr->resolvers))))))
+
+(defn uml [ctx]
+  (let [resolvers     (ctx-resolvers ctx)
+        asts          (mapcat (fn [resolver]
                                 [(:biff.graph/input-ast resolver)
                                  (:biff.graph/output-ast resolver)])
                               resolvers)

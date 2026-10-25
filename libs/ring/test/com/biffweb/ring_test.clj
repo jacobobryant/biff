@@ -180,6 +180,16 @@
              (fn [{:keys [status ex]}]
                {:status status :exception ex})})))))
 
+(deftest internal-error-middleware-uses-status-from-ex-data
+  (let [ex      (ex-info "wrapper" {}
+                         (ex-info "bad param" {:biff.ring/status 400}))
+        handler (ring/wrap-internal-error (fn [_] (throw ex)))]
+    (is (= 400 (:status (handler {}))))
+    (is (= {:status 400 :exception ex}
+           (handler {:biff.ring/on-error
+                     (fn [{:keys [status ex]}]
+                       {:status status :exception ex})})))))
+
 (deftest ssl-middleware-honors-request-options
   (let [handler (ring/wrap-ssl (constantly {:status 200}))]
     (is (= 200 (:status (handler {:scheme           :http

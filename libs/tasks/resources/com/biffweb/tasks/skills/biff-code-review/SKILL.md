@@ -14,7 +14,8 @@ highest number already in the folder for the current date.
 Read rules.md for a description of each of the points in the checklist. Then
 review the recently written code against the points in the checklist. Check off
 points (replace `[ ]` with `[x]`) in the checklist for which there are no
-violations. Leave other points unchecked.
+violations. Leave other points unchecked. For each unchecked point, include a
+bulleted list underneath with filenames and line numbers for violations.
 
 Tell the user the path for the new review checklist file and ask them to verify
 the checklist is correct. After this point, you should never edit the checklist.
@@ -49,10 +50,8 @@ want.
 
 ## Continuing
 
-If the user includes the path to a review file (e.g.
-.biff/review/2020-01-01/0.txt) or a segment of that path (e.g. 2020-01-01/0.txt,
-or even just 0), then assume that file has already been reviewed/edited by the
-user and start implementing the fixes.
+If the user says "fix" when invoking this skill, then find the most recent
+review file and fix the violations in that file as described above.
 
 ## Biff docs
 

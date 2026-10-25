@@ -139,13 +139,16 @@ to the wrapped handler.
 
 Logs exceptions and returns a default 500 response.
 
+If the exception or any of its causes has :biff.ring/status in its ex-data,
+that status is used instead, and the error is logged at the debug level.
+
 Set :biff.ring/on-error on incoming requests to override the default
 response.
 ```
 
 ### wrap-log-requests
 
-[view source](../../src/com/biffweb/ring.clj#L145)
+[view source](../../src/com/biffweb/ring.clj#L148)
 
 ```
 (wrap-log-requests handler)
@@ -155,7 +158,7 @@ Logs an info message after each request finishes.
 
 ### wrap-session
 
-[view source](../../src/com/biffweb/ring.clj#L150)
+[view source](../../src/com/biffweb/ring.clj#L153)
 
 ```
 (wrap-session handler)
@@ -193,7 +196,7 @@ Sets HttpOnly on the session cookie.
 
 ### wrap-ssl
 
-[view source](../../src/com/biffweb/ring.clj#L183)
+[view source](../../src/com/biffweb/ring.clj#L186)
 
 ```
 (wrap-ssl handler)
@@ -214,7 +217,7 @@ Incoming requests may have the following keys:
 
 ### wrap-site-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L199)
+[view source](../../src/com/biffweb/ring.clj#L202)
 
 ```
 (wrap-site-defaults handler)
@@ -232,7 +235,7 @@ Includes:
 
 ### wrap-api-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L212)
+[view source](../../src/com/biffweb/ring.clj#L215)
 
 ```
 (wrap-api-defaults handler)
@@ -247,7 +250,7 @@ Includes:
 
 ### wrap-base-defaults
 
-[view source](../../src/com/biffweb/ring.clj#L222)
+[view source](../../src/com/biffweb/ring.clj#L225)
 
 ```
 (wrap-base-defaults handler)
@@ -265,7 +268,7 @@ Includes:
 
 ### module
 
-[view source](../../src/com/biffweb/ring.clj#L237)
+[view source](../../src/com/biffweb/ring.clj#L240)
 
 ```
 (module)

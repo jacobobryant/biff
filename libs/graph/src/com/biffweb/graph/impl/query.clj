@@ -209,7 +209,9 @@
                                              :path
                                              peek)]]
        (throw (ex-info (str "Could not resolve " attr)
-                       {:biff.graph/trace fail-trace})))
+                       (cond-> {:biff.graph/trace fail-trace}
+                         (= "request" (some-> attr namespace))
+                         (assoc :biff.ring/status 400)))))
      (if sequential-input
        results
        (first results)))))

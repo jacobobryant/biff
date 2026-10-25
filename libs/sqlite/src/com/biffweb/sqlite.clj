@@ -165,7 +165,15 @@
 (defn module
   "Returns a biff.core module. Module ID is :biff.sqlite/module.
 
-   - includes litestream-module, sqldef-module, and conn-module
+   Combines config-module, litestream-module, sqldef-module, and conn-module."
+  {:arglists '([]
+               [{:biff.sqlite/keys [extra-init-sql authorize columns]}])}
+  [& args]
+  (apply impl.system/module args))
+
+(defn config-module
+  "Returns a biff.core module.
+
    - collects :biff.sqlite/columns from other modules and merges with the given
      `columns`.
    - provides :biff.fx/handlers and :biff.graph/resolvers in the module.
@@ -176,7 +184,7 @@
   {:arglists '([]
                [{:biff.sqlite/keys [extra-init-sql authorize columns]}])}
   [& args]
-  (apply impl.system/module args))
+  (apply impl.system/config-module args))
 
 (defn litestream-module
   "On start, uses litestream to backup/restore the database. Module ID is
@@ -282,8 +290,8 @@
 
    All resolvers have `:batch true`.
 
-   Since `module` provides :biff.core/wrap-db-snapshot, if you use `module`,
-   biff.graph queries will run inside a read transaction and thus the resolvers
-   will all see a consistent view of the database."
+   When using `module` or `conn-module`, biff.graph queries will run inside a
+   read transaction and thus the resolvers will all see a consistent view of the
+   database (see :biff.core/wrap-db-snapshot)."
   [columns]
   (impl.resolver/make-resolvers columns))

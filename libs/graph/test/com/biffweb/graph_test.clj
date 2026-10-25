@@ -101,6 +101,16 @@
                 "  order -- customer : order/customer\n")
            (biff.graph/uml {:biff.graph/resolvers resolvers})))))
 
+(deftest uml-works-with-new-ctx-and-get-ctx
+  (let [resolvers [(resolver {:id         ::uml-ctx
+                              :input      [:order/id]
+                              :output     [{:order/customer [:customer/id]}]
+                              :resolve-fn (fn [_ _] {})})]
+        expected  (biff.graph/uml {:biff.graph/resolvers resolvers})
+        ctx       (biff.graph/new-ctx resolvers)]
+    (is (= expected (biff.graph/uml ctx)))
+    (is (= expected (biff.graph/uml {:biff.graph/get-ctx (constantly ctx)})))))
+
 (deftest fx-resolver-passes-input-then-previous-output
   (is (= {:user/name "User 7"}
          (biff.graph/query
@@ -309,6 +319,29 @@
            (:biff.graph/trace data)))
     (is (= {:user/id 1}
            (:biff.graph/input data)))))
+
+(deftest unresolved-request-attributes-include-status
+  (let [ctx (test-ctx
+             [(resolver
+               {:id         ::request-user
+                :output     [:request/user]
+                :resolve-fn (fn [_ctx _input] nil)})
+              (resolver
+               {:id         ::greeting
+                :input      [:request/user]
+                :output     [:user/greeting]
+                :resolve-fn (fn [_ctx _input]
+                              {:user/greeting "hi"})})
+              (resolver
+               {:id         ::missing-name
+                :output     [:user/name]
+                :resolve-fn (fn [_ctx _input] nil)})])]
+    (is (= 400 (:biff.ring/status
+                (thrown-data #(biff.graph/query ctx {} [:request/user])))))
+    (is (= 400 (:biff.ring/status
+                (thrown-data #(biff.graph/query ctx {} [:user/greeting])))))
+    (is (not (contains? (thrown-data #(biff.graph/query ctx {} [:user/name]))
+                        :biff.ring/status)))))
 
 (deftest module-builds-context-from-current-modules
   (let [modules-var (atom [{:biff.graph/resolvers

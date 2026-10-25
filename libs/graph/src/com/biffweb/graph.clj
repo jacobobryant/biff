@@ -123,7 +123,9 @@
      A map of starting data for the query. Can also be a vector of maps, in
      which case `query` will return a vector of maps.
 
-   Throws an exception if any required attributes couldn't be resolved.
+   Throws an exception if any required attributes couldn't be resolved. If the
+   unresolved attribute has a `request` namespace (e.g. :request/thing), the
+   exception's ex-data includes `:biff.ring/status 400`.
 
    Calls (:biff.core/wrap-db-snapshot ctx) if set so that resolvers get a
    consistent view of the database.
@@ -153,7 +155,9 @@
    :biff.fx/handlers fx-handlers})
 
 (defn uml
-  "Returns a Mermaid classDiagram string for `resolvers`."
-  {:arglists '([{:keys [biff.graph/resolvers]}])}
+  "Returns a Mermaid classDiagram string for the resolvers in ctx.
+
+   ctx can be a map returned by `new-ctx`, a system map that includes
+   :biff.graph/get-ctx (see `module`), or a map with :biff.graph/resolvers."
   [ctx]
   (impl.uml/uml ctx))

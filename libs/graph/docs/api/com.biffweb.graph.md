@@ -104,7 +104,9 @@ input
   A map of starting data for the query. Can also be a vector of maps, in
   which case `query` will return a vector of maps.
 
-Throws an exception if any required attributes couldn't be resolved.
+Throws an exception if any required attributes couldn't be resolved. If the
+unresolved attribute has a `request` namespace (e.g. :request/thing), the
+exception's ex-data includes `:biff.ring/status 400`.
 
 Calls (:biff.core/wrap-db-snapshot ctx) if set so that resolvers get a
 consistent view of the database.
@@ -115,7 +117,7 @@ consistent view of the database.
 
 ### fx-handlers
 
-[view source](../../src/com/biffweb/graph.clj#L138)
+[view source](../../src/com/biffweb/graph.clj#L140)
 
 ```
 A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
@@ -123,7 +125,7 @@ A biff.fx handlers map. Contains `:biff.graph.fx/query query`.
 
 ### module
 
-[view source](../../src/com/biffweb/graph.clj#L142)
+[view source](../../src/com/biffweb/graph.clj#L144)
 
 ```
 (module)
@@ -137,10 +139,13 @@ you can pass the system map as ctx to `query`.
 
 ### uml
 
-[view source](../../src/com/biffweb/graph.clj#L155)
+[view source](../../src/com/biffweb/graph.clj#L157)
 
 ```
-(uml {:keys [biff.graph/resolvers]})
+(uml ctx)
 
-Returns a Mermaid classDiagram string for `resolvers`.
+Returns a Mermaid classDiagram string for the resolvers in ctx.
+
+ctx can be a map returned by `new-ctx`, a system map that includes
+:biff.graph/get-ctx (see `module`), or a map with :biff.graph/resolvers.
 ```

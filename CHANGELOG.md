@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.3
+
+- biff.tasks: update biff-code-review skill
+- biff.sqlite: add config-module
+- biff.graph: fix `uml` so it works with `@system`
+- biff.graph, biff.ring: cause `:request/*` query failures to result in `:status
+  400`
+
 ## 2.0.3-rc1
 
 - biff.tasks: copy docs into .biff/ and skills into .agents/

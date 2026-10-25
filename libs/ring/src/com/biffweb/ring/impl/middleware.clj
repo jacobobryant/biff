@@ -90,13 +90,20 @@
              (some (wrap-content-type #(resource/resource-request % root))))
         (handler ctx))))
 
+(defn- ex-status [e]
+  (some #(:biff.ring/status (ex-data %))
+        (take-while some? (iterate ex-cause e))))
+
 (defn wrap-internal-error [handler]
   (fn [ctx]
     (try
       (handler ctx)
       (catch Exception e
-        (log/error e "Exception while handling request")
-        (on-error (assoc ctx :status 500 :ex e))))))
+        (let [status (or (ex-status e) 500)]
+          (if (< status 500)
+            (log/debug e "Client error while handling request")
+            (log/error e "Exception while handling request"))
+          (on-error (assoc ctx :status status :ex e)))))))
 
 (defn wrap-log-requests [handler]
   (fn [ctx]

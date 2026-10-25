@@ -24,6 +24,8 @@ biff.fx
 [ ] B4. machines and pipelines minimize state functions
 [ ] B5. use existing fx handlers instead of defining new ones
 [ ] B6. if you must define fx handlers, keep them small
+[ ] B7. share state functions via vectors/maps
+[ ] B8. remove unused state function parameters
 
 biff.graph
 
@@ -44,24 +46,32 @@ biff.graph
 [ ] C15. mark optional input keys
 [ ] C16. don't use shortcut resolvers
 [ ] C17. avoid unnecessary multiple queries
+[ ] C18. request-derived entities are authorized
+[ ] C19. define backrefs for ref columns
+[ ] C20. colocate queries with resolvers and call sites
+[ ] C21. rely on default 400 for missing :request/* attributes
 
-Database adapters
+Authorization rules
 
-[ ] D1. authorization rules are current and enforce ownership
-[ ] D2. authorization rules query ownership rather than accept out-of-band data
-[ ] D3. user-initiated writes go through authorization rules
-[ ] D4. SQL queries use HoneySQL
+[ ] D1. authorization rules are up to date with the schema
+[ ] D2. authorization rules don't use out-of-band information
+[ ] D3. authorization rules query ownership when needed
+[ ] D4. user-initiated writes go through authorization rules
+[ ] D5. authorized writes use an fx handler
 
 biff.ring
 
 [ ] E1. route templates use defpath
 [ ] E2. defpaths have the correct location
+[ ] E3. no redundant path params
+[ ] E4. path params include the entity name
 
 biff.datastar
 
 [ ] F1. application pages use biff.datastar
 [ ] F2. rendering updates are pushed by biff.datastar middleware
 [ ] F3. tab-specific state uses biff.datastar/tab-id
+[ ] F4. don't write javascript that Datastar can replace
 
 Tests
 
@@ -71,7 +81,7 @@ Tests
 
 Code style
 
-[ ] H1. biff.sqlite columns map formatting
+[ ] H1. database schema map formatting
 [ ] H2. lint and formatter configuration
 [ ] H3. vector and map entry formatting
 [ ] H4. biff.fx and biff.graph blank lines
@@ -83,3 +93,5 @@ Code style
 [ ] H10. don't shadow clojure.core names
 [ ] H11. avoid lazy operations
 [ ] H12. don't break form pairs unnecessarily
+[ ] H13. don't separate form pairs with blank lines unnecessarily
+[ ] H14. use :?foo/bar for optional attributes

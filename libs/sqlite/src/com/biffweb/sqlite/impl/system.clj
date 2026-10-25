@@ -26,6 +26,20 @@
    :biff.sqlite.fx/authorized-write    authorize/authorized-write
    :biff.sqlite.fx/authorized-write-tx authorize/authorized-write-tx})
 
+(defn config-module [& {:biff.sqlite/keys [columns extra-init-sql authorize]}]
+  {:biff.fx/handlers     fx-handlers
+   :biff.sqlite/columns  (merge kv/columns columns)
+   :biff.graph/resolvers (resolver/make-resolvers (or columns {}))
+
+   :biff.core/init
+   (fn [modules-var]
+     (into {:biff.sqlite/columns (into {}
+                                       (mapcat :biff.sqlite/columns)
+                                       @modules-var)}
+           (filter (comp some? val))
+           {:biff.sqlite/extra-init-sql extra-init-sql
+            :biff.sqlite/authorize      authorize}))})
+
 (defn litestream-module []
   {:biff.core/id    :biff.sqlite/litestream-module
    :biff.core/start litestream/start
@@ -40,19 +54,9 @@
    :biff.core/start pool/start
    :biff.core/stop  pool/stop})
 
-(defn module [& {:biff.sqlite/keys [columns extra-init-sql authorize]}]
-  {:biff.core/id         :biff.sqlite/module
-   :biff.core/start      start
-   :biff.core/stop       stop
-   :biff.fx/handlers     fx-handlers
-   :biff.sqlite/columns  (merge kv/columns columns)
-   :biff.graph/resolvers (resolver/make-resolvers (or columns {}))
-
-   :biff.core/init
-   (fn [modules-var]
-     (into {:biff.sqlite/columns (into {}
-                                       (mapcat :biff.sqlite/columns)
-                                       @modules-var)}
-           (filter (comp some? val))
-           {:biff.sqlite/extra-init-sql extra-init-sql
-            :biff.sqlite/authorize      authorize}))})
+(defn module [& {:as opts}]
+  (merge
+   (config-module opts)
+   {:biff.core/id    :biff.sqlite/module
+    :biff.core/start start
+    :biff.core/stop  stop}))
