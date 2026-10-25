@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.3 (2026-10-25)
+## 2.0.4 (2026-10-25)
 
 - biff.tasks: update biff-code-review skill
 - biff.sqlite: add config-module

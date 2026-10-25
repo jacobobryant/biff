@@ -21,7 +21,10 @@
 (defn publish-all [& args]
   (doseq [library libraries]
     (binding [biff.tasks/*extra-config*
-              {:biff.tasks/lib-name     library
-               :biff.tasks/project-root (str "libs/" library)}]
+              (cond-> {:biff.tasks/lib-name     library
+                       :biff.tasks/project-root (str "libs/" library)}
+                (= library "tasks")
+                (assoc :biff.tasks/build-jar-resources
+                       'com.biffweb.tasks.impl.init/build-jar-resources))]
       (apply biff.tasks/publish args)))
   nil)
