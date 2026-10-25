@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.3
+## 2.0.3 (2026-10-25)
 
 - biff.tasks: update biff-code-review skill
 - biff.sqlite: add config-module
@@ -8,7 +8,7 @@
 - biff.graph, biff.ring: cause `:request/*` query failures to result in `:status
   400`
 
-## 2.0.3-rc1
+### 2.0.3-rc1
 
 - biff.tasks: copy docs into .biff/ and skills into .agents/
 - add :biff.tasks/skip-project-files, :biff.tasks/build-jar-resources
