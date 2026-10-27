@@ -191,6 +191,29 @@
     (is (str/ends-with? (get-in (ex-data ex) [:biff.fx/output :payload])
                         "…"))))
 
+(deftest machine-wraps-state-function-errors-with-context
+  (let [machine (biff.fx/machine
+                 ::state-error-test
+                 :start
+                 (fn [_]
+                   (throw (ex-info "step failed" {}))))
+        ex      (try
+                  (machine {:biff.fx/handlers {}})
+                  (catch clojure.lang.ExceptionInfo e
+                    e))]
+    (is (= "State function threw an exception"
+           (ex-message ex)))
+    (is (= "step failed"
+           (ex-message (ex-cause ex))))
+    (is (= ::state-error-test
+           (:biff.fx/machine-name (ex-data ex))))
+    (is (inst? (:biff.fx/now (ex-data ex))))
+    (is (int? (:biff.fx/seed (ex-data ex))))
+    (is (int? (:biff.fx/uuid7-seed (ex-data ex))))
+    (is (int? (:biff.fx/uuid4-seed (ex-data ex))))
+    (is (not (contains? (ex-data ex) :biff.fx/random-uuid7-seq)))
+    (is (not (contains? (ex-data ex) :biff.fx/random-uuid4-seq)))))
+
 (deftest module-collects-handlers-from-modules
   (let [modules-var (atom [{:biff.fx/handlers
                             {:test/a      identity

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.5 (2026-10-26)
+
+- biff.fx: don't OOM when a state function throws
+
 ## 2.0.4 (2026-10-25)
 
 - biff.tasks: update biff-code-review skill

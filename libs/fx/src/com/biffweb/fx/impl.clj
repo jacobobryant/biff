@@ -107,6 +107,8 @@
 
         injected   {:biff.fx/now              now
                     :biff.fx/seed             seed
+                    :biff.fx/uuid7-seed       uuid7-seed
+                    :biff.fx/uuid4-seed       uuid4-seed
                     :biff.fx/random-uuid7-seq (uuid-seq #(uuid7 % now)
                                                         uuid7-seed)
                     :biff.fx/random-uuid4-seq (uuid-seq uuid4 uuid4-seed)}
@@ -114,7 +116,10 @@
                      (apply state-fn (merge ctx injected) input)
                      (catch Exception e
                        (error! "State function threw an exception"
-                               injected e)))
+                               (dissoc injected
+                                       :biff.fx/random-uuid7-seq
+                                       :biff.fx/random-uuid4-seq)
+                               e)))
         result     (if (map? raw-result)
                      raw-result
                      {:biff.fx/return raw-result})
