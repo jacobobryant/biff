@@ -88,7 +88,7 @@ implementations for those.
 Send a POST request to `/_biff/auth/signout`, including a CSRF token:
 
 ```clojure
-(require '[com.biffweb.authentication :as biff.auth])
+(require '[com.biffweb.authenticate :as biff.auth])
 
 (defn my-signout-button [{:keys [anti-forgery-token] :as _request}]
   [:form {:method "post"
