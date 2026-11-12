@@ -171,5 +171,5 @@ Set this flag to disable that behavior.
 
 ### :biff.tasks/tailwind-version
 
-String, default `"4.3.0"`. The version of Tailwind to install and use (as a
+String, default `"4.3.5"`. The version of Tailwind to install and use (as a
 standalone binary).

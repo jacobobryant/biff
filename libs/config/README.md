@@ -17,7 +17,7 @@ system properties, if set.
 ### Dependency
 
 ```clojure
-com.biffweb/config {:mvn/version "2.0.5"}
+com.biffweb/config {:mvn/version "2.0.6"}
 ```
 
 ## Reference

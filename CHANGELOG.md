@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.6 (2026-11-11)
+
+- biff.tasks: update default tailwind version to 4.3.5
+
 ## 2.0.5 (2026-10-26)
 
 - biff.fx: don't OOM when a state function throws

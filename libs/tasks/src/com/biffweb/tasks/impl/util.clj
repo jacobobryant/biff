@@ -12,7 +12,7 @@
 
 (def config-defaults
   {:biff.tasks/deployment-name        "app"
-   :biff.tasks/tailwind-version       "4.3.0"
+   :biff.tasks/tailwind-version       "4.3.5"
    :biff.tasks/cljfmt-version         "0.16.4"
    :biff.tasks/clj-kondo-version      "2026.05.25"
    :biff.tasks/css-input-path         "resources/tailwind.css"
